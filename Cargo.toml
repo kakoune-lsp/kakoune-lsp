@@ -1,0 +1,21 @@
+[package]
+name = "kak-lsp"
+version = "0.1.0"
+authors = ["Ruslan Prakapchuk <rprakapchuk@atlassian.com>"]
+
+[dependencies]
+clap = "2"
+crossbeam-channel = "0"
+fnv="1"
+jsonrpc-core = "8"
+languageserver-types = "0"
+regex = "0"
+serde = "1"
+serde_derive = "1"
+serde_json = "1"
+url = "1"
+url_serde = "0"
+
+[profile.release]
+lto = true
+

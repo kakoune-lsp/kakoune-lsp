@@ -1,0 +1,42 @@
+Kakoune Language Server Protocol Client
+---------------------------------------
+
+Implemented in Rust.
+
+Installation
+-----------
+
+Replace `~/.local/bin/` with something on your `$PATH`
+
+----
+$ git clone https://github.com/ul/kak-lsp
+$ cd kak-lsp
+$ cargo build --release
+$ ln -s $PWD/target/release/kak-lsp ~/.local/bin/
+$ ln $PWD/rc ~/.config/kak/autoload/lsp
+----
+
+Usage
+-----
+
+`kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore `kak-lsp` process should be started separately and having single one running is enough.
+
+The easiest way to enable LSP support for language, i.e. Rust, is to add following to `kakrc`:
+
+----
+hook global WinSetOption filetype=rust %{
+    lsp-enable
+}
+----
+
+It will add support for completions, hover and will bind goto definition to `gd`.
+
+Unfortunately, LSP servers commands and supported file extensions are hardcoded at the moment. They are:
+
+|===
+| Language | Extensions | Server command
+| Rust | .rs | rls
+| JavaScript | .js | flow-language-server --stdio
+|===
+
+Making server configurable is #1 priority and will be done before extending LSP features support.
