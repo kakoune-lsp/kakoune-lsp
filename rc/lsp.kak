@@ -8,7 +8,8 @@ def lsp-did-change %{
             "meta": {
                 "session" : "%s",
                 "client"  : "%s",
-                "buffile" : "%s"
+                "buffile" : "%s",
+                "version" : %d
             },
             "call": {
                 "jsonrpc" : "2.0",
@@ -21,7 +22,7 @@ def lsp-did-change %{
                     }
                 }
             }
-        }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" "${kak_timestamp}" ${kak_opt_lsp_draft} | ${kak_opt_lsp_cmd} }
+        }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" ${kak_opt_lsp_draft} | ${kak_opt_lsp_cmd} }
 }
 
 def lsp-completion %{
@@ -36,7 +37,8 @@ def lsp-completion %{
         "meta": {
             "session" : "%s",
             "client"  : "%s",
-            "buffile" : "%s"
+            "buffile" : "%s",
+            "version" : %d
         },
         "call" : {
             "jsonrpc" : "2.0",
@@ -55,7 +57,7 @@ def lsp-completion %{
                 }
             }
         }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd} }
+    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd} }
 }
 
 def lsp-hover %{
@@ -63,7 +65,8 @@ def lsp-hover %{
         "meta": {
             "session" : "%s",
             "client"  : "%s",
-            "buffile" : "%s"
+            "buffile" : "%s",
+            "version" : %d
         },
         "call" : {
             "jsonrpc" : "2.0",
@@ -78,7 +81,7 @@ def lsp-hover %{
                 }
             }
         }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd} }
+    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd} }
 }
 
 def lsp-definition %{
@@ -86,7 +89,8 @@ def lsp-definition %{
         "meta": {
             "session" : "%s",
             "client"  : "%s",
-            "buffile" : "%s"
+            "buffile" : "%s",
+            "version" : %d
         },
         "call" : {
             "jsonrpc" : "2.0",
@@ -101,7 +105,7 @@ def lsp-definition %{
                 }
             }
         }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd} }
+    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd} }
 }
 
 def lsp-did-open %{
@@ -109,7 +113,8 @@ def lsp-did-open %{
         "meta": {
             "session" : "%s",
             "client"  : "%s",
-            "buffile" : "%s"
+            "buffile" : "%s",
+            "version" : %d
         },
         "call" : {
             "jsonrpc" : "2.0",
@@ -121,7 +126,7 @@ def lsp-did-open %{
                 }
             }
         }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
+    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
 }
 
 def lsp-did-close %{
@@ -129,7 +134,8 @@ def lsp-did-close %{
         "meta": {
             "session" : "%s",
             "client"  : "%s",
-            "buffile" : "%s"
+            "buffile" : "%s",
+            "version" : %d
         },
         "call" : {
             "jsonrpc" : "2.0",
@@ -141,7 +147,7 @@ def lsp-did-close %{
                 }
             }
         }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
+    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
 }
 
 def lsp-did-save %{
@@ -149,7 +155,8 @@ def lsp-did-save %{
         "meta": {
             "session" : "%s",
             "client"  : "%s",
-            "buffile" : "%s"
+            "buffile" : "%s",
+            "version" : %d
         },
         "call" : {
             "jsonrpc" : "2.0",
@@ -161,7 +168,7 @@ def lsp-did-save %{
                 }
             }
         }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
+    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
 }
 
 def lsp-enable %{

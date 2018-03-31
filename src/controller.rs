@@ -75,7 +75,7 @@ struct Context {
     pending_requests: Vec<EditorRequest>,
     request_counter: u64,
     response_waitlist: FnvHashMap<Id, (EditorMeta, String, Params)>,
-    versions: FnvHashMap<Url, u64>,
+    versions: FnvHashMap<String, u64>,
 }
 
 impl Context {
@@ -130,17 +130,7 @@ impl Controller {
             for msg in editor_rx {
                 let mut ctx = ctx.lock().expect("Failed to lock context");
                 if ctx.capabilities.is_some() {
-                    match msg.call {
-                        Call::Notification(notification) => {
-                            dispatch_editor_notification(&msg.meta, notification, &mut ctx);
-                        }
-                        Call::MethodCall(call) => {
-                            dispatch_editor_call(&msg.meta, &call, &mut ctx);
-                        }
-                        Call::Invalid(m) => {
-                            panic!("Invalid call, shall not pass! {:?}", m);
-                        }
-                    }
+                    dispatch_editor_request(msg, &mut ctx);
                 } else {
                     ctx.pending_requests.push(msg);
                 }
@@ -253,6 +243,34 @@ fn initialize(root_path: &str) -> Params {
     params.to_params().unwrap()
 }
 
+fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
+    let buffile = &request.meta.buffile;
+    if !ctx.versions.contains_key(buffile) {
+        text_document_did_open(
+            (TextDocumentDidOpenParams {
+                text_document: VersionedTextDocumentIdentifier {
+                    uri: Url::parse(&format!("file://{}", buffile)).unwrap(),
+                    version: Some(request.meta.version),
+                },
+            }).to_params()
+                .unwrap(),
+            &request.meta,
+            &mut ctx,
+        );
+    }
+    match request.call {
+        Call::Notification(notification) => {
+            dispatch_editor_notification(&request.meta, notification, &mut ctx);
+        }
+        Call::MethodCall(call) => {
+            dispatch_editor_call(&request.meta, &call, &mut ctx);
+        }
+        Call::Invalid(m) => {
+            panic!("Invalid call, shall not pass! {:?}", m);
+        }
+    }
+}
+
 fn dispatch_editor_call(
     _meta: &EditorMeta,
     _call: &jsonrpc_core::MethodCall,
@@ -361,20 +379,21 @@ fn text_document_did_open(params: Params, meta: &EditorMeta, ctx: &mut Context) 
             text,
         },
     };
+    ctx.versions.insert(meta.buffile.clone(), meta.version);
     ctx.notify(notification::DidOpenTextDocument::METHOD.into(), params);
 }
 
-fn text_document_did_change(params: Params, _meta: &EditorMeta, ctx: &mut Context) {
+fn text_document_did_change(params: Params, meta: &EditorMeta, ctx: &mut Context) {
     let params: TextDocumentDidChangeParams = params
         .parse()
         .expect("Params should follow TextDocumentDidChangeParams structure");
     let uri = params.text_document.uri;
     let version = params.text_document.version.unwrap_or(0);
-    let old_version = ctx.versions.get(&uri).cloned().unwrap_or(0);
+    let old_version = ctx.versions.get(&meta.buffile).cloned().unwrap_or(0);
     if old_version >= version {
         return;
     }
-    ctx.versions.insert(uri.clone(), version);
+    ctx.versions.insert(meta.buffile.clone(), version);
     let file_path = params.text_document.draft;
     let mut text = String::new();
     {
@@ -575,19 +594,8 @@ fn initialized(
         requests.push(msg);
     }
 
-    // TODO DRY
     for msg in requests.drain(..) {
-        match msg.call {
-            Call::Notification(notification) => {
-                dispatch_editor_notification(&msg.meta, notification, &mut ctx);
-            }
-            Call::MethodCall(call) => {
-                dispatch_editor_call(&msg.meta, &call, &mut ctx);
-            }
-            Call::Invalid(m) => {
-                panic!("Invalid call, shall not pass! {:?}", m);
-            }
-        }
+        dispatch_editor_request(msg, &mut ctx);
     }
 }
 

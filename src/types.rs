@@ -50,6 +50,7 @@ pub struct EditorMeta {
     pub session: String,
     pub client: String,
     pub buffile: String,
+    pub version: u64,
 }
 
 #[derive(Deserialize)]
@@ -117,7 +118,7 @@ pub struct TextDraft {
     pub draft: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TextDocumentDidOpenParams {
     #[serde(rename = "textDocument")]
     pub text_document: VersionedTextDocumentIdentifier,
