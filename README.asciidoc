@@ -38,5 +38,5 @@ Configuration
 
 kak-lsp is configured via configuration file in https://github.com/toml-lang/toml[TOML] format. By default kak-lsp tries to read `$HOME/.config/kak-lsp/kak-lsp.toml`, but you can override it with command-line option `--config`.
 
-Look into the default `kak-lsp.toml` in the root of repository, it should be quiet self-descriptive.
+Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
 
