@@ -1,3 +1,4 @@
+use fnv::FnvHashMap;
 use jsonrpc_core::{Call, Output, Params};
 use languageserver_types::*;
 use serde::Serialize;
@@ -5,6 +6,44 @@ use serde_json::Value;
 use std::io::Error;
 use url::Url;
 use url_serde;
+
+#[derive(Deserialize, Debug)]
+pub struct Config {
+    pub language: FnvHashMap<String, LanguageConfig>,
+    pub server: ServerConfig,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ServerConfig {
+    pub ip: String,
+    pub port: u16,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct LanguageConfig {
+    pub extensions: Vec<String>,
+    pub command: String,
+    pub args: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct FileConfig {
+    pub language: FnvHashMap<String, FileLanguageConfig>,
+    pub server: Option<FileServerConfig>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct FileServerConfig {
+    pub ip: Option<String>,
+    pub port: Option<u16>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct FileLanguageConfig {
+    pub extensions: Vec<String>,
+    pub command: String,
+    pub args: Option<Vec<String>>,
+}
 
 #[derive(Clone, Deserialize)]
 pub struct EditorMeta {

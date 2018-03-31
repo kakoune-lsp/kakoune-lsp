@@ -16,20 +16,15 @@ use std::thread::{self, JoinHandle};
 use types::*;
 use url::Url;
 
-// TODO read from config
-fn get_server_cmd(language_id: &str) -> Option<(String, Vec<String>)> {
-    match language_id {
-        "rust" => Some(("rls".to_string(), vec![])),
-        "javascript" => Some((
-            "flow-language-server".to_string(),
-            vec!["--stdio".to_string()],
-        )),
-        _ => None,
+fn get_server_cmd(config: &Config, language_id: &str) -> Option<(String, Vec<String>)> {
+    if let Some(language) = config.language.get(language_id) {
+        return Some((language.command.clone(), language.args.clone()));
     }
+    None
 }
 
-pub fn start() {
-    let (editor_tx, editor_rx) = editor_transport::start();
+pub fn start(config: &Config) {
+    let (editor_tx, editor_rx) = editor_transport::start(config);
     let mut controllers: FnvHashMap<Route, Sender<EditorRequest>> = FnvHashMap::default();
     for request in editor_rx {
         let route = request.route.clone();
@@ -42,7 +37,7 @@ pub fn start() {
                     .expect("Failed to route editor request");
             }
             None => {
-                let (lang_srv_cmd, lang_srv_args) = get_server_cmd(&language_id).unwrap();
+                let (lang_srv_cmd, lang_srv_args) = get_server_cmd(config, &language_id).unwrap();
                 // NOTE 1024 is arbitrary
                 let (controller_tx, controller_rx) = bounded(1024);
                 controllers.insert(route, controller_tx);

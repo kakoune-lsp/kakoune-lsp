@@ -1,0 +1,12 @@
+[server]
+ip = "127.0.0.1"
+port = 31337
+
+[language.rust]
+extensions = ["rs"]
+command = "rls"
+
+[language.javascript]
+extensions = ["js"]
+command = "flow-language-server"
+args = ["--stdio"]

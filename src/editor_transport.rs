@@ -1,4 +1,5 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
+use fnv::FnvHashMap;
 use project_root::find_project_root;
 use serde_json;
 use std::io::{Read, Write};
@@ -8,22 +9,24 @@ use std::process::{Command, Stdio};
 use std::thread;
 use types::*;
 
-fn get_language_id(path: &str) -> Option<String> {
-    match Path::new(path).extension()?.to_str()? {
-        "rs" => Some("rust".to_string()),
-        "js" => Some("javascript".to_string()),
-        _ => None,
-    }
+fn get_language_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
+    extensions
+        .get(Path::new(path).extension()?.to_str()?)
+        .cloned()
 }
 
-pub fn start() -> (Sender<EditorResponse>, Receiver<RoutedEditorRequest>) {
+pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorRequest>) {
+    let mut extensions = FnvHashMap::default();
+    for (language_id, language) in &config.language {
+        for extension in &language.extensions {
+            extensions.insert(extension.clone(), language_id.clone());
+        }
+    }
+    let port = config.server.port;
+    let ip = config.server.ip.parse().expect("Failed to parse IP");
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
     thread::spawn(move || {
-        // TODO configurable
-        let ip = "127.0.0.1".parse().unwrap();
-        // TODO configurable
-        let port = 31_337;
         let addr = SocketAddr::new(ip, port);
 
         let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
@@ -38,7 +41,8 @@ pub fn start() -> (Sender<EditorResponse>, Receiver<RoutedEditorRequest>) {
                 serde_json::from_str(&request).expect("Failed to parse editor request");
             let session = request.meta.session.clone();
             let buffile = request.meta.buffile.clone();
-            let language_id = get_language_id(&buffile).expect("Failed to recognize language");
+            let language_id =
+                get_language_id(&extensions, &buffile).expect("Failed to recognize language");
             let root_path = find_project_root(&buffile).expect("File must reside in project");
             let route = (session, language_id, root_path);
             let routed_request = RoutedEditorRequest { request, route };

@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 use std::thread;
 use types::*;
 
-pub fn start(cmd: &str, args: &Vec<String>) -> (Sender<ServerMessage>, Receiver<ServerMessage>) {
+pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<ServerMessage>) {
     let mut child = Command::new(cmd)
         .args(args)
         .stdin(Stdio::piped())
