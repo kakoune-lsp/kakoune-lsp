@@ -8,11 +8,13 @@ use languageserver_types::notification::Notification;
 use languageserver_types::request::Request;
 use regex::Regex;
 use serde_json::{self, Value};
+use serde::Deserialize;
 use std::fs::{remove_file, File};
 use std::io::Read;
 use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
+use toml;
 use types::*;
 use url::Url;
 
@@ -74,7 +76,7 @@ struct Context {
     language_id: String,
     pending_requests: Vec<EditorRequest>,
     request_counter: u64,
-    response_waitlist: FnvHashMap<Id, (EditorMeta, String, Params)>,
+    response_waitlist: FnvHashMap<Id, (EditorMeta, String, EditorParams)>,
     versions: FnvHashMap<String, u64>,
 }
 
@@ -185,7 +187,7 @@ impl Controller {
             (
                 initial_request_meta,
                 req.method.clone(),
-                req.params.clone().unwrap(),
+                toml::Value::Table(toml::value::Table::default()),
             ),
         );
         ctx.lang_srv_tx
@@ -247,47 +249,14 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     let buffile = &request.meta.buffile;
     if !ctx.versions.contains_key(buffile) {
         text_document_did_open(
-            (TextDocumentDidOpenParams {
-                text_document: VersionedTextDocumentIdentifier {
-                    uri: Url::parse(&format!("file://{}", buffile)).unwrap(),
-                    version: Some(request.meta.version),
-                },
-            }).to_params()
-                .unwrap(),
+            toml::Value::Table(toml::value::Table::default()),
             &request.meta,
             &mut ctx,
         );
     }
-    match request.call {
-        Call::Notification(notification) => {
-            dispatch_editor_notification(&request.meta, notification, &mut ctx);
-        }
-        Call::MethodCall(call) => {
-            dispatch_editor_call(&request.meta, &call, &mut ctx);
-        }
-        Call::Invalid(m) => {
-            panic!("Invalid call, shall not pass! {:?}", m);
-        }
-    }
-}
-
-fn dispatch_editor_call(
-    _meta: &EditorMeta,
-    _call: &jsonrpc_core::MethodCall,
-    mut _ctx: &mut Context,
-) {
-    println!("Method calls (requests which require response with id) from editor are not supported at the moment, how did you run into this branch of code?");
-}
-
-fn dispatch_editor_notification(
-    meta: &EditorMeta,
-    notification: jsonrpc_core::Notification,
-    mut ctx: &mut Context,
-) {
-    let params = notification
-        .params
-        .expect("All editor notifications must have parameters");
-    let method: &str = &notification.method;
+    let meta = &request.meta;
+    let params = request.params;
+    let method: &str = &request.method;
     match method {
         notification::DidOpenTextDocument::METHOD => {
             text_document_did_open(params, meta, &mut ctx);
@@ -311,7 +280,7 @@ fn dispatch_editor_notification(
             text_document_definition(params, meta, &mut ctx);
         }
         _ => {
-            println!("Unsupported method: {}", notification.method);
+            println!("Unsupported method: {}", request.method);
         }
     }
 }
@@ -319,7 +288,7 @@ fn dispatch_editor_notification(
 fn dispatch_server_response(
     meta: &EditorMeta,
     method: &str,
-    params: Params,
+    params: EditorParams,
     response: Value,
     mut ctx: &mut Context,
 ) {
@@ -327,7 +296,7 @@ fn dispatch_server_response(
         request::Completion::METHOD => {
             editor_completion(
                 meta,
-                &params.parse().expect("Failed to parse params"),
+                &TextDocumentCompletionParams::deserialize(params).expect("Failed to parse params"),
                 serde_json::from_value(response).expect("Failed to parse completion response"),
                 &mut ctx,
             );
@@ -335,7 +304,7 @@ fn dispatch_server_response(
         request::HoverRequest::METHOD => {
             editor_hover(
                 meta,
-                &params.parse().expect("Failed to parse params"),
+                &PositionParams::deserialize(params).expect("Failed to parse params"),
                 serde_json::from_value(response).expect("Failed to parse hover response"),
                 &mut ctx,
             );
@@ -343,7 +312,7 @@ fn dispatch_server_response(
         request::GotoDefinition::METHOD => {
             editor_definition(
                 meta,
-                &params.parse().expect("Failed to parse params"),
+                &PositionParams::deserialize(params).expect("Failed to parse params"),
                 serde_json::from_value(response).expect("Failed to parse definition response"),
                 &mut ctx,
             );
@@ -351,7 +320,7 @@ fn dispatch_server_response(
         request::Initialize::METHOD => {
             initialized(
                 meta,
-                &params.parse().unwrap(),
+                &toml::Value::Table(toml::value::Table::default()),
                 serde_json::from_value(response).expect("Failed to parse initialized response"),
                 &mut ctx,
             );
@@ -362,10 +331,7 @@ fn dispatch_server_response(
     }
 }
 
-fn text_document_did_open(params: Params, meta: &EditorMeta, ctx: &mut Context) {
-    let params: TextDocumentDidOpenParams = params
-        .parse()
-        .expect("Params should follow TextDocumentDidOpenParams structure");
+fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let language_id = ctx.language_id.clone();
     let mut file = File::open(&meta.buffile).expect("Failed to open file");
     let mut text = String::new();
@@ -373,9 +339,9 @@ fn text_document_did_open(params: Params, meta: &EditorMeta, ctx: &mut Context) 
         .expect("Failed to read from file");
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
-            uri: params.text_document.uri,
+            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
             language_id,
-            version: params.text_document.version.unwrap(),
+            version: meta.version,
             text,
         },
     };
@@ -383,18 +349,17 @@ fn text_document_did_open(params: Params, meta: &EditorMeta, ctx: &mut Context) 
     ctx.notify(notification::DidOpenTextDocument::METHOD.into(), params);
 }
 
-fn text_document_did_change(params: Params, meta: &EditorMeta, ctx: &mut Context) {
-    let params: TextDocumentDidChangeParams = params
-        .parse()
+fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let params = TextDocumentDidChangeParams::deserialize(params)
         .expect("Params should follow TextDocumentDidChangeParams structure");
-    let uri = params.text_document.uri;
-    let version = params.text_document.version.unwrap_or(0);
+    let uri = Url::parse(&format!("file://{}", &meta.buffile)).unwrap();
+    let version = meta.version;
     let old_version = ctx.versions.get(&meta.buffile).cloned().unwrap_or(0);
     if old_version >= version {
         return;
     }
     ctx.versions.insert(meta.buffile.clone(), version);
-    let file_path = params.text_document.draft;
+    let file_path = params.draft;
     let mut text = String::new();
     {
         let mut file = File::open(&file_path).expect("Failed to open file");
@@ -404,8 +369,8 @@ fn text_document_did_change(params: Params, meta: &EditorMeta, ctx: &mut Context
     remove_file(file_path).expect("Failed to remove temporary file");
     let params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
-            uri: uri.clone(),
-            version: params.text_document.version,
+            uri,
+            version: Some(meta.version),
         },
         content_changes: vec![
             TextDocumentContentChangeEvent {
@@ -418,37 +383,29 @@ fn text_document_did_change(params: Params, meta: &EditorMeta, ctx: &mut Context
     ctx.notify(notification::DidChangeTextDocument::METHOD.into(), params);
 }
 
-fn text_document_did_close(params: Params, _meta: &EditorMeta, ctx: &mut Context) {
-    let params: TextDocumentDidCloseParams = params
-        .parse()
-        .expect("Params should follow TextDocumentDidCloseParams structure");
-    let uri = params.text_document.uri;
+fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let uri = Url::parse(&format!("file://{}", &meta.buffile)).unwrap();
     let params = DidCloseTextDocumentParams {
-        text_document: TextDocumentIdentifier { uri: uri.clone() },
+        text_document: TextDocumentIdentifier { uri },
     };
     ctx.notify(notification::DidCloseTextDocument::METHOD.into(), params);
 }
 
-fn text_document_did_save(params: Params, _meta: &EditorMeta, ctx: &mut Context) {
-    let params: TextDocumentDidSaveParams = params
-        .parse()
-        .expect("Params should follow TextDocumentDidSaveParams structure");
-    let uri = params.text_document.uri;
+fn text_document_did_save(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let uri = Url::parse(&format!("file://{}", &meta.buffile)).unwrap();
     let params = DidSaveTextDocumentParams {
-        text_document: TextDocumentIdentifier { uri: uri.clone() },
+        text_document: TextDocumentIdentifier { uri },
     };
     ctx.notify(notification::DidSaveTextDocument::METHOD.into(), params);
 }
 
-fn text_document_completion(params: Params, meta: &EditorMeta, ctx: &mut Context) {
-    let req_params: TextDocumentCompletionParams = params
-        .clone()
-        .parse()
+fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let req_params = TextDocumentCompletionParams::deserialize(params.clone())
         .expect("Params should follow TextDocumentCompletionParams structure");
     let position = req_params.position;
     let req_params = CompletionParams {
         text_document: TextDocumentIdentifier {
-            uri: req_params.text_document.uri.clone(),
+            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
         },
         position,
         context: None,
@@ -462,11 +419,16 @@ fn text_document_completion(params: Params, meta: &EditorMeta, ctx: &mut Context
     ctx.call(id, request::Completion::METHOD.into(), req_params);
 }
 
-fn text_document_hover(params: Params, meta: &EditorMeta, ctx: &mut Context) {
-    let req_params: TextDocumentPositionParams = params
-        .clone()
-        .parse()
-        .expect("Params should follow TextDocumentPositionParams structure");
+fn text_document_hover(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let req_params = PositionParams::deserialize(params.clone())
+        .expect("Params should follow PositionParams structure");
+    let position = req_params.position;
+    let req_params = TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
+        },
+        position,
+    };
     // TODO DRY
     let id = Id::Num(ctx.request_counter);
     ctx.request_counter += 1;
@@ -477,11 +439,16 @@ fn text_document_hover(params: Params, meta: &EditorMeta, ctx: &mut Context) {
     ctx.call(id, request::HoverRequest::METHOD.into(), req_params);
 }
 
-fn text_document_definition(params: Params, meta: &EditorMeta, ctx: &mut Context) {
-    let req_params: TextDocumentPositionParams = params
-        .clone()
-        .parse()
-        .expect("Params should follow TextDocumentPositionParams structure");
+fn text_document_definition(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let req_params = PositionParams::deserialize(params.clone())
+        .expect("Params should follow PositionParams structure");
+    let position = req_params.position;
+    let req_params = TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
+        },
+        position,
+    };
     // TODO DRY
     let id = Id::Num(ctx.request_counter);
     ctx.request_counter += 1;
@@ -521,7 +488,7 @@ fn editor_completion(
         meta.buffile,
         p.line + 1,
         p.character + 1 - params.completion.offset,
-        params.text_document.version.unwrap(),
+        meta.version,
         items
     );
     ctx.editor_tx
@@ -532,12 +499,7 @@ fn editor_completion(
         .expect("Failed to send message to editor transport");
 }
 
-fn editor_hover(
-    meta: &EditorMeta,
-    _params: &TextDocumentPositionParams,
-    result: Hover,
-    ctx: &mut Context,
-) {
+fn editor_hover(meta: &EditorMeta, _params: &PositionParams, result: Hover, ctx: &mut Context) {
     let contents = match result.contents {
         HoverContents::Scalar(contents) => contents.plaintext(),
         HoverContents::Array(contents) => contents
@@ -561,7 +523,7 @@ fn editor_hover(
 
 fn editor_definition(
     meta: &EditorMeta,
-    _params: &TextDocumentPositionParams,
+    _params: &PositionParams,
     result: GotoDefinitionResponse,
     ctx: &mut Context,
 ) {
@@ -584,7 +546,7 @@ fn editor_definition(
 
 fn initialized(
     _meta: &EditorMeta,
-    _params: &InitializedParams,
+    _params: &EditorParams,
     result: InitializeResult,
     mut ctx: &mut Context,
 ) {

@@ -4,25 +4,15 @@ decl -hidden completions lsp_completions
 def lsp-did-change %{
     decl -hidden str lsp_draft %sh{ mktemp }
     eval -no-hooks write %opt{lsp_draft}
-    nop %sh{ printf '{
-            "meta": {
-                "session" : "%s",
-                "client"  : "%s",
-                "buffile" : "%s",
-                "version" : %d
-            },
-            "call": {
-                "jsonrpc" : "2.0",
-                "method"  : "textDocument/didChange",
-                "params"  : {
-                    "textDocument" : {
-                        "uri"      : "file://%s",
-                        "version"  : %d,
-                        "draft"    : "%s"
-                    }
-                }
-            }
-        }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" ${kak_opt_lsp_draft} | ${kak_opt_lsp_cmd} }
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/didChange"
+[params]
+draft   = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-completion %{
@@ -33,142 +23,77 @@ def lsp-completion %{
     } catch %{
         set buffer lsp_completion_offset "0"
     }}
-    nop %sh{ printf '{
-        "meta": {
-            "session" : "%s",
-            "client"  : "%s",
-            "buffile" : "%s",
-            "version" : %d
-        },
-        "call" : {
-            "jsonrpc" : "2.0",
-            "method"  : "textDocument/completion",
-            "params"  : {
-                "textDocument" : {
-                    "uri"      : "file://%s",
-                    "version"  : %d
-                },
-                "position": {
-                    "line"     : %d,
-                    "character": %d
-                },
-                "completion" : {
-                    "offset" : %d
-                }
-            }
-        }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd} }
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "textDocument/completion"
+[params.position]
+line      = %d
+character = %d
+[params.completion]
+offset    = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-hover %{
-    nop %sh{ printf '{
-        "meta": {
-            "session" : "%s",
-            "client"  : "%s",
-            "buffile" : "%s",
-            "version" : %d
-        },
-        "call" : {
-            "jsonrpc" : "2.0",
-            "method"  : "textDocument/hover",
-            "params"  : {
-                "textDocument" : {
-                    "uri"      : "file://%s"
-                },
-                "position": {
-                    "line"     : %d,
-                    "character": %d
-                }
-            }
-        }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd} }
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "textDocument/hover"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-definition %{
-    nop %sh{ printf '{
-        "meta": {
-            "session" : "%s",
-            "client"  : "%s",
-            "buffile" : "%s",
-            "version" : %d
-        },
-        "call" : {
-            "jsonrpc" : "2.0",
-            "method"  : "textDocument/definition",
-            "params"  : {
-                "textDocument" : {
-                    "uri"      : "file://%s"
-                },
-                "position": {
-                    "line"     : %d,
-                    "character": %d
-                }
-            }
-        }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd} }
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "textDocument/definition"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-did-open %{
-    nop %sh{printf '{
-        "meta": {
-            "session" : "%s",
-            "client"  : "%s",
-            "buffile" : "%s",
-            "version" : %d
-        },
-        "call" : {
-            "jsonrpc" : "2.0",
-            "method"  : "textDocument/didOpen",
-            "params"  : {
-                "textDocument" : {
-                    "uri"      : "file://%s",
-                    "version"  : %d
-                }
-            }
-        }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/didOpen"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-did-close %{
-    nop %sh{printf '{
-        "meta": {
-            "session" : "%s",
-            "client"  : "%s",
-            "buffile" : "%s",
-            "version" : %d
-        },
-        "call" : {
-            "jsonrpc" : "2.0",
-            "method"  : "textDocument/didClose",
-            "params"  : {
-                "textDocument" : {
-                    "uri"      : "file://%s",
-                    "version"  : %d
-                }
-            }
-        }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/didClose"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-did-save %{
-    nop %sh{printf '{
-        "meta": {
-            "session" : "%s",
-            "client"  : "%s",
-            "buffile" : "%s",
-            "version" : %d
-        },
-        "call" : {
-            "jsonrpc" : "2.0",
-            "method"  : "textDocument/didSave",
-            "params"  : {
-                "textDocument" : {
-                    "uri"      : "file://%s",
-                    "version"  : %d
-                }
-            }
-        }
-    }\n' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}}
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/didSave"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-enable %{

@@ -1,3 +1,5 @@
+#![feature(match_default_bindings)]
+#![feature(try_trait)]
 #![feature(getpid)]
 
 extern crate clap;
@@ -12,7 +14,6 @@ extern crate serde_derive;
 extern crate serde;
 extern crate toml;
 extern crate url;
-extern crate url_serde;
 
 mod types;
 mod project_root;

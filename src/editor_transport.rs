@@ -1,12 +1,12 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
 use fnv::FnvHashMap;
 use project_root::find_project_root;
-use serde_json;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener};
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread;
+use toml;
 use types::*;
 
 fn get_language_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
@@ -39,14 +39,13 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
                 .read_to_string(&mut request)
                 .expect("Failed to read from TCP stream");
             let request: EditorRequest =
-                serde_json::from_str(&request).expect("Failed to parse editor request");
+                toml::from_str(&request).expect("Failed to parse editor request");
             let session = request.meta.session.clone();
             let buffile = request.meta.buffile.clone();
             let language_id =
                 get_language_id(&extensions, &buffile).expect("Failed to recognize language");
-            let root_path =
-                find_project_root(&languages.get(&language_id).unwrap().roots, &buffile)
-                    .expect("File must reside in project");
+            let root_path = find_project_root(&languages[&language_id].roots, &buffile)
+                .expect("File must reside in project");
             let route = (session, language_id, root_path);
             let routed_request = RoutedEditorRequest { request, route };
             reader_tx

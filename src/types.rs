@@ -4,8 +4,7 @@ use languageserver_types::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::io::Error;
-use url::Url;
-use url_serde;
+use toml;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
@@ -55,10 +54,14 @@ pub struct EditorMeta {
     pub version: u64,
 }
 
+pub type EditorParams = toml::Value;
+
 #[derive(Deserialize)]
 pub struct EditorRequest {
+    #[serde(flatten)]
     pub meta: EditorMeta,
-    pub call: Call,
+    pub method: String,
+    pub params: EditorParams,
 }
 
 #[derive(Deserialize)]
@@ -107,49 +110,25 @@ where
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Completion {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EditorCompletion {
     pub offset: u64,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct TextDraft {
-    #[serde(with = "url_serde")]
-    pub uri: Url,
-    pub version: Option<u64>,
+pub struct TextDocumentDidChangeParams {
     pub draft: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct TextDocumentDidOpenParams {
-    #[serde(rename = "textDocument")]
-    pub text_document: VersionedTextDocumentIdentifier,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct TextDocumentDidChangeParams {
-    #[serde(rename = "textDocument")]
-    pub text_document: TextDraft,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct TextDocumentDidCloseParams {
-    #[serde(rename = "textDocument")]
-    pub text_document: VersionedTextDocumentIdentifier,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct TextDocumentDidSaveParams {
-    #[serde(rename = "textDocument")]
-    pub text_document: VersionedTextDocumentIdentifier,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct TextDocumentCompletionParams {
-    #[serde(rename = "textDocument")]
-    pub text_document: VersionedTextDocumentIdentifier,
     pub position: Position,
-    pub completion: Completion,
+    pub completion: EditorCompletion,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PositionParams {
+    pub position: Position,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
