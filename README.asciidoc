@@ -18,7 +18,7 @@ ln $PWD/rc ~/.config/kak/autoload/lsp
 mkdir -p ~/.config/kak-lsp 
 cp kak-lsp.toml ~/.config/kak-lsp/
 # service for MacOS to not bother with manual start/restart
-ln -s com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
+ln -s $PWD/com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
 launchctl load com.github.ul.kak-lsp.plist
 ----
 
