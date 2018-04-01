@@ -26,6 +26,7 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
     let ip = config.server.ip.parse().expect("Failed to parse IP");
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
+    let languages = config.language.clone();
     thread::spawn(move || {
         let addr = SocketAddr::new(ip, port);
 
@@ -43,7 +44,9 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
             let buffile = request.meta.buffile.clone();
             let language_id =
                 get_language_id(&extensions, &buffile).expect("Failed to recognize language");
-            let root_path = find_project_root(&buffile).expect("File must reside in project");
+            let root_path =
+                find_project_root(&languages.get(&language_id).unwrap().roots, &buffile)
+                    .expect("File must reside in project");
             let route = (session, language_id, root_path);
             let routed_request = RoutedEditorRequest { request, route };
             reader_tx

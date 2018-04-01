@@ -68,6 +68,7 @@ fn main() {
             language_id,
             LanguageConfig {
                 extensions: lang.extensions,
+                roots: lang.roots,
                 command: lang.command,
                 args: lang.args.unwrap_or_else(Vec::new),
             },

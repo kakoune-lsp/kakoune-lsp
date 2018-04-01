@@ -1,16 +1,12 @@
 use std::path::{Path, PathBuf};
 
-pub fn find_project_root(path: &str) -> Option<String> {
+pub fn find_project_root(roots: &[String], path: &str) -> Option<String> {
     let mut pwd = PathBuf::from(path);
     if pwd.is_file() {
         pwd.pop();
     }
 
-    // TODO depend on language_id and read from config
-    let names: Vec<&Path> = ["package.json", "Cargo.toml"]
-        .iter()
-        .map(|x| Path::new(x))
-        .collect();
+    let names: Vec<&Path> = roots.iter().map(|x| Path::new(x)).collect();
 
     loop {
         for name in &names {

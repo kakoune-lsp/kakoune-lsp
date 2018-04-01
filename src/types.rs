@@ -19,9 +19,10 @@ pub struct ServerConfig {
     pub port: u16,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct LanguageConfig {
     pub extensions: Vec<String>,
+    pub roots: Vec<String>,
     pub command: String,
     pub args: Vec<String>,
 }
@@ -41,6 +42,7 @@ pub struct FileServerConfig {
 #[derive(Deserialize, Debug)]
 pub struct FileLanguageConfig {
     pub extensions: Vec<String>,
+    pub roots: Vec<String>,
     pub command: String,
     pub args: Option<Vec<String>>,
 }

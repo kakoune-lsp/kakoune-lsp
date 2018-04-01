@@ -4,9 +4,11 @@ port = 31337
 
 [language.rust]
 extensions = ["rs"]
+roots = ["Cargo.toml"]
 command = "rls"
 
 [language.javascript]
 extensions = ["js"]
+roots = ["package.json"]
 command = "flow-language-server"
 args = ["--stdio"]
