@@ -67,12 +67,20 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
                 .expect("Failed to run Kakoune");
             {
                 let stdin = child.stdin.as_mut().expect("Failed to get editor stdin");
-                // NOTE fingers crossed no 🦀 will appear in response.command
-                write!(
-                    stdin,
-                    "eval -client {} %🦀{}🦀",
-                    response.meta.client, response.command
-                ).expect("Failed to write to editor stdin");
+                match response.meta.client {
+                    Some(client) => {
+                        // NOTE fingers crossed no 🦀 will appear in response.command
+                        write!(
+                            stdin,
+                            "eval -client {} %🦀{}🦀",
+                            client, response.command
+                        ).expect("Failed to write to editor stdin");
+                    }
+                    None => {
+                        write!(stdin, "{}", response.command)
+                            .expect("Failed to write to editor stdin");
+                    }
+                }
             }
             child.wait().unwrap();
         }

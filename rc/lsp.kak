@@ -1,5 +1,6 @@
 decl str lsp_cmd 'nc localhost 31337'
 decl -hidden completions lsp_completions
+decl -hidden range-specs lsp_errors 
 
 def lsp-did-change %{
     decl -hidden str lsp_draft %sh{ mktemp }
@@ -98,6 +99,7 @@ method  = "textDocument/didSave"
 
 def lsp-enable %{
     set buffer completers "option=lsp_completions:%opt{completers}"
+    add-highlighter buffer/ ranges lsp_errors
 
     lsp-did-open
 

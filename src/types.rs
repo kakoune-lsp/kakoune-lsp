@@ -49,7 +49,7 @@ pub struct FileLanguageConfig {
 #[derive(Clone, Deserialize)]
 pub struct EditorMeta {
     pub session: String,
-    pub client: String,
+    pub client: Option<String>,
     pub buffile: String,
     pub version: u64,
 }

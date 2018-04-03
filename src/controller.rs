@@ -77,6 +77,7 @@ struct Context {
     pending_requests: Vec<EditorRequest>,
     request_counter: u64,
     response_waitlist: FnvHashMap<Id, (EditorMeta, String, EditorParams)>,
+    session: SessionId,
     versions: FnvHashMap<String, u64>,
 }
 
@@ -103,6 +104,12 @@ impl Context {
             .send(ServerMessage::Request(Call::Notification(notification)))
             .expect("Failed to send request to language server transport");
     }
+
+    fn exec(&self, meta: EditorMeta, command: String) {
+        self.editor_tx
+            .send(EditorResponse { meta, command })
+            .expect("Failed to send message to editor transport");
+    }
 }
 
 impl Controller {
@@ -124,6 +131,7 @@ impl Controller {
             pending_requests: vec![initial_request],
             request_counter: 0,
             response_waitlist: FnvHashMap::default(),
+            session: initial_request_meta.session.clone(),
             versions: FnvHashMap::default(),
         }));
 
@@ -143,9 +151,24 @@ impl Controller {
         thread::spawn(move || {
             for msg in lang_srv_rx {
                 match msg {
-                    ServerMessage::Request(_) => {
-                        //println!("Requests from language server are not supported yet");
-                        //println!("{:?}", request);
+                    ServerMessage::Request(call) => {
+                        let mut ctx = ctx.lock().expect("Failed to lock context");
+                        match call {
+                            Call::MethodCall(_request) => {
+                                //println!("Requests from language server are not supported yet");
+                                //println!("{:?}", request);
+                            }
+                            Call::Notification(notification) => {
+                                dispatch_server_notification(
+                                    &notification.method,
+                                    notification.params.unwrap(),
+                                    &mut ctx,
+                                );
+                            }
+                            Call::Invalid(m) => {
+                                println!("Invalid call from language server: {:?}", m);
+                            }
+                        }
                     }
                     ServerMessage::Response(output) => {
                         let mut ctx = ctx.lock().expect("Failed to lock context");
@@ -281,6 +304,18 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
         _ => {
             println!("Unsupported method: {}", request.method);
+        }
+    }
+}
+
+fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Context) {
+    match method {
+        notification::PublishDiagnostics::METHOD => {
+            publish_diagnostics(params.parse().expect("Failed to parse params"), &mut ctx);
+        }
+        "window/progress" => {}
+        _ => {
+            println!("Unsupported method: {}", method);
         }
     }
 }
@@ -491,12 +526,7 @@ fn editor_completion(
         meta.version,
         items
     );
-    ctx.editor_tx
-        .send(EditorResponse {
-            meta: meta.clone(),
-            command,
-        })
-        .expect("Failed to send message to editor transport");
+    ctx.exec(meta.clone(), command);
 }
 
 fn editor_hover(meta: &EditorMeta, _params: &PositionParams, result: Hover, ctx: &mut Context) {
@@ -513,12 +543,7 @@ fn editor_hover(meta: &EditorMeta, _params: &PositionParams, result: Hover, ctx:
         return;
     }
     let command = format!("info %§{}§", contents);
-    ctx.editor_tx
-        .send(EditorResponse {
-            meta: meta.clone(),
-            command,
-        })
-        .expect("Failed to send message to editor transport");
+    ctx.exec(meta.clone(), command);
 }
 
 fn editor_definition(
@@ -535,12 +560,7 @@ fn editor_definition(
         let filename = location.uri.path();
         let p = location.range.start;
         let command = format!("edit %§{}§ {} {}", filename, p.line + 1, p.character + 1);
-        ctx.editor_tx
-            .send(EditorResponse {
-                meta: meta.clone(),
-                command,
-            })
-            .expect("Failed to send message to editor transport");
+        ctx.exec(meta.clone(), command);
     };
 }
 
@@ -559,6 +579,46 @@ fn initialized(
     for msg in requests.drain(..) {
         dispatch_editor_request(msg, &mut ctx);
     }
+}
+
+fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) {
+    let session = ctx.session.clone();
+    let client = None;
+    let buffile = params.uri.path().to_string();
+    let version = ctx.versions.get(&buffile);
+    if version.is_none() {
+        return;
+    }
+    let version = *version.unwrap();
+    // TODO version as timestamp
+    // TODO handle empty case
+    // looks like we need to save diagnostics and show their message on hover, not only highlight
+    let ranges = params
+        .diagnostics
+        .iter()
+        .map(|x| {
+            format!(
+                "{}.{},{}.{}|red",
+                x.range.start.line + 1,
+                x.range.start.character + 1,
+                x.range.end.line + 1,
+                // LSP ranges are exclusive, but Kakoune's are inclusive
+                x.range.end.character
+            )
+        })
+        .collect::<Vec<String>>()
+        .join(":");
+    let command = format!(
+        "eval -buffer %{{{}}} %{{set buffer lsp_errors \"%val{{timestamp}}:{}\"}}",
+        buffile, ranges
+    );
+    let meta = EditorMeta {
+        session,
+        client,
+        buffile,
+        version,
+    };
+    ctx.exec(meta, command.to_string());
 }
 
 trait PlainText {
