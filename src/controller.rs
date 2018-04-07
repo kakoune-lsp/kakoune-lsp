@@ -630,7 +630,7 @@ fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) {
         .iter()
         .map(|x| {
             format!(
-                "{}.{},{}.{}|red",
+                "{}.{},{}.{}|Error",
                 x.range.start.line + 1,
                 x.range.start.character + 1,
                 x.range.end.line + 1,
