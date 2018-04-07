@@ -72,6 +72,7 @@ struct Controller {
 struct Context {
     capabilities: Option<ServerCapabilities>,
     editor_tx: Sender<EditorResponse>,
+    diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
     lang_srv_tx: Sender<ServerMessage>,
     language_id: String,
     pending_requests: Vec<EditorRequest>,
@@ -125,6 +126,7 @@ impl Controller {
         let initial_request_meta = initial_request.meta.clone();
         let ctx_src = Arc::new(Mutex::new(Context {
             capabilities: None,
+            diagnostics: FnvHashMap::default(),
             editor_tx,
             lang_srv_tx,
             language_id: language_id.to_string(),
@@ -394,6 +396,7 @@ fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &mut C
         return;
     }
     ctx.versions.insert(meta.buffile.clone(), version);
+    ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
     let file_path = params.draft;
     let mut text = String::new();
     {
@@ -529,7 +532,31 @@ fn editor_completion(
     ctx.exec(meta.clone(), command);
 }
 
-fn editor_hover(meta: &EditorMeta, _params: &PositionParams, result: Hover, ctx: &mut Context) {
+fn editor_hover(meta: &EditorMeta, params: &PositionParams, result: Hover, ctx: &mut Context) {
+    let diagnostics = ctx.diagnostics.get(&meta.buffile);
+    let pos = params.position;
+    let diagnostics = diagnostics
+        .and_then(|x| {
+            Some(
+                x.iter()
+                    .filter(|x| {
+                        let start = x.range.start;
+                        let end = x.range.end;
+                        (start.line < pos.line && pos.line < end.line)
+                            || (start.line == pos.line && pos.line == end.line
+                                && start.character <= pos.character
+                                && pos.character <= end.character)
+                            || (start.line == pos.line && pos.line <= end.line
+                                && start.character <= pos.character)
+                            || (start.line <= pos.line && end.line == pos.line
+                                && pos.character <= end.character)
+                    })
+                    .map(|x| x.message.to_string())
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+            )
+        })
+        .unwrap_or_else(String::new);
     let contents = match result.contents {
         HoverContents::Scalar(contents) => contents.plaintext(),
         HoverContents::Array(contents) => contents
@@ -539,10 +566,18 @@ fn editor_hover(meta: &EditorMeta, _params: &PositionParams, result: Hover, ctx:
             .join("\n"),
         HoverContents::Markup(contents) => contents.value,
     };
-    if contents.is_empty() {
+    if contents.is_empty() && diagnostics.is_empty() {
         return;
     }
-    let command = format!("info %§{}§", contents);
+    let command;
+    if diagnostics.is_empty() {
+        command = format!("info %§{}§", contents);
+    } else if contents.is_empty() {
+        command = format!("info %§{}§", diagnostics);
+    } else {
+        command = format!("info %§{}\n\n{}§", contents, diagnostics);
+    }
+
     ctx.exec(meta.clone(), command);
 }
 
@@ -590,9 +625,6 @@ fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) {
         return;
     }
     let version = *version.unwrap();
-    // TODO version as timestamp
-    // TODO handle empty case
-    // looks like we need to save diagnostics and show their message on hover, not only highlight
     let ranges = params
         .diagnostics
         .iter()
@@ -609,9 +641,10 @@ fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) {
         .collect::<Vec<String>>()
         .join(":");
     let command = format!(
-        "eval -buffer %{{{}}} %{{set buffer lsp_errors \"%val{{timestamp}}:{}\"}}",
-        buffile, ranges
+        "eval -buffer %§{}§ %§set buffer lsp_errors \"{}:{}\"§",
+        buffile, version, ranges
     );
+    ctx.diagnostics.insert(buffile.clone(), params.diagnostics);
     let meta = EditorMeta {
         session,
         client,

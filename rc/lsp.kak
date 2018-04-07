@@ -112,6 +112,7 @@ def lsp-enable %{
         lsp-completion
     }
     hook -group lsp window NormalIdle .* %{
+        lsp-did-change
         lsp-hover
     }
 }

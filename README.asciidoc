@@ -44,3 +44,5 @@ kak-lsp is configured via configuration file in https://github.com/toml-lang/tom
 
 Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
 
+When changing address and port don't forget to update them in `rc/lsp.kak`: `decl str lsp_cmd 'nc localhost 31337'`
+
