@@ -107,11 +107,11 @@ def lsp-enable %{
 
     hook -group lsp buffer BufClose .* lsp-did-close
     hook -group lsp buffer BufWritePost .* lsp-did-save
-    hook -group lsp window InsertIdle .* %{
+    hook -group lsp buffer InsertIdle .* %{
         lsp-did-change
         lsp-completion
     }
-    hook -group lsp window NormalIdle .* %{
+    hook -group lsp buffer NormalIdle .* %{
         lsp-did-change
         lsp-hover
     }
