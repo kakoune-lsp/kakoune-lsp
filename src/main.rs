@@ -22,7 +22,6 @@ mod editor_transport;
 mod controller;
 
 use clap::App;
-use fnv::FnvHashMap;
 use std::io::{BufReader, Read};
 use std::fs::File;
 use std::path::Path;
@@ -60,37 +59,15 @@ fn main() {
         .read_to_string(&mut config)
         .expect("Failed to read config");
 
-    let config: FileConfig = toml::from_str(&config).expect("Failed to parse config file");
+    let mut config: Config = toml::from_str(&config).expect("Failed to parse config file");
 
-    let mut language = FnvHashMap::default();
-
-    for (language_id, lang) in config.language {
-        language.insert(
-            language_id,
-            LanguageConfig {
-                extensions: lang.extensions,
-                roots: lang.roots,
-                command: lang.command,
-                args: lang.args.unwrap_or_else(Vec::new),
-            },
-        );
+    if let Some(port) = matches.value_of("port") {
+        config.server.port = port.parse().unwrap();
     }
 
-    let config = Config {
-        server: ServerConfig {
-            port: matches
-                .value_of("port")
-                .and_then(|x| x.parse().ok())
-                .or(config.server.as_ref().and_then(|x| x.port))
-                .unwrap_or(31_337),
-            ip: matches
-                .value_of("ip")
-                .and_then(|x| Some(x.to_string()))
-                .or(config.server.and_then(|x| x.ip))
-                .unwrap_or_else(|| "127.0.0.1".to_string()),
-        },
-        language,
-    };
+    if let Some(ip) = matches.value_of("ip") {
+        config.server.ip = ip.to_string();
+    }
 
     controller::start(&config);
 }

@@ -6,15 +6,20 @@ use serde_json::Value;
 use std::io::Error;
 use toml;
 
+// Configuration
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub language: FnvHashMap<String, LanguageConfig>,
+    #[serde(default)]
     pub server: ServerConfig,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ServerConfig {
+    #[serde(default = "default_ip")]
     pub ip: String,
+    #[serde(default = "default_port")]
     pub port: u16,
 }
 
@@ -23,28 +28,28 @@ pub struct LanguageConfig {
     pub extensions: Vec<String>,
     pub roots: Vec<String>,
     pub command: String,
+    #[serde(default)]
     pub args: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct FileConfig {
-    pub language: FnvHashMap<String, FileLanguageConfig>,
-    pub server: Option<FileServerConfig>,
+impl Default for ServerConfig {
+    fn default() -> Self {
+        ServerConfig {
+            ip: default_ip(),
+            port: default_port(),
+        }
+    }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct FileServerConfig {
-    pub ip: Option<String>,
-    pub port: Option<u16>,
+fn default_ip() -> String {
+    "127.0.0.1".to_string()
 }
 
-#[derive(Deserialize, Debug)]
-pub struct FileLanguageConfig {
-    pub extensions: Vec<String>,
-    pub roots: Vec<String>,
-    pub command: String,
-    pub args: Option<Vec<String>>,
+fn default_port() -> u16 {
+    31337
 }
+
+// Editor
 
 #[derive(Clone, Deserialize)]
 pub struct EditorMeta {
@@ -80,6 +85,29 @@ pub struct RoutedEditorRequest {
     pub route: Route,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EditorCompletion {
+    pub offset: u64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TextDocumentDidChangeParams {
+    pub draft: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TextDocumentCompletionParams {
+    pub position: Position,
+    pub completion: EditorCompletion,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PositionParams {
+    pub position: Position,
+}
+
+// Language Server
+
 // XXX serde(untagged) ?
 pub enum ServerMessage {
     Request(Call),
@@ -108,27 +136,6 @@ where
 
         Ok(params)
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EditorCompletion {
-    pub offset: u64,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct TextDocumentDidChangeParams {
-    pub draft: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TextDocumentCompletionParams {
-    pub position: Position,
-    pub completion: EditorCompletion,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct PositionParams {
-    pub position: Position,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
