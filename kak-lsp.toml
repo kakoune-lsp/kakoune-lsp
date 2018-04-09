@@ -12,3 +12,21 @@ extensions = ["js"]
 roots = ["package.json"]
 command = "flow-language-server"
 args = ["--stdio"]
+
+[language.json]
+extensions = ["json"]
+roots = ["package.json"]
+command = "json-languageserver"
+args = ["--stdio"]
+
+[language.css]
+extensions = ["css"]
+roots = ["package.json"]
+command = "css-languageserver"
+args = ["--stdio"]
+
+[language.html]
+extensions = ["html"]
+roots = ["package.json"]
+command = "html-languageserver"
+args = ["--stdio"]
