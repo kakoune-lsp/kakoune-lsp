@@ -111,6 +111,12 @@ impl Context {
             .send(EditorResponse { meta, command })
             .expect("Failed to send message to editor transport");
     }
+
+    fn next_request_id(&mut self) -> Id {
+        let id = Id::Num(self.request_counter);
+        self.request_counter += 1;
+        id
+    }
 }
 
 impl Controller {
@@ -200,7 +206,7 @@ impl Controller {
         });
 
         let mut ctx = ctx_src.lock().expect("Failed to lock context");
-        let req_id = Id::Num(ctx.request_counter);
+        let req_id = ctx.next_request_id();
         let req = jsonrpc_core::MethodCall {
             jsonrpc: Some(Version::V2),
             id: req_id.clone(),
@@ -453,8 +459,7 @@ fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &mut C
         position,
         context: None,
     };
-    let id = Id::Num(ctx.request_counter);
-    ctx.request_counter += 1;
+    let id = ctx.next_request_id();
     ctx.response_waitlist.insert(
         id.clone(),
         (meta.clone(), request::Completion::METHOD.into(), params),
@@ -472,9 +477,7 @@ fn text_document_hover(params: EditorParams, meta: &EditorMeta, ctx: &mut Contex
         },
         position,
     };
-    // TODO DRY
-    let id = Id::Num(ctx.request_counter);
-    ctx.request_counter += 1;
+    let id = ctx.next_request_id();
     ctx.response_waitlist.insert(
         id.clone(),
         (meta.clone(), request::HoverRequest::METHOD.into(), params),
@@ -492,9 +495,7 @@ fn text_document_definition(params: EditorParams, meta: &EditorMeta, ctx: &mut C
         },
         position,
     };
-    // TODO DRY
-    let id = Id::Num(ctx.request_counter);
-    ctx.request_counter += 1;
+    let id = ctx.next_request_id();
     ctx.response_waitlist.insert(
         id.clone(),
         (meta.clone(), request::GotoDefinition::METHOD.into(), params),
