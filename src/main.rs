@@ -1,5 +1,3 @@
-#![feature(match_default_bindings)]
-#![feature(try_trait)]
 #![feature(getpid)]
 
 extern crate clap;

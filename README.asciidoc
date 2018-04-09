@@ -6,15 +6,23 @@ Implemented in Rust.
 Installation
 -----------
 
+`kak-lsp` requires nightly Rust because of using `getpid` feature (LSP requires sending client pid in initialize reqest).
+
 ----
 git clone https://github.com/ul/kak-lsp
 cd kak-lsp
-cargo build --release
+
+rustup install nightly
+rustup run nightly cargo build --release
+
 # replace `~/.local/bin/` with something on your `$PATH`
 ln -s $PWD/target/release/kak-lsp ~/.local/bin/
-ln $PWD/rc ~/.config/kak/autoload/lsp
+ln -s $PWD/rc ~/.config/kak/autoload/lsp
+
 mkdir -p ~/.config/kak-lsp 
+# or just link if you are okay with default config
 cp kak-lsp.toml ~/.config/kak-lsp/
+
 # service for MacOS to not bother with manual start/restart
 ln -s $PWD/com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
 launchctl load com.github.ul.kak-lsp.plist
