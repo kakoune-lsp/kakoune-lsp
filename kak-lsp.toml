@@ -30,3 +30,15 @@ extensions = ["html"]
 roots = ["package.json"]
 command = "html-languageserver"
 args = ["--stdio"]
+
+[language.ocaml]
+extensions = ["ml", "mli"]
+roots = ["Makefile", ".git"]
+command = "ocaml-language-server"
+args = ["--stdio"]
+
+[language.reason]
+extensions = ["re", "rei"]
+roots = ["package.json", "Makefile", ".git"]
+command = "ocaml-language-server"
+args = ["--stdio"]
