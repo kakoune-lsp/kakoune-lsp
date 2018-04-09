@@ -339,10 +339,15 @@ fn dispatch_server_response(
             );
         }
         request::HoverRequest::METHOD => {
+            let response = if response.is_null() {
+                None
+            } else {
+                Some(serde_json::from_value(response).expect("Failed to parse hover response"))
+            };
             editor_hover(
                 meta,
                 &PositionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse hover response"),
+                response,
                 &mut ctx,
             );
         }
@@ -532,7 +537,12 @@ fn editor_completion(
     ctx.exec(meta.clone(), command);
 }
 
-fn editor_hover(meta: &EditorMeta, params: &PositionParams, result: Hover, ctx: &mut Context) {
+fn editor_hover(
+    meta: &EditorMeta,
+    params: &PositionParams,
+    result: Option<Hover>,
+    ctx: &mut Context,
+) {
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
     let pos = params.position;
     let diagnostics = diagnostics
@@ -557,14 +567,17 @@ fn editor_hover(meta: &EditorMeta, params: &PositionParams, result: Hover, ctx: 
             )
         })
         .unwrap_or_else(String::new);
-    let contents = match result.contents {
-        HoverContents::Scalar(contents) => contents.plaintext(),
-        HoverContents::Array(contents) => contents
-            .into_iter()
-            .map(|x| x.plaintext())
-            .collect::<Vec<String>>()
-            .join("\n"),
-        HoverContents::Markup(contents) => contents.value,
+    let contents = match result {
+        None => "".to_string(),
+        Some(result) => match result.contents {
+            HoverContents::Scalar(contents) => contents.plaintext(),
+            HoverContents::Array(contents) => contents
+                .into_iter()
+                .map(|x| x.plaintext())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            HoverContents::Markup(contents) => contents.value,
+        },
     };
     if contents.is_empty() && diagnostics.is_empty() {
         return;
