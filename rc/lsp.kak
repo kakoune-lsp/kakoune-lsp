@@ -20,9 +20,9 @@ def lsp-completion %{
     decl -hidden str lsp_completion_offset
     eval -draft %{ try %{
         execute-keys <esc><a-h>s\w+.\z<ret>
-        set buffer lsp_completion_offset %sh{echo $(expr ${#kak_selection} - 1)}
+        set window lsp_completion_offset %sh{echo $(expr ${#kak_selection} - 1)}
     } catch %{
-        set buffer lsp_completion_offset "0"
+        set window lsp_completion_offset "0"
     }}
     nop %sh{ (printf '
 session   = "%s"

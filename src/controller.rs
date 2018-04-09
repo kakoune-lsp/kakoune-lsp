@@ -527,8 +527,7 @@ fn editor_completion(
         .join(":");
     let p = params.position;
     let command = format!(
-        "set %{{buffer={}}} lsp_completions %§{}.{}@{}:{}§\n",
-        meta.buffile,
+        "set window lsp_completions %§{}.{}@{}:{}§\n",
         p.line + 1,
         p.character + 1 - params.completion.offset,
         meta.version,
