@@ -4,6 +4,7 @@ Implemented in Rust.
 
 == Installation
 
+`kak-lsp` doesn't manage installation of language servers, please install them by yourself for the languages you plan to use `kak-lsp` with. Please consult  https://github.com/ul/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for quick installation of language servers supported by `kak-lsp` out of the box.
 
 === Pre-built binaries
 
