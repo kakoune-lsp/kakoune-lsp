@@ -1,10 +1,47 @@
-Kakoune Language Server Protocol Client
----------------------------------------
+= Kakoune Language Server Protocol Client
 
 Implemented in Rust.
 
-Installation
------------
+== Installation
+
+
+=== Pre-built binaries
+
+==== MacOS
+
+----
+curl -O -L https://github.com/ul/kak-lsp/releases/download/v1.0/kak-lsp.x86_64-apple-darwin.tar.gz
+tar xzvf kak-lsp.x86_64-apple-darwin.tar.gz
+
+# replace `~/.local/bin/` with something on your `$PATH`
+mv kak-lsp ~/.local/bin/
+
+mv lsp.kak ~/.config/kak/autoload/
+
+mkdir -p ~/.config/kak-lsp 
+mv kak-lsp.toml ~/.config/kak-lsp/ 
+
+# service for MacOS to not bother with manual start/restart
+mv com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.github.ul.kak-lsp.plist
+----
+
+==== Linux
+
+----
+wget https://github.com/ul/kak-lsp/releases/download/v1.0/kak-lsp.x86_64-unknown-linux-musl.tar.gz
+tar xzvf kak-lsp.x86_64-unknown-linux-musl.tar.gz
+
+# replace `~/.local/bin/` with something on your `$PATH`
+mv kak-lsp ~/.local/bin/
+
+mv lsp.kak ~/.config/kak/autoload/
+
+mkdir -p ~/.config/kak-lsp 
+mv kak-lsp.toml ~/.config/kak-lsp/ 
+----
+
+=== From the source
 
 `kak-lsp` requires nightly Rust because of using `getpid` feature (LSP requires sending client pid in initialize request).
 
@@ -28,8 +65,7 @@ ln -s $PWD/com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
 launchctl load com.github.ul.kak-lsp.plist
 ----
 
-Usage
------
+== Usage
 
 `kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore `kak-lsp` process should be started separately and having single one running is enough. Expect it to crash from time to time. Usually it's enough just to restart it. When you return to editing your files `kak-lsp` will restart language server. See Installation for example how to automate keeping `kak-lsp` alive under MacOS.
 
@@ -44,8 +80,7 @@ hook global WinSetOption filetype=rust %{
 
 It will add completions, hover and will bind goto definition to `gd`. Rudimentary support for diagnostics is implemented as well.
 
-Configuration
--------------
+== Configuration
 
 kak-lsp is configured via configuration file in https://github.com/toml-lang/toml[TOML] format. By default kak-lsp tries to read `$HOME/.config/kak-lsp/kak-lsp.toml`, but you can override it with command-line option `--config`.
 
