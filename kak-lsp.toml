@@ -42,3 +42,8 @@ extensions = ["re", "rei"]
 roots = ["package.json", "Makefile", ".git"]
 command = "ocaml-language-server"
 args = ["--stdio"]
+
+[language.python]
+extensions = ["py"]
+roots = ["requirements.txt", "setup.py", ".git"]
+command = "pyls"
