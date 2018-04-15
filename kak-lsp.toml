@@ -8,7 +8,7 @@ roots = ["Cargo.toml"]
 command = "rls"
 
 [language.javascript]
-extensions = ["js"]
+extensions = ["js", "jsx"]
 roots = ["package.json"]
 command = "flow-language-server"
 args = ["--stdio"]

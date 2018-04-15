@@ -17,6 +17,11 @@ mod types;
 mod project_root;
 mod language_server_transport;
 mod editor_transport;
+mod context;
+mod general;
+mod text_sync;
+mod diagnostics;
+mod language_features;
 mod controller;
 
 use clap::App;
@@ -29,7 +34,7 @@ fn main() {
     let matches = App::new("kak-lsp")
         .version("1.0")
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
-        .about("Kakoune Language Server Protocol client")
+        .about("Kakoune Language Server Protocol Client")
         .arg_from_usage(
             "-c, --config=[FILE] 'Read config from FILE (default $HOME/.config/kak-lsp/kak-lsp.toml)'
              -p, --port=[PORT]   'Port to listen for commands from Kakoune (default 31337)'
@@ -46,7 +51,7 @@ fn main() {
                 Some(Path::new(&home.join(".config/kak-lsp/kak-lsp.toml")).to_owned())
             })
         })
-        .expect("Config path is not present in options and home directory os not available");
+        .expect("Config path is not present in options and home directory is not available");
 
     let mut config_file =
         BufReader::new(File::open(config_path).expect("Failed to open config file"));
