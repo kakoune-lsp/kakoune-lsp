@@ -9,7 +9,9 @@ use url::Url;
 pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
         capabilities: ClientCapabilities {
-            workspace: None,
+            workspace: Some(WorkspaceClientCapabilites {
+                ..WorkspaceClientCapabilites::default()
+            }),
             text_document: Some(TextDocumentClientCapabilities {
                 synchronization: None,
                 completion: Some(CompletionCapability {
