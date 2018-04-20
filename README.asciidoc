@@ -11,7 +11,7 @@ Implemented in Rust.
 ==== MacOS
 
 ----
-curl -O -L https://github.com/ul/kak-lsp/releases/download/v1.0/kak-lsp.x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/ul/kak-lsp/releases/download/v1.0.1/kak-lsp.x86_64-apple-darwin.tar.gz
 tar xzvf kak-lsp.x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -30,7 +30,7 @@ launchctl load ~/Library/LaunchAgents/com.github.ul.kak-lsp.plist
 ==== Linux
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v1.0/kak-lsp.x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v1.0.1/kak-lsp.x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp.x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
