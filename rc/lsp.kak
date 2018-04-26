@@ -1,6 +1,9 @@
-decl str lsp_cmd 'nc localhost 31337'
+decl str lsp_cmd 'nc localhost 31337 -c'
 decl -hidden completions lsp_completions
-decl -hidden range-specs lsp_errors 
+decl -hidden range-specs lsp_errors
+
+#cquery
+decl -hidden range-specs cquery_semhl
 
 def lsp-did-change %{
     decl -hidden str lsp_draft %sh{ mktemp }
@@ -100,6 +103,7 @@ method  = "textDocument/didSave"
 def lsp-enable %{
     set buffer completers "option=lsp_completions:%opt{completers}"
     add-highlighter buffer/ ranges lsp_errors
+    add-highlighter buffer/ ranges cquery_semhl
 
     lsp-did-open
 

@@ -8,6 +8,7 @@ use std::thread;
 use types::*;
 
 pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<ServerMessage>) {
+    println!("Starting Language server {}", cmd);
     let mut child = Command::new(cmd)
         .args(args)
         .stdin(Stdio::piped())
