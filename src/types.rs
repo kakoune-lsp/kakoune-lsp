@@ -51,7 +51,7 @@ fn default_port() -> u16 {
 
 // Editor
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct EditorMeta {
     pub session: String,
     pub client: Option<String>,
@@ -61,7 +61,7 @@ pub struct EditorMeta {
 
 pub type EditorParams = toml::Value;
 
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct EditorRequest {
     #[serde(flatten)]
     pub meta: EditorMeta,
@@ -79,11 +79,6 @@ pub type SessionId = String;
 pub type LanguageId = String;
 pub type RootPath = String;
 pub type Route = (SessionId, LanguageId, RootPath);
-
-pub struct RoutedEditorRequest {
-    pub request: EditorRequest,
-    pub route: Route,
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EditorCompletion {
@@ -109,6 +104,7 @@ pub struct PositionParams {
 // Language Server
 
 // XXX serde(untagged) ?
+#[derive(Debug)]
 pub enum ServerMessage {
     Request(Call),
     Response(Output),

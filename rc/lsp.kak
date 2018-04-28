@@ -99,24 +99,39 @@ method  = "textDocument/didSave"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-exit %{
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "exit"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 def lsp-enable %{
-    set buffer completers "option=lsp_completions:%opt{completers}"
-    add-highlighter buffer/ ranges lsp_errors
-    add-highlighter buffer/ ranges cquery_semhl
+    set global completers "option=lsp_completions:%opt{completers}"
+    add-highlighter global/ ranges lsp_errors
+    add-highlighter global/ ranges cquery_semhl
 
-    lsp-did-open
+    map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
 
-    map buffer goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
-
-    hook -group lsp buffer BufClose .* lsp-did-close
-    hook -group lsp buffer BufWritePost .* lsp-did-save
-    hook -group lsp buffer InsertIdle .* %{
+    hook -group lsp global BufCreate .* %{
+        lsp-did-open
+    }
+    hook -group lsp global BufClose .* lsp-did-close
+    hook -group lsp global BufWritePost .* lsp-did-save
+    hook -group lsp global InsertIdle .* %{
         lsp-did-change
         lsp-completion
     }
-    hook -group lsp buffer NormalIdle .* %{
+    hook -group lsp global NormalIdle .* %{
         lsp-did-change
         lsp-hover
+    }
+    hook -group lsp global KakEnd .* %{
+        lsp-exit
     }
 }
 

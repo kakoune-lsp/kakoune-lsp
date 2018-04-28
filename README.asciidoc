@@ -11,7 +11,7 @@ Implemented in Rust.
 ==== MacOS
 
 ----
-curl -O -L https://github.com/ul/kak-lsp/releases/download/v1.1.0/kak-lsp.x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/ul/kak-lsp/releases/download/v2.0.0/kak-lsp.x86_64-apple-darwin.tar.gz
 tar xzvf kak-lsp.x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -30,7 +30,7 @@ launchctl load ~/Library/LaunchAgents/com.github.ul.kak-lsp.plist
 ==== Linux
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v1.1.0/kak-lsp.x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v2.0.0/kak-lsp.x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp.x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -70,13 +70,10 @@ launchctl load com.github.ul.kak-lsp.plist
 
 `kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore `kak-lsp` process should be started separately and having single one running is enough. Expect it to crash from time to time. Usually it's enough just to restart it. When you return to editing your files `kak-lsp` will restart language server. See Installation for example how to automate keeping `kak-lsp` alive under MacOS.
 
-To enable LSP support for language you need first to configure it (see the next section).
-Then add following hook to `kakrc` for correspondent filetype:
+To enable LSP support for configured languages (see the next section) just add `lsp-enable` command to your `kak`:
 
 ----
-hook global WinSetOption filetype=rust %{
-    lsp-enable
-}
+lsp-enable
 ----
 
 It will add completions, hover and will bind goto definition to `gd`. Rudimentary support for diagnostics is implemented as well.

@@ -1,32 +1,16 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
-use fnv::FnvHashMap;
-use project_root::find_project_root;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener};
-use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread;
 use toml;
 use types::*;
 
-fn get_language_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
-    extensions
-        .get(Path::new(path).extension()?.to_str()?)
-        .cloned()
-}
-
-pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorRequest>) {
-    let mut extensions = FnvHashMap::default();
-    for (language_id, language) in &config.language {
-        for extension in &language.extensions {
-            extensions.insert(extension.clone(), language_id.clone());
-        }
-    }
+pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
     let port = config.server.port;
     let ip = config.server.ip.parse().expect("Failed to parse IP");
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
-    let languages = config.language.clone();
     thread::spawn(move || {
         println!("Starting editor transport on {}:{}", ip, port);
         let addr = SocketAddr::new(ip, port);
@@ -42,16 +26,8 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
             println!("Request: {}", request);
             let request: EditorRequest =
                 toml::from_str(&request).expect("Failed to parse editor request");
-            let session = request.meta.session.clone();
-            let buffile = request.meta.buffile.clone();
-            let language_id =
-                get_language_id(&extensions, &buffile).expect("Failed to recognize language");
-            let root_path = find_project_root(&languages[&language_id].roots, &buffile)
-                .expect("File must reside in project");
-            let route = (session, language_id, root_path);
-            let routed_request = RoutedEditorRequest { request, route };
             reader_tx
-                .send(routed_request)
+                .send(request)
                 .expect("Failed to send request from server");
         }
     });

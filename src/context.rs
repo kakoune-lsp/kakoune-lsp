@@ -1,13 +1,15 @@
 use crossbeam_channel::Sender;
 use fnv::FnvHashMap;
-use jsonrpc_core::{self, Call, Id, Version};
+use jsonrpc_core::{self, Call, Id, Params, Version};
 use languageserver_types::*;
 use types::*;
 
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
-    pub editor_tx: Sender<EditorResponse>,
+    pub controller_poison_tx: Sender<()>,
     pub diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
+    pub editor_tx: Sender<EditorResponse>,
+    pub lang_srv_poison_tx: Sender<()>,
     pub lang_srv_tx: Sender<ServerMessage>,
     pub language_id: String,
     pub pending_requests: Vec<EditorRequest>,
@@ -23,12 +25,16 @@ impl Context {
         initial_request: EditorRequest,
         lang_srv_tx: Sender<ServerMessage>,
         editor_tx: Sender<EditorResponse>,
+        lang_srv_poison_tx: Sender<()>,
+        controller_poison_tx: Sender<()>,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
             capabilities: None,
+            controller_poison_tx,
             diagnostics: FnvHashMap::default(),
             editor_tx,
+            lang_srv_poison_tx,
             lang_srv_tx,
             language_id: language_id.to_string(),
             pending_requests: vec![initial_request],
@@ -52,10 +58,15 @@ impl Context {
     }
 
     pub fn notify(&mut self, method: String, params: impl ToParams) {
+        let params = params.to_params().expect("Failed to convert params");
         let notification = jsonrpc_core::Notification {
             jsonrpc: Some(Version::V2),
             method,
-            params: Some(params.to_params().expect("Failed to convert params")),
+            // NOTE this is required because jsonrpc serializer converts Some(None) into []
+            params: match params {
+                Params::None => None,
+                params => Some(params),
+            },
         };
         self.lang_srv_tx
             .send(ServerMessage::Request(Call::Notification(notification)))
