@@ -26,6 +26,7 @@ fn get_server_cmd(config: &Config, language_id: &str) -> Option<(String, Vec<Str
 }
 
 pub fn start(config: &Config) {
+    println!("Starting Controller");
     let (editor_tx, editor_rx) = editor_transport::start(config);
     let mut controllers: FnvHashMap<Route, Sender<EditorRequest>> = FnvHashMap::default();
     for request in editor_rx {
@@ -211,6 +212,12 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
         notification::PublishDiagnostics::METHOD => {
             diagnostics::publish_diagnostics(
                 params.parse().expect("Failed to parse params"),
+                &mut ctx,
+            );
+        }
+        "$cquery/publishSemanticHighlighting" => {
+            cquery::publish_semantic_highlighting(
+                params.parse().expect("Failed to parse semhl params"),
                 &mut ctx,
             );
         }

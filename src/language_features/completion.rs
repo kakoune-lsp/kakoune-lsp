@@ -5,6 +5,7 @@ use regex::Regex;
 use serde::Deserialize;
 use types::*;
 use url::Url;
+use std;
 
 pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let req_params = TextDocumentCompletionParams::deserialize(params.clone())
@@ -36,14 +37,35 @@ pub fn editor_completion(
         CompletionResponse::List(list) => list.items,
     };
     let re = Regex::new(r"(?P<c>[:|$])").unwrap();
+    let maxlen = items
+        .iter()
+        .map(|x| {
+            x.label.len()
+        }).max().unwrap_or(0);
+
     let items = items
         .into_iter()
         .map(|x| {
+            let mut doc: String = match &x.documentation {
+                None => "".to_string(),
+                Some(doc) => match doc {
+                    Documentation::String(st) => st.clone(),
+                    Documentation::MarkupContent(mup) => mup.value.clone(),
+                },
+            };
+            if let Some(d) = x.detail {
+                doc = d.clone() + "\n\n" + &doc;
+            }
+            let mut entry = x.label.clone();
+            if let Some(k) = x.kind {
+                entry += &std::iter::repeat(" ").take(maxlen - x.label.len()).collect::<String>();
+                entry += &format!(" {{MenuInfo}}{:?}", k);
+            }
             format!(
                 "{}|{}|{}",
-                re.replace_all(&x.label, r"\$c"),
-                re.replace_all(&x.detail.unwrap_or_else(|| "".to_string()), r"\$c"),
-                re.replace_all(&x.label, r"\$c"),
+                re.replace_all(&x.insert_text.unwrap_or(x.label), r"\$c"),
+                re.replace_all(&doc, r"\$c"),
+                re.replace_all(&entry, r"\$c"),
             )
         })
         .collect::<Vec<String>>()

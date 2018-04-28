@@ -12,6 +12,9 @@ extern crate serde_derive;
 extern crate serde;
 extern crate toml;
 extern crate url;
+extern crate url_serde;
+#[macro_use]
+extern crate enum_primitive;
 
 mod types;
 mod project_root;

@@ -28,6 +28,7 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
     let (reader_tx, reader_rx) = bounded(1024);
     let languages = config.language.clone();
     thread::spawn(move || {
+        println!("Starting editor transport on {}:{}", ip, port);
         let addr = SocketAddr::new(ip, port);
 
         let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
@@ -38,6 +39,7 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<RoutedEditorR
             stream
                 .read_to_string(&mut request)
                 .expect("Failed to read from TCP stream");
+            println!("Request: {}", request);
             let request: EditorRequest =
                 toml::from_str(&request).expect("Failed to parse editor request");
             let session = request.meta.session.clone();
