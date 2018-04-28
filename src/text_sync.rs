@@ -1,6 +1,6 @@
 use context::*;
-use languageserver_types::*;
 use languageserver_types::notification::Notification;
+use languageserver_types::*;
 use serde::Deserialize;
 use std::fs::{remove_file, File};
 use std::io::Read;
@@ -49,13 +49,11 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
             uri,
             version: Some(meta.version),
         },
-        content_changes: vec![
-            TextDocumentContentChangeEvent {
-                range: None,
-                range_length: None,
-                text,
-            },
-        ],
+        content_changes: vec![TextDocumentContentChangeEvent {
+            range: None,
+            range_length: None,
+            text,
+        }],
     };
     ctx.notify(notification::DidChangeTextDocument::METHOD.into(), params);
 }

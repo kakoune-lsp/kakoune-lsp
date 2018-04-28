@@ -16,20 +16,20 @@ extern crate url_serde;
 #[macro_use]
 extern crate enum_primitive;
 
-mod types;
-mod project_root;
-mod language_server_transport;
-mod editor_transport;
 mod context;
-mod general;
-mod text_sync;
-mod diagnostics;
-mod language_features;
 mod controller;
+mod diagnostics;
+mod editor_transport;
+mod general;
+mod language_features;
+mod language_server_transport;
+mod project_root;
+mod text_sync;
+mod types;
 
 use clap::App;
-use std::io::{BufReader, Read};
 use std::fs::File;
+use std::io::{BufReader, Read};
 use std::path::Path;
 use types::*;
 

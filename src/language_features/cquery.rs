@@ -1,9 +1,9 @@
-use types::*;
 use context::*;
-use url::Url;
-use languageserver_types::{Range, NumberOrString};
-use url_serde;
+use languageserver_types::{NumberOrString, Range};
 use serde;
+use types::*;
+use url::Url;
+use url_serde;
 
 enum_from_primitive!{
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -25,7 +25,7 @@ impl<'de> serde::Deserialize<'de> for StorageClass {
     {
         use enum_primitive::FromPrimitive;
 
-        let i = try!(u8::deserialize(deserializer));
+        let i = u8::deserialize(deserializer)?;
         Ok(StorageClass::from_u8(i).unwrap_or(StorageClass::Invalid))
     }
 }
@@ -89,7 +89,7 @@ impl<'de> serde::Deserialize<'de> for SemanticSymbolKind {
     {
         use enum_primitive::FromPrimitive;
 
-        let i = try!(u8::deserialize(deserializer));
+        let i = u8::deserialize(deserializer)?;
         Ok(SemanticSymbolKind::from_u8(i).unwrap_or(SemanticSymbolKind::Unknown))
     }
 }
@@ -103,7 +103,6 @@ impl serde::Serialize for SemanticSymbolKind {
     }
 }
 
-
 #[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticSymbol {
@@ -116,7 +115,6 @@ pub struct SemanticSymbol {
 }
 
 impl SemanticSymbol {
-    
     /// Get the face for this symbol
     pub fn get_face(&self) -> String {
         match self.kind {
@@ -127,17 +125,13 @@ impl SemanticSymbol {
             SemanticSymbolKind::Function => "cqueryFreeStandingFunctions",
             SemanticSymbolKind::Method | SemanticSymbolKind::Constructor => "cqueryMemberFunctions",
             SemanticSymbolKind::StaticMethod => "cqueryStaticMemberFunctions",
-            SemanticSymbolKind::Variable => {
-                match self.parent_kind {
-                    SemanticSymbolKind::Function => "cqueryFreeStandingVariables",
-                    _ => "cqueryGlobalVariables",
-                }
+            SemanticSymbolKind::Variable => match self.parent_kind {
+                SemanticSymbolKind::Function => "cqueryFreeStandingVariables",
+                _ => "cqueryGlobalVariables",
             },
-            SemanticSymbolKind::Field => {
-                match self.storage {
-                    StorageClass::Static => "cqueryStaticMemberVariables",
-                    _ => "cqueryMemberVariables",
-                }
+            SemanticSymbolKind::Field => match self.storage {
+                StorageClass::Static => "cqueryStaticMemberVariables",
+                _ => "cqueryMemberVariables",
             },
             SemanticSymbolKind::Parameter => "cqueryParameters",
             SemanticSymbolKind::EnumMember => "cqueryEnumConstants",
@@ -173,9 +167,7 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
         .iter()
         .flat_map(|x| {
             let face = x.get_face();
-            x.ranges
-            .iter()
-            .filter_map(move |r| {
+            x.ranges.iter().filter_map(move |r| {
                 if face.is_empty() {
                     println!("No face found for {:?}", x);
                     Option::None

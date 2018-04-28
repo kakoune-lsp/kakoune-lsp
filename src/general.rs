@@ -1,6 +1,6 @@
 use context::*;
-use languageserver_types::*;
 use languageserver_types::request::Request;
+use languageserver_types::*;
 use std::process;
 use toml;
 use types::*;

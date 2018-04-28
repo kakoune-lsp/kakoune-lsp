@@ -2,7 +2,6 @@ decl str lsp_cmd 'nc localhost 31337 -c'
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
-#cquery
 decl -hidden range-specs cquery_semhl
 
 def lsp-did-change %{
