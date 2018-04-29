@@ -13,6 +13,8 @@ pub struct Config {
     pub language: FnvHashMap<String, LanguageConfig>,
     #[serde(default)]
     pub server: ServerConfig,
+    #[serde(default)]
+    pub verbosity: u8,
 }
 
 #[derive(Deserialize, Debug)]
