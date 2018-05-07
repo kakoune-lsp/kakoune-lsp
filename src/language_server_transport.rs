@@ -1,6 +1,8 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
 use fnv::FnvHashMap;
-use jsonrpc_core::{Call, Output};
+use jsonrpc_core::{self, Call, Output, Params, Version};
+use languageserver_types::notification::Notification;
+use languageserver_types::*;
 use serde_json;
 use slog::Logger;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
@@ -57,6 +59,21 @@ pub fn start(
         // NOTE prevent zombie
         debug!(reader_logger, "Waiting for language server process end");
         child.wait().unwrap();
+
+        let notification = jsonrpc_core::Notification {
+            jsonrpc: Some(Version::V2),
+            method: notification::Exit::METHOD.to_string(),
+            params: Some(Params::None),
+        };
+        if !reader_tx.is_disconnected() {
+            debug!(
+                reader_logger,
+                "Sending exit notification back to controller"
+            );
+            reader_tx
+                .send(ServerMessage::Request(Call::Notification(notification)))
+                .unwrap();
+        }
     });
 
     // NOTE 1024 is arbitrary

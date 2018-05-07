@@ -46,92 +46,115 @@ pub fn start(config: &Config, logger: Logger) {
     let extensions = extensions;
     let languages = config.language.clone();
     let mut controllers: FnvHashMap<Route, Sender<EditorRequest>> = FnvHashMap::default();
-    for request in editor_rx {
-        if request.method == notification::Exit::METHOD {
-            info!(
-                logger,
-                "Session `{}` closed, shutting down associated language servers",
-                request.meta.session
-            );
-            for k in controllers.keys().map(|k| k.clone()).collect::<Vec<_>>() {
-                if k.0 == request.meta.session {
-                    let controller_tx = controllers.remove(&k).unwrap();
-                    debug!(logger, "Exit {} in project {}", k.1, k.2);
-                    controller_tx
-                        .send(request.clone())
-                        .expect("Failed to route editor request");
-                }
-            }
-            continue;
-        }
-        let language_id = get_language_id(&extensions, &request.meta.buffile);
-        if language_id.is_none() {
-            debug!(
-                logger,
-                "Language server is not configured for extension `{}`",
-                Path::new(&request.meta.buffile)
-                    .extension()
-                    .unwrap_or_default()
-                    .to_str()
-                    .unwrap_or_default()
-            );
-            continue;
-        }
-        let language_id = language_id.unwrap();
-        let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
-        if root_path.is_none() {
-            debug!(
-                logger,
-                "Unable to detect project root for file `{}`", request.meta.buffile
-            );
-            continue;
-        }
-        let root_path = root_path.unwrap();
-        let route = (
-            request.meta.session.clone(),
-            language_id.clone(),
-            root_path.clone(),
-        );
-        debug!(logger, "Routing editor request to {:?}", route);
-        let controller = controllers.get(&route).cloned();
-        match controller {
-            Some(controller_tx) => {
-                controller_tx
-                    .send(request)
-                    .expect("Failed to route editor request");
-            }
-            None => {
-                // because Kakoune triggers BufClose after KakEnd
-                // we don't want textDocument/didClose to start server
-                if request.method == notification::DidCloseTextDocument::METHOD {
-                    continue;
-                }
-                let (lang_srv_cmd, lang_srv_args) = get_server_cmd(config, &language_id).unwrap();
-                // NOTE 1024 is arbitrary
-                let (controller_tx, controller_rx) = bounded(1024);
-                controllers.insert(route, controller_tx);
-                let editor_tx = editor_tx.clone();
-                let logger = logger.clone();
-                thread::spawn(move || {
-                    let (lang_srv_tx, lang_srv_rx, lang_srv_poison_tx) =
-                        language_server_transport::start(
-                            &lang_srv_cmd,
-                            &lang_srv_args,
-                            logger.clone(),
-                        );
-                    let controller = Controller::start(
-                        &language_id,
-                        &root_path,
-                        lang_srv_tx,
-                        lang_srv_rx,
-                        editor_tx,
-                        controller_rx,
-                        lang_srv_poison_tx,
-                        request,
+    let (controller_remove_tx, controller_remove_rx) = bounded(1);
+    'event_loop: loop {
+        select_loop! {
+            recv(editor_rx, request) => {
+                if request.method == notification::Exit::METHOD {
+                    info!(
                         logger,
+                        "Session `{}` closed, shutting down associated language servers",
+                        request.meta.session
                     );
-                    controller.wait().expect("Failed to wait for controller");
-                });
+                    for k in controllers.keys().map(|k| k.clone()).collect::<Vec<_>>() {
+                        if k.0 == request.meta.session {
+                            let controller_tx = controllers.remove(&k).unwrap();
+                            debug!(logger, "Exit {} in project {}", k.1, k.2);
+                            controller_tx
+                                .send(request.clone())
+                                .expect("Failed to route editor request");
+                        }
+                    }
+                    continue 'event_loop;
+                }
+                let language_id = get_language_id(&extensions, &request.meta.buffile);
+                if language_id.is_none() {
+                    debug!(
+                        logger,
+                        "Language server is not configured for extension `{}`",
+                        Path::new(&request.meta.buffile)
+                            .extension()
+                            .unwrap_or_default()
+                            .to_str()
+                            .unwrap_or_default()
+                    );
+                    continue 'event_loop;
+                }
+                let language_id = language_id.unwrap();
+                let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
+                if root_path.is_none() {
+                    debug!(
+                        logger,
+                        "Unable to detect project root for file `{}`", request.meta.buffile
+                    );
+                    continue 'event_loop;
+                }
+                let root_path = root_path.unwrap();
+                let route = (
+                    request.meta.session.clone(),
+                    language_id.clone(),
+                    root_path.clone(),
+                );
+                debug!(logger, "Routing editor request to {:?}", route);
+                let controller = controllers.get(&route).cloned();
+                match controller {
+                    Some(controller_tx) => {
+                        controller_tx
+                            .send(request)
+                            .expect("Failed to route editor request");
+                    }
+                    None => {
+                        // because Kakoune triggers BufClose after KakEnd
+                        // we don't want textDocument/didClose to start server
+                        if request.method == notification::DidCloseTextDocument::METHOD {
+                            continue 'event_loop;
+                        }
+                        let (lang_srv_cmd, lang_srv_args) = get_server_cmd(config, &language_id).unwrap();
+                        // NOTE 1024 is arbitrary
+                        let (controller_tx, controller_rx) = bounded(1024);
+                        controllers.insert(route.clone(), controller_tx);
+                        let editor_tx = editor_tx.clone();
+                        let logger = logger.clone();
+                        let (controller_poison_tx, controller_poison_rx) = bounded(1);
+                        let (controller_poison_tx_mult, controller_poison_rx_mult) = bounded(1);
+                        let controller_remove_tx = controller_remove_tx.clone();
+                        let route_mult = route.clone();
+                        thread::spawn(move || {
+                            for _ in controller_poison_rx_mult {
+                                controller_remove_tx.send(route_mult.clone()).unwrap();
+                                controller_poison_tx.send(()).unwrap();
+                            }
+                        });
+                        thread::spawn(move || {
+                            let (lang_srv_tx, lang_srv_rx, lang_srv_poison_tx) =
+                                language_server_transport::start(
+                                    &lang_srv_cmd,
+                                    &lang_srv_args,
+                                    logger.clone(),
+                                );
+                            let controller = Controller::start(
+                                &language_id,
+                                &root_path,
+                                lang_srv_tx,
+                                lang_srv_rx,
+                                editor_tx,
+                                controller_rx,
+                                lang_srv_poison_tx,
+                                controller_poison_tx_mult,
+                                controller_poison_rx,
+                                request,
+                                logger.clone(),
+                            );
+                            controller.wait().expect("Failed to wait for controller");
+                            debug!(logger, "Controller {:?} exited", route);
+                        });
+                    }
+                }
+            }
+            recv(controller_remove_rx, route) => {
+                controllers.remove(&route);
+                debug!(logger, "Controller {:?} removed", route);
+                continue 'event_loop;
             }
         }
     }
@@ -151,14 +174,15 @@ impl Controller {
         editor_tx: Sender<EditorResponse>,
         editor_rx: Receiver<EditorRequest>,
         lang_srv_poison_tx: Sender<()>,
+        controller_poison_tx: Sender<()>,
+        controller_poison_rx: Receiver<()>,
         initial_request: EditorRequest,
         logger: Logger,
     ) -> Self {
-        let (controller_poison_tx, controller_posion_rx) = bounded(1);
         let (editor_reader_poison_tx, editor_reader_poison_rx) = bounded(1);
         let (lang_srv_reader_poison_tx, lang_srv_reader_poison_rx) = bounded(1);
         thread::spawn(move || {
-            for msg in controller_posion_rx {
+            for msg in controller_poison_rx {
                 editor_reader_poison_tx.send(msg).unwrap();
                 lang_srv_reader_poison_tx.send(msg).unwrap();
             }
@@ -171,6 +195,7 @@ impl Controller {
             editor_tx,
             lang_srv_poison_tx,
             controller_poison_tx,
+            logger.clone(),
         )));
 
         let ctx = Arc::clone(&ctx_src);
@@ -330,6 +355,11 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
                 &mut ctx,
             );
         }
+        notification::Exit::METHOD => {
+            debug!(ctx.logger, "Language server exited, poisoning controller");
+            ctx.controller_poison_tx.send(()).unwrap();
+        }
+        // to not litter logs with "unsupported method"
         "window/progress" => {}
         _ => {
             println!("Unsupported method: {}", method);
