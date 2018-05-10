@@ -54,8 +54,9 @@ pub fn start(
     let (reader_tx, reader_rx) = bounded(1024);
     let reader_logger = logger.clone();
     thread::spawn(move || {
-        reader_loop(reader, &reader_tx, reader_logger.clone())
-            .expect("Failed to read message from language server");
+        if let Err(_) = reader_loop(reader, &reader_tx, reader_logger.clone()) {
+            error!(reader_logger, "Failed to read message from language server");
+        }
         // NOTE prevent zombie
         debug!(reader_logger, "Waiting for language server process end");
         child.wait().unwrap();
@@ -80,8 +81,11 @@ pub fn start(
     let (writer_tx, writer_rx): (Sender<ServerMessage>, Receiver<ServerMessage>) = bounded(1024);
     let writer_logger = logger.clone();
     thread::spawn(move || {
-        writer_loop(writer, &writer_rx, &poison_rx, writer_logger)
-            .expect("Failed to write message to language server");
+        if let Err(_) = writer_loop(writer, &writer_rx, &poison_rx, writer_logger.clone()) {
+            error!(writer_logger, "Failed to write message to language server");
+        }
+        // NOTE we rely on assumption that if write failed then read is failed as well
+        // or fill fail shortly and do all exiting stuff
     });
 
     (writer_tx, reader_rx, poison_tx)

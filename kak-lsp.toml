@@ -49,3 +49,9 @@ args = ["--stdio"]
 extensions = ["py"]
 roots = ["requirements.txt", "setup.py", ".git"]
 command = "pyls"
+
+[language.c_cpp]
+extensions = ["c", "h", "cc", "hh"]
+roots = ["compile_commands.json", ".cquery"]
+command = "cquery"
+args = ["--init={\"cacheDirectory\":\"/tmp/cquery\"}"]
