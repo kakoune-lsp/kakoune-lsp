@@ -7,7 +7,7 @@ decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
 
 def lsp-did-change %{ try %{
-    %%sh{
+    %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
         else
