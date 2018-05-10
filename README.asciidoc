@@ -10,8 +10,18 @@ Implemented in Rust.
 
 ==== MacOS
 
+==== Homebrew
+
 ----
-curl -O -L https://github.com/ul/kak-lsp/releases/download/v2.1.0/kak-lsp.x86_64-apple-darwin.tar.gz
+brew install ul/kak-lsp/kak-lsp
+# enable service to not bother with manual start/restart
+sudo brew services start ul/kak-lsp/kak-lsp
+----
+
+==== Manual
+
+----
+curl -O -L https://github.com/ul/kak-lsp/releases/download/v2.2.0/kak-lsp.x86_64-apple-darwin.tar.gz
 tar xzvf kak-lsp.x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -30,7 +40,7 @@ launchctl load ~/Library/LaunchAgents/com.github.ul.kak-lsp.plist
 ==== Linux
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v2.1.0/kak-lsp.x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v2.2.0/kak-lsp.x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp.x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
