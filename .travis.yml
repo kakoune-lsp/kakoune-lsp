@@ -24,8 +24,6 @@ matrix:
     # *BSD
     - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
       rust: nightly
-    - env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
-      rust: nightly
 
 before_install:
   - set -e
