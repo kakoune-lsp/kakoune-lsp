@@ -1,0 +1,69 @@
+# Based on the "trust" template v0.1.2
+# https://github.com/japaric/trust/tree/v0.1.2
+
+dist: trusty
+language: rust
+services: docker
+sudo: required
+
+env:
+  global:
+    - CRATE_NAME=kak-lsp
+
+matrix:
+  include:
+    # Linux
+    - env: TARGET=x86_64-unknown-linux-musl
+      rust: nightly
+
+    # OSX
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+      rust: nightly
+
+    # *BSD
+    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
+      rust: nightly
+    - env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
+      rust: nightly
+
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
+
+script:
+  - bash ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: KLcEdCCk15MVtAEDm+Nb/HnGZjRuTVKdyMTyTBbFI0L8jzGfkGneSd9+b++QVcFpHcIYtddQaQ2L0yWTqesME/+1fAIP3sc1llYdtxEw6ELMZIXb5u3wKU+/O6xGQCiDNag/G3Leq2Z7SEC96tZA9o3uC7qxhoc7GL3+sTewZpVEySMKzRZeKOCQUOqIUiMfjCx8SV8U3qgXffZoaPTVNgXgzfHMKcEZ0STMBr7TnS3Si1eq6vEcC1NV92H4Nqu2DY0Hnzf/z7gpnzx1XdgLIePbJPU9tX5D4JHNjh/nRwDTci/h76m7Z84fejBrEZZOk4WS03e+vLPgv+a8Dt1Q6o1PV0ykvLfCaKkm7qTmtYrGA5oO62Q/FNFqnWP1PNHqE46QNTxQApoIMHFBZcDoc1DmCr2/lRLncEojmnjB4weH1Fnl+NyRMgqGKelAl2443rRFJy573ca2NkbqWf1He049/8J7srNHiqzDF2OG9UuY+UrUaCzmbO4ec5SSCoTUMXqXYubim3cDeXdyqcmQtFA6oymjxeMrp+y0HXUUl9WJ8++NOgNoKSWehuw5ruoqdFnyUARvx7i6kaaSM7gDEsnypmNz13zGanVUg4zF5yWOmBxNf5uflGxUWp44vqNWmQ8DWl73nTg8qsNm7RP+x31YRnuA4ej7gjs1SNn/yg4=
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:
+    tags: true
+  provider: releases
+  skip_cleanup: true
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+notifications:
+  email:
+    on_success: never
