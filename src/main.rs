@@ -89,7 +89,15 @@ fn main() {
                 }
             })
         })
-        .or_else(|| Some(Path::new("kak-lsp.toml").to_owned()))
+        .or_else(|| {
+            std::env::current_exe()
+                .and_then(|p| p.read_link().or(Ok(p)))
+                .ok()
+                .and_then(|p| {
+                    p.parent()
+                        .and_then(|p| Some(p.join("kak-lsp.toml").to_owned()))
+                })
+        })
         .unwrap();
 
     let mut config_file =
