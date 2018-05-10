@@ -14,8 +14,12 @@ Implemented in Rust.
 
 ----
 brew install ul/kak-lsp/kak-lsp
+# due to Homebrew limitations, will be fixed by #20
+cp /usr/local/opt/kak-lsp/share/kak-lsp/lsp.kak ~/.config/kak/autoload/
 # enable service to not bother with manual start/restart
-sudo brew services start ul/kak-lsp/kak-lsp
+# note that you might want it w/o `sudo` despite of brew suggestion
+# because some language servers are available only in user's PATH by default
+brew services start ul/kak-lsp/kak-lsp
 ----
 
 ===== Manual
