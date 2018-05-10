@@ -91,7 +91,7 @@ fn main() {
         })
         .or_else(|| {
             std::env::current_exe()
-                .and_then(|p| p.read_link().or(Ok(p)))
+                .and_then(|p| p.canonicalize())
                 .ok()
                 .and_then(|p| {
                     p.parent()
