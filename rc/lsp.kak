@@ -3,10 +3,18 @@ decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
 decl -hidden range-specs cquery_semhl
+decl -hidden str lsp_draft
+decl -hidden int lsp_timestamp -1
 
-def lsp-did-change %{
-    decl -hidden str lsp_draft %sh{ mktemp }
-    eval -no-hooks write %opt{lsp_draft}
+def lsp-did-change %{ try %{
+    %%sh{
+        if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
+            echo "fail"
+        else
+            draft=$(mktemp)
+            printf 'eval -no-hooks %%{write "%s"; set buffer lsp_timestamp %d; set buffer lsp_draft "%s"}\n' "${draft}" "${kak_timestamp}" "${draft}"
+        fi
+    }
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -16,7 +24,7 @@ method  = "textDocument/didChange"
 [params]
 draft   = "%s"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
-}
+}}
 
 def lsp-completion %{
     decl -hidden str lsp_completion_offset
