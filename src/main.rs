@@ -81,10 +81,16 @@ fn main() {
         .and_then(|config| Some(Path::new(&config).to_owned()))
         .or_else(|| {
             std::env::home_dir().and_then(|home| {
-                Some(Path::new(&home.join(".config/kak-lsp/kak-lsp.toml")).to_owned())
+                let path = Path::new(&home.join(".config/kak-lsp/kak-lsp.toml")).to_owned();
+                if path.exists() {
+                    Some(path)
+                } else {
+                    None
+                }
             })
         })
-        .expect("Config path is not present in options and home directory is not available");
+        .or_else(|| Some(Path::new("kak-lsp.toml").to_owned()))
+        .unwrap();
 
     let mut config_file =
         BufReader::new(File::open(config_path).expect("Failed to open config file"));
