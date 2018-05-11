@@ -279,7 +279,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             general::exit(params, meta, &mut ctx);
         }
         _ => {
-            println!("Unsupported method: {}", request.method);
+            warn!("Unsupported method: {}", method);
         }
     }
 }
@@ -305,7 +305,7 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
         // to not litter logs with "unsupported method"
         "window/progress" => {}
         _ => {
-            println!("Unsupported method: {}", method);
+            warn!("Unsupported method: {}", method);
         }
     }
 }
@@ -363,7 +363,7 @@ fn dispatch_server_response(
             }
         }
         _ => {
-            println!("Don't know how to handle response for method: {}", method);
+            warn!("Don't know how to handle response for method: {}", method);
         }
     }
 }

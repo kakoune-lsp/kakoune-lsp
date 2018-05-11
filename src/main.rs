@@ -129,39 +129,41 @@ fn main() {
         config.server.ip = ip.to_string();
     }
 
+    let mut verbosity = matches.occurrences_of("v") as u8;
+
+    if verbosity == 0 {
+        verbosity = config.verbosity
+    }
+
+    let level = match verbosity {
+        0 => Severity::Error,
+        1 => Severity::Warning,
+        2 => Severity::Info,
+        3 => Severity::Debug,
+        _ => Severity::Trace,
+    };
+
+    let mut builder = TerminalLoggerBuilder::new();
+    builder.level(level);
+    builder.destination(Destination::Stderr);
+    let logger = builder.build().unwrap();
+    let _guard = slog_scope::set_global_logger(logger);
+
     if matches.is_present("kakoune") {
-        let template = include_str!("../rc/lsp.kak");
-        let handlebars = Handlebars::new();
-        handlebars
-            .render_template_to_write(
-                template,
-                &json!({"ip": config.server.ip, "port": config.server.port}),
-                &mut stdout(),
-            )
-            .unwrap();
+        kakoune(&config);
     } else {
-        let mut verbosity = matches.occurrences_of("v") as u8;
-
-        if verbosity == 0 {
-            verbosity = config.verbosity
-        }
-
-        let level = match verbosity {
-            0 => Severity::Error,
-            1 => Severity::Warning,
-            2 => Severity::Info,
-            3 => Severity::Debug,
-            _ => Severity::Trace,
-        };
-
-        let mut builder = TerminalLoggerBuilder::new();
-        builder.level(level);
-        builder.destination(Destination::Stderr);
-
-        let logger = builder.build().unwrap();
-
-        let _guard = slog_scope::set_global_logger(logger);
-
         controller::start(&config);
     }
+}
+
+fn kakoune(config: &Config) {
+    let template = include_str!("../rc/lsp.kak");
+    let handlebars = Handlebars::new();
+    handlebars
+        .render_template_to_write(
+            template,
+            &json!({"ip": config.server.ip, "port": config.server.port}),
+            &mut stdout(),
+        )
+        .unwrap();
 }

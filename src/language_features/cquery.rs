@@ -169,7 +169,7 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
             let face = x.get_face();
             x.ranges.iter().filter_map(move |r| {
                 if face.is_empty() {
-                    println!("No face found for {:?}", x);
+                    warn!("No face found for {:?}", x);
                     Option::None
                 } else {
                     Option::Some(format!(
