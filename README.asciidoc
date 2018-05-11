@@ -111,7 +111,7 @@ It's not needed if you change options in `~/.config/kak-lsp/kak-lsp.toml` file.
 
 == Versioning
 
-kak-lsp follows [SemVer](https://semver.org/) with one notable difference from common practice: we 
+kak-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we 
 don't use 0 major version to indicate that product is not yet reached stability. Even for 
 non-stable and not feature-complete product user should be clearly informed about breaking change. 
 Therefore we start with major version 1 and increment it every time upgrade need user's attention.
