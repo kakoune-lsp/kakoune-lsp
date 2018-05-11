@@ -4,9 +4,11 @@ extern crate clap;
 #[macro_use]
 extern crate crossbeam_channel;
 extern crate fnv;
+extern crate handlebars;
 extern crate jsonrpc_core;
 extern crate languageserver_types;
 extern crate regex;
+#[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
@@ -34,11 +36,12 @@ mod text_sync;
 mod types;
 
 use clap::{App, Arg};
+use handlebars::Handlebars;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{stdout, BufReader, Read};
 use std::path::Path;
 use types::*;
 
@@ -47,6 +50,11 @@ fn main() {
         .version("1.0")
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
+        .arg(
+            Arg::with_name("kakoune")
+                .long("kakoune")
+                .help("Generate commands for Kakoune to plug in kak-lsp"),
+        )
         .arg(
             Arg::with_name("config")
                 .short("c")
@@ -121,27 +129,39 @@ fn main() {
         config.server.ip = ip.to_string();
     }
 
-    let mut verbosity = matches.occurrences_of("v") as u8;
+    if matches.is_present("kakoune") {
+        let template = include_str!("../rc/lsp.kak");
+        let handlebars = Handlebars::new();
+        handlebars
+            .render_template_to_write(
+                template,
+                &json!({"ip": config.server.ip, "port": config.server.port}),
+                &mut stdout(),
+            )
+            .unwrap();
+    } else {
+        let mut verbosity = matches.occurrences_of("v") as u8;
 
-    if verbosity == 0 {
-        verbosity = config.verbosity
+        if verbosity == 0 {
+            verbosity = config.verbosity
+        }
+
+        let level = match verbosity {
+            0 => Severity::Error,
+            1 => Severity::Warning,
+            2 => Severity::Info,
+            3 => Severity::Debug,
+            _ => Severity::Trace,
+        };
+
+        let mut builder = TerminalLoggerBuilder::new();
+        builder.level(level);
+        builder.destination(Destination::Stderr);
+
+        let logger = builder.build().unwrap();
+
+        let _guard = slog_scope::set_global_logger(logger);
+
+        controller::start(&config);
     }
-
-    let level = match verbosity {
-        0 => Severity::Error,
-        1 => Severity::Warning,
-        2 => Severity::Info,
-        3 => Severity::Debug,
-        _ => Severity::Trace,
-    };
-
-    let mut builder = TerminalLoggerBuilder::new();
-    builder.level(level);
-    builder.destination(Destination::Stderr);
-
-    let logger = builder.build().unwrap();
-
-    let _guard = slog_scope::set_global_logger(logger);
-
-    controller::start(&config);
 }

@@ -1,4 +1,4 @@
-decl str lsp_cmd 'nc localhost 31337 -c'
+decl str lsp_cmd 'nc {{ip}} {{port}} -c'
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
@@ -143,3 +143,4 @@ def lsp-enable %{
     }
 }
 
+lsp-enable

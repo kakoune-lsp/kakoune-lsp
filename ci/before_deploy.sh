@@ -21,7 +21,6 @@ main() {
 
     cp target/$TARGET/release/kak-lsp $stage/
     cp kak-lsp.toml $stage/
-    cp rc/lsp.kak $stage/
 
     case $TRAVIS_OS_NAME in
         linux)
