@@ -20,45 +20,37 @@ use text_sync::*;
 use toml;
 use types::*;
 
+type Controllers = FnvHashMap<Route, Sender<EditorRequest>>;
+
 pub fn start(config: &Config) {
     info!("Starting Controller");
-    let (editor_tx, editor_rx) = editor_transport::start(config);
-    let extensions = ext_to_lang_id_map(&config);
+
+    let extensions = extension_to_language_id_map(&config);
     let languages = config.language.clone();
-    let mut controllers: FnvHashMap<Route, Sender<EditorRequest>> = FnvHashMap::default();
+
+    let (editor_tx, editor_rx) = editor_transport::start(config);
+
+    let mut controllers: Controllers = FnvHashMap::default();
     let (controller_remove_tx, controller_remove_rx) = bounded(1);
+
     'event_loop: loop {
         select_loop! {
             recv(editor_rx, request) => {
                 if request.method == notification::Exit::METHOD {
-                    info!(
-                        "Session `{}` closed, shutting down associated language servers",
-                        request.meta.session
-                    );
-                    for k in controllers.keys().map(|k| k.clone()).collect::<Vec<_>>() {
-                        if k.0 == request.meta.session {
-                            let controller_tx = controllers.remove(&k).unwrap();
-                            debug!("Exit {} in project {}", k.1, k.2);
-                            controller_tx
-                                .send(request.clone())
-                                .expect("Failed to route editor request");
-                        }
-                    }
+                    exit_session(&mut controllers, request);
                     continue 'event_loop;
                 }
-                let language_id = path_to_lang_id(&extensions, &request.meta.buffile);
+
+                let language_id = path_to_language_id(&extensions, &request.meta.buffile);
                 if language_id.is_none() {
                     debug!(
                         "Language server is not configured for extension `{}`",
-                        Path::new(&request.meta.buffile)
-                            .extension()
-                            .unwrap_or_default()
-                            .to_str()
-                            .unwrap_or_default()
+                        ext_as_str(&request.meta.buffile)
                     );
                     continue 'event_loop;
                 }
                 let language_id = language_id.unwrap();
+
                 let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
                 if root_path.is_none() {
                     debug!(
@@ -67,14 +59,16 @@ pub fn start(config: &Config) {
                     continue 'event_loop;
                 }
                 let root_path = root_path.unwrap();
-                let route = (
-                    request.meta.session.clone(),
-                    language_id.clone(),
-                    root_path.clone(),
-                );
+
+                let route = Route {
+                    session: request.meta.session.clone(),
+                    language: language_id.clone(),
+                    root: root_path.clone(),
+                };
+
                 debug!("Routing editor request to {:?}", route);
-                let controller = controllers.get(&route).cloned();
-                match controller {
+
+                match controllers.get(&route).cloned() {
                     Some(controller_tx) => {
                         controller_tx
                             .send(request)
@@ -86,45 +80,20 @@ pub fn start(config: &Config) {
                         if request.method == notification::DidCloseTextDocument::METHOD {
                             continue 'event_loop;
                         }
-                        let (lang_srv_cmd, lang_srv_args) = lang_id_to_server_cmd(config, &language_id).unwrap();
-                        // NOTE 1024 is arbitrary
-                        let (controller_tx, controller_rx) = bounded(1024);
-                        controllers.insert(route.clone(), controller_tx);
-                        let editor_tx = editor_tx.clone();
-                        let (controller_poison_tx, controller_poison_rx) = bounded(1);
-                        let (controller_poison_tx_mult, controller_poison_rx_mult) = bounded(1);
-                        let controller_remove_tx = controller_remove_tx.clone();
-                        let route_mult = route.clone();
-                        thread::spawn(move || {
-                            for _ in controller_poison_rx_mult {
-                                controller_remove_tx.send(route_mult.clone()).unwrap();
-                                controller_poison_tx.send(()).unwrap();
-                            }
-                        });
-                        thread::spawn(move || {
-                            let (lang_srv_tx, lang_srv_rx, lang_srv_poison_tx) =
-                                language_server_transport::start(
-                                    &lang_srv_cmd,
-                                    &lang_srv_args,
-                                );
-                            let controller = Controller::start(
-                                &language_id,
-                                &root_path,
-                                lang_srv_tx,
-                                lang_srv_rx,
-                                editor_tx,
-                                controller_rx,
-                                lang_srv_poison_tx,
-                                controller_poison_tx_mult,
-                                controller_poison_rx,
-                                request,
-                            );
-                            controller.wait().expect("Failed to wait for controller");
-                            debug!("Controller {:?} exited", route);
-                        });
+                        spawn_controller(
+                            &mut controllers,
+                            config,
+                            language_id,
+                            root_path,
+                            route,
+                            request,
+                            editor_tx.clone(),
+                            controller_remove_tx.clone()
+                        );
                     }
                 }
             }
+
             recv(controller_remove_rx, route) => {
                 controllers.remove(&route);
                 debug!("Controller {:?} removed", route);
@@ -160,7 +129,9 @@ impl Controller {
                 lang_srv_reader_poison_tx.send(msg).unwrap();
             }
         });
+
         let initial_request_meta = initial_request.meta.clone();
+
         let ctx_src = Arc::new(Mutex::new(Context::new(
             language_id,
             initial_request,
@@ -176,7 +147,7 @@ impl Controller {
                 select_loop! {
                     recv(editor_rx, msg) =>{
                         let mut ctx = ctx.lock().expect("Failed to lock context");
-                        // initialize request must be first requst from client to language server
+                        // initialize request must be first request from client to language server
                         // initialized response contains capabilities which we save for future use
                         // capabilities also serve as a marker of completing initialization
                         // we park all requests from editor before initialization is complete
@@ -184,10 +155,11 @@ impl Controller {
                         if ctx.capabilities.is_some() {
                             dispatch_editor_request(msg, &mut ctx);
                         } else {
-                        debug!("Language server is not initialized, parking request");
+                            debug!("Language server is not initialized, parking request");
                             ctx.pending_requests.push(msg);
                         }
                     }
+
                     recv(editor_reader_poison_rx, _) => {
                         debug!("Stopping editor dispatcher");
                         return;
@@ -244,6 +216,7 @@ impl Controller {
                         }
                     }
                 }
+
                 recv(lang_srv_reader_poison_rx, _) => {
                     debug!("Stopping language server dispatcher");
                     return;
@@ -395,20 +368,20 @@ fn dispatch_server_response(
     }
 }
 
-fn lang_id_to_server_cmd(config: &Config, language_id: &str) -> Option<(String, Vec<String>)> {
+fn language_id_to_server_cmd(config: &Config, language_id: &str) -> Option<(String, Vec<String>)> {
     if let Some(language) = config.language.get(language_id) {
         return Some((language.command.clone(), language.args.clone()));
     }
     None
 }
 
-fn path_to_lang_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
+fn path_to_language_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
     extensions
         .get(Path::new(path).extension()?.to_str()?)
         .cloned()
 }
 
-fn ext_to_lang_id_map(config: &Config) -> FnvHashMap<String, String> {
+fn extension_to_language_id_map(config: &Config) -> FnvHashMap<String, String> {
     let mut extensions = FnvHashMap::default();
     for (language_id, language) in &config.language {
         for extension in &language.extensions {
@@ -416,4 +389,73 @@ fn ext_to_lang_id_map(config: &Config) -> FnvHashMap<String, String> {
         }
     }
     extensions
+}
+
+fn exit_session(controllers: &mut Controllers, request: EditorRequest) {
+    info!(
+        "Session `{}` closed, shutting down associated language servers",
+        request.meta.session
+    );
+    for k in controllers.keys().map(|k| k.clone()).collect::<Vec<_>>() {
+        if k.session == request.meta.session {
+            let controller_tx = controllers.remove(&k).unwrap();
+            info!("Exit {} in project {}", k.language, k.root);
+            controller_tx
+                .send(request.clone())
+                .expect("Failed to route editor request");
+        }
+    }
+}
+
+fn ext_as_str(path: &str) -> &str {
+    Path::new(path)
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or_default()
+}
+
+fn spawn_controller(
+    controllers: &mut Controllers,
+    config: &Config,
+    language_id: String,
+    root_path: String,
+    route: Route,
+    request: EditorRequest,
+    editor_tx: Sender<EditorResponse>,
+    controller_remove_tx: Sender<Route>,
+) {
+    let (lang_srv_cmd, lang_srv_args) = language_id_to_server_cmd(config, &language_id).unwrap();
+    // NOTE 1024 is arbitrary
+    let (controller_tx, controller_rx) = bounded(1024);
+    controllers.insert(route.clone(), controller_tx);
+    let editor_tx = editor_tx.clone();
+    let (controller_poison_tx, controller_poison_rx) = bounded(1);
+    let (controller_poison_tx_mult, controller_poison_rx_mult) = bounded(1);
+    let controller_remove_tx = controller_remove_tx.clone();
+    let route_mult = route.clone();
+    thread::spawn(move || {
+        for _ in controller_poison_rx_mult {
+            controller_remove_tx.send(route_mult.clone()).unwrap();
+            controller_poison_tx.send(()).unwrap();
+        }
+    });
+    thread::spawn(move || {
+        let (lang_srv_tx, lang_srv_rx, lang_srv_poison_tx) =
+            language_server_transport::start(&lang_srv_cmd, &lang_srv_args);
+        let controller = Controller::start(
+            &language_id,
+            &root_path,
+            lang_srv_tx,
+            lang_srv_rx,
+            editor_tx,
+            controller_rx,
+            lang_srv_poison_tx,
+            controller_poison_tx_mult,
+            controller_poison_rx,
+            request,
+        );
+        controller.wait().expect("Failed to wait for controller");
+        debug!("Controller {:?} exited", route);
+    });
 }

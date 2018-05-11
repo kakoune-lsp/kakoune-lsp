@@ -80,7 +80,13 @@ pub struct EditorResponse {
 pub type SessionId = String;
 pub type LanguageId = String;
 pub type RootPath = String;
-pub type Route = (SessionId, LanguageId, RootPath);
+
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub struct Route {
+    pub session: SessionId,
+    pub language: LanguageId,
+    pub root: RootPath,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EditorCompletion {
