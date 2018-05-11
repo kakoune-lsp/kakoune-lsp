@@ -13,7 +13,6 @@ use languageserver_types::*;
 use project_root::find_project_root;
 use serde::Deserialize;
 use serde_json::{self, Value};
-use slog::Logger;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -21,9 +20,9 @@ use text_sync::*;
 use toml;
 use types::*;
 
-pub fn start(config: &Config, logger: Logger) {
-    info!(logger, "Starting Controller");
-    let (editor_tx, editor_rx) = editor_transport::start(config, logger.clone());
+pub fn start(config: &Config) {
+    info!("Starting Controller");
+    let (editor_tx, editor_rx) = editor_transport::start(config);
     let extensions = ext_to_lang_id_map(&config);
     let languages = config.language.clone();
     let mut controllers: FnvHashMap<Route, Sender<EditorRequest>> = FnvHashMap::default();
@@ -33,14 +32,13 @@ pub fn start(config: &Config, logger: Logger) {
             recv(editor_rx, request) => {
                 if request.method == notification::Exit::METHOD {
                     info!(
-                        logger,
                         "Session `{}` closed, shutting down associated language servers",
                         request.meta.session
                     );
                     for k in controllers.keys().map(|k| k.clone()).collect::<Vec<_>>() {
                         if k.0 == request.meta.session {
                             let controller_tx = controllers.remove(&k).unwrap();
-                            debug!(logger, "Exit {} in project {}", k.1, k.2);
+                            debug!("Exit {} in project {}", k.1, k.2);
                             controller_tx
                                 .send(request.clone())
                                 .expect("Failed to route editor request");
@@ -51,7 +49,6 @@ pub fn start(config: &Config, logger: Logger) {
                 let language_id = path_to_lang_id(&extensions, &request.meta.buffile);
                 if language_id.is_none() {
                     debug!(
-                        logger,
                         "Language server is not configured for extension `{}`",
                         Path::new(&request.meta.buffile)
                             .extension()
@@ -65,7 +62,6 @@ pub fn start(config: &Config, logger: Logger) {
                 let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
                 if root_path.is_none() {
                     debug!(
-                        logger,
                         "Unable to detect project root for file `{}`", request.meta.buffile
                     );
                     continue 'event_loop;
@@ -76,7 +72,7 @@ pub fn start(config: &Config, logger: Logger) {
                     language_id.clone(),
                     root_path.clone(),
                 );
-                debug!(logger, "Routing editor request to {:?}", route);
+                debug!("Routing editor request to {:?}", route);
                 let controller = controllers.get(&route).cloned();
                 match controller {
                     Some(controller_tx) => {
@@ -95,7 +91,6 @@ pub fn start(config: &Config, logger: Logger) {
                         let (controller_tx, controller_rx) = bounded(1024);
                         controllers.insert(route.clone(), controller_tx);
                         let editor_tx = editor_tx.clone();
-                        let logger = logger.clone();
                         let (controller_poison_tx, controller_poison_rx) = bounded(1);
                         let (controller_poison_tx_mult, controller_poison_rx_mult) = bounded(1);
                         let controller_remove_tx = controller_remove_tx.clone();
@@ -111,7 +106,6 @@ pub fn start(config: &Config, logger: Logger) {
                                 language_server_transport::start(
                                     &lang_srv_cmd,
                                     &lang_srv_args,
-                                    logger.clone(),
                                 );
                             let controller = Controller::start(
                                 &language_id,
@@ -124,17 +118,16 @@ pub fn start(config: &Config, logger: Logger) {
                                 controller_poison_tx_mult,
                                 controller_poison_rx,
                                 request,
-                                logger.clone(),
                             );
                             controller.wait().expect("Failed to wait for controller");
-                            debug!(logger, "Controller {:?} exited", route);
+                            debug!("Controller {:?} exited", route);
                         });
                     }
                 }
             }
             recv(controller_remove_rx, route) => {
                 controllers.remove(&route);
-                debug!(logger, "Controller {:?} removed", route);
+                debug!("Controller {:?} removed", route);
                 continue 'event_loop;
             }
         }
@@ -158,7 +151,6 @@ impl Controller {
         controller_poison_tx: Sender<()>,
         controller_poison_rx: Receiver<()>,
         initial_request: EditorRequest,
-        logger: Logger,
     ) -> Self {
         let (editor_reader_poison_tx, editor_reader_poison_rx) = bounded(1);
         let (lang_srv_reader_poison_tx, lang_srv_reader_poison_rx) = bounded(1);
@@ -176,11 +168,9 @@ impl Controller {
             editor_tx,
             lang_srv_poison_tx,
             controller_poison_tx,
-            logger.clone(),
         )));
 
         let ctx = Arc::clone(&ctx_src);
-        let editor_reader_logger = logger.clone();
         let editor_reader_handle = thread::spawn(move || {
             loop {
                 select_loop! {
@@ -194,12 +184,12 @@ impl Controller {
                         if ctx.capabilities.is_some() {
                             dispatch_editor_request(msg, &mut ctx);
                         } else {
-                        debug!(editor_reader_logger, "Language server is not initialized, parking request");
+                        debug!("Language server is not initialized, parking request");
                             ctx.pending_requests.push(msg);
                         }
                     }
                     recv(editor_reader_poison_rx, _) => {
-                        debug!(editor_reader_logger, "Stopping editor dispatcher");
+                        debug!("Stopping editor dispatcher");
                         return;
                     }
                 }
@@ -207,7 +197,6 @@ impl Controller {
         });
 
         let ctx = Arc::clone(&ctx_src);
-        let lang_srv_logger = logger.clone();
         let lang_srv_handle = thread::spawn(move || loop {
             select_loop! {
                 recv(lang_srv_rx, msg) => {
@@ -216,7 +205,7 @@ impl Controller {
                             let mut ctx = ctx.lock().expect("Failed to lock context");
                             match call {
                                 Call::MethodCall(request) => {
-                                    debug!(lang_srv_logger, "Requests from language server are not supported yet: {:?}", request);
+                                    debug!("Requests from language server are not supported yet: {:?}", request);
                                 }
                                 Call::Notification(notification) => {
                                     dispatch_server_notification(
@@ -226,7 +215,7 @@ impl Controller {
                                     );
                                 }
                                 Call::Invalid(m) => {
-                                    error!(lang_srv_logger, "Invalid call from language server: {:?}", m);
+                                    error!("Invalid call from language server: {:?}", m);
                                 }
                             }
                         }
@@ -244,11 +233,11 @@ impl Controller {
                                             &mut ctx,
                                         );
                                     } else {
-                                        error!(lang_srv_logger, "Id {:?} is not in waitlist!", success.id);
+                                        error!("Id {:?} is not in waitlist!", success.id);
                                     }
                                 }
                                 Output::Failure(failure) => {
-                                    error!(lang_srv_logger, "Error response from server: {:?}", failure);
+                                    error!("Error response from server: {:?}", failure);
                                     ctx.response_waitlist.remove(&failure.id);
                                 }
                             }
@@ -256,7 +245,7 @@ impl Controller {
                     }
                 }
                 recv(lang_srv_reader_poison_rx, _) => {
-                    debug!(lang_srv_logger, "Stopping language server dispatcher");
+                    debug!("Stopping language server dispatcher");
                     return;
                 }
             }
@@ -337,7 +326,7 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
             );
         }
         notification::Exit::METHOD => {
-            debug!(ctx.logger, "Language server exited, poisoning controller");
+            debug!("Language server exited, poisoning controller");
             ctx.controller_poison_tx.send(()).unwrap();
         }
         // to not litter logs with "unsupported method"

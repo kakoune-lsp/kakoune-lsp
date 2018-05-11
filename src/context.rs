@@ -2,7 +2,6 @@ use crossbeam_channel::Sender;
 use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Id, Params, Version};
 use languageserver_types::*;
-use slog::Logger;
 use types::*;
 
 pub struct Context {
@@ -13,7 +12,6 @@ pub struct Context {
     pub lang_srv_poison_tx: Sender<()>,
     pub lang_srv_tx: Sender<ServerMessage>,
     pub language_id: String,
-    pub logger: Logger,
     pub pending_requests: Vec<EditorRequest>,
     pub request_counter: u64,
     pub response_waitlist: FnvHashMap<Id, (EditorMeta, String, EditorParams)>,
@@ -29,7 +27,6 @@ impl Context {
         editor_tx: Sender<EditorResponse>,
         lang_srv_poison_tx: Sender<()>,
         controller_poison_tx: Sender<()>,
-        logger: Logger,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
@@ -40,7 +37,6 @@ impl Context {
             lang_srv_poison_tx,
             lang_srv_tx,
             language_id: language_id.to_string(),
-            logger,
             pending_requests: vec![initial_request],
             request_counter: 0,
             response_waitlist: FnvHashMap::default(),

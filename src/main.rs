@@ -14,6 +14,8 @@ extern crate serde;
 #[macro_use]
 extern crate slog;
 extern crate sloggers;
+#[macro_use]
+extern crate slog_scope;
 extern crate toml;
 extern crate url;
 extern crate url_serde;
@@ -139,5 +141,7 @@ fn main() {
 
     let logger = builder.build().unwrap();
 
-    controller::start(&config, logger);
+    let _guard = slog_scope::set_global_logger(logger);
+
+    controller::start(&config);
 }

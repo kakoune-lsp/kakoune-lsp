@@ -1,5 +1,4 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
-use slog::Logger;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener};
 use std::process::{Command, Stdio};
@@ -7,17 +6,13 @@ use std::thread;
 use toml;
 use types::*;
 
-pub fn start(config: &Config, logger: Logger) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
+pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
     let port = config.server.port;
     let ip = config.server.ip.parse().expect("Failed to parse IP");
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
-    let request_logger = logger.clone();
     thread::spawn(move || {
-        info!(
-            request_logger,
-            "Starting editor transport on {}:{}", ip, port
-        );
+        info!("Starting editor transport on {}:{}", ip, port);
         let addr = SocketAddr::new(ip, port);
 
         let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
@@ -28,7 +23,7 @@ pub fn start(config: &Config, logger: Logger) -> (Sender<EditorResponse>, Receiv
             stream
                 .read_to_string(&mut request)
                 .expect("Failed to read from TCP stream");
-            debug!(request_logger, "From editor: {}", request);
+            debug!("From editor: {}", request);
             let request: EditorRequest =
                 toml::from_str(&request).expect("Failed to parse editor request");
             reader_tx
@@ -50,14 +45,14 @@ pub fn start(config: &Config, logger: Logger) -> (Sender<EditorResponse>, Receiv
                 .expect("Failed to run Kakoune");
             {
                 let stdin = child.stdin.as_mut().expect("Failed to get editor stdin");
-                let command = match response.meta.client {
+                let command = match response.meta.client.clone() {
                     Some(client) => {
                         // NOTE fingers crossed no 🦀 will appear in response.command
                         format!("eval -client {} %🦀{}🦀", client, response.command)
                     }
                     None => format!("{}", response.command),
                 };
-                debug!(logger, "To editor `{}`: {}", response.meta.session, command);
+                debug!("To editor `{}`: {}", response.meta.session, command);
                 stdin
                     .write_all(command.as_bytes())
                     .expect("Failed to write to editor stdin");
