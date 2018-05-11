@@ -6,7 +6,7 @@ decl -hidden range-specs cquery_semhl
 decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
 
-def lsp-did-change %{ try %{
+def -hidden lsp-did-change %{ try %{
     %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
@@ -26,7 +26,7 @@ draft   = "%s"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }}
 
-def lsp-completion %{
+def -hidden lsp-completion %{
     decl -hidden str lsp_completion_offset
     eval -draft %{ try %{
         execute-keys <esc><a-h>s\w+.\z<ret>
@@ -48,7 +48,7 @@ offset    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-hover %{
+def -hidden lsp-hover %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -74,7 +74,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-did-open %{
+def -hidden lsp-did-open %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -85,7 +85,7 @@ method  = "textDocument/didOpen"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-did-close %{
+def -hidden lsp-did-close %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -96,7 +96,7 @@ method  = "textDocument/didClose"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-did-save %{
+def -hidden lsp-did-save %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -107,7 +107,7 @@ method  = "textDocument/didSave"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-exit %{
+def -hidden lsp-exit %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -118,7 +118,7 @@ method  = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-enable %{
+def -hidden lsp-enable %{
     set global completers "option=lsp_completions:%opt{completers}"
     add-highlighter global/ ranges lsp_errors
     add-highlighter global/ ranges cquery_semhl
