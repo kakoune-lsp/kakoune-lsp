@@ -21,29 +21,10 @@ use text_sync::*;
 use toml;
 use types::*;
 
-fn get_server_cmd(config: &Config, language_id: &str) -> Option<(String, Vec<String>)> {
-    if let Some(language) = config.language.get(language_id) {
-        return Some((language.command.clone(), language.args.clone()));
-    }
-    None
-}
-
-fn get_language_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
-    extensions
-        .get(Path::new(path).extension()?.to_str()?)
-        .cloned()
-}
-
 pub fn start(config: &Config, logger: Logger) {
     info!(logger, "Starting Controller");
     let (editor_tx, editor_rx) = editor_transport::start(config, logger.clone());
-    let mut extensions = FnvHashMap::default();
-    for (language_id, language) in &config.language {
-        for extension in &language.extensions {
-            extensions.insert(extension.clone(), language_id.clone());
-        }
-    }
-    let extensions = extensions;
+    let extensions = ext_to_lang_id_map(&config);
     let languages = config.language.clone();
     let mut controllers: FnvHashMap<Route, Sender<EditorRequest>> = FnvHashMap::default();
     let (controller_remove_tx, controller_remove_rx) = bounded(1);
@@ -67,7 +48,7 @@ pub fn start(config: &Config, logger: Logger) {
                     }
                     continue 'event_loop;
                 }
-                let language_id = get_language_id(&extensions, &request.meta.buffile);
+                let language_id = path_to_lang_id(&extensions, &request.meta.buffile);
                 if language_id.is_none() {
                     debug!(
                         logger,
@@ -109,7 +90,7 @@ pub fn start(config: &Config, logger: Logger) {
                         if request.method == notification::DidCloseTextDocument::METHOD {
                             continue 'event_loop;
                         }
-                        let (lang_srv_cmd, lang_srv_args) = get_server_cmd(config, &language_id).unwrap();
+                        let (lang_srv_cmd, lang_srv_args) = lang_id_to_server_cmd(config, &language_id).unwrap();
                         // NOTE 1024 is arbitrary
                         let (controller_tx, controller_rx) = bounded(1024);
                         controllers.insert(route.clone(), controller_tx);
@@ -423,4 +404,27 @@ fn dispatch_server_response(
             println!("Don't know how to handle response for method: {}", method);
         }
     }
+}
+
+fn lang_id_to_server_cmd(config: &Config, language_id: &str) -> Option<(String, Vec<String>)> {
+    if let Some(language) = config.language.get(language_id) {
+        return Some((language.command.clone(), language.args.clone()));
+    }
+    None
+}
+
+fn path_to_lang_id(extensions: &FnvHashMap<String, String>, path: &str) -> Option<String> {
+    extensions
+        .get(Path::new(path).extension()?.to_str()?)
+        .cloned()
+}
+
+fn ext_to_lang_id_map(config: &Config) -> FnvHashMap<String, String> {
+    let mut extensions = FnvHashMap::default();
+    for (language_id, language) in &config.language {
+        for extension in &language.extensions {
+            extensions.insert(extension.clone(), language_id.clone());
+        }
+    }
+    extensions
 }
