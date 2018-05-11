@@ -45,7 +45,7 @@ pub fn start(
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
     thread::spawn(move || {
-        if let Err(_) = reader_loop(reader, &reader_tx) {
+        if reader_loop(reader, &reader_tx).is_err() {
             error!("Failed to read message from language server");
         }
         // NOTE prevent zombie
@@ -68,7 +68,7 @@ pub fn start(
     // NOTE 1024 is arbitrary
     let (writer_tx, writer_rx): (Sender<ServerMessage>, Receiver<ServerMessage>) = bounded(1024);
     thread::spawn(move || {
-        if let Err(_) = writer_loop(writer, &writer_rx, &poison_rx) {
+        if writer_loop(writer, &writer_rx, &poison_rx).is_err() {
             error!("Failed to write message to language server");
         }
         // NOTE we rely on assumption that if write failed then read is failed as well

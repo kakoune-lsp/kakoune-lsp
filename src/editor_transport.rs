@@ -50,7 +50,7 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest
                         // NOTE fingers crossed no 🦀 will appear in response.command
                         format!("eval -client {} %🦀{}🦀", client, response.command)
                     }
-                    None => format!("{}", response.command),
+                    None => response.command.to_string(),
                 };
                 debug!("To editor `{}`: {}", response.meta.session, command);
                 stdin

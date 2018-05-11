@@ -37,7 +37,7 @@ pub fn start(config: &Config) {
         select_loop! {
             recv(editor_rx, request) => {
                 if request.method == notification::Exit::METHOD {
-                    exit_session(&mut controllers, request);
+                    exit_session(&mut controllers, &request);
                     continue 'event_loop;
                 }
 
@@ -391,12 +391,12 @@ fn extension_to_language_id_map(config: &Config) -> FnvHashMap<String, String> {
     extensions
 }
 
-fn exit_session(controllers: &mut Controllers, request: EditorRequest) {
+fn exit_session(controllers: &mut Controllers, request: &EditorRequest) {
     info!(
         "Session `{}` closed, shutting down associated language servers",
         request.meta.session
     );
-    for k in controllers.keys().map(|k| k.clone()).collect::<Vec<_>>() {
+    for k in controllers.keys().cloned().collect::<Vec<_>>() {
         if k.session == request.meta.session {
             let controller_tx = controllers.remove(&k).unwrap();
             info!("Exit {} in project {}", k.language, k.root);
