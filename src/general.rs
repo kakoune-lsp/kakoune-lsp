@@ -11,30 +11,7 @@ pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities::default()),
-            text_document: Some(TextDocumentClientCapabilities {
-                synchronization: None,
-                completion: Some(CompletionCapability {
-                    dynamic_registration: None,
-                    completion_item: Some(CompletionItemCapability {
-                        snippet_support: None,
-                        commit_characters_support: None,
-                        documentation_format: None,
-                    }),
-                }),
-                hover: None,
-                signature_help: None,
-                references: None,
-                document_highlight: None,
-                document_symbol: None,
-                formatting: None,
-                range_formatting: None,
-                on_type_formatting: None,
-                definition: None,
-                code_action: None,
-                code_lens: None,
-                document_link: None,
-                rename: None,
-            }),
+            text_document: Some(TextDocumentClientCapabilities::default()),
             experimental: None,
         },
         initialization_options: None,
