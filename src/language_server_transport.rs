@@ -50,7 +50,9 @@ pub fn start(
         }
         // NOTE prevent zombie
         debug!("Waiting for language server process end");
-        child.wait().unwrap();
+        if child.wait().is_err() {
+            error!("Language server wasn't running was it?!");
+        }
 
         let notification = jsonrpc_core::Notification {
             jsonrpc: Some(Version::V2),

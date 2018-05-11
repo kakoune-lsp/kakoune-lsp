@@ -363,7 +363,7 @@ fn dispatch_server_response(
             }
         }
         _ => {
-            warn!("Don't know how to handle response for method: {}", method);
+            error!("Don't know how to handle response for method: {}", method);
         }
     }
 }
