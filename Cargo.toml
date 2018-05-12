@@ -1,6 +1,6 @@
 [package]
 name = "kak-lsp"
-version = "3.1.0"
+version = "3.1.1"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>"]
 
 [dependencies]
@@ -15,7 +15,7 @@ regex = "0"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
-slog = "2"
+slog = { version = "2", features = ["release_max_level_debug"] }
 slog-scope = "4"
 sloggers = "0"
 toml = "0"
