@@ -275,6 +275,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::GotoDefinition::METHOD => {
             definition::text_document_definition(params, meta, &mut ctx);
         }
+        request::References::METHOD => {
+            references::text_document_references(params, meta, &mut ctx);
+        }
         notification::Exit::METHOD => {
             general::exit(params, meta, &mut ctx);
         }
@@ -341,6 +344,14 @@ fn dispatch_server_response(
         }
         request::GotoDefinition::METHOD => {
             definition::editor_definition(
+                meta,
+                &PositionParams::deserialize(params).expect("Failed to parse params"),
+                serde_json::from_value(response).expect("Failed to parse definition response"),
+                &mut ctx,
+            );
+        }
+        request::References::METHOD => {
+            references::editor_references(
                 meta,
                 &PositionParams::deserialize(params).expect("Failed to parse params"),
                 serde_json::from_value(response).expect("Failed to parse definition response"),

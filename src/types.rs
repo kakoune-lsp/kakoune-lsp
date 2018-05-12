@@ -149,3 +149,10 @@ pub enum GotoDefinitionResponse {
     Scalar(Location),
     Array(Vec<Location>),
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ReferencesResponse {
+    None,
+    Array(Vec<Location>),
+}
