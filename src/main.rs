@@ -156,14 +156,12 @@ fn main() {
     }
 }
 
-#[cfg(debug_assertions)]
-const TEMPLATE: &str = include_str!("../rc/lsp.kak");
-
 fn kakoune(config: &Config) {
     let handlebars = Handlebars::new();
+    let template: &str = include_str!("../rc/lsp.kak");
     handlebars
         .render_template_to_write(
-            TEMPLATE,
+            template,
             &json!({"ip": config.server.ip, "port": config.server.port}),
             &mut stdout(),
         )
