@@ -55,3 +55,9 @@ extensions = ["c", "h", "cc", "hh"]
 roots = ["compile_commands.json", ".cquery"]
 command = "cquery"
 args = ["--init={\"cacheDirectory\":\"/tmp/cquery\"}"]
+
+[language.haskell]
+extensions = ["hs"]
+roots = ["Setup.hs", "stack.yaml"]
+command = "hie"
+args = ["--lsp"]
