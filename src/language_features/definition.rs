@@ -31,7 +31,11 @@ pub fn editor_definition(
 ) {
     if let Some(location) = match result {
         GotoDefinitionResponse::Scalar(location) => Some(location),
-        GotoDefinitionResponse::Array(mut locations) => Some(locations.remove(0)),
+        GotoDefinitionResponse::Array(mut locations) => if locations.is_empty() {
+            None
+        } else {
+            Some(locations.remove(0))
+        },
         GotoDefinitionResponse::None => None,
     } {
         let filename = location.uri.path();
