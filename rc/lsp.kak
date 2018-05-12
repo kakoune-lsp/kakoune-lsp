@@ -1,4 +1,4 @@
-decl str lsp_cmd 'nc {{ip}} {{port}} -c'
+decl str lsp_cmd 'kak-lsp --request {{args}}'
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 

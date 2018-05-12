@@ -41,7 +41,8 @@ use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
 use std::fs::File;
-use std::io::{stdout, BufReader, Read};
+use std::io::{stdin, stdout, BufReader, Read, Write};
+use std::net::{SocketAddr, TcpStream};
 use std::path::Path;
 use types::*;
 
@@ -54,6 +55,11 @@ fn main() {
             Arg::with_name("kakoune")
                 .long("kakoune")
                 .help("Generate commands for Kakoune to plug in kak-lsp"),
+        )
+        .arg(
+            Arg::with_name("request")
+                .long("request")
+                .help("Forward stdin to kak-lsp server"),
         )
         .arg(
             Arg::with_name("config")
@@ -150,20 +156,36 @@ fn main() {
     let _guard = slog_scope::set_global_logger(logger);
 
     if matches.is_present("kakoune") {
-        kakoune(&config);
+        kakoune();
+    } else if matches.is_present("request") {
+        request(&config);
     } else {
         controller::start(&config);
     }
 }
 
-fn kakoune(config: &Config) {
+fn kakoune() {
     let handlebars = Handlebars::new();
     let template: &str = include_str!("../rc/lsp.kak");
     handlebars
         .render_template_to_write(
             template,
-            &json!({"ip": config.server.ip, "port": config.server.port}),
+            &json!({"args": std::env::args().skip(1).collect::<Vec<_>>().join(" ")}),
             &mut stdout(),
         )
         .unwrap();
+}
+
+fn request(config: &Config) {
+    let port = config.server.port;
+    let ip = config.server.ip.parse().expect("Failed to parse IP");
+    let addr = SocketAddr::new(ip, port);
+    let mut stream = TcpStream::connect(addr).expect("Failed to connect to kak-lsp server");
+    let mut input = Vec::new();
+    stdin()
+        .read_to_end(&mut input)
+        .expect("Failed to read stdin");
+    stream
+        .write_all(&input)
+        .expect("Failed to send stdin to server");
 }

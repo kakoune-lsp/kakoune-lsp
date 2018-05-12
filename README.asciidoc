@@ -21,8 +21,8 @@ brew services start ul/kak-lsp/kak-lsp
 ===== Manual
 
 ----
-curl -O -L https://github.com/ul/kak-lsp/releases/download/v3.1.1/kak-lsp-v3.1.1-x86_64-apple-darwin.tar.gz
-tar xzvf kak-lsp-v3.1.1-x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/ul/kak-lsp/releases/download/v3.1.2/kak-lsp-v3.1.2-x86_64-apple-darwin.tar.gz
+tar xzvf kak-lsp-v3.1.2-x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
@@ -38,7 +38,7 @@ launchctl load ~/Library/LaunchAgents/com.github.ul.kak-lsp.plist
 ==== Linux
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v3.1.1/kak-lsp.x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v3.1.2/kak-lsp.x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp.x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -51,8 +51,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ==== FreeBSD
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v3.1.1/kak-lsp-v3.1.1-x86_64-unknown-freebsd.tar.gz
-tar xzvf kak-lsp-v3.1.1-x86_64-unknown-freebsd.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v3.1.2/kak-lsp-v3.1.2-x86_64-unknown-freebsd.tar.gz
+tar xzvf kak-lsp-v3.1.2-x86_64-unknown-freebsd.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
@@ -90,8 +90,15 @@ launchctl load com.github.ul.kak-lsp.plist
 
 == Usage
 
-`kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore `kak-lsp` process should be started separately and having single one running is enough. Expect it to crash from time to time. Usually it's enough just to restart it. When you return to editing your files `kak-lsp` will restart language server. See Installation for example how to automate keeping `kak-lsp` alive under MacOS.
+`kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore `kak-lsp` process should be started separately and having single one running is enough:
 
+----
+kak-lsp
+----
+
+Expect it to crash from time to time. Usually it's enough just to restart it. When you return to editing your files `kak-lsp` will restart language server. See Installation for example how to automate keeping `kak-lsp` alive under MacOS.
+
+Now you have running kak-lsp service and need to make Kakoune aware of it.
 To enable LSP support for configured languages (see the next section) just add following command to your `kakrc`:
 
 ----
