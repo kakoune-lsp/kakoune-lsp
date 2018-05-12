@@ -155,10 +155,10 @@ fn main() {
     let logger = builder.build().unwrap();
     let _guard = slog_scope::set_global_logger(logger);
 
-    if matches.is_present("kakoune") {
-        kakoune();
-    } else if matches.is_present("request") {
+    if matches.is_present("request") {
         request(&config);
+    } else if matches.is_present("kakoune") {
+        kakoune();
     } else {
         controller::start(&config);
     }
@@ -170,7 +170,7 @@ fn kakoune() {
     handlebars
         .render_template_to_write(
             template,
-            &json!({"args": std::env::args().skip(1).collect::<Vec<_>>().join(" ")}),
+            &json!({"args": std::env::args().skip(1).filter(|arg| arg != "--kakoune").collect::<Vec<_>>().join(" ")}),
             &mut stdout(),
         )
         .unwrap();
