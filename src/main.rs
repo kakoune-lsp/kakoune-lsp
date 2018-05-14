@@ -167,10 +167,16 @@ fn main() {
 fn kakoune() {
     let handlebars = Handlebars::new();
     let template: &str = include_str!("../rc/lsp.kak");
+    let args = std::env::args()
+        .skip(1)
+        .filter(|arg| arg != "--kakoune")
+        .collect::<Vec<_>>()
+        .join(" ");
+    let cmd = std::env::current_exe().unwrap().to_owned();
     handlebars
         .render_template_to_write(
             template,
-            &json!({"args": std::env::args().skip(1).filter(|arg| arg != "--kakoune").collect::<Vec<_>>().join(" ")}),
+            &json!({ "cmd": cmd, "args": args }),
             &mut stdout(),
         )
         .unwrap();
