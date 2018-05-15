@@ -8,7 +8,7 @@ use toml;
 
 // Configuration
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     #[serde(default)]
     pub editor: FnvHashMap<String, bool>,
@@ -19,7 +19,7 @@ pub struct Config {
     pub verbosity: u8,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct ServerConfig {
     #[serde(default = "default_ip")]
     pub ip: String,

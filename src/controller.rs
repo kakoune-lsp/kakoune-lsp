@@ -120,6 +120,7 @@ impl Controller {
         controller_poison_tx: Sender<()>,
         controller_poison_rx: Receiver<()>,
         initial_request: EditorRequest,
+        config: Config,
     ) -> Self {
         let (editor_reader_poison_tx, editor_reader_poison_rx) = bounded(1);
         let (lang_srv_reader_poison_tx, lang_srv_reader_poison_rx) = bounded(1);
@@ -139,6 +140,7 @@ impl Controller {
             editor_tx,
             lang_srv_poison_tx,
             controller_poison_tx,
+            config,
         )));
 
         let ctx = Arc::clone(&ctx_src);
@@ -451,6 +453,7 @@ fn spawn_controller(
             controller_poison_tx.send(()).unwrap();
         }
     });
+    let config = (*config).clone();
     thread::spawn(move || {
         let (lang_srv_tx, lang_srv_rx, lang_srv_poison_tx) =
             language_server_transport::start(&lang_srv_cmd, &lang_srv_args);
@@ -465,6 +468,7 @@ fn spawn_controller(
             controller_poison_tx_mult,
             controller_poison_rx,
             request,
+            config,
         );
         controller.wait().expect("Failed to wait for controller");
         debug!("Controller {:?} exited", route);

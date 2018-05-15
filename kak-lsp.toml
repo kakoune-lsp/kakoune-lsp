@@ -2,6 +2,7 @@ verbosity = 2
 
 [editor]
 hover = true
+zero_char_completion = false
 
 [server]
 ip = "127.0.0.1"

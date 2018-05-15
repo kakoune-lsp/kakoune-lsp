@@ -6,6 +6,7 @@ use types::*;
 
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
+    pub config: Config,
     pub controller_poison_tx: Sender<()>,
     pub diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
     pub editor_tx: Sender<EditorResponse>,
@@ -27,10 +28,12 @@ impl Context {
         editor_tx: Sender<EditorResponse>,
         lang_srv_poison_tx: Sender<()>,
         controller_poison_tx: Sender<()>,
+        config: Config,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
             capabilities: None,
+            config,
             controller_poison_tx,
             diagnostics: FnvHashMap::default(),
             editor_tx,
