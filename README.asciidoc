@@ -46,6 +46,11 @@ mv kak-lsp ~/.local/bin/
 
 mkdir -p ~/.config/kak-lsp 
 mv kak-lsp.toml ~/.config/kak-lsp/ 
+
+# service for Linux (systemd) to not bother with manual start/restart
+mkdir -p ~/.config/systemd/user/
+mv kak-lsp.service ~/.config/systemd/user/
+systemctl --user enable --now kak-lsp
 ----
 
 ==== FreeBSD
@@ -82,6 +87,11 @@ cp kak-lsp.toml ~/.config/kak-lsp/
 # service for MacOS to not bother with manual start/restart
 ln -s $PWD/com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
 launchctl load com.github.ul.kak-lsp.plist
+
+# service for Linux (systemd) to not bother with manual start/restart
+mkdir -p ~/.config/systemd/user/
+mv kak-lsp.service ~/.config/systemd/user/
+systemctl --user enable --now kak-lsp
 ----
 
 == Language servers
