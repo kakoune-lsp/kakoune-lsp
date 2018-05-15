@@ -10,6 +10,8 @@ use toml;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
+    #[serde(default)]
+    pub editor: FnvHashMap<String, bool>,
     pub language: FnvHashMap<String, LanguageConfig>,
     #[serde(default)]
     pub server: ServerConfig,

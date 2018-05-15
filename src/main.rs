@@ -36,7 +36,7 @@ mod text_sync;
 mod types;
 
 use clap::{App, Arg};
-use handlebars::Handlebars;
+use handlebars::{no_escape, Handlebars};
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
@@ -158,14 +158,15 @@ fn main() {
     if matches.is_present("request") {
         request(&config);
     } else if matches.is_present("kakoune") {
-        kakoune();
+        kakoune(&config);
     } else {
         controller::start(&config);
     }
 }
 
-fn kakoune() {
-    let handlebars = Handlebars::new();
+fn kakoune(config: &Config) {
+    let mut handlebars = Handlebars::new();
+    handlebars.register_escape_fn(no_escape);
     let template: &str = include_str!("../rc/lsp.kak");
     let args = std::env::args()
         .skip(1)
@@ -176,7 +177,11 @@ fn kakoune() {
     handlebars
         .render_template_to_write(
             template,
-            &json!({ "cmd": cmd, "args": args }),
+            &json!({
+                "cmd": cmd,
+                "args": args,
+                "hover": config.editor.get("hover").unwrap_or(&true)
+            }),
             &mut stdout(),
         )
         .unwrap();

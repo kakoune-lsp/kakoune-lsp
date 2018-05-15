@@ -1,5 +1,8 @@
 verbosity = 2
 
+[editor]
+hover = true
+
 [server]
 ip = "127.0.0.1"
 port = 31337

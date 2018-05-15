@@ -149,7 +149,7 @@ def -hidden lsp-enable %{
     }
     hook -group lsp global NormalIdle .* %{
         lsp-did-change
-        lsp-hover
+        {{#if hover}}lsp-hover{{/if}}
     }
     hook -group lsp global KakEnd .* %{
         lsp-exit
