@@ -180,7 +180,7 @@ fn kakoune(config: &Config) {
             &json!({
                 "cmd": cmd,
                 "args": args,
-                "hover": config.editor.get("hover").unwrap_or(&true)
+                "hover": config.editor.hover
             }),
             &mut stdout(),
         )

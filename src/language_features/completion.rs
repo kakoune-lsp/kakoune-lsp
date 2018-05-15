@@ -12,12 +12,7 @@ pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &m
         .expect("Params should follow TextDocumentCompletionParams structure");
     let position = req_params.position;
     let offset = req_params.completion.offset;
-    if offset == 0
-        && !ctx.config
-            .editor
-            .get("zero_char_completion")
-            .unwrap_or(&false)
-    {
+    if offset == 0 && !ctx.config.editor.zero_char_completion {
         let p = position;
         let command = format!(
             "set window lsp_completions %§{}.{}@{}:§\n",

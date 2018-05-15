@@ -11,12 +11,18 @@ use toml;
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     #[serde(default)]
-    pub editor: FnvHashMap<String, bool>,
+    pub editor: EditorConfig,
     pub language: FnvHashMap<String, LanguageConfig>,
     #[serde(default)]
     pub server: ServerConfig,
     #[serde(default)]
     pub verbosity: u8,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct EditorConfig {
+    pub hover: bool,
+    pub zero_char_completion: bool,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -34,6 +40,15 @@ pub struct LanguageConfig {
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
+}
+
+impl Default for EditorConfig {
+    fn default() -> Self {
+        EditorConfig {
+            hover: true,
+            zero_char_completion: false,
+        }
+    }
 }
 
 impl Default for ServerConfig {
