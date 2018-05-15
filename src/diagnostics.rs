@@ -16,12 +16,16 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         .iter()
         .map(|x| {
             format!(
-                "{}.{},{}.{}|Error",
+                "{}.{},{}.{}|{}",
                 x.range.start.line + 1,
                 x.range.start.character + 1,
                 x.range.end.line + 1,
                 // LSP ranges are exclusive, but Kakoune's are inclusive
-                x.range.end.character
+                x.range.end.character,
+                match x.severity {
+                    Some(::languageserver_types::DiagnosticSeverity::Error) => "Error",
+                    _ => "Information",
+                }
             )
         })
         .collect::<Vec<String>>()
