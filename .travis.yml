@@ -14,16 +14,13 @@ matrix:
   include:
     # Linux
     - env: TARGET=x86_64-unknown-linux-musl
-      rust: nightly
 
     # OSX
     - env: TARGET=x86_64-apple-darwin
       os: osx
-      rust: nightly
 
     # *BSD
     - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
-      rust: nightly
 
 before_install:
   - set -e

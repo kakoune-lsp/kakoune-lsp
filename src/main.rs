@@ -1,5 +1,3 @@
-#![feature(getpid)]
-
 extern crate clap;
 #[macro_use]
 extern crate crossbeam_channel;

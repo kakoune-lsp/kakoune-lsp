@@ -3,7 +3,7 @@
 
 environment:
   global:
-    RUST_VERSION: nightly
+    RUST_VERSION: stable
 
     CRATE_NAME: kak-lsp
 
@@ -48,7 +48,6 @@ deploy:
     secure: FAxKim4ijTnkGi+CRlo4JR4J6YFaOOgJEKDRc5KXb8HTKjTKEv0zBaxyIs2KIxFP
   description: ''
   on:
-    RUST_VERSION: nightly
     appveyor_repo_tag: true
   provider: GitHub
 

@@ -63,14 +63,11 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 === From the source
 
-`kak-lsp` requires nightly Rust because of using `getpid` feature (LSP requires sending client pid in initialize request).
-
 ----
 git clone https://github.com/ul/kak-lsp
 cd kak-lsp
 
-rustup install nightly
-rustup run nightly cargo build --release
+cargo build --release
 
 # replace `~/.local/bin/` with something on your `$PATH`
 ln -s $PWD/target/release/kak-lsp ~/.local/bin/
