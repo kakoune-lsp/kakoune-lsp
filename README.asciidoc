@@ -87,7 +87,7 @@ launchctl load com.github.ul.kak-lsp.plist
 
 # service for Linux (systemd) to not bother with manual start/restart
 mkdir -p ~/.config/systemd/user/
-mv kak-lsp.service ~/.config/systemd/user/
+ln -s $PWD/kak-lsp.service ~/.config/systemd/user/
 systemctl --user enable --now kak-lsp
 ----
 
