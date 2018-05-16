@@ -2,6 +2,7 @@ extern crate clap;
 #[macro_use]
 extern crate crossbeam_channel;
 extern crate fnv;
+extern crate glob;
 extern crate handlebars;
 extern crate jsonrpc_core;
 extern crate languageserver_types;

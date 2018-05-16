@@ -39,7 +39,7 @@ args = ["--stdio"]
 
 [language.ocaml]
 extensions = ["ml", "mli"]
-roots = ["Makefile", ".git"]
+roots = ["Makefile", "opam", "*.opam"]
 command = "ocaml-language-server"
 args = ["--stdio"]
 
@@ -62,6 +62,6 @@ args = ["--init={\"cacheDirectory\":\"/tmp/cquery\"}"]
 
 [language.haskell]
 extensions = ["hs"]
-roots = ["Setup.hs", "stack.yaml"]
+roots = ["Setup.hs", "stack.yaml", "*.cabal"]
 command = "hie"
 args = ["--lsp"]
