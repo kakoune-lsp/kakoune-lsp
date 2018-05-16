@@ -48,7 +48,7 @@ offset    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-hover %{
+def lsp-hover %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
