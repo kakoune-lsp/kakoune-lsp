@@ -2,7 +2,7 @@
 Description=Kak LSP daemon
 
 [Service]
-ExecStart=/home/lars/.local/bin/kak-lsp
+ExecStart=/bin/sh -c 'kak-lsp'
 Type=simple
 Restart=always
 
