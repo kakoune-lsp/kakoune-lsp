@@ -24,6 +24,7 @@ main() {
 
     case $TRAVIS_OS_NAME in
         linux)
+            cp kak-lsp.service $stage/
             ;;
         osx)
             cp com.github.ul.kak-lsp.plist $stage/
