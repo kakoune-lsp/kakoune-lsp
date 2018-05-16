@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate clap;
 #[macro_use]
 extern crate crossbeam_channel;
@@ -47,7 +48,7 @@ use types::*;
 
 fn main() {
     let matches = App::new("kak-lsp")
-        .version("1.0")
+        .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
         .arg(
