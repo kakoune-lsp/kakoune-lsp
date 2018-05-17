@@ -55,7 +55,7 @@ roots = ["requirements.txt", "setup.py", ".git"]
 command = "pyls"
 
 [language.c_cpp]
-extensions = ["c", "h", "cc", "hh"]
+extensions = ["c", "h", "cc", "hh", "cpp", "hpp"]
 roots = ["compile_commands.json", ".cquery"]
 command = "cquery"
 args = ["--init={\"cacheDirectory\":\"/tmp/cquery\"}"]
