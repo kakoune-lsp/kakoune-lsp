@@ -45,8 +45,9 @@ pub fn start(
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
     thread::spawn(move || {
-        if reader_loop(reader, &reader_tx).is_err() {
-            error!("Failed to read message from language server");
+        match reader_loop(reader, &reader_tx) {
+            Err(msg) => error!("{}", msg),
+            _ => (),
         }
         // NOTE prevent zombie
         debug!("Waiting for language server process end");
@@ -102,12 +103,16 @@ fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Resu
         }
         let content_len = headers
             .get("Content-Length")
-            .expect("Failed to find Content-Length header")
+            .ok_or(Error::new(
+                ErrorKind::Other,
+                "Failed to get Content-Length header",
+            ))?
             .parse()
-            .expect("Failed to parse Content-Length header");
+            .map_err(|_| Error::new(ErrorKind::Other, "Failed to parse Content-Length header"))?;
         let mut content = vec![0; content_len];
         reader.read_exact(&mut content)?;
-        let msg = String::from_utf8(content).expect("Failed to read content as UTF-8 string");
+        let msg = String::from_utf8(content)
+            .map_err(|_| Error::new(ErrorKind::Other, "Failed to read content as UTF-8 string"))?;
         debug!("From server: {}", msg);
         let output: serde_json::Result<Output> = serde_json::from_str(&msg);
         match output {

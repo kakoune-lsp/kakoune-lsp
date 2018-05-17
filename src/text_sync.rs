@@ -11,8 +11,10 @@ pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mu
     let language_id = ctx.language_id.clone();
     let mut file = File::open(&meta.buffile).expect("Failed to open file");
     let mut text = String::new();
-    file.read_to_string(&mut text)
-        .expect("Failed to read from file");
+    if file.read_to_string(&mut text).is_err() {
+        error!("Failed to read from file: {}", meta.buffile);
+        return;
+    }
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
             uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
@@ -38,12 +40,16 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
     ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
     let file_path = params.draft;
     let mut text = String::new();
+    let result;
     {
         let mut file = File::open(&file_path).expect("Failed to open file");
-        file.read_to_string(&mut text)
-            .expect("Failed to read from file");
+        result = file.read_to_string(&mut text);
     }
     remove_file(file_path).expect("Failed to remove temporary file");
+    if result.is_err() {
+        error!("Failed to read from file: {}", meta.buffile);
+        return;
+    }
     let params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
             uri,
