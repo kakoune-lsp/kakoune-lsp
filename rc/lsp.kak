@@ -30,7 +30,7 @@ def -hidden lsp-completion %{
     decl -hidden str lsp_completion_offset
     eval -draft %{ try %{
         execute-keys <esc><a-h>s\w+.\z<ret>
-        set window lsp_completion_offset %sh{echo $(expr ${#kak_selection} - 1)}
+        set window lsp_completion_offset %sh{echo $((${#kak_selection} - 1))}
     } catch %{
         set window lsp_completion_offset "0"
     }}
@@ -45,7 +45,7 @@ line      = %d
 character = %d
 [params.completion]
 offset    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-hover %{
@@ -58,7 +58,7 @@ method    = "textDocument/hover"
 [params.position]
 line      = %d
 character = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-definition %{
@@ -71,7 +71,7 @@ method    = "textDocument/definition"
 [params.position]
 line      = %d
 character = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def lsp-references %{
@@ -84,7 +84,7 @@ method    = "textDocument/references"
 [params.position]
 line      = %d
 character = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $(expr ${kak_cursor_line} - 1) $(expr ${kak_cursor_column} - 1) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
 def -hidden lsp-did-open %{
