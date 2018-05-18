@@ -5,15 +5,19 @@ use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use types::*;
-use url::Url;
+use util::*;
 
 pub fn text_document_references(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone())
-        .expect("Params should follow PositionParams structure");
+    let req_params = PositionParams::deserialize(params.clone());
+    if req_params.is_err() {
+        error!("Params should follow PositionParams structure");
+        return;
+    }
+    let req_params = req_params.unwrap();
     let position = req_params.position;
     let req_params = ReferenceParams {
         text_document: TextDocumentIdentifier {
-            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
+            uri: path_to_uri(&meta.buffile),
         },
         position,
         context: ReferenceContext {
@@ -43,18 +47,29 @@ pub fn editor_references(
             .map(|location| {
                 let p = location.range.start;
                 let filename = location.uri.path();
-                let file = File::open(filename)
-                    .expect(&format!("Failed to open referenced file: {}", filename));
+                let file = File::open(filename);
+                if file.is_err() {
+                    error!("Failed to open referenced file: {}", filename);
+                    return String::new();
+                }
                 let line_num = p.line as usize;
-                for (i, line) in BufReader::new(file).lines().enumerate() {
+                for (i, line) in BufReader::new(file.unwrap()).lines().enumerate() {
                     if i == line_num {
-                        return format!(
-                            "{}:{}:{}:{}",
-                            filename,
-                            p.line + 1,
-                            p.character + 1,
-                            line.unwrap()
-                        );
+                        match line {
+                            Ok(line) => {
+                                return format!(
+                                    "{}:{}:{}:{}",
+                                    filename,
+                                    p.line + 1,
+                                    p.character + 1,
+                                    line
+                                )
+                            }
+                            Err(e) => {
+                                error!("Failed to read line {} in {}: {}", filename, line_num, e);
+                                return String::new();
+                            }
+                        }
                     }
                 }
                 return String::new();

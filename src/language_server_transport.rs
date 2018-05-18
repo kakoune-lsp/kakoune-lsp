@@ -34,11 +34,17 @@ pub fn start(
     let mut stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
     thread::spawn(move || loop {
         let mut buf = String::new();
-        stderr.read_to_string(&mut buf).unwrap();
-        if buf.is_empty() {
-            break;
+        match stderr.read_to_string(&mut buf) {
+            Ok(_) => {
+                if buf.is_empty() {
+                    return;
+                }
+                error!("Language server error: {}", buf);
+            }
+            Err(e) => {
+                error!("Failed to read from language server stderr: {}", e);
+            }
         }
-        error!("Language server error: {}", buf);
     });
     // XXX
 
@@ -62,6 +68,8 @@ pub fn start(
         };
         if !reader_tx.is_disconnected() {
             debug!("Sending exit notification back to controller");
+            // should be safe to unwrap because we checked channel for being connected
+            // otherwise something went completely wrong and it's okay to panic
             reader_tx
                 .send(ServerMessage::Request(Call::Notification(notification)))
                 .unwrap();
@@ -119,8 +127,9 @@ fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Resu
             Ok(output) => tx.send(ServerMessage::Response(output))
                 .expect("Failed to send message from language server"),
             Err(_) => {
-                let msg: Call =
-                    serde_json::from_str(&msg).expect("Failed to parse language server message");
+                let msg: Call = serde_json::from_str(&msg).map_err(|_| {
+                    Error::new(ErrorKind::Other, "Failed to parse language server message")
+                })?;
                 tx.send(ServerMessage::Request(msg))
                     .expect("Failed to send message from language server");
             }

@@ -34,12 +34,13 @@ mod language_server_transport;
 mod project_root;
 mod text_sync;
 mod types;
+mod util;
 
 use clap::{App, Arg};
 use handlebars::{no_escape, Handlebars};
+use sloggers::Build;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
-use sloggers::Build;
 use std::fs::File;
 use std::io::{stdin, stdout, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};

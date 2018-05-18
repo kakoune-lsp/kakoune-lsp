@@ -49,11 +49,16 @@ impl Context {
     }
 
     pub fn call(&mut self, id: Id, method: String, params: impl ToParams) {
+        let params = params.to_params();
+        if params.is_err() {
+            error!("Failed to convert params");
+            return;
+        }
         let call = jsonrpc_core::MethodCall {
             jsonrpc: Some(Version::V2),
             id,
             method,
-            params: Some(params.to_params().expect("Failed to convert params")),
+            params: Some(params.unwrap()),
         };
         self.lang_srv_tx
             .send(ServerMessage::Request(Call::MethodCall(call)))
@@ -61,12 +66,16 @@ impl Context {
     }
 
     pub fn notify(&mut self, method: String, params: impl ToParams) {
-        let params = params.to_params().expect("Failed to convert params");
+        let params = params.to_params();
+        if params.is_err() {
+            error!("Failed to convert params");
+            return;
+        }
         let notification = jsonrpc_core::Notification {
             jsonrpc: Some(Version::V2),
             method,
             // NOTE this is required because jsonrpc serializer converts Some(None) into []
-            params: match params {
+            params: match params.unwrap() {
                 Params::None => None,
                 params => Some(params),
             },

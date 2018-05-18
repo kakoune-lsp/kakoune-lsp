@@ -182,6 +182,10 @@ impl Controller {
                                     debug!("Requests from language server are not supported yet: {:?}", request);
                                 }
                                 Call::Notification(notification) => {
+                                    if notification.params.is_none() {
+                                        error!("Missing notification params");
+                                        return;
+                                    }
                                     dispatch_server_notification(
                                         &notification.method,
                                         notification.params.unwrap(),
@@ -411,6 +415,7 @@ fn exit_session(controllers: &mut Controllers, request: &EditorRequest) {
     );
     for k in controllers.keys().cloned().collect::<Vec<_>>() {
         if k.session == request.meta.session {
+            // should be safe to unwrap because we are iterating controllers' keys
             let controller_tx = controllers.remove(&k).unwrap();
             info!("Exit {} in project {}", k.language, k.root);
             controller_tx
@@ -438,6 +443,8 @@ fn spawn_controller(
     editor_tx: Sender<EditorResponse>,
     controller_remove_tx: Sender<Route>,
 ) {
+    // should be fine to unwrap because request was already routed which means
+    // language is configured with all mandatory fields in place
     let (lang_srv_cmd, lang_srv_args) = language_id_to_server_cmd(config, &language_id).unwrap();
     // NOTE 1024 is arbitrary
     let (controller_tx, controller_rx) = bounded(1024);

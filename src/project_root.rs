@@ -9,12 +9,14 @@ pub fn find_project_root(roots: &[String], path: &str) -> Option<String> {
 
     loop {
         for root in roots {
+            // unwrap should be safe here because we walk up path previously converted from str
             let matches = glob(pwd.join(root).to_str().unwrap());
-            if matches.is_ok() {
-                let mut m = matches.unwrap();
-                if m.next().is_some() {
+            match matches {
+                Ok(mut m) => if m.next().is_some() {
+                    // ditto unwrap
                     return Some(pwd.to_str().unwrap().to_string());
-                }
+                },
+                _ => (),
             }
         }
         if !pwd.pop() {

@@ -3,15 +3,18 @@ use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
 use types::*;
-use url::Url;
+use util::*;
 
 pub fn text_document_definition(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone())
-        .expect("Params should follow PositionParams structure");
+    let req_params = PositionParams::deserialize(params.clone());
+    if req_params.is_err() {
+        error!("Params should follow PositionParams structure");
+    }
+    let req_params = req_params.unwrap();
     let position = req_params.position;
     let req_params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier {
-            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
+            uri: path_to_uri(&meta.buffile),
         },
         position,
     };

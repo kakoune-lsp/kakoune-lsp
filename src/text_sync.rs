@@ -5,19 +5,23 @@ use serde::Deserialize;
 use std::fs::{remove_file, File};
 use std::io::Read;
 use types::*;
-use url::Url;
+use util::*;
 
 pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let language_id = ctx.language_id.clone();
-    let mut file = File::open(&meta.buffile).expect("Failed to open file");
+    let file = File::open(&meta.buffile);
+    if file.is_err() {
+        error!("Failed to open file");
+        return;
+    }
     let mut text = String::new();
-    if file.read_to_string(&mut text).is_err() {
+    if file.unwrap().read_to_string(&mut text).is_err() {
         error!("Failed to read from file: {}", meta.buffile);
         return;
     }
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
-            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
+            uri: path_to_uri(&meta.buffile),
             language_id,
             version: meta.version,
             text,
@@ -28,9 +32,13 @@ pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mu
 }
 
 pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let params = TextDocumentDidChangeParams::deserialize(params)
-        .expect("Params should follow TextDocumentDidChangeParams structure");
-    let uri = Url::parse(&format!("file://{}", &meta.buffile)).unwrap();
+    let params = TextDocumentDidChangeParams::deserialize(params);
+    if params.is_err() {
+        error!("Params should follow TextDocumentDidChangeParams structure");
+        return;
+    }
+    let params = params.unwrap();
+    let uri = path_to_uri(&meta.buffile);
     let version = meta.version;
     let old_version = ctx.versions.get(&meta.buffile).cloned().unwrap_or(0);
     if old_version >= version {
@@ -42,10 +50,16 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
     let mut text = String::new();
     let result;
     {
-        let mut file = File::open(&file_path).expect("Failed to open file");
-        result = file.read_to_string(&mut text);
+        let file = File::open(&file_path);
+        if file.is_err() {
+            error!("Failed to open file");
+            return;
+        }
+        result = file.unwrap().read_to_string(&mut text);
     }
-    remove_file(file_path).expect("Failed to remove temporary file");
+    if remove_file(file_path).is_err() {
+        error!("Failed to remove temporary file");
+    }
     if result.is_err() {
         error!("Failed to read from file: {}", meta.buffile);
         return;
@@ -55,17 +69,19 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
             uri,
             version: Some(meta.version),
         },
-        content_changes: vec![TextDocumentContentChangeEvent {
-            range: None,
-            range_length: None,
-            text,
-        }],
+        content_changes: vec![
+            TextDocumentContentChangeEvent {
+                range: None,
+                range_length: None,
+                text,
+            },
+        ],
     };
     ctx.notify(notification::DidChangeTextDocument::METHOD.into(), params);
 }
 
 pub fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let uri = Url::parse(&format!("file://{}", &meta.buffile)).unwrap();
+    let uri = path_to_uri(&meta.buffile);
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };
@@ -73,7 +89,7 @@ pub fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &m
 }
 
 pub fn text_document_did_save(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let uri = Url::parse(&format!("file://{}", &meta.buffile)).unwrap();
+    let uri = path_to_uri(&meta.buffile);
     let params = DidSaveTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };

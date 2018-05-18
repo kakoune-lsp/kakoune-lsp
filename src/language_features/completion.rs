@@ -5,11 +5,15 @@ use regex::Regex;
 use serde::Deserialize;
 use std;
 use types::*;
-use url::Url;
+use util::*;
 
 pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let req_params = TextDocumentCompletionParams::deserialize(params.clone())
-        .expect("Params should follow TextDocumentCompletionParams structure");
+    let req_params = TextDocumentCompletionParams::deserialize(params.clone());
+    if req_params.is_err() {
+        error!("Params should follow TextDocumentCompletionParams structure");
+        return;
+    }
+    let req_params = req_params.unwrap();
     let position = req_params.position;
     let offset = req_params.completion.offset;
     if offset == 0 && !ctx.config.editor.zero_char_completion {
@@ -25,7 +29,7 @@ pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &m
     }
     let req_params = CompletionParams {
         text_document: TextDocumentIdentifier {
-            uri: Url::parse(&format!("file://{}", &meta.buffile)).unwrap(),
+            uri: path_to_uri(&meta.buffile),
         },
         position,
         context: None,

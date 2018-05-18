@@ -5,7 +5,7 @@ use languageserver_types::*;
 use std::process;
 use toml;
 use types::*;
-use url::Url;
+use util::*;
 
 pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
@@ -16,7 +16,7 @@ pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
         },
         initialization_options: None,
         process_id: Some(process::id().into()),
-        root_uri: Some(Url::parse(&format!("file://{}", root_path)).unwrap()),
+        root_uri: Some(path_to_uri(root_path)),
         root_path: Some(root_path.to_string()),
         trace: Some(TraceOption::Off),
     };
