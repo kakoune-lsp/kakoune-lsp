@@ -4,6 +4,7 @@ use languageserver_types::*;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use types::*;
 use util::*;
 
@@ -59,7 +60,12 @@ pub fn editor_references(
                             Ok(line) => {
                                 return format!(
                                     "{}:{}:{}:{}",
-                                    filename,
+                                    Path::new(filename)
+                                        .strip_prefix(&ctx.root_path)
+                                        .ok()
+                                        .and_then(|p| Some(p.to_str().unwrap()))
+                                        .or_else(|| Some(filename))
+                                        .unwrap(),
                                     p.line + 1,
                                     p.character + 1,
                                     line
@@ -77,8 +83,13 @@ pub fn editor_references(
             .collect::<Vec<String>>()
             .join("\n");
         let command = format!(
-            "edit! -scratch *references*\nset buffer filetype grep\nset-register '\"' %§{}§\nexec -no-hooks p",
-            content,
+            "edit! -scratch *references*
+             cd %§{}§
+             try %{{ set buffer working_folder %sh{{pwd}} }}
+             set buffer filetype grep
+             set-register '\"' %§{}§
+             exec -no-hooks p",
+            ctx.root_path, content,
         );
         ctx.exec(meta.clone(), command);
     };
