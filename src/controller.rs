@@ -288,6 +288,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         notification::Exit::METHOD => {
             general::exit(params, meta, &mut ctx);
         }
+        "textDocument/diagnostics" => {
+            diagnostics::editor_diagnostics(params, meta, &mut ctx);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
         }

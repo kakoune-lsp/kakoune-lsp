@@ -115,7 +115,8 @@ To enable LSP support for configured languages (see the next section) just add f
 It will add completions, hover info and will bind goto definition to `gd`
 (the latter is available as `:lsp-definition` command, feel free to bind it to any convenient key/alias or call directly).
 References for a symbol under the main cursor are available via `:lsp-references` which is not bound to any key by default.
-Rudimentary support for diagnostics is implemented as well.
+Project-wide diagnostics are available via `:lsp-diagnostics` (current buffer determines project and language to collect diagnostics).
+Also diagnostics are highlighted inline with Error or Information face depending on severity.
 
 == Configuration
 
