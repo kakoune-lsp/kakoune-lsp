@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::fs::{remove_file, File};
 use std::io::Read;
 use types::*;
-use util::*;
+use url::Url;
 
 pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let language_id = ctx.language_id.clone();
@@ -21,7 +21,7 @@ pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mu
     }
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
-            uri: path_to_uri(&meta.buffile),
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
             language_id,
             version: meta.version,
             text,
@@ -38,7 +38,7 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
         return;
     }
     let params = params.unwrap();
-    let uri = path_to_uri(&meta.buffile);
+    let uri = Url::from_file_path(&meta.buffile).unwrap();
     let version = meta.version;
     let old_version = ctx.versions.get(&meta.buffile).cloned().unwrap_or(0);
     if old_version >= version {
@@ -81,7 +81,7 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
 }
 
 pub fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let uri = path_to_uri(&meta.buffile);
+    let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };
@@ -89,7 +89,7 @@ pub fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &m
 }
 
 pub fn text_document_did_save(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let uri = path_to_uri(&meta.buffile);
+    let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidSaveTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };

@@ -3,7 +3,7 @@ use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
 use types::*;
-use util::*;
+use url::Url;
 
 pub fn text_document_hover(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -15,7 +15,7 @@ pub fn text_document_hover(params: EditorParams, meta: &EditorMeta, ctx: &mut Co
     let position = req_params.position;
     let req_params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier {
-            uri: path_to_uri(&meta.buffile),
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
         position,
     };

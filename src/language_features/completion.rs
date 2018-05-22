@@ -5,7 +5,7 @@ use regex::Regex;
 use serde::Deserialize;
 use std;
 use types::*;
-use util::*;
+use url::Url;
 
 pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let req_params = TextDocumentCompletionParams::deserialize(params.clone());
@@ -29,7 +29,7 @@ pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &m
     }
     let req_params = CompletionParams {
         text_document: TextDocumentIdentifier {
-            uri: path_to_uri(&meta.buffile),
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
         position,
         context: None,

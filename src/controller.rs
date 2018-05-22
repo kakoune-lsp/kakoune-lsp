@@ -141,7 +141,7 @@ impl Controller {
             lang_srv_poison_tx,
             controller_poison_tx,
             config,
-            root_path.to_string()
+            root_path.to_string(),
         )));
 
         let ctx = Arc::clone(&ctx_src);

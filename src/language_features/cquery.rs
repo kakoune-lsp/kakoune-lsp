@@ -156,8 +156,9 @@ pub struct PublishSemanticHighlightingParams {
 pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, ctx: &mut Context) {
     let session = ctx.session.clone();
     let client = None;
-    let buffile = params.uri.path().to_string();
-    let version = ctx.versions.get(&buffile);
+    let path = params.uri.to_file_path().unwrap();
+    let buffile = path.to_str().unwrap();
+    let version = ctx.versions.get(buffile);
     if version.is_none() {
         return;
     }
@@ -193,7 +194,7 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
     let meta = EditorMeta {
         session,
         client,
-        buffile,
+        buffile: buffile.to_string(),
         version,
     };
     ctx.exec(meta, command.to_string());

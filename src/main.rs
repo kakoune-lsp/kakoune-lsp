@@ -34,7 +34,6 @@ mod language_server_transport;
 mod project_root;
 mod text_sync;
 mod types;
-mod util;
 
 use clap::{App, Arg};
 use handlebars::{no_escape, Handlebars};

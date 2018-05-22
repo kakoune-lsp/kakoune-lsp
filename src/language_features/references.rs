@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use types::*;
-use util::*;
+use url::Url;
 
 pub fn text_document_references(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -18,7 +18,7 @@ pub fn text_document_references(params: EditorParams, meta: &EditorMeta, ctx: &m
     let position = req_params.position;
     let req_params = ReferenceParams {
         text_document: TextDocumentIdentifier {
-            uri: path_to_uri(&meta.buffile),
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
         position,
         context: ReferenceContext {
@@ -47,7 +47,8 @@ pub fn editor_references(
             .iter()
             .map(|location| {
                 let p = location.range.start;
-                let filename = location.uri.path();
+                let path = location.uri.to_file_path().unwrap();
+                let filename = path.to_str().unwrap();
                 let file = File::open(filename);
                 if file.is_err() {
                     error!("Failed to open referenced file: {}", filename);
