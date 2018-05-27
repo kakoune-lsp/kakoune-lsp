@@ -68,6 +68,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 === From the source
 
+Note that ArchLinux users can automate most of the following steps with the https://aur.archlinux.org/packages/kak-lsp-git/[kak-lsp-git] AUR package.
+
 ----
 git clone https://github.com/ul/kak-lsp
 cd kak-lsp
@@ -93,11 +95,11 @@ systemctl --user enable --now kak-lsp
 
 == Language servers
 
-`kak-lsp` doesn't manage installation of language servers, please install them by yourself for the languages you plan to use `kak-lsp` with. Please consult  https://github.com/ul/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for quick installation of language servers supported by `kak-lsp` out of the box.
+`kak-lsp` doesn't manage installation of language servers, please install them by yourself for the languages you plan to use `kak-lsp` with. Please consult the https://github.com/ul/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for quick installation of language servers supported by `kak-lsp` out of the box.
 
 == Usage
 
-`kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore `kak-lsp` process should be started separately and having single one running is enough:
+`kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore the `kak-lsp` process should be started separately and having a single one running is enough:
 
 ----
 kak-lsp
@@ -105,7 +107,7 @@ kak-lsp
 
 Expect it to crash from time to time. Usually it's enough just to restart it. When you return to editing your files `kak-lsp` will restart language server. See Installation for example how to automate keeping `kak-lsp` alive under MacOS and Linux (systemd).
 
-Now you have running kak-lsp service and need to make Kakoune aware of it.
+Now you have a running kak-lsp service and need to make Kakoune aware of it.
 To enable LSP support for configured languages (see the next section) just add following command to your `kakrc`:
 
 ----
