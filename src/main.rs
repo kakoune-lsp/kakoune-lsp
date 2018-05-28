@@ -40,8 +40,8 @@ use handlebars::{no_escape, Handlebars};
 use sloggers::Build;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
-use std::fs::File;
-use std::io::{stdin, stdout, BufReader, Read, Write};
+use std::fs;
+use std::io::{stdin, stdout, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::Path;
 use types::*;
@@ -92,6 +92,8 @@ fn main() {
         )
         .get_matches();
 
+    let mut config = include_str!("../kak-lsp.toml").to_string();
+
     let config_path = matches
         .value_of("config")
         .and_then(|config| Some(Path::new(&config).to_owned()))
@@ -104,26 +106,16 @@ fn main() {
                     None
                 }
             })
-        })
-        .or_else(|| {
-            std::env::current_exe()
-                .and_then(|p| p.canonicalize())
-                .ok()
-                .and_then(|p| {
-                    p.parent()
-                        .and_then(|p| Some(p.join("kak-lsp.toml").to_owned()))
-                })
-        })
-        .unwrap();
+        });
 
-    let mut config_file =
-        BufReader::new(File::open(config_path).expect("Failed to open config file"));
-
-    let mut config = String::new();
-
-    config_file
-        .read_to_string(&mut config)
-        .expect("Failed to read config");
+    match config_path {
+        Some(config_path) => {
+            config = fs::read_to_string(config_path).expect("Failed to read config");
+        }
+        None => {
+            println!("Config file is not found, starting with default configuration");
+        }
+    }
 
     let mut config: Config = toml::from_str(&config).expect("Failed to parse config file");
 
