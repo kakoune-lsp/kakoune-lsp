@@ -135,6 +135,9 @@ If kak-lsp fails try to run it with `-vvv` command-line option to enable debug l
 not give enough insights to fix the problem or if the problem is a bug in kak-lsp itself please
 don't hesitate to raise an issue.
 
+NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
+E.g. `racer.kak` competes for autocompletion in Rust files.
+
 == Versioning
 
 kak-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we 
