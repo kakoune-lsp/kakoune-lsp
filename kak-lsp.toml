@@ -45,13 +45,13 @@ args = ["--stdio"]
 
 [language.reason]
 extensions = ["re", "rei"]
-roots = ["package.json", "Makefile", ".git"]
+roots = ["package.json", "Makefile", ".git", ".hg"]
 command = "ocaml-language-server"
 args = ["--stdio"]
 
 [language.python]
 extensions = ["py"]
-roots = ["requirements.txt", "setup.py", ".git"]
+roots = ["requirements.txt", "setup.py", ".git", ".hg"]
 command = "pyls"
 
 [language.c_cpp]
@@ -65,3 +65,9 @@ extensions = ["hs"]
 roots = ["Setup.hs", "stack.yaml", "*.cabal"]
 command = "hie"
 args = ["--lsp"]
+
+[language.go]
+extensions = ["go"]
+roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
+command = "go-langserver"
+args = ["-mode", "stdio", "-gocodecompletion"]
