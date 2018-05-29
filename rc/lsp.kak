@@ -6,6 +6,8 @@ decl -hidden range-specs cquery_semhl
 decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
 
+def lsp-start %{ nop %sh{ ({{cmd}} {{args}}) > /dev/null 2>&1 < /dev/null & } }
+
 def -hidden lsp-did-change %{ try %{
     %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then

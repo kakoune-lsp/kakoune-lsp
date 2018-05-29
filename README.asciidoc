@@ -12,10 +12,6 @@ Implemented in Rust.
 
 ----
 brew install ul/kak-lsp/kak-lsp
-# enable service to not bother with manual start/restart
-# note that you might want it w/o `sudo` despite of brew suggestion
-# because some language servers are available only in user's PATH by default
-brew services start ul/kak-lsp/kak-lsp
 ----
 
 ===== Manual
@@ -29,10 +25,6 @@ mv kak-lsp ~/.local/bin/
 
 mkdir -p ~/.config/kak-lsp 
 mv kak-lsp.toml ~/.config/kak-lsp/ 
-
-# service for MacOS to not bother with manual start/restart
-mv com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.github.ul.kak-lsp.plist
 ----
 
 ==== Linux
@@ -46,11 +38,6 @@ mv kak-lsp ~/.local/bin/
 
 mkdir -p ~/.config/kak-lsp 
 mv kak-lsp.toml ~/.config/kak-lsp/ 
-
-# service for Linux (systemd) to not bother with manual start/restart
-mkdir -p ~/.config/systemd/user/
-mv kak-lsp.service ~/.config/systemd/user/
-systemctl --user enable --now kak-lsp
 ----
 
 ==== FreeBSD
@@ -68,7 +55,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 === From the source
 
-Note that ArchLinux users can automate most of the following steps with the https://aur.archlinux.org/packages/kak-lsp-git/[kak-lsp-git] AUR package.
+NOTE: ArchLinux users can automate most of the following steps with the https://aur.archlinux.org/packages/kak-lsp-git/[kak-lsp-git] AUR package.
 
 ----
 git clone https://github.com/ul/kak-lsp
@@ -82,43 +69,35 @@ ln -s $PWD/target/release/kak-lsp ~/.local/bin/
 mkdir -p ~/.config/kak-lsp 
 # or just link if you are okay with default config
 cp kak-lsp.toml ~/.config/kak-lsp/
-
-# service for MacOS to not bother with manual start/restart
-ln -s $PWD/com.github.ul.kak-lsp.plist ~/Library/LaunchAgents/
-launchctl load com.github.ul.kak-lsp.plist
-
-# service for Linux (systemd) to not bother with manual start/restart
-mkdir -p ~/.config/systemd/user/
-ln -s $PWD/kak-lsp.service ~/.config/systemd/user/
-systemctl --user enable --now kak-lsp
 ----
 
 == Language servers
 
-`kak-lsp` doesn't manage installation of language servers, please install them by yourself for the languages you plan to use `kak-lsp` with. Please consult the https://github.com/ul/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for quick installation of language servers supported by `kak-lsp` out of the box.
+kak-lsp doesn't manage installation of language servers, please install them
+by yourself for the languages you plan to use kak-lsp with. Please consult the
+https://github.com/ul/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
+quick installation of language servers supported by kak-lsp out of the box.
 
 == Usage
 
-`kak-lsp` is able to connect multiple editor sessions to multiple language servers. Therefore the `kak-lsp` process should be started separately and having a single one running is enough:
+To enable LSP support for configured languages (see the next section) just add following commands to
+your `kakrc`:
 
 ----
-kak-lsp
+%sh{kak-lsp --kakoune -s $kak_session}
+lsp-start
 ----
 
-Expect it to crash from time to time. Usually it's enough just to restart it. When you return to editing your files `kak-lsp` will restart language server. See Installation for example how to automate keeping `kak-lsp` alive under MacOS and Linux (systemd).
+It will add completions, hover info and will bind goto definition to `gd` (the latter is available
+as `:lsp-definition` command, feel free to bind it to any convenient key/alias or call directly).
+References for a symbol under the main cursor are available via `:lsp-references` which is not bound
+to any key by default. Project-wide diagnostics are available via `:lsp-diagnostics` (current buffer
+determines project and language to collect diagnostics). Also diagnostics are highlighted inline
+with Error or Information face depending on severity.
 
-Now you have a running kak-lsp service and need to make Kakoune aware of it.
-To enable LSP support for configured languages (see the next section) just add following command to your `kakrc`:
-
-----
-%sh{kak-lsp --kakoune}
-----
-
-It will add completions, hover info and will bind goto definition to `gd`
-(the latter is available as `:lsp-definition` command, feel free to bind it to any convenient key/alias or call directly).
-References for a symbol under the main cursor are available via `:lsp-references` which is not bound to any key by default.
-Project-wide diagnostics are available via `:lsp-diagnostics` (current buffer determines project and language to collect diagnostics).
-Also diagnostics are highlighted inline with Error or Information face depending on severity.
+Expect kak-lsp to crash from time to time. Usually it's enough just to restart it (`:lsp-start`
+command if you are using default integration). When you return to editing your files kak-lsp will
+restart language server.
 
 == Configuration
 
@@ -126,21 +105,28 @@ kak-lsp is configured via configuration file in https://github.com/toml-lang/tom
 
 Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
 
-If you are setting any options via cli do not forget to append them to `%sh{kak-lsp --kakoune}` in your `kakrc`.
-It's not needed if you change options in `~/.config/kak-lsp/kak-lsp.toml` file.
+If you are setting any options via cli do not forget to append them to `%sh{kak-lsp --kakoune ...}`
+in your `kakrc`. It's not needed if you change options in `~/.config/kak-lsp/kak-lsp.toml` file.
+
+Please let us know if you have any ideas about how to make default config more sensible.
 
 == Troubleshooting
 
-If kak-lsp fails try to run it with `-vvv` command-line option to enable debug logging. If it will
-not give enough insights to fix the problem or if the problem is a bug in kak-lsp itself please
-don't hesitate to raise an issue.
+If kak-lsp fails try to replace `lsp-start` in your `kakrc` with 
+
+----
+nop %sh{ (kak-lsp -s $kak_session -vvv ) > /tmp/kak-lsp.log 2>&1 < /dev/null & }
+----
+
+to enable debug logging. If it will not give enough insights to fix the problem or if the problem is
+a bug in kak-lsp itself please don't hesitate to raise an issue.
 
 NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
 E.g. `racer.kak` competes for autocompletion in Rust files.
 
 == Versioning
 
-kak-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we 
-don't use 0 major version to indicate that product is not yet reached stability. Even for 
-non-stable and not feature-complete product user should be clearly informed about breaking change. 
-Therefore we start with major version 1 and increment it every time upgrade need user's attention.
+kak-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we
+don't use 0 major version to indicate that product is not yet reached stability. Even for non-stable
+and not feature-complete product user should be clearly informed about breaking change. Therefore we
+start with major version 1 and increment it each time when upgrade requires user's attention.

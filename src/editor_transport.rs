@@ -1,46 +1,47 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener};
-use std::process::{Command, Stdio};
+use std::fs;
+use std::io::{stderr, stdout, Read, Write};
+use std::net::{IpAddr, SocketAddr, TcpListener};
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::process::{exit, Command, Stdio};
 use std::thread;
+use std::time::Duration;
 use toml;
 use types::*;
+use util;
 
 pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
-    let port = config.server.port;
-    let ip = config.server.ip.parse().expect("Failed to parse IP");
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
-    thread::spawn(move || {
-        info!("Starting editor transport on {}:{}", ip, port);
-        let addr = SocketAddr::new(ip, port);
 
-        let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
+    if let Some(ref session) = config.server.session {
+        let session = session.to_string();
+        let timeout = config.server.timeout;
 
-        for stream in listener.incoming() {
-            match stream {
-                Ok(mut stream) => {
-                    let mut request = String::new();
-                    match stream.read_to_string(&mut request) {
-                        Ok(_) => {
-                            debug!("From editor: {}", request);
-                            let request: EditorRequest =
-                                toml::from_str(&request).expect("Failed to parse editor request");
-                            reader_tx
-                                .send(request)
-                                .expect("Failed to send request from server");
-                        }
-                        Err(e) => {
-                            error!("Failed to read from TCP stream: {}", e);
-                        }
+        if timeout > 0 {
+            let (timeout_tx, timeout_rx) = bounded(1);
+            thread::spawn(move || {
+                let timeout = Duration::from_secs(timeout);
+                loop {
+                    if timeout_rx.recv_timeout(timeout).is_err() {
+                        info!("Exiting by timeout");
+                        stderr().flush().unwrap();
+                        stdout().flush().unwrap();
+                        thread::sleep(Duration::from_secs(1));
+                        // TODO clean exit
+                        exit(0);
                     }
                 }
-                Err(e) => {
-                    error!("Failed to accept connection: {}", e);
-                }
-            }
+            });
+            thread::spawn(move || start_unix(session, reader_tx, Some(timeout_tx)));
+        } else {
+            thread::spawn(move || start_unix(session, reader_tx, None));
         }
-    });
+    } else {
+        let port = config.server.port;
+        let ip = config.server.ip.parse().expect("Failed to parse IP");
+        thread::spawn(move || start_tcp(ip, port, reader_tx));
+    }
 
     // NOTE 1024 is arbitrary
     let (writer_tx, writer_rx): (Sender<EditorResponse>, Receiver<EditorResponse>) = bounded(1024);
@@ -83,4 +84,107 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest
     });
 
     (writer_tx, reader_rx)
+}
+
+pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: Sender<EditorRequest>) {
+    info!("Starting editor transport on {}:{}", ip, port);
+    let addr = SocketAddr::new(ip, port);
+
+    let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(mut stream) => {
+                let mut request = String::new();
+                match stream.read_to_string(&mut request) {
+                    Ok(_) => {
+                        debug!("From editor: {}", request);
+                        let request: EditorRequest =
+                            toml::from_str(&request).expect("Failed to parse editor request");
+                        reader_tx
+                            .send(request)
+                            .expect("Failed to send request from server");
+                    }
+                    Err(e) => {
+                        error!("Failed to read from TCP stream: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to accept connection: {}", e);
+            }
+        }
+    }
+}
+
+pub fn start_unix(
+    session: String,
+    reader_tx: Sender<EditorRequest>,
+    timeout_tx: Option<Sender<()>>,
+) {
+    let mut path = util::sock_dir();
+    path.push(&session);
+
+    if path.exists() {
+        if UnixStream::connect(&path).is_err() {
+            if fs::remove_file(&path).is_err() {
+                error!(
+                    "Failed to clean up dead session at {}",
+                    path.to_str().unwrap()
+                );
+                stderr().flush().unwrap();
+                stdout().flush().unwrap();
+                thread::sleep(Duration::from_secs(1));
+                exit(1);
+            };
+        } else {
+            error!("Server is already running for session {}", session);
+            stderr().flush().unwrap();
+            stdout().flush().unwrap();
+            thread::sleep(Duration::from_secs(1));
+            exit(1);
+        }
+    }
+
+    let listener = UnixListener::bind(&path);
+
+    if listener.is_err() {
+        error!("Failed to bind {}", path.to_str().unwrap());
+        stderr().flush().unwrap();
+        stdout().flush().unwrap();
+        thread::sleep(Duration::from_secs(1));
+        exit(1);
+    }
+
+    let listener = listener.unwrap();
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(mut stream) => {
+                let mut request = String::new();
+                match stream.read_to_string(&mut request) {
+                    Ok(_) => {
+                        if request.is_empty() {
+                            continue;
+                        }
+                        debug!("From editor: {}", request);
+                        let request: EditorRequest =
+                            toml::from_str(&request).expect("Failed to parse editor request");
+                        reader_tx
+                            .send(request)
+                            .expect("Failed to send request from server");
+                        if let Some(ref timeout_tx) = timeout_tx {
+                            timeout_tx.send(()).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to read from stream: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to accept connection: {}", e);
+            }
+        }
+    }
 }
