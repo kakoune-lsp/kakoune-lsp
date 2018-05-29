@@ -1,11 +1,12 @@
 use glob::glob;
 use std::path::PathBuf;
 
-pub fn find_project_root(roots: &[String], path: &str) -> Option<String> {
+pub fn find_project_root(roots: &[String], path: &str) -> String {
     let mut pwd = PathBuf::from(path);
     if pwd.is_file() {
         pwd.pop();
     }
+    let src = pwd.to_str().unwrap().to_string();
 
     loop {
         for root in roots {
@@ -14,13 +15,13 @@ pub fn find_project_root(roots: &[String], path: &str) -> Option<String> {
             match matches {
                 Ok(mut m) => if m.next().is_some() {
                     // ditto unwrap
-                    return Some(pwd.to_str().unwrap().to_string());
+                    return pwd.to_str().unwrap().to_string();
                 },
                 _ => (),
             }
         }
         if !pwd.pop() {
-            return None;
+            return src;
         }
     }
 }

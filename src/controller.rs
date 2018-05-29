@@ -52,13 +52,6 @@ pub fn start(config: &Config) {
                 let language_id = language_id.unwrap();
 
                 let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
-                if root_path.is_none() {
-                    debug!(
-                        "Unable to detect project root for file `{}`", request.meta.buffile
-                    );
-                    continue 'event_loop;
-                }
-                let root_path = root_path.unwrap();
 
                 let route = Route {
                     session: request.meta.session.clone(),
