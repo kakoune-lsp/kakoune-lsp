@@ -31,6 +31,10 @@ pub struct ServerConfig {
     pub ip: String,
     #[serde(default = "default_port")]
     pub port: u16,
+    #[serde(default)]
+    pub session: Option<String>,
+    #[serde(default)]
+    pub timeout: u64,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -56,6 +60,8 @@ impl Default for ServerConfig {
         ServerConfig {
             ip: default_ip(),
             port: default_port(),
+            session: None,
+            timeout: 1800,
         }
     }
 }

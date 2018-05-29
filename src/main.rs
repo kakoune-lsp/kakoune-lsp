@@ -34,15 +34,18 @@ mod language_server_transport;
 mod project_root;
 mod text_sync;
 mod types;
+mod util;
 
 use clap::{App, Arg};
 use handlebars::{no_escape, Handlebars};
 use sloggers::Build;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
+use std::env;
 use std::fs;
 use std::io::{stdin, stdout, Read, Write};
 use std::net::{SocketAddr, TcpStream};
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 use types::*;
 
@@ -67,6 +70,22 @@ fn main() {
                 .long("config")
                 .value_name("FILE")
                 .help("Read config from FILE (default $HOME/.config/kak-lsp/kak-lsp.toml)")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("session")
+                .short("s")
+                .long("session")
+                .value_name("SESSION")
+                .help("Session id to communicate via unix socket instead of tcp")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("timeout")
+                .short("t")
+                .long("timeout")
+                .value_name("TIMEOUT")
+                .help("Session timeout in seconds (default 1800)")
                 .takes_value(true),
         )
         .arg(
@@ -98,7 +117,7 @@ fn main() {
         .value_of("config")
         .and_then(|config| Some(Path::new(&config).to_owned()))
         .or_else(|| {
-            std::env::home_dir().and_then(|home| {
+            env::home_dir().and_then(|home| {
                 let path = Path::new(&home.join(".config/kak-lsp/kak-lsp.toml")).to_owned();
                 if path.exists() {
                     Some(path)
@@ -125,6 +144,14 @@ fn main() {
 
     if let Some(ip) = matches.value_of("ip") {
         config.server.ip = ip.to_string();
+    }
+
+    if let Some(session) = matches.value_of("session") {
+        config.server.session = Some(session.to_string());
+    }
+
+    if let Some(timeout) = matches.value_of("timeout") {
+        config.server.timeout = timeout.parse().unwrap();
     }
 
     let mut verbosity = matches.occurrences_of("v") as u8;
@@ -160,12 +187,12 @@ fn kakoune(config: &Config) {
     let mut handlebars = Handlebars::new();
     handlebars.register_escape_fn(no_escape);
     let template: &str = include_str!("../rc/lsp.kak");
-    let args = std::env::args()
+    let args = env::args()
         .skip(1)
         .filter(|arg| arg != "--kakoune")
         .collect::<Vec<_>>()
         .join(" ");
-    let cmd = std::env::current_exe().unwrap().to_owned();
+    let cmd = env::current_exe().unwrap().to_owned();
     handlebars
         .render_template_to_write(
             template,
@@ -180,15 +207,24 @@ fn kakoune(config: &Config) {
 }
 
 fn request(config: &Config) {
-    let port = config.server.port;
-    let ip = config.server.ip.parse().expect("Failed to parse IP");
-    let addr = SocketAddr::new(ip, port);
-    let mut stream = TcpStream::connect(addr).expect("Failed to connect to kak-lsp server");
     let mut input = Vec::new();
     stdin()
         .read_to_end(&mut input)
         .expect("Failed to read stdin");
-    stream
-        .write_all(&input)
-        .expect("Failed to send stdin to server");
+    if let Some(ref session) = config.server.session {
+        let mut path = util::sock_dir();
+        path.push(session);
+        UnixStream::connect(&path)
+            .expect(&format!("Failed to connect to {} ", path.to_str().unwrap()))
+            .write_all(&input)
+            .expect("Failed to send stdin to server");
+    } else {
+        let port = config.server.port;
+        let ip = config.server.ip.parse().expect("Failed to parse IP");
+        let addr = SocketAddr::new(ip, port);
+        TcpStream::connect(addr)
+            .expect(&format!("Failed to connect to {}", addr))
+            .write_all(&input)
+            .expect("Failed to send stdin to server");
+    }
 }
