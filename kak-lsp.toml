@@ -1,13 +1,14 @@
 verbosity = 2
 
 [editor]
+# set to false to disable auto-hover
 hover = true
+# set to true to allow autocompletion with no prefix
 zero_char_completion = false
 
 [server]
-ip = "127.0.0.1"
-port = 31337
-timeout = 1800
+# exit if no requests during given period
+timeout = 1800 # seconds = 30 min
 
 [language.rust]
 extensions = ["rs"]
