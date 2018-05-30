@@ -1,6 +1,6 @@
 = Kakoune Language Server Protocol Client
 
-Implemented in Rust.
+kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for http://kakoune.org[Kakoune] implemented in https://www.rust-lang.org[Rust].
 
 == Installation
 
