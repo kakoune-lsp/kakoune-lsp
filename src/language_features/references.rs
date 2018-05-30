@@ -84,12 +84,14 @@ pub fn editor_references(
             .collect::<Vec<String>>()
             .join("\n");
         let command = format!(
-            "edit! -scratch *references*
+            "eval -try-client %opt[toolsclient] %☠
+             edit! -scratch *references*
              cd %§{}§
              try %{{ set buffer working_folder %sh{{pwd}} }}
              set buffer filetype grep
              set-register '\"' %§{}§
-             exec -no-hooks p",
+             exec -no-hooks p
+             ☠",
             ctx.root_path, content,
         );
         ctx.exec(meta.clone(), command);

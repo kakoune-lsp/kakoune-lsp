@@ -73,12 +73,14 @@ pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Co
         .collect::<Vec<_>>()
         .join("\n");
     let command = format!(
-        "edit! -scratch *diagnostics*
-             cd %§{}§
-             try %{{ set buffer working_folder %sh{{pwd}} }}
-             set buffer filetype grep
-             set-register '\"' %§{}§
-             exec -no-hooks p",
+        "eval -try-client %opt[toolsclient] %☠
+         edit! -scratch *diagnostics*
+         cd %§{}§
+         try %{{ set buffer working_folder %sh{{pwd}} }}
+         set buffer filetype grep
+         set-register '\"' %§{}§
+         exec -no-hooks p
+         ☠",
         ctx.root_path, content,
     );
     ctx.exec(meta.clone(), command);
