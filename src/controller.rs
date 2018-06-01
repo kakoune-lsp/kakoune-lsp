@@ -4,7 +4,7 @@ use diagnostics;
 use editor_transport;
 use fnv::FnvHashMap;
 use general;
-use jsonrpc_core::{Call, Output, Params};
+use jsonrpc_core::{Call, ErrorCode, Output, Params};
 use language_features::*;
 use language_server_transport;
 use languageserver_types::notification::Notification;
@@ -210,7 +210,20 @@ impl Controller {
                                 }
                                 Output::Failure(failure) => {
                                     error!("Error response from server: {:?}", failure);
-                                    ctx.response_waitlist.remove(&failure.id);
+                                    if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
+                                        let (meta, method, _) = request;
+                                        let msg = match failure.error.code {
+                                            ErrorCode::MethodNotFound => {
+                                                format!("{} language server doesn't support method {}", ctx.language_id, method)
+                                            }
+                                            _ => {
+                                                format!("{} language server error: {}", ctx.language_id, failure.error.message)
+                                            }
+                                        };
+                                        ctx.exec(meta, format!("echo -debug %§kak-lsp: {0}§; info %§{0}§", msg));
+                                    } else {
+                                        error!("Id {:?} is not in waitlist!", failure.id);
+                                    }
                                 }
                             }
                         }
