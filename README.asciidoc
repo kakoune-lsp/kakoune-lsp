@@ -92,8 +92,12 @@ It will add completions, hover info and will bind goto definition to `gd` (the l
 as `:lsp-definition` command, feel free to bind it to any convenient key/alias or call directly).
 References for a symbol under the main cursor are available via `:lsp-references` which is not bound
 to any key by default. Project-wide diagnostics are available via `:lsp-diagnostics` (current buffer
-determines project and language to collect diagnostics). Also diagnostics are highlighted inline
-with Error or Information face depending on severity.
+determines project and language to collect diagnostics). To enable inline diagnostics either set
+`editor.inline_diagnostics` to true in `kak-lsp.toml` or add `lsp-inline-diagnostics-enable` after
+`lsp-start` in your `kakrc`.
+
+To know which subset of kak-lsp commands is backed by current buffer filetype's language server use
+`:lsp-capabilities` command.
 
 Expect kak-lsp to crash from time to time. Usually it's enough just to restart it (`:lsp-start`
 command if you are using default integration). When you return to editing your files kak-lsp will

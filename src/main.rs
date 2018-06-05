@@ -199,7 +199,8 @@ fn kakoune(config: &Config) {
             &json!({
                 "cmd": cmd,
                 "args": args,
-                "hover": config.editor.hover
+                "hover": config.editor.hover,
+                "inline_diagnostics": config.editor.inline_diagnostics
             }),
             &mut stdout(),
         )

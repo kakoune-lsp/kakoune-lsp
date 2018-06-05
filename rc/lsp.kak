@@ -155,10 +155,18 @@ method  = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-inline-diagnostics-enable %{
+    add-highlighter global/ ranges lsp_errors
+}
+
+def lsp-inline-diagnostics-disable %{
+    remove-highlighter global/hlranges_lsp_errors
+}
+
 def -hidden lsp-enable %{
     set global completers "option=lsp_completions:%opt{completers}"
-    add-highlighter global/ ranges lsp_errors
     add-highlighter global/ ranges cquery_semhl
+    {{#if inline_diagnostics}}lsp-inline-diagnostics-enable{{/if}}
 
     map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
 
