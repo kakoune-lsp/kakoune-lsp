@@ -69,13 +69,11 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
             uri,
             version: Some(meta.version),
         },
-        content_changes: vec![
-            TextDocumentContentChangeEvent {
-                range: None,
-                range_length: None,
-                text,
-            },
-        ],
+        content_changes: vec![TextDocumentContentChangeEvent {
+            range: None,
+            range_length: None,
+            text,
+        }],
     };
     ctx.notify(notification::DidChangeTextDocument::METHOD.into(), params);
 }

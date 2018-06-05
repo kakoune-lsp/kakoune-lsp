@@ -152,7 +152,19 @@ impl Controller {
                             dispatch_editor_request(msg, &mut ctx);
                         } else {
                             debug!("Language server is not initialized, parking request");
+                            {
+                                let method: &str = &msg.method;
+                                match method {
+                                    notification::DidOpenTextDocument::METHOD => (),
+                                    notification::DidChangeTextDocument::METHOD => (),
+                                    notification::DidCloseTextDocument::METHOD => (),
+                                    notification::DidSaveTextDocument::METHOD => (),
+                                    request::HoverRequest::METHOD => (),
+                                    _ => ctx.exec(msg.meta.clone(), "info 'Language server is not initialized, parking request'".to_string())
+                                }
+                            }
                             ctx.pending_requests.push(msg);
+
                         }
                     }
 
@@ -297,6 +309,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "textDocument/diagnostics" => {
             diagnostics::editor_diagnostics(params, meta, &mut ctx);
         }
+        "capabilities" => {
+            general::capabilities(params, meta, &mut ctx);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
         }
@@ -321,8 +336,12 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
             debug!("Language server exited, poisoning controller");
             ctx.controller_poison_tx.send(()).unwrap();
         }
-        // to not litter logs with "unsupported method"
-        "window/progress" => {}
+        "window/logMessage" => {
+            debug!("{:?}", params);
+        }
+        "window/progress" => {
+            debug!("{:?}", params);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
         }

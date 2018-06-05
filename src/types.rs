@@ -49,7 +49,7 @@ pub struct LanguageConfig {
 impl Default for EditorConfig {
     fn default() -> Self {
         EditorConfig {
-            hover: true,
+            hover: false,
             zero_char_completion: false,
         }
     }

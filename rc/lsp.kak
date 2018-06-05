@@ -28,7 +28,7 @@ draft   = "%s"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }}
 
-def -hidden lsp-completion %{
+def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
     decl -hidden str lsp_completion_offset
     eval -draft %{ try %{
         execute-keys <esc><a-h>s\w+.\z<ret>
@@ -50,7 +50,7 @@ offset    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-hover %{
+def lsp-hover -docstring "Request hover info for the main cursor position" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -63,7 +63,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-definition %{
+def lsp-definition -docstring "Go to definition" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -76,7 +76,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-references %{
+def lsp-references -docstring "Open buffer with symbol references" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -89,13 +89,24 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-diagnostics %{
+def lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
 buffile = "%s"
 version = %d
 method  = "textDocument/diagnostics"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def lsp-capabilities -docstring "List available commands for current filetype" %{
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "capabilities"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
