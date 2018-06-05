@@ -200,7 +200,6 @@ fn kakoune(config: &Config) {
                 "cmd": cmd,
                 "args": args,
                 "hover": config.editor.hover,
-                "inline_diagnostics": config.editor.inline_diagnostics
             }),
             &mut stdout(),
         )

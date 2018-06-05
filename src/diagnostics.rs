@@ -28,8 +28,8 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
                 // LSP ranges are exclusive, but Kakoune's are inclusive
                 x.range.end.character,
                 match x.severity {
-                    Some(::languageserver_types::DiagnosticSeverity::Error) => "Error",
-                    _ => "Information",
+                    Some(::languageserver_types::DiagnosticSeverity::Error) => "DiagnosticError",
+                    _ => "DiagnosticWarning",
                 }
             )
         })

@@ -1,3 +1,6 @@
+set-face global DiagnosticError red
+set-face global DiagnosticWarning yellow
+
 decl str lsp_cmd '{{cmd}} --request {{args}}'
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
@@ -166,7 +169,7 @@ def lsp-inline-diagnostics-disable %{
 def -hidden lsp-enable %{
     set global completers "option=lsp_completions:%opt{completers}"
     add-highlighter global/ ranges cquery_semhl
-    {{#if inline_diagnostics}}lsp-inline-diagnostics-enable{{/if}}
+    lsp-inline-diagnostics-enable
 
     map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
 

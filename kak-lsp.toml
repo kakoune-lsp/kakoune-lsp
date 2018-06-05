@@ -1,8 +1,6 @@
 verbosity = 2
 
 [editor]
-# set to true for highlighting diagnostics inline with Error/Information face
-inline_diagnostics = false
 # set to true to enable auto-hover
 hover = false
 # set to true to allow autocompletion with no prefix
