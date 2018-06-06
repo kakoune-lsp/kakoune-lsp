@@ -54,7 +54,7 @@ pub fn capabilities(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context)
     let mut features = vec![];
 
     if server_capabilities.hover_provider.unwrap_or(false) {
-        features.push("lsp-hover (hooked on NormalIdle if editor.hover = true in kak-lsp.toml)");
+        features.push("lsp-hover");
     }
 
     if server_capabilities.completion_provider.is_some() {

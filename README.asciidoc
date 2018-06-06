@@ -88,13 +88,14 @@ your `kakrc`:
 lsp-start
 ----
 
-It will add completions, hover info and will bind goto definition to `gd` (the latter is available
-as `:lsp-definition` command, feel free to bind it to any convenient key/alias or call directly).
-References for a symbol under the main cursor are available via `:lsp-references` which is not bound
-to any key by default. Project-wide diagnostics are available via `:lsp-diagnostics` (current buffer
-determines project and language to collect diagnostics). Inline diagnostics use `DiagnosticError`
-and `DiagnosticWarning` faces to highlight relevant parts of code depending on severity. To disable
-inline diagnostics put `lsp-inline-diagnostics-disable` after `lsp-start` in your `kakrc`.
+It adds:
+
+* completions
+* `lsp-definition` command to go to definition, mapped to `gd` by default
+* `lsp-hover` command to show hover info; to automatically show hover when you move around use `lsp-auto-hover-enable`
+* `lsp-references` command to find references for a symbol under the main cursor
+* `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
+* inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
 
 To know which subset of kak-lsp commands is backed by current buffer filetype's language server use
 `:lsp-capabilities` command.

@@ -183,7 +183,7 @@ fn main() {
     }
 }
 
-fn kakoune(config: &Config) {
+fn kakoune(_config: &Config) {
     let mut handlebars = Handlebars::new();
     handlebars.register_escape_fn(no_escape);
     let template: &str = include_str!("../rc/lsp.kak");
@@ -199,7 +199,6 @@ fn kakoune(config: &Config) {
             &json!({
                 "cmd": cmd,
                 "args": args,
-                "hover": config.editor.hover,
             }),
             &mut stdout(),
         )

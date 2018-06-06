@@ -21,7 +21,6 @@ pub struct Config {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct EditorConfig {
-    pub hover: bool,
     pub zero_char_completion: bool,
 }
 
@@ -49,7 +48,6 @@ pub struct LanguageConfig {
 impl Default for EditorConfig {
     fn default() -> Self {
         EditorConfig {
-            hover: false,
             zero_char_completion: false,
         }
     }

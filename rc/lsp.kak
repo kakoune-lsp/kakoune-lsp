@@ -158,15 +158,25 @@ method  = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-inline-diagnostics-enable %{
+def lsp-inline-diagnostics-enable -docstring "Enable inline diagnostics highlighting" %{
     add-highlighter global/ ranges lsp_errors
 }
 
-def lsp-inline-diagnostics-disable %{
+def lsp-inline-diagnostics-disable -docstring "Disable inline diagnostics highlighting"  %{
     remove-highlighter global/hlranges_lsp_errors
 }
 
-def -hidden lsp-enable %{
+def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
+    hook -group lsp-auto-hover global NormalIdle .* %{
+        lsp-hover
+    }
+}
+
+def lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
+    remove-hooks global lsp-auto-hover
+}
+
+def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers "option=lsp_completions:%opt{completers}"
     add-highlighter global/ ranges cquery_semhl
     lsp-inline-diagnostics-enable
@@ -182,13 +192,8 @@ def -hidden lsp-enable %{
         lsp-did-change
         lsp-completion
     }
-    hook -group lsp global NormalIdle .* %{
-        lsp-did-change
-        {{#if hover}}lsp-hover{{/if}}
-    }
-    hook -group lsp global KakEnd .* %{
-        lsp-exit
-    }
+    hook -group lsp global NormalIdle .* lsp-did-change
+    hook -group lsp global KakEnd .* lsp-exit
 }
 
 lsp-enable
