@@ -69,17 +69,23 @@ pub fn editor_hover(
             HoverContents::Markup(contents) => contents.value,
         },
     };
+
     if contents.is_empty() && diagnostics.is_empty() {
         return;
     }
-    let command;
-    if diagnostics.is_empty() {
-        command = format!("info %§{}§", contents);
+
+    let position = format!("{}.{}", pos.line + 1, pos.character + 1);
+
+    let command = if diagnostics.is_empty() {
+        format!("lsp-show-hover {} %§{}§", position, contents)
     } else if contents.is_empty() {
-        command = format!("info %§{}§", diagnostics);
+        format!("lsp-show-hover {} %§{}§", position, diagnostics)
     } else {
-        command = format!("info %§{}\n\n{}§", contents, diagnostics);
-    }
+        format!(
+            "lsp-show-hover {} %§{}\n\n{}§",
+            position, contents, diagnostics
+        )
+    };
 
     ctx.exec(meta.clone(), command);
 }

@@ -2,6 +2,7 @@ set-face global DiagnosticError red
 set-face global DiagnosticWarning yellow
 
 decl str lsp_cmd '{{cmd}} --request {{args}}'
+decl bool lsp_hover_anchor false
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
@@ -175,6 +176,13 @@ def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for curr
 def lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
     remove-hooks global lsp-auto-hover
 }
+
+def -hidden lsp-show-hover -params 2 -docstring "Command responsible for rendering hover info" %{ %sh{
+    case $kak_opt_lsp_hover_anchor in
+        true) echo 'info -anchor %arg{1} %arg{2}';;
+        *)    echo 'info %arg{2}';;
+    esac
+}}
 
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers "option=lsp_completions:%opt{completers}"

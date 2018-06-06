@@ -92,7 +92,9 @@ It adds:
 
 * completions
 * `lsp-definition` command to go to definition, mapped to `gd` by default
-* `lsp-hover` command to show hover info; to automatically show hover when you move around use `lsp-auto-hover-enable`
+* `lsp-hover` command to show hover info;
+  to automatically show hover when you move around use `lsp-auto-hover-enable`;
+  to show hover anchored to hovered position do `set global lsp_hover_anchor true`
 * `lsp-references` command to find references for a symbol under the main cursor
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
