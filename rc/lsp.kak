@@ -148,13 +148,24 @@ method  = "textDocument/didSave"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-exit %{
+def -hidden lsp-exit-editor-session %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
 buffile = "%s"
 version = %d
 method  = "exit"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def lsp-stop %{
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "stop"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
@@ -183,6 +194,16 @@ def -hidden lsp-show-hover -params 2 -docstring "Command responsible for renderi
         *)    echo 'info %arg{2}';;
     esac
 }}
+
+def lsp-stop-on-exit-enable -docstring "End kak-lsp session on Kakoune session end" %{
+    alias global lsp-exit lsp-stop
+}
+
+def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune session end" %{
+    alias global lsp-exit lsp-exit-editor-session
+}
+
+lsp-stop-on-exit-disable
 
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers "option=lsp_completions:%opt{completers}"

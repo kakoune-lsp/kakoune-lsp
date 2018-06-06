@@ -13,9 +13,12 @@ use languageserver_types::*;
 use project_root::find_project_root;
 use serde::Deserialize;
 use serde_json::{self, Value};
+use std::io::{stderr, stdout, Write};
 use std::path::Path;
+use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 use text_sync::*;
 use toml;
 use types::*;
@@ -36,8 +39,12 @@ pub fn start(config: &Config) {
     'event_loop: loop {
         select_loop! {
             recv(editor_rx, request) => {
+                if request.method == "stop" {
+                    stop_session(&mut controllers, &request);
+                }
+
                 if request.method == notification::Exit::METHOD {
-                    exit_session(&mut controllers, &request);
+                    exit_editor_session(&mut controllers, &request);
                     continue 'event_loop;
                 }
 
@@ -437,7 +444,7 @@ fn extension_to_language_id_map(config: &Config) -> FnvHashMap<String, String> {
     extensions
 }
 
-fn exit_session(controllers: &mut Controllers, request: &EditorRequest) {
+fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
     info!(
         "Session `{}` closed, shutting down associated language servers",
         request.meta.session
@@ -452,6 +459,26 @@ fn exit_session(controllers: &mut Controllers, request: &EditorRequest) {
                 .expect("Failed to route editor request");
         }
     }
+}
+
+fn stop_session(controllers: &mut Controllers, request: &EditorRequest) {
+    let request = EditorRequest {
+        method: notification::Exit::METHOD.to_string(),
+        ..request.clone()
+    };
+    info!("Shutting down language servers and exiting");
+    for k in controllers.keys().cloned().collect::<Vec<_>>() {
+        // should be safe to unwrap because we are iterating controllers' keys
+        let controller_tx = controllers.remove(&k).unwrap();
+        info!("Exit {} in project {}", k.language, k.root);
+        if let Err(_) = controller_tx.send(request.clone()) {
+            error!("Failed to route editor request");
+        }
+    }
+    stderr().flush().unwrap();
+    stdout().flush().unwrap();
+    thread::sleep(Duration::from_secs(1));
+    process::exit(0);
 }
 
 fn ext_as_str(path: &str) -> &str {
