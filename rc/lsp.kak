@@ -33,8 +33,8 @@ draft   = "%s"
 }}
 
 def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
-    # fail if preceding character is space
-    eval -draft %{ execute-keys <esc>Hs\S.\z<ret> }
+    # fail if preceding character is a whitespace
+    execute-keys -draft <a-h><a-k>\S.\z<ret>
 
     decl -hidden str lsp_completion_offset
 
