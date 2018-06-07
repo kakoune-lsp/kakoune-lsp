@@ -127,13 +127,8 @@ fn main() {
             })
         });
 
-    match config_path {
-        Some(config_path) => {
-            config = fs::read_to_string(config_path).expect("Failed to read config");
-        }
-        None => {
-            println!("Config file is not found, starting with default configuration");
-        }
+    if let Some(config_path) = config_path {
+        config = fs::read_to_string(config_path).expect("Failed to read config");
     }
 
     let mut config: Config = toml::from_str(&config).expect("Failed to parse config file");
