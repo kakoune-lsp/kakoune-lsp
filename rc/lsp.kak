@@ -3,7 +3,8 @@ set-face global DiagnosticWarning yellow
 
 decl str lsp_cmd '{{cmd}} --request {{args}}'
 decl bool lsp_hover_anchor false
-decl str lsp_completion_trigger '<a-h><a-k>\S.\z<ret>'
+decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
+decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>;s\(<ret>'}
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
@@ -35,7 +36,7 @@ draft   = "%s"
 
 def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
     # fail if preceding character is a whitespace
-    execute-keys -draft %opt{lsp_completion_trigger}
+    eval -draft %opt{lsp_completion_trigger}
 
     decl -hidden str lsp_completion_offset
 
@@ -192,6 +193,17 @@ def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for curr
 
 def lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
     remove-hooks global lsp-auto-hover
+}
+
+def lsp-auto-hover-insert-mode-enable -docstring "Enable auto-requesting hover info for current function in insert mode" %{
+    hook -group lsp-auto-hover-insert-mode global InsertIdle .* %{ try %{ eval -draft %{
+        eval %opt{lsp_hover_insert_mode_trigger}
+        lsp-hover
+    }}}
+}
+
+def lsp-auto-hover-insert-mode-disable -docstring "Disable auto-requesting hover info for current function in insert mode" %{
+    remove-hooks global lsp-auto-hover-insert-mode
 }
 
 def -hidden lsp-show-hover -params 2 -docstring "Command responsible for rendering hover info" %{ %sh{
