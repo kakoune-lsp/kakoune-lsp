@@ -204,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "kak-lsp"
-version = "3.7.0"
+version = "4.0.0-rc.1"
 dependencies = [
  "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-channel 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
