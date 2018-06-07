@@ -10,7 +10,7 @@ decl -hidden range-specs cquery_semhl
 decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
 
-def lsp-start %{ nop %sh{ ({{cmd}} {{args}}) > /dev/null 2>&1 < /dev/null & } }
+def lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ ({{cmd}} {{args}}) > /dev/null 2>&1 < /dev/null & } }
 
 def -hidden lsp-did-change %{ try %{
     %sh{
@@ -32,14 +32,19 @@ draft   = "%s"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }}
 
-def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
+def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
+    # fail if preceding character is space
+    eval -draft %{ execute-keys <esc>Hs\S.\z<ret> }
+
     decl -hidden str lsp_completion_offset
+
     eval -draft %{ try %{
         execute-keys <esc><a-h>s\w+.\z<ret>
         set window lsp_completion_offset %sh{echo $((${#kak_selection} - 1))}
     } catch %{
         set window lsp_completion_offset "0"
     }}
+
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -52,7 +57,7 @@ character = %d
 [params.completion]
 offset    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
-}
+}}
 
 def lsp-hover -docstring "Request hover info for the main cursor position" %{
     nop %sh{ (printf '
@@ -159,7 +164,7 @@ method  = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-stop %{
+def lsp-stop -docstring "Stop kak-lsp session" %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"

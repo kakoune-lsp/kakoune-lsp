@@ -1,9 +1,5 @@
 verbosity = 2
 
-[editor]
-# set to true to allow autocompletion with no prefix
-zero_char_completion = false
-
 [server]
 # exit if no requests during given period
 timeout = 1800 # seconds = 30 min

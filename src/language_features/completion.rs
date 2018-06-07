@@ -15,18 +15,7 @@ pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &m
     }
     let req_params = req_params.unwrap();
     let position = req_params.position;
-    let offset = req_params.completion.offset;
-    if offset == 0 && !ctx.config.editor.zero_char_completion {
-        let p = position;
-        let command = format!(
-            "set window lsp_completions %§{}.{}@{}:§\n",
-            p.line + 1,
-            p.character + 1,
-            meta.version,
-        );
-        ctx.exec(meta.clone(), command);
-        return;
-    }
+
     let req_params = CompletionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
