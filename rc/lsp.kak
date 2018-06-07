@@ -208,7 +208,7 @@ def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune se
     alias global lsp-exit lsp-exit-editor-session
 }
 
-lsp-stop-on-exit-disable
+lsp-stop-on-exit-enable
 
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers "option=lsp_completions:%opt{completers}"

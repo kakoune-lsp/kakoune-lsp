@@ -44,7 +44,7 @@ impl Default for ServerConfig {
             ip: default_ip(),
             port: default_port(),
             session: None,
-            timeout: 1800,
+            timeout: 0,
         }
     }
 }
