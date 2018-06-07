@@ -3,6 +3,7 @@ set-face global DiagnosticWarning yellow
 
 decl str lsp_cmd '{{cmd}} --request {{args}}'
 decl bool lsp_hover_anchor false
+decl str lsp_completion_trigger '<a-h><a-k>\S.\z<ret>'
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
@@ -34,7 +35,7 @@ draft   = "%s"
 
 def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
     # fail if preceding character is a whitespace
-    execute-keys -draft <a-h><a-k>\S.\z<ret>
+    execute-keys -draft %opt{lsp_completion_trigger}
 
     decl -hidden str lsp_completion_offset
 
