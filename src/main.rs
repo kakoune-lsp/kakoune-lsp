@@ -5,6 +5,7 @@ extern crate crossbeam_channel;
 extern crate fnv;
 extern crate glob;
 extern crate handlebars;
+extern crate itertools;
 extern crate jsonrpc_core;
 extern crate languageserver_types;
 extern crate regex;
