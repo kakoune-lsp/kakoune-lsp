@@ -4,7 +4,7 @@ set-face global DiagnosticWarning yellow
 decl str lsp_cmd '{{cmd}} --request {{args}}'
 decl bool lsp_hover_anchor false
 decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
-decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>;s\(<ret>'}
+decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+\z<ret>'}
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 
