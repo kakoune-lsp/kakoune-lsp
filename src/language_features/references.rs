@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
@@ -43,46 +44,73 @@ pub fn editor_references(
         ReferencesResponse::Array(locations) => Some(locations),
         ReferencesResponse::None => None,
     } {
-        let content = locations
-            .iter()
-            .map(|location| {
-                let p = location.range.start;
-                let path = location.uri.to_file_path().unwrap();
-                let filename = path.to_str().unwrap();
-                let file = File::open(filename);
-                if file.is_err() {
-                    error!("Failed to open referenced file: {}", filename);
-                    return String::new();
-                }
-                let line_num = p.line as usize;
-                for (i, line) in BufReader::new(file.unwrap()).lines().enumerate() {
-                    if i == line_num {
-                        match line {
-                            Ok(line) => {
-                                return format!(
-                                    "{}:{}:{}:{}",
-                                    Path::new(filename)
-                                        .strip_prefix(&ctx.root_path)
-                                        .ok()
-                                        .and_then(|p| Some(p.to_str().unwrap()))
-                                        .or_else(|| Some(filename))
-                                        .unwrap(),
-                                    p.line + 1,
-                                    p.character + 1,
-                                    line
-                                )
-                            }
-                            Err(e) => {
-                                error!("Failed to read line {} in {}: {}", filename, line_num, e);
-                                return String::new();
-                            }
-                        }
-                    }
-                }
-                return String::new();
+        // Sort locations by (filename, line)
+        let mut locations = locations.to_vec();
+
+        locations
+        	.sort_unstable_by_key(|location| {
+              (location.uri.to_file_path(),
+              location.range.start.line)
+          });
+
+		let content = locations
+			.iter()
+			.group_by(|location|{
+              location.uri.to_file_path()
             })
-            .collect::<Vec<String>>()
-            .join("\n");
+            .into_iter()
+            .map(|(filename, group)| {
+                let filename = filename.unwrap();
+                let name = filename.to_str().unwrap();
+    			let file = File::open(name);
+    			if file.is_err() {
+                    error!("Failed to open referenced file: {}", name);
+                    return group
+                    	.map(|_loc| String::new())
+                    	.collect::<Vec<String>>()
+                    	.join("\n");
+				}
+				let mut buffer = BufReader::new(file.unwrap()).lines();
+				let mut next_buf_line = 0;
+				return group.map(|location| {
+                    let p = location.range.start;
+                    let loc_line = p.line as usize;
+                    while next_buf_line != loc_line {
+                        buffer.next();
+                        next_buf_line += 1;
+                    }
+                    next_buf_line += 1;
+                    match buffer.next() {
+                        Some(Ok(line)) => {
+                            return format!(
+                                "{}:{}:{}:{}",
+                                Path::new(name)
+                                    .strip_prefix(&ctx.root_path)
+                                    .ok()
+                                    .and_then(|p| Some(p.to_str().unwrap()))
+                                    .or_else(|| Some(name))
+                                    .unwrap(),
+                                p.line + 1,
+                                p.character + 1,
+                                line
+                            )
+                        }
+                        Some(Err(e)) => {
+                            error!("Failed to read line {} in {}: {}", name, loc_line, e);
+                            return String::new();
+                        }
+                        None => {
+                            error!("End of file reached, line {} not found in {}", loc_line, name,);
+                            return String::new();
+                        }
+    				}
+				})
+    			.collect::<Vec<String>>()
+    			.join("\n");
+            })
+           	.collect::<Vec<String>>()
+           	.join("\n");
+
         let command = format!(
             "eval -try-client %opt[toolsclient] %☠
              edit! -scratch *references*
