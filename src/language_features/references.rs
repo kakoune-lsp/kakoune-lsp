@@ -84,14 +84,7 @@ pub fn editor_references(
             .collect::<Vec<String>>()
             .join("\n");
         let command = format!(
-            "eval -try-client %opt[toolsclient] %☠
-             edit! -scratch *references*
-             cd %§{}§
-             try %{{ set buffer working_folder %sh{{pwd}} }}
-             set buffer filetype grep
-             set-register '\"' %§{}§
-             exec -no-hooks p
-             ☠",
+            "lsp-show-references %§{}§ %§{}§",
             ctx.root_path, content,
         );
         ctx.exec(meta.clone(), command);

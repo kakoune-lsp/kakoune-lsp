@@ -1,16 +1,27 @@
+# faces used by inline diagnostics
 set-face global DiagnosticError red
 set-face global DiagnosticWarning yellow
 
 decl str lsp_cmd '{{cmd}} --request {{args}}'
+
+# set to true to display hover info anchored to hovered position
 decl bool lsp_hover_anchor false
+# completions request is sent only when this expression doesn't fail
+# by default it ensures that preceding character is not a whitespace
 decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
+# if hover in insert mode is enabled then request is made only when this expression doesn't fail and
+# for position at which it moves cursor; by default it ensures that cursor is after opening parens
+# and then moves cursor to opening parens to request hover info for current function; note that it
+# doesn't handle well nested function calls
 decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+\z<ret>'}
+
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
-
 decl -hidden range-specs cquery_semhl
 decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
+
+# commands to make kak-lsp requests
 
 def lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ ({{cmd}} {{args}}) > /dev/null 2>&1 < /dev/null & } }
 
@@ -177,6 +188,44 @@ method  = "stop"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+# commands called as kak-lsp responses
+
+def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ %sh{
+    case $kak_opt_lsp_hover_anchor in
+        true) echo 'info -anchor %arg{1} %arg{2}';;
+        *)    echo 'info %arg{2}';;
+    esac
+}}
+
+def -hidden lsp-show-error -params 1 -docstring "Render error" %{
+    echo -debug "kak-lsp:" %arg{1}
+    info %arg{1}
+}
+
+def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
+     eval -try-client %opt[toolsclient] %☠
+         edit! -scratch *diagnostics*
+         cd %arg{1}
+         try %{ set buffer working_folder %sh{pwd} }
+         set buffer filetype grep
+         set-register '"' %arg{2}
+         exec -no-hooks p
+     ☠
+}
+
+def -hidden lsp-show-references -params 2 -docstring "Render references" %{
+     eval -try-client %opt[toolsclient] %☠
+         edit! -scratch *references*
+         cd %arg{1}
+         try %{ set buffer working_folder %sh{pwd} }
+         set buffer filetype grep
+         set-register '"' %arg{2}
+         exec -no-hooks p
+     ☠
+}
+
+# convenient commands to set and remove hooks for common cases
+
 def lsp-inline-diagnostics-enable -docstring "Enable inline diagnostics highlighting" %{
     add-highlighter global/ ranges lsp_errors
 }
@@ -205,13 +254,6 @@ def lsp-auto-hover-insert-mode-enable -docstring "Enable auto-requesting hover i
 def lsp-auto-hover-insert-mode-disable -docstring "Disable auto-requesting hover info for current function in insert mode" %{
     remove-hooks global lsp-auto-hover-insert-mode
 }
-
-def -hidden lsp-show-hover -params 2 -docstring "Command responsible for rendering hover info" %{ %sh{
-    case $kak_opt_lsp_hover_anchor in
-        true) echo 'info -anchor %arg{1} %arg{2}';;
-        *)    echo 'info %arg{2}';;
-    esac
-}}
 
 def lsp-stop-on-exit-enable -docstring "End kak-lsp session on Kakoune session end" %{
     alias global lsp-exit lsp-stop

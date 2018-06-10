@@ -167,7 +167,7 @@ impl Controller {
                                     notification::DidCloseTextDocument::METHOD => (),
                                     notification::DidSaveTextDocument::METHOD => (),
                                     request::HoverRequest::METHOD => (),
-                                    _ => ctx.exec(msg.meta.clone(), "info 'Language server is not initialized, parking request'".to_string())
+                                    _ => ctx.exec(msg.meta.clone(), "lsp-show-error 'Language server is not initialized, parking request'".to_string())
                                 }
                             }
                             ctx.pending_requests.push(msg);
@@ -239,7 +239,7 @@ impl Controller {
                                                 format!("{} language server error: {}", ctx.language_id, failure.error.message)
                                             }
                                         };
-                                        ctx.exec(meta, format!("echo -debug %§kak-lsp: {0}§; info %§{0}§", msg));
+                                        ctx.exec(meta, format!("lsp-show-error %§{}§", msg));
                                     } else {
                                         error!("Id {:?} is not in waitlist!", failure.id);
                                     }
