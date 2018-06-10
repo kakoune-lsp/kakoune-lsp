@@ -5,7 +5,6 @@ use languageserver_types::*;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
 use types::*;
 use url::Url;
 
@@ -40,13 +39,11 @@ pub fn editor_references(
     result: ReferencesResponse,
     ctx: &mut Context,
 ) {
-    if let Some(locations) = match result {
+    if let Some(mut locations) = match result {
         ReferencesResponse::Array(locations) => Some(locations),
         ReferencesResponse::None => None,
     } {
         // Sort locations by (filename, line)
-        let mut locations = locations.to_vec();
-
         locations
             .sort_unstable_by_key(|location| {
               (location.uri.to_file_path(),
@@ -61,8 +58,14 @@ pub fn editor_references(
             .into_iter()
             .map(|(filename, group)| {
                 let filename = filename.unwrap();
-                let name = filename.to_str().unwrap();
-                let file = File::open(name);
+                let file = File::open(&filename);
+                let name = filename
+                    .strip_prefix(&ctx.root_path)
+                    .ok()
+                    .and_then(|p| Some(p.to_str().unwrap()))
+                    .or_else(|| filename.to_str())
+                    .unwrap();
+                
                 if file.is_err() {
                     error!("Failed to open referenced file: {}", name);
                     return group
@@ -84,12 +87,7 @@ pub fn editor_references(
                         Some(Ok(line)) => {
                             return format!(
                                 "{}:{}:{}:{}",
-                                Path::new(name)
-                                    .strip_prefix(&ctx.root_path)
-                                    .ok()
-                                    .and_then(|p| Some(p.to_str().unwrap()))
-                                    .or_else(|| Some(name))
-                                    .unwrap(),
+                                name,
                                 p.line + 1,
                                 p.character + 1,
                                 line
