@@ -4,7 +4,7 @@ verbosity = 2
 # exit session if no requests were received during given period in seconds
 # works only in unix sockets mode (-s/--session)
 # set to 0 to disable
-timeout = 0
+timeout = 1800 # seconds = 30 minutes
 
 [language.rust]
 extensions = ["rs"]
