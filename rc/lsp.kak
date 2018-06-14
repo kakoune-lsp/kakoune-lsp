@@ -135,6 +135,17 @@ method  = "textDocument/diagnostics"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-document-symbol -docstring "Open buffer with document symbols" %{
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/documentSymbol"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 def lsp-capabilities -docstring "List available commands for current filetype" %{
     nop %sh{ (printf '
 session = "%s"
@@ -229,6 +240,17 @@ def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
 def -hidden lsp-show-references -params 2 -docstring "Render references" %{
      eval -try-client %opt[toolsclient] %{
          edit! -scratch *references*
+         cd %arg{1}
+         try %{ set buffer working_folder %sh{pwd} }
+         set buffer filetype grep
+         set-register '"' %arg{2}
+         exec -no-hooks p
+     }
+}
+
+def -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
+     eval -try-client %opt[toolsclient] %{
+         edit! -scratch *symbols*
          cd %arg{1}
          try %{ set buffer working_folder %sh{pwd} }
          set buffer filetype grep
