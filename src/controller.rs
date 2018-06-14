@@ -316,6 +316,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "textDocument/diagnostics" => {
             diagnostics::editor_diagnostics(params, meta, &mut ctx);
         }
+        "textDocument/signatureHelp" => {
+            signature_help::text_document_signature_help(params, meta, &mut ctx);
+        }
         "capabilities" => {
             general::capabilities(params, meta, &mut ctx);
         }
@@ -396,7 +399,15 @@ fn dispatch_server_response(
             references::editor_references(
                 meta,
                 &PositionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse definition response"),
+                serde_json::from_value(response).expect("Failed to parse references response"),
+                &mut ctx,
+            );
+        }
+        request::SignatureHelpRequest::METHOD => {
+            signature_help::editor_signature_help(
+                meta,
+                &PositionParams::deserialize(params).expect("Failed to parse params"),
+                serde_json::from_value(response).expect("Failed to parse signature help response"),
                 &mut ctx,
             );
         }

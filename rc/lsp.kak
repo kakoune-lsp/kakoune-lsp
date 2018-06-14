@@ -111,6 +111,19 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-signature-help -docstring "Request signature help for the main cursor position" %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "textDocument/signatureHelp"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 def lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
     nop %sh{ (printf '
 session = "%s"
@@ -166,7 +179,7 @@ method  = "textDocument/didSave"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-exit-editor-session %{
+def -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -203,25 +216,29 @@ def -hidden lsp-show-error -params 1 -docstring "Render error" %{
 }
 
 def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
-     eval -try-client %opt[toolsclient] %☠
+     eval -try-client %opt[toolsclient] %{
          edit! -scratch *diagnostics*
          cd %arg{1}
          try %{ set buffer working_folder %sh{pwd} }
          set buffer filetype grep
          set-register '"' %arg{2}
          exec -no-hooks p
-     ☠
+     }
 }
 
 def -hidden lsp-show-references -params 2 -docstring "Render references" %{
-     eval -try-client %opt[toolsclient] %☠
+     eval -try-client %opt[toolsclient] %{
          edit! -scratch *references*
          cd %arg{1}
          try %{ set buffer working_folder %sh{pwd} }
          set buffer filetype grep
          set-register '"' %arg{2}
          exec -no-hooks p
-     ☠
+     }
+}
+
+def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
+    echo %arg{2}
 }
 
 # convenient commands to set and remove hooks for common cases
@@ -253,6 +270,14 @@ def lsp-auto-hover-insert-mode-enable -docstring "Enable auto-requesting hover i
 
 def lsp-auto-hover-insert-mode-disable -docstring "Disable auto-requesting hover info for current function in insert mode" %{
     remove-hooks global lsp-auto-hover-insert-mode
+}
+
+def lsp-auto-signature-help-enable -docstring "Enable auto-requesting signature help in insert mode" %{
+    hook -group lsp-auto-signature-help global InsertIdle .* lsp-signature-help
+}
+
+def lsp-auto-signature-help-disable -docstring "Disable auto-requesting signature help in insert mode" %{
+    remove-hooks global lsp-auto-signature-help
 }
 
 def lsp-stop-on-exit-enable -docstring "End kak-lsp session on Kakoune session end" %{
