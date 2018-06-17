@@ -52,7 +52,7 @@ def -hidden lsp-completion -docstring "Request completions for the main cursor p
     decl -hidden str lsp_completion_offset
 
     eval -draft %{ try %{
-        execute-keys <esc><a-h>s\w+.\z<ret>
+        execute-keys <esc><a-h>s\$?\w+.\z<ret>
         set window lsp_completion_offset %sh{echo $((${#kak_selection} - 1))}
     } catch %{
         set window lsp_completion_offset "0"
