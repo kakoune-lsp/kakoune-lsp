@@ -41,7 +41,7 @@ pub fn editor_completion(
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
     };
-    let re = Regex::new(r"(?P<c>[:|$])").unwrap();
+    let re = Regex::new(r"(?P<c>[:|])").unwrap();
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
 
     let items = items
