@@ -13,6 +13,7 @@ use languageserver_types::*;
 use project_root::find_project_root;
 use serde::Deserialize;
 use serde_json::{self, Value};
+use std::fs;
 use std::io::{stderr, stdout, Write};
 use std::path::Path;
 use std::process;
@@ -54,6 +55,17 @@ pub fn start(config: &Config) {
                         "Language server is not configured for extension `{}`",
                         ext_as_str(&request.meta.buffile)
                     );
+                    if request.method == notification::DidChangeTextDocument::METHOD {
+                        let params = TextDocumentDidChangeParams::deserialize(request.params);
+                        match params {
+                            Ok(params) => {
+                                if fs::remove_file(params.draft).is_err() {
+                                    error!("Failed to remove temporary file");
+                                }
+                            }
+                            Err(_) => error!("Params should follow TextDocumentDidChangeParams structure")
+                        }
+                    }
                     continue 'event_loop;
                 }
                 let language_id = language_id.unwrap();
