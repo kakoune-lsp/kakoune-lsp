@@ -1,6 +1,6 @@
 [package]
 name = "kak-lsp"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>"]
 
 [dependencies]
