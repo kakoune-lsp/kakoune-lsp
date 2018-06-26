@@ -20,15 +20,22 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         .unwrap()
         .iter()
         .map(|x| {
+            // LSP ranges are 0-based, but Kakoune's 1-based.
+            // LSP ranges are exclusive, but Kakoune's are inclusive.
+            // Also from LSP spec: If you want to specify a range that contains a line including
+            // the line ending character(s) then use an end position denoting the start of the next
+            // line.
+            // Proper handling of that case requires more complex logic in lsp.kak. For now we just
+            // allow highlighting extra character on the next line
+            let end_char = x.range.end.character;
             format!(
                 "{}.{},{}.{}|{}",
                 x.range.start.line + 1,
                 x.range.start.character + 1,
                 x.range.end.line + 1,
-                // LSP ranges are exclusive, but Kakoune's are inclusive
-                x.range.end.character,
+                if end_char > 0 { end_char } else { 1 },
                 match x.severity {
-                    Some(::languageserver_types::DiagnosticSeverity::Error) => "DiagnosticError",
+                    Some(DiagnosticSeverity::Error) => "DiagnosticError",
                     _ => "DiagnosticWarning",
                 }
             )
