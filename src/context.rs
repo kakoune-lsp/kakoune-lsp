@@ -64,8 +64,7 @@ impl Context {
             params: Some(params.unwrap()),
         };
         self.lang_srv_tx
-            .send(ServerMessage::Request(Call::MethodCall(call)))
-            .expect("Failed to send request to language server transport");
+            .send(ServerMessage::Request(Call::MethodCall(call)));
     }
 
     pub fn notify(&mut self, method: String, params: impl ToParams) {
@@ -84,14 +83,11 @@ impl Context {
             },
         };
         self.lang_srv_tx
-            .send(ServerMessage::Request(Call::Notification(notification)))
-            .expect("Failed to send request to language server transport");
+            .send(ServerMessage::Request(Call::Notification(notification)));
     }
 
     pub fn exec(&self, meta: EditorMeta, command: String) {
-        self.editor_tx
-            .send(EditorResponse { meta, command })
-            .expect("Failed to send message to editor transport");
+        self.editor_tx.send(EditorResponse { meta, command });
     }
 
     pub fn next_request_id(&mut self) -> Id {

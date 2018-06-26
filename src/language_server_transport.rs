@@ -66,14 +66,8 @@ pub fn start(
             method: notification::Exit::METHOD.to_string(),
             params: Some(Params::None),
         };
-        if !reader_tx.is_disconnected() {
-            debug!("Sending exit notification back to controller");
-            // should be safe to unwrap because we checked channel for being connected
-            // otherwise something went completely wrong and it's okay to panic
-            reader_tx
-                .send(ServerMessage::Request(Call::Notification(notification)))
-                .unwrap();
-        }
+        debug!("Sending exit notification back to controller");
+        reader_tx.send(ServerMessage::Request(Call::Notification(notification)));
     });
 
     // NOTE 1024 is arbitrary
@@ -124,14 +118,12 @@ fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Resu
         debug!("From server: {}", msg);
         let output: serde_json::Result<Output> = serde_json::from_str(&msg);
         match output {
-            Ok(output) => tx.send(ServerMessage::Response(output))
-                .expect("Failed to send message from language server"),
+            Ok(output) => tx.send(ServerMessage::Response(output)),
             Err(_) => {
                 let msg: Call = serde_json::from_str(&msg).map_err(|_| {
                     Error::new(ErrorKind::Other, "Failed to parse language server message")
                 })?;
-                tx.send(ServerMessage::Request(msg))
-                    .expect("Failed to send message from language server");
+                tx.send(ServerMessage::Request(msg));
             }
         }
     }
@@ -143,8 +135,13 @@ fn writer_loop(
     poison_rx: &Receiver<()>,
 ) -> io::Result<()> {
     loop {
-        select_loop! {
+        select! {
             recv(rx, request) => {
+                if request.is_none() {
+                    debug!("Received signal to stop language server, closing pipe");
+                    return Ok(())
+                }
+                let request = request.unwrap();
                 let request = match request {
                     ServerMessage::Request(request) => serde_json::to_string(&request),
                     ServerMessage::Response(response) => serde_json::to_string(&response),
@@ -160,9 +157,10 @@ fn writer_loop(
             }
             // NOTE we rely on the assumption that language server will exit when its stdin is closed
             // without need to kill child process
-            recv(poison_rx, _) => {
+            recv(poison_rx) => {
                 debug!("Received signal to stop language server, closing pipe");
-                return Ok(())}
+                return Ok(())
+            }
         }
     }
 }

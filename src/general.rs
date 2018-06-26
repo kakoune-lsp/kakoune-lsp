@@ -37,12 +37,8 @@ pub fn exit(_params: EditorParams, _meta: &EditorMeta, ctx: &mut Context) {
     // NOTE we can't use Params::None because it's serialized as Value::Array([])
     let params: Option<u8> = None;
     ctx.notify(notification::Exit::METHOD.into(), params);
-    ctx.lang_srv_poison_tx
-        .send(())
-        .expect("Failed to poison language server");
-    ctx.controller_poison_tx
-        .send(())
-        .expect("Failed to poison controller");
+    ctx.lang_srv_poison_tx.send(());
+    ctx.controller_poison_tx.send(());
 }
 
 pub fn capabilities(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {

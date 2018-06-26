@@ -38,10 +38,16 @@ pub fn start(config: &Config) {
     let (controller_remove_tx, controller_remove_rx) = bounded(1);
 
     'event_loop: loop {
-        select_loop! {
+        select! {
             recv(editor_rx, request) => {
+                if request.is_none() {
+                    stop_session(&mut controllers);
+                }
+
+                let request = request.unwrap();
+
                 if request.method == "stop" {
-                    stop_session(&mut controllers, &request);
+                    stop_session(&mut controllers);
                 }
 
                 if request.method == notification::Exit::METHOD {
@@ -82,9 +88,7 @@ pub fn start(config: &Config) {
 
                 match controllers.get(&route).cloned() {
                     Some(controller_tx) => {
-                        controller_tx
-                            .send(request)
-                            .expect("Failed to route editor request");
+                        controller_tx.send(request);
                     }
                     None => {
                         // because Kakoune triggers BufClose after KakEnd
@@ -107,6 +111,10 @@ pub fn start(config: &Config) {
             }
 
             recv(controller_remove_rx, route) => {
+                if route.is_none() {
+                    continue 'event_loop;
+                }
+                let route = route.unwrap();
                 controllers.remove(&route);
                 debug!("Controller {:?} removed", route);
                 continue 'event_loop;
@@ -138,8 +146,8 @@ impl Controller {
         let (lang_srv_reader_poison_tx, lang_srv_reader_poison_rx) = bounded(1);
         thread::spawn(move || {
             for msg in controller_poison_rx {
-                editor_reader_poison_tx.send(msg).unwrap();
-                lang_srv_reader_poison_tx.send(msg).unwrap();
+                editor_reader_poison_tx.send(msg);
+                lang_srv_reader_poison_tx.send(msg);
             }
         });
 
@@ -159,8 +167,13 @@ impl Controller {
         let ctx = Arc::clone(&ctx_src);
         let editor_reader_handle = thread::spawn(move || {
             loop {
-                select_loop! {
+                select! {
                     recv(editor_rx, msg) =>{
+                        if msg.is_none() {
+                            debug!("Stopping editor dispatcher");
+                            return;
+                        }
+                        let msg = msg.unwrap();
                         let mut ctx = ctx.lock().expect("Failed to lock context");
                         // initialize request must be first request from client to language server
                         // initialized response contains capabilities which we save for future use
@@ -187,7 +200,7 @@ impl Controller {
                         }
                     }
 
-                    recv(editor_reader_poison_rx, _) => {
+                    recv(editor_reader_poison_rx) => {
                         debug!("Stopping editor dispatcher");
                         return;
                     }
@@ -197,8 +210,13 @@ impl Controller {
 
         let ctx = Arc::clone(&ctx_src);
         let lang_srv_handle = thread::spawn(move || loop {
-            select_loop! {
+            select! {
                 recv(lang_srv_rx, msg) => {
+                    if msg.is_none() {
+                        debug!("Stopping language server dispatcher");
+                        return;
+                    }
+                    let msg = msg.unwrap();
                     match msg {
                         ServerMessage::Request(call) => {
                             let mut ctx = ctx.lock().expect("Failed to lock context");
@@ -261,7 +279,7 @@ impl Controller {
                     }
                 }
 
-                recv(lang_srv_reader_poison_rx, _) => {
+                recv(lang_srv_reader_poison_rx) => {
                     debug!("Stopping language server dispatcher");
                     return;
                 }
@@ -359,7 +377,7 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
         }
         notification::Exit::METHOD => {
             debug!("Language server exited, poisoning controller");
-            ctx.controller_poison_tx.send(()).unwrap();
+            ctx.controller_poison_tx.send(());
         }
         "window/logMessage" => {
             debug!("{:?}", params);
@@ -487,26 +505,28 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
             // should be safe to unwrap because we are iterating controllers' keys
             let controller_tx = controllers.remove(&k).unwrap();
             info!("Exit {} in project {}", k.language, k.root);
-            controller_tx
-                .send(request.clone())
-                .expect("Failed to route editor request");
+            controller_tx.send(request.clone());
         }
     }
 }
 
-fn stop_session(controllers: &mut Controllers, request: &EditorRequest) {
+fn stop_session(controllers: &mut Controllers) {
     let request = EditorRequest {
+        meta: EditorMeta {
+            session: "".to_string(),
+            buffile: "".to_string(),
+            client: None,
+            version: 0,
+        },
         method: notification::Exit::METHOD.to_string(),
-        ..request.clone()
+        params: toml::Value::Table(toml::value::Table::default()),
     };
     info!("Shutting down language servers and exiting");
     for k in controllers.keys().cloned().collect::<Vec<_>>() {
         // should be safe to unwrap because we are iterating controllers' keys
         let controller_tx = controllers.remove(&k).unwrap();
         info!("Exit {} in project {}", k.language, k.root);
-        if let Err(_) = controller_tx.send(request.clone()) {
-            error!("Failed to route editor request");
-        }
+        controller_tx.send(request.clone())
     }
     stderr().flush().unwrap();
     stdout().flush().unwrap();
@@ -545,8 +565,8 @@ fn spawn_controller(
     let route_mult = route.clone();
     thread::spawn(move || {
         for _ in controller_poison_rx_mult {
-            controller_remove_tx.send(route_mult.clone()).unwrap();
-            controller_poison_tx.send(()).unwrap();
+            controller_remove_tx.send(route_mult.clone());
+            controller_poison_tx.send(());
         }
     });
     let config = (*config).clone();

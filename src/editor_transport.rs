@@ -1,4 +1,4 @@
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam_channel::{after, bounded, Receiver, Sender};
 use std::fs;
 use std::io::{stderr, stdout, Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener};
@@ -23,13 +23,16 @@ pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest
             thread::spawn(move || {
                 let timeout = Duration::from_secs(timeout);
                 loop {
-                    if timeout_rx.recv_timeout(timeout).is_err() {
-                        info!("Exiting by timeout");
-                        stderr().flush().unwrap();
-                        stdout().flush().unwrap();
-                        thread::sleep(Duration::from_secs(1));
-                        // TODO clean exit
-                        exit(0);
+                    select! {
+                        recv(timeout_rx) => {}
+                        recv(after(timeout)) => {
+                            info!("Exiting by timeout");
+                            stderr().flush().unwrap();
+                            stdout().flush().unwrap();
+                            thread::sleep(Duration::from_secs(1));
+                            // TODO clean exit
+                            exit(0);
+                        }
                     }
                 }
             });
@@ -101,9 +104,7 @@ pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: Sender<EditorRequest>) {
                         debug!("From editor: {}", request);
                         let request: EditorRequest =
                             toml::from_str(&request).expect("Failed to parse editor request");
-                        reader_tx
-                            .send(request)
-                            .expect("Failed to send request from server");
+                        reader_tx.send(request);
                     }
                     Err(e) => {
                         error!("Failed to read from TCP stream: {}", e);
@@ -170,11 +171,9 @@ pub fn start_unix(
                         debug!("From editor: {}", request);
                         let request: EditorRequest =
                             toml::from_str(&request).expect("Failed to parse editor request");
-                        reader_tx
-                            .send(request)
-                            .expect("Failed to send request from server");
+                        reader_tx.send(request);
                         if let Some(ref timeout_tx) = timeout_tx {
-                            timeout_tx.send(()).unwrap();
+                            timeout_tx.send(());
                         }
                     }
                     Err(e) => {
