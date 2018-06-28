@@ -85,7 +85,6 @@ your `kakrc`:
 
 ----
 %sh{kak-lsp --kakoune -s $kak_session}
-lsp-start
 ----
 
 It adds:
@@ -103,14 +102,11 @@ It adds:
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune during 30 minutes,
 even if Kakoune session is still up and running. Change `server.timeout` in `kak-lsp.toml` to tweak
-duration, or set it to 0 to disable this behaviour.
+duration, or set it to 0 to disable this behaviour. In any scenario making new request would lead to
+attempt to spin up server if it is down.
 
 To know which subset of kak-lsp commands is backed by current buffer filetype's language server use
 `lsp-capabilities` command.
-
-Expect kak-lsp to crash from time to time. Usually it's enough just to restart it (`lsp-start`
-command if you are using default integration). When you return to editing your files kak-lsp will
-restart language server.
 
 == Configuration
 
@@ -118,21 +114,22 @@ kak-lsp is configured via configuration file in https://github.com/toml-lang/tom
 
 Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
 
-If you are setting any options via cli do not forget to append them to `%sh{kak-lsp --kakoune ...}`
-in your `kakrc`. It's not needed if you change options in `~/.config/kak-lsp/kak-lsp.toml` file.
+If you are setting any options to server via cli do not forget to append them to
+`%sh{kak-lsp --kakoune ...}` in your `kakrc`. It's not needed if you change options in
+`~/.config/kak-lsp/kak-lsp.toml` file.
 
 Please let us know if you have any ideas about how to make default config more sensible.
 
 == Troubleshooting
 
-If kak-lsp fails try to replace `lsp-start` in your `kakrc` with 
+If kak-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
 
 ----
 nop %sh{ (kak-lsp -s $kak_session -vvv ) > /tmp/kak-lsp.log 2>&1 < /dev/null & }
 ----
 
-to enable debug logging. If it will not give enough insights to fix the problem or if the problem is
-a bug in kak-lsp itself please don't hesitate to raise an issue.
+to explicitly start server and enable debug logging. If it will not give enough insights to fix the
+problem or if the problem is a bug in kak-lsp itself please don't hesitate to raise an issue.
 
 NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
 E.g. `racer.kak` competes for autocompletion in Rust files.

@@ -10,9 +10,18 @@ use toml;
 use types::*;
 use util;
 
-pub fn start(config: &Config) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
+pub fn start(
+    config: &Config,
+    initial_request: Option<&str>,
+) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
+
+    if let Some(initial_request) = initial_request {
+        let initial_request: EditorRequest =
+            toml::from_str(&initial_request).expect("Failed to parse initial request");
+        reader_tx.send(initial_request);
+    }
 
     if let Some(ref session) = config.server.session {
         let session = session.to_string();

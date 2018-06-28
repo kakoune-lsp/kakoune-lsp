@@ -26,13 +26,13 @@ use types::*;
 
 type Controllers = FnvHashMap<Route, Sender<EditorRequest>>;
 
-pub fn start(config: &Config) {
+pub fn start(config: &Config, initial_request: Option<&str>) {
     info!("Starting Controller");
 
     let extensions = extension_to_language_id_map(&config);
     let languages = config.language.clone();
 
-    let (editor_tx, editor_rx) = editor_transport::start(config);
+    let (editor_tx, editor_rx) = editor_transport::start(config, initial_request);
 
     let mut controllers: Controllers = FnvHashMap::default();
     let (controller_remove_tx, controller_remove_rx) = bounded(1);

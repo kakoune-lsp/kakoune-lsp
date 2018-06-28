@@ -2,6 +2,7 @@
 extern crate clap;
 #[macro_use]
 extern crate crossbeam_channel;
+extern crate daemonize;
 extern crate fnv;
 extern crate glob;
 extern crate handlebars;
@@ -38,6 +39,7 @@ mod types;
 mod util;
 
 use clap::{App, Arg};
+use daemonize::Daemonize;
 use handlebars::{no_escape, Handlebars};
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
@@ -48,6 +50,7 @@ use std::io::{stdin, stdout, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
+use std::process::{exit, Command};
 use types::*;
 
 fn main() {
@@ -72,6 +75,12 @@ fn main() {
                 .value_name("FILE")
                 .help("Read config from FILE (default $HOME/.config/kak-lsp/kak-lsp.toml)")
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("daemonize")
+                .short("d")
+                .long("daemonize")
+                .help("Daemonize kak-lsp process (server only)"),
         )
         .arg(
             Arg::with_name("session")
@@ -102,6 +111,13 @@ fn main() {
                 .long("ip")
                 .value_name("ADDR")
                 .help("Address to listen for commands from Kakoune (default 127.0.0.1)")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("initial-request")
+                .long("initial-request")
+                .value_name("REQUEST")
+                .help("Initial request to start server with")
                 .takes_value(true),
         )
         .arg(
@@ -175,7 +191,18 @@ fn main() {
     } else if matches.is_present("kakoune") {
         kakoune(&config);
     } else {
-        controller::start(&config);
+        let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
+        if matches.is_present("daemonize")
+            && Daemonize::new()
+                .pid_file(format!("/tmp/kak-lsp-{}.pid", session))
+                .start()
+                .is_err()
+        {
+            error!("Failed to daemonize process");
+            exit(1);
+        } else {
+            controller::start(&config, matches.value_of("initial-request"));
+        }
     }
 }
 
@@ -209,17 +236,35 @@ fn request(config: &Config) {
     if let Some(ref session) = config.server.session {
         let mut path = util::sock_dir();
         path.push(session);
-        UnixStream::connect(&path)
-            .expect(&format!("Failed to connect to {} ", path.to_str().unwrap()))
-            .write_all(&input)
-            .expect("Failed to send stdin to server");
+        if let Ok(mut stream) = UnixStream::connect(&path) {
+            stream
+                .write_all(&input)
+                .expect("Failed to send stdin to server");
+        } else {
+            spin_up_server(&input);
+        }
     } else {
         let port = config.server.port;
         let ip = config.server.ip.parse().expect("Failed to parse IP");
         let addr = SocketAddr::new(ip, port);
-        TcpStream::connect(addr)
-            .expect(&format!("Failed to connect to {}", addr))
-            .write_all(&input)
-            .expect("Failed to send stdin to server");
+        if let Ok(mut stream) = TcpStream::connect(addr) {
+            stream
+                .write_all(&input)
+                .expect("Failed to send stdin to server");
+        } else {
+            spin_up_server(&input);
+        }
     }
+}
+
+fn spin_up_server(input: &[u8]) {
+    let input = String::from_utf8_lossy(&input);
+    let args = env::args()
+        .filter(|arg| arg != "--request")
+        .collect::<Vec<_>>();
+    let mut cmd = Command::new(&args[0]);
+    cmd.args(&args[1..])
+        .args(&["--daemonize", "--initial-request", &input])
+        .output()
+        .expect("Failed to run server");
 }
