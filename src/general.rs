@@ -11,7 +11,16 @@ pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities::default()),
-            text_document: Some(TextDocumentClientCapabilities::default()),
+            text_document: Some(TextDocumentClientCapabilities {
+                completion: Some(CompletionCapability {
+                    completion_item: Some(CompletionItemCapability {
+                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        ..CompletionItemCapability::default()
+                    }),
+                    ..CompletionCapability::default()
+                }),
+                ..TextDocumentClientCapabilities::default()
+            }),
             experimental: None,
         },
         initialization_options: None,

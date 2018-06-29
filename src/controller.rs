@@ -191,6 +191,7 @@ impl Controller {
                                     notification::DidChangeTextDocument::METHOD => (),
                                     notification::DidCloseTextDocument::METHOD => (),
                                     notification::DidSaveTextDocument::METHOD => (),
+                                    // TODO if auto-hover is not enabled we might want warning about parking as well
                                     request::HoverRequest::METHOD => (),
                                     _ => ctx.exec(msg.meta.clone(), "lsp-show-error 'Language server is not initialized, parking request'".to_string())
                                 }
