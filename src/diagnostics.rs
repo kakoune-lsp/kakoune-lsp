@@ -67,7 +67,7 @@ pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Co
                 .iter()
                 .map(|x| {
                     format!(
-                        "{}:{}:{}:{}",
+                        "{}:{}:{}: {}:{}",
                         Path::new(filename)
                             .strip_prefix(&ctx.root_path)
                             .ok()
@@ -76,6 +76,10 @@ pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Co
                             .unwrap(),
                         x.range.start.line + 1,
                         x.range.start.character + 1,
+                        match x.severity {
+                            Some(DiagnosticSeverity::Error) => "error",
+                            _ => "warning",
+                        },
                         x.message
                     )
                 })

@@ -231,7 +231,7 @@ def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
          edit! -scratch *diagnostics*
          cd %arg{1}
          try %{ set buffer working_folder %sh{pwd} }
-         set buffer filetype grep
+         set buffer filetype make
          set-register '"' %arg{2}
          exec -no-hooks p
      }
