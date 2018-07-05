@@ -41,9 +41,9 @@ pub fn editor_completion(
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
     };
-    let escape_kakoune_list_re = Regex::new(r"(?P<c>[:|])").unwrap();
     let unescape_markdown_re = Regex::new(r"\\(?P<c>.)").unwrap();
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
+    let escape = |s: &str| { s.replace("'", "''").replace("|", r"\|") };
 
     let items = items
         .into_iter()
@@ -73,17 +73,17 @@ pub fn editor_completion(
                 entry += &format!(" {{MenuInfo}}{:?}", k);
             }
             format!(
-                "{}|{}|{}",
-                escape_kakoune_list_re.replace_all(&x.insert_text.unwrap_or(x.label), r"\$c"),
-                escape_kakoune_list_re.replace_all(&doc, r"\$c"),
-                escape_kakoune_list_re.replace_all(&entry, r"\$c"),
+                "'{}|{}|{}'",
+                escape(&x.insert_text.unwrap_or(x.label)),
+                escape(&doc),
+                escape(&entry),
             )
         })
         .collect::<Vec<String>>()
-        .join(":");
+        .join(" ");
     let p = params.position;
     let command = format!(
-        "set window lsp_completions %§{}.{}@{}:{}§\n",
+        "set window lsp_completions {}.{}@{} {}\n",
         p.line + 1,
         p.character + 1 - params.completion.offset,
         meta.version,

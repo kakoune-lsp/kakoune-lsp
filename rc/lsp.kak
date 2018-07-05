@@ -26,7 +26,7 @@ decl -hidden int lsp_timestamp -1
 def lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ ({{cmd}} {{args}}) > /dev/null 2>&1 < /dev/null & } }
 
 def -hidden lsp-did-change %{ try %{
-    %sh{
+    evaluate-commands %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
         else
@@ -214,7 +214,7 @@ method  = "stop"
 
 # commands called as kak-lsp responses
 
-def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ %sh{
+def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
     case $kak_opt_lsp_hover_anchor in
         true) echo 'info -anchor %arg{1} %arg{2}';;
         *)    echo 'info %arg{2}';;
@@ -233,7 +233,7 @@ def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
          try %{ set buffer working_folder %sh{pwd} }
          set buffer filetype make
          set-register '"' %arg{2}
-         exec -no-hooks p
+         exec p
      }
 }
 
@@ -244,7 +244,7 @@ def -hidden lsp-show-references -params 2 -docstring "Render references" %{
          try %{ set buffer working_folder %sh{pwd} }
          set buffer filetype grep
          set-register '"' %arg{2}
-         exec -no-hooks p
+         exec p
      }
 }
 
@@ -255,7 +255,7 @@ def -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbo
          try %{ set buffer working_folder %sh{pwd} }
          set buffer filetype grep
          set-register '"' %arg{2}
-         exec -no-hooks p
+         exec p
      }
 }
 
@@ -266,11 +266,11 @@ def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help"
 # convenient commands to set and remove hooks for common cases
 
 def lsp-inline-diagnostics-enable -docstring "Enable inline diagnostics highlighting" %{
-    add-highlighter global/ ranges lsp_errors
+    add-highlighter global/lsp_errors ranges lsp_errors
 }
 
 def lsp-inline-diagnostics-disable -docstring "Disable inline diagnostics highlighting"  %{
-    remove-highlighter global/hlranges_lsp_errors
+    remove-highlighter global/lsp_errors
 }
 
 def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
@@ -313,8 +313,8 @@ def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune se
 lsp-stop-on-exit-enable
 
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
-    set global completers "option=lsp_completions:%opt{completers}"
-    add-highlighter global/ ranges cquery_semhl
+    set global completers option=lsp_completions %opt{completers}
+    add-highlighter global/cquery_semhl ranges cquery_semhl
     lsp-inline-diagnostics-enable
 
     map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
