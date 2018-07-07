@@ -26,7 +26,7 @@ decl -hidden int lsp_timestamp -1
 def lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ ({{cmd}} {{args}}) > /dev/null 2>&1 < /dev/null & } }
 
 def -hidden lsp-did-change %{ try %{
-    %sh{
+    eval %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
         else
@@ -214,7 +214,7 @@ method  = "stop"
 
 # commands called as kak-lsp responses
 
-def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ %sh{
+def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ eval %sh{
     case $kak_opt_lsp_hover_anchor in
         true) echo 'info -anchor %arg{1} %arg{2}';;
         *)    echo 'info %arg{2}';;

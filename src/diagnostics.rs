@@ -47,7 +47,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         .collect::<Vec<String>>()
         .join(":");
     let command = format!(
-        "eval -buffer %§{}§ %§set buffer lsp_errors \"{}:{}\"§",
+        "eval -buffer %§{}§ %§set buffer lsp_errors {} {}§",
         buffile, version, ranges
     );
     let meta = EditorMeta {

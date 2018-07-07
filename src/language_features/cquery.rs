@@ -186,9 +186,9 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
             })
         })
         .collect::<Vec<String>>()
-        .join(":");
+        .join(" ");
     let command = format!(
-        "eval -buffer %§{}§ %§set buffer cquery_semhl \"{}:{}\"§",
+        "eval -buffer %§{}§ %§set buffer cquery_semhl {} {}§",
         buffile, version, ranges
     );
     let meta = EditorMeta {
