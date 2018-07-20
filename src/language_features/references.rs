@@ -44,17 +44,13 @@ pub fn editor_references(
         ReferencesResponse::None => None,
     } {
         // Sort locations by (filename, line)
-        locations
-            .sort_unstable_by_key(|location| {
-              (location.uri.to_file_path(),
-              location.range.start.line)
-          });
+        locations.sort_unstable_by_key(|location| {
+            (location.uri.to_file_path(), location.range.start.line)
+        });
 
         let content = locations
             .iter()
-            .group_by(|location|{
-              location.uri.to_file_path()
-            })
+            .group_by(|location| location.uri.to_file_path())
             .into_iter()
             .map(|(filename, group)| {
                 let filename = filename.unwrap();
@@ -65,7 +61,7 @@ pub fn editor_references(
                     .and_then(|p| Some(p.to_str().unwrap()))
                     .or_else(|| filename.to_str())
                     .unwrap();
-                
+
                 if file.is_err() {
                     error!("Failed to open referenced file: {}", name);
                     return group
@@ -75,36 +71,40 @@ pub fn editor_references(
                 }
                 let mut buffer = BufReader::new(file.unwrap()).lines();
                 let mut next_buf_line = 0;
-                return group.map(|location| {
-                    let p = location.range.start;
-                    let loc_line = p.line as usize;
-                    while next_buf_line != loc_line {
-                        buffer.next();
+                return group
+                    .map(|location| {
+                        let p = location.range.start;
+                        let loc_line = p.line as usize;
+                        while next_buf_line != loc_line {
+                            buffer.next();
+                            next_buf_line += 1;
+                        }
                         next_buf_line += 1;
-                    }
-                    next_buf_line += 1;
-                    match buffer.next() {
-                        Some(Ok(line)) => {
-                            return format!(
-                                "{}:{}:{}:{}",
-                                name,
-                                p.line + 1,
-                                p.character + 1,
-                                line
-                            )
+                        match buffer.next() {
+                            Some(Ok(line)) => {
+                                return format!(
+                                    "{}:{}:{}:{}",
+                                    name,
+                                    p.line + 1,
+                                    p.character + 1,
+                                    line
+                                )
+                            }
+                            Some(Err(e)) => {
+                                error!("Failed to read line {} in {}: {}", name, loc_line, e);
+                                return String::new();
+                            }
+                            None => {
+                                error!(
+                                    "End of file reached, line {} not found in {}",
+                                    loc_line, name,
+                                );
+                                return String::new();
+                            }
                         }
-                        Some(Err(e)) => {
-                            error!("Failed to read line {} in {}: {}", name, loc_line, e);
-                            return String::new();
-                        }
-                        None => {
-                            error!("End of file reached, line {} not found in {}", loc_line, name,);
-                            return String::new();
-                        }
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join("\n");
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n");
             })
             .collect::<Vec<String>>()
             .join("\n");

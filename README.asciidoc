@@ -100,6 +100,7 @@ It adds:
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
+* `lsp-formatting` command to format current buffer
 * starting new kak-lsp session when Kakoune session begins and stopping it when Kakoune session ends
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune during 30 minutes,

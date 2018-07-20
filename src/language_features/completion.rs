@@ -43,7 +43,7 @@ pub fn editor_completion(
     };
     let unescape_markdown_re = Regex::new(r"\\(?P<c>.)").unwrap();
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
-    let escape = |s: &str| { s.replace("'", "''").replace("|", r"\|") };
+    let escape = |s: &str| s.replace("'", "''").replace("|", r"\|");
 
     let items = items
         .into_iter()

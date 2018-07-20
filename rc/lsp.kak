@@ -14,6 +14,10 @@ decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
 # and then moves cursor to opening parens to request hover info for current function; note that it
 # doesn't handle well nested function calls
 decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+\z<ret>'}
+# formatting: size of a tab in spaces
+decl int lsp_tab_size 4
+# formatting: prefer spaces over tabs
+decl bool lsp_insert_spaces true
 
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
@@ -212,6 +216,19 @@ method  = "stop"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-formatting -docstring "Format document" %{
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/formatting"
+[params]
+tabSize = %d
+insertSpaces = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_tab_size}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 # commands called as kak-lsp responses
 
 def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
@@ -261,6 +278,19 @@ def -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbo
 
 def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
     echo %arg{2}
+}
+
+def -hidden lsp-text-edit -params 2 -docstring "Replace region with new text" %{
+    decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
+    decl -hidden str lsp_text_edit_content %arg{2}
+    eval -draft %{
+        select %arg{1}
+        exec %sh{
+            printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp 
+            printf "|cat %s<ret>" $kak_opt_lsp_text_edit_tmp
+        }
+    }
+    nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
 }
 
 # convenient commands to set and remove hooks for common cases

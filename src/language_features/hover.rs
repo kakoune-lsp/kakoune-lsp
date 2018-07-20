@@ -44,12 +44,15 @@ pub fn editor_hover(
                         let start = x.range.start;
                         let end = x.range.end;
                         (start.line < pos.line && pos.line < end.line)
-                            || (start.line == pos.line && pos.line == end.line
+                            || (start.line == pos.line
+                                && pos.line == end.line
                                 && start.character <= pos.character
                                 && pos.character <= end.character)
-                            || (start.line == pos.line && pos.line <= end.line
+                            || (start.line == pos.line
+                                && pos.line <= end.line
                                 && start.character <= pos.character)
-                            || (start.line <= pos.line && end.line == pos.line
+                            || (start.line <= pos.line
+                                && end.line == pos.line
                                 && pos.character <= end.character)
                     })
                     .map(|x| format!("• {}", str::trim(&x.message)))

@@ -350,6 +350,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::DocumentSymbol::METHOD => {
             document_symbol::text_document_document_symbol(params, meta, &mut ctx);
         }
+        request::Formatting::METHOD => {
+            formatting::text_document_formatting(params, meta, &mut ctx);
+        }
         "textDocument/diagnostics" => {
             diagnostics::editor_diagnostics(params, meta, &mut ctx);
         }
@@ -449,6 +452,14 @@ fn dispatch_server_response(
             document_symbol::editor_document_symbol(
                 meta,
                 serde_json::from_value(response).expect("Failed to parse document symbol response"),
+                &mut ctx,
+            );
+        }
+        request::Formatting::METHOD => {
+            formatting::editor_formatting(
+                meta,
+                &FormattingOptions::deserialize(params).expect("Failed to parse params"),
+                serde_json::from_value(response).expect("Failed to parse formatting response"),
                 &mut ctx,
             );
         }

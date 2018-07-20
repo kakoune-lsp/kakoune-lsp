@@ -162,3 +162,10 @@ pub enum ReferencesResponse {
     None,
     Array(Vec<Location>),
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TextEditResponse {
+    None,
+    Array(Vec<TextEdit>),
+}
