@@ -280,15 +280,28 @@ def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help"
     echo %arg{2}
 }
 
-def -hidden lsp-text-edit -params 2 -docstring "Replace region with new text" %{
+def -hidden lsp-insert-after-selection -params 1 -docstring %{
+    Insert content after current selections while keeping cursor intact.
+    It is used to apply text edits from language server.
+} %{
     decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    decl -hidden str lsp_text_edit_content %arg{2}
-    eval -draft %{
-        select %arg{1}
-        exec %sh{
-            printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp 
-            printf "|cat %s<ret>" $kak_opt_lsp_text_edit_tmp
-        }
+    decl -hidden str lsp_text_edit_content %arg{1}
+    exec %sh{
+        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp 
+        printf "<a-!>cat %s<ret>" $kak_opt_lsp_text_edit_tmp
+    }
+    nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
+}
+
+def -hidden lsp-replace-selection -params 1 -docstring %{
+    Replace content of current selections while keeping cursor intact.
+    It is used to apply text edits from language server.
+} %{
+    decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
+    decl -hidden str lsp_text_edit_content %arg{1}
+    exec %sh{
+        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp 
+        printf "|cat %s<ret>" $kak_opt_lsp_text_edit_tmp
     }
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
 }

@@ -36,7 +36,7 @@ pub fn editor_formatting(
     ctx: &mut Context,
 ) {
     if let TextEditResponse::Array(text_edits) = result {
-        let command = text_edits
+        let edits = text_edits
             .iter()
             .map(|text_edit| {
                 let TextEdit { range, new_text } = text_edit;
@@ -45,25 +45,65 @@ pub fn editor_formatting(
                 // Also from LSP spec: If you want to specify a range that contains a line including
                 // the line ending character(s) then use an end position denoting the start of the next
                 // line.
-                // TODO: extract to util
+                let mut start_line = range.start.line;
+                let mut start_char = range.start.character;
                 let mut end_line = range.end.line;
                 let mut end_char = range.end.character;
+
+                if start_line == end_line && start_char == end_char && start_char == 0 {
+                    start_char = 1_000_000;
+                } else {
+                    start_line += 1;
+                    start_char += 1;
+                }
+
                 if end_char > 0 {
                     end_line += 1;
                 } else {
                     end_char = 1_000_000;
                 }
+
+                (
+                    format!("{}.{}", start_line, start_char),
+                    format!("{}.{}", end_line, end_char),
+                    escape(&new_text),
+                )
+            })
+            .collect::<Vec<_>>();
+        let select_edits = edits
+            .iter()
+            .map(|(start, end, _)| format!("{},{}", start, end))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let apply_edits = edits
+            .iter()
+            .enumerate()
+            .map(|(i, (start, end, content))| {
                 format!(
-                    "lsp-text-edit {}.{},{}.{} '{}'",
-                    range.start.line + 1,
-                    range.start.character + 1,
-                    end_line,
-                    end_char,
-                    escape(&new_text)
+                    "exec 'z{}<space>'
+                    {} '{}'",
+                    if i > 0 {
+                        format!("{})", i)
+                    } else {
+                        "".to_string()
+                    },
+                    if start == end {
+                        "lsp-insert-after-selection"
+                    } else {
+                        "lsp-replace-selection"
+                    },
+                    content
                 )
             })
             .collect::<Vec<_>>()
             .join("\n");
+        let command = format!(
+            "select {}
+            exec -save-regs '' Z
+            {}",
+            select_edits, apply_edits
+        );
+        let command = format!("eval -draft -save-regs '^' '{}'", escape(&command));
         ctx.exec(meta.clone(), command);
     }
 }

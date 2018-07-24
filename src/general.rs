@@ -74,7 +74,10 @@ pub fn capabilities(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context)
         features.push("lsp-references");
     }
 
-    if server_capabilities.document_formatting_provider.unwrap_or(false) {
+    if server_capabilities
+        .document_formatting_provider
+        .unwrap_or(false)
+    {
         features.push("lsp-formatting");
     }
 
