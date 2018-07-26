@@ -34,19 +34,21 @@ def -hidden lsp-did-change %{ try %{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
         else
-            draft=$(mktemp)
-            printf 'eval -no-hooks %%{write "%s"; set buffer lsp_timestamp %d; set buffer lsp_draft "%s"}\n' "${draft}" "${kak_timestamp}" "${draft}"
+            echo "eval -draft -no-hooks %{set buffer lsp_timestamp %val{timestamp}; exec '%'; set buffer lsp_draft %val{selection}}"
         fi
     }
-    nop %sh{ (printf '
+    nop %sh{ (
+lsp_draft=$(sed 's/\\/\\\\/g' <<< "${kak_opt_lsp_draft}" | sed 's/"""/\\"\\"\\"/g')
+printf '
 session = "%s"
 client  = "%s"
 buffile = "%s"
 version = %d
 method  = "textDocument/didChange"
 [params]
-draft   = "%s"
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+draft   = """
+%s"""
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }}
 
 def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{

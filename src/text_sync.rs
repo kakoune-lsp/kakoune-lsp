@@ -2,7 +2,7 @@ use context::*;
 use languageserver_types::notification::Notification;
 use languageserver_types::*;
 use serde::Deserialize;
-use std::fs::{remove_file, File};
+use std::fs::File;
 use std::io::Read;
 use types::*;
 use url::Url;
@@ -46,24 +46,6 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
     }
     ctx.versions.insert(meta.buffile.clone(), version);
     ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
-    let file_path = params.draft;
-    let mut text = String::new();
-    let result;
-    {
-        let file = File::open(&file_path);
-        if file.is_err() {
-            error!("Failed to open file");
-            return;
-        }
-        result = file.unwrap().read_to_string(&mut text);
-    }
-    if remove_file(file_path).is_err() {
-        error!("Failed to remove temporary file");
-    }
-    if result.is_err() {
-        error!("Failed to read from file: {}", meta.buffile);
-        return;
-    }
     let params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
             uri,
@@ -72,7 +54,7 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
         content_changes: vec![TextDocumentContentChangeEvent {
             range: None,
             range_length: None,
-            text,
+            text: params.draft,
         }],
     };
     ctx.notify(notification::DidChangeTextDocument::METHOD.into(), params);
