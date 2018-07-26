@@ -14,8 +14,8 @@ command = "rls"
 [language.javascript]
 extensions = ["js", "jsx"]
 roots = ["package.json"]
-command = "flow-language-server"
-args = ["--stdio"]
+command = "flow"
+args = ["lsp"]
 
 [language.json]
 extensions = ["json"]
