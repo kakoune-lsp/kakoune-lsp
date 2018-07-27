@@ -26,7 +26,7 @@ pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
         initialization_options: None,
         process_id: Some(process::id().into()),
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
-        root_path: Some(root_path.to_string()),
+        root_path: None,
         trace: Some(TraceOption::Off),
     };
 

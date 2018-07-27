@@ -45,7 +45,7 @@ def -hidden lsp-did-change %{ try %{
         fi
     }
     nop %sh{ (
-lsp_draft=$(sed 's/\\/\\\\/g' <<< "${kak_opt_lsp_draft}" | sed 's/"""/\\"\\"\\"/g')
+lsp_draft=$(sed 's/\\/\\\\/g' <<< "${kak_opt_lsp_draft}" | sed 's/"""/\\"\\"\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
 printf '
 session = "%s"
 client  = "%s"
