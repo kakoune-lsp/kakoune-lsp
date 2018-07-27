@@ -1,6 +1,8 @@
 # faces used by inline diagnostics
 set-face global DiagnosticError red
 set-face global DiagnosticWarning yellow
+# Line flags for errors and warnings both use this face
+set-face global LineFlagErrors red
 
 decl str lsp_cmd '{{cmd}} --request {{args}}'
 
@@ -19,8 +21,13 @@ decl int lsp_tab_size 4
 # formatting: prefer spaces over tabs
 decl bool lsp_insert_spaces true
 
+
+decl str lsp_diagnostic_line_error_sign '*'
+decl str lsp_diagnostic_line_warning_sign '!'
+
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
+decl -hidden line-specs lsp_error_lines
 decl -hidden range-specs cquery_semhl
 decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
@@ -318,6 +325,14 @@ def lsp-inline-diagnostics-disable -docstring "Disable inline diagnostics highli
     remove-highlighter global/lsp_errors
 }
 
+def lsp-diagnostic-lines-enable -docstring "Enable diagnostics line flags" %{
+    add-highlighter global/lsp_error_lines flag-lines LineFlagErrors lsp_error_lines
+}
+
+def lsp-diagnostic-lines-disable -docstring "Disable diagnostics line flags"  %{
+    remove-highlighter global/lsp_error_lines
+}
+
 def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
     hook -group lsp-auto-hover global NormalIdle .* %{
         lsp-hover
@@ -361,8 +376,10 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers option=lsp_completions %opt{completers}
     add-highlighter global/cquery_semhl ranges cquery_semhl
     lsp-inline-diagnostics-enable
+    lsp-diagnostic-lines-enable
 
     map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
+    map global goto r '<esc>:lsp-references<ret>' -docstring 'references'
 
     hook -group lsp global BufCreate .* %{
         lsp-did-open

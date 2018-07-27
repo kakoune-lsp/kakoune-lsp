@@ -46,9 +46,30 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         })
         .collect::<Vec<String>>()
         .join(" ");
+
+    let line_flags = ctx.diagnostics
+        .get(buffile)
+        .unwrap()
+        .iter()
+        .map(|x| {
+            // See above
+            format!(
+                "{}|{}",
+                x.range.start.line + 1,
+                match x.severity {
+                    Some(DiagnosticSeverity::Error) => "%opt[lsp_diagnostic_line_error_sign]",
+                    _ => "%opt[lsp_diagnostic_line_warning_sign]",
+                }
+            )
+        })
+        .collect::<Vec<String>>()
+        .join(" ");
     let command = format!(
-        "eval -buffer %§{}§ %§set buffer lsp_errors {} {}§",
-        buffile, version, ranges
+        // Allways show a space on line one if no other highlighter is there,
+        // to make sure the column always has the right width
+        // Also wrap it in another eval and quotes, to make sure the %opt[] tags are expanded
+        "eval -buffer %§{}§ %§set buffer lsp_errors {} {} ; eval \"set buffer lsp_error_lines {} {} '1| ' \" §",
+        buffile, version, ranges, version, line_flags
     );
     let meta = EditorMeta {
         session,
