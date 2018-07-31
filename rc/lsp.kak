@@ -45,7 +45,7 @@ def -hidden lsp-did-change -docstring "Notify language server about buffer chang
         fi
     }
     nop %sh{ (
-lsp_draft=$(printf %s "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"""/\\"\\"\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
+lsp_draft=$(printf %s "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
 printf '
 session = "%s"
 client  = "%s"
@@ -55,7 +55,7 @@ method  = "textDocument/didChange"
 [params]
 draft   = """
 %s"""
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null }
 }}
 
 def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
