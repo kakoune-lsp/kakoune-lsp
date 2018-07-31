@@ -148,7 +148,7 @@ impl Controller {
             editor_tx,
             lang_srv_poison_tx,
             controller_poison_tx,
-            config,
+            config.clone(),
             root_path.to_string(),
         )));
 
@@ -277,7 +277,15 @@ impl Controller {
 
         {
             let mut ctx = ctx_src.lock().expect("Failed to lock context");
-            general::initialize(root_path, &initial_request_meta, &mut ctx);
+            // config for the current language should be defined at this point,
+            // thus okay to just unwrap and panic if it's not because everything is broken then
+            let options = config
+                .language
+                .get(language_id)
+                .unwrap()
+                .initialization_options
+                .clone();
+            general::initialize(root_path, options, &initial_request_meta, &mut ctx);
         }
 
         Controller {

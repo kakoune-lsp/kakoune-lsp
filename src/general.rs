@@ -2,12 +2,13 @@ use context::*;
 use languageserver_types::notification::Notification;
 use languageserver_types::request::Request;
 use languageserver_types::*;
+use serde_json::Value;
 use std::process;
 use toml;
 use types::*;
 use url::Url;
 
-pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
+pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities::default()),
@@ -23,7 +24,7 @@ pub fn initialize(root_path: &str, meta: &EditorMeta, ctx: &mut Context) {
             }),
             experimental: None,
         },
-        initialization_options: None,
+        initialization_options: options,
         process_id: Some(process::id().into()),
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: None,

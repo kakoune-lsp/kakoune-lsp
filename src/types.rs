@@ -36,6 +36,7 @@ pub struct LanguageConfig {
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
+    pub initialization_options: Option<Value>,
 }
 
 impl Default for ServerConfig {

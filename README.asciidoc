@@ -116,6 +116,14 @@ To know which subset of kak-lsp commands is backed by current buffer filetype's 
 kak-lsp is configured via configuration file in https://github.com/toml-lang/toml[TOML] format. By default kak-lsp tries to read `$HOME/.config/kak-lsp/kak-lsp.toml`, but you can override it with command-line option `--config`.
 
 Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
+The only example which is not covered by default `kak-lsp.toml` is setting initialization options
+for a language server. It's done like this:
+
+[source=toml]
+----
+[language.go.initialization_options]
+formatTool = "gofmt"
+----
 
 If you are setting any options to server via cli do not forget to append them to
 `%sh{kak-lsp --kakoune ...}` in your `kakrc`. It's not needed if you change options in
