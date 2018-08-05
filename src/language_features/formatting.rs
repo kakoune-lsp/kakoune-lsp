@@ -63,22 +63,25 @@ pub fn editor_formatting(
                     end_char = 1_000_000;
                 }
 
+                let insert = start_line == end_line && start_char - 1 == end_char;
+                
                 (
-                    format!("{}.{}", start_line, start_char),
+                    format!("{}.{}", start_line, if !insert { start_char } else { end_char }),
                     format!("{}.{}", end_line, end_char),
                     escape(&new_text),
+                    insert 
                 )
             })
             .collect::<Vec<_>>();
         let select_edits = edits
             .iter()
-            .map(|(start, end, _)| format!("{},{}", start, end))
+            .map(|(start, end, _, _)| format!("{},{}", start, end))
             .collect::<Vec<_>>()
             .join(" ");
         let apply_edits = edits
             .iter()
             .enumerate()
-            .map(|(i, (start, end, content))| {
+            .map(|(i, (_, _, content, insert))| {
                 format!(
                     "exec 'z{}<space>'
                     {} '{}'",
@@ -87,7 +90,7 @@ pub fn editor_formatting(
                     } else {
                         "".to_string()
                     },
-                    if start == end {
+                    if *insert {
                         "lsp-insert-after-selection"
                     } else {
                         "lsp-replace-selection"
