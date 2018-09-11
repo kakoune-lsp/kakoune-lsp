@@ -54,7 +54,8 @@ version = %d
 method  = "textDocument/didChange"
 [params]
 draft   = """
-%s"""
+%s
+"""
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null }
 }}
 
