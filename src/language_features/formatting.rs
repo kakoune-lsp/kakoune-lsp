@@ -64,12 +64,16 @@ pub fn editor_formatting(
                 }
 
                 let insert = start_line == end_line && start_char - 1 == end_char;
-                
+
                 (
-                    format!("{}.{}", start_line, if !insert { start_char } else { end_char }),
+                    format!(
+                        "{}.{}",
+                        start_line,
+                        if !insert { start_char } else { end_char }
+                    ),
                     format!("{}.{}", end_line, end_char),
                     escape(&new_text),
-                    insert 
+                    insert,
                 )
             })
             .collect::<Vec<_>>();

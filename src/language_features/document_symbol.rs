@@ -13,9 +13,17 @@ pub fn text_document_document_symbol(params: EditorParams, meta: &EditorMeta, ct
     let id = ctx.next_request_id();
     ctx.response_waitlist.insert(
         id.clone(),
-        (meta.clone(), request::DocumentSymbol::METHOD.into(), params),
+        (
+            meta.clone(),
+            request::DocumentSymbolRequest::METHOD.into(),
+            params,
+        ),
     );
-    ctx.call(id, request::DocumentSymbol::METHOD.into(), req_params);
+    ctx.call(
+        id,
+        request::DocumentSymbolRequest::METHOD.into(),
+        req_params,
+    );
 }
 
 pub fn editor_document_symbol(

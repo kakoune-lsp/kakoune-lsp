@@ -15,7 +15,8 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         return;
     }
     let version = *version.unwrap();
-    let ranges = ctx.diagnostics
+    let ranges = ctx
+        .diagnostics
         .get(buffile)
         .unwrap()
         .iter()
@@ -47,7 +48,8 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         .collect::<Vec<String>>()
         .join(" ");
 
-    let line_flags = ctx.diagnostics
+    let line_flags = ctx
+        .diagnostics
         .get(buffile)
         .unwrap()
         .iter()
@@ -81,7 +83,8 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
 }
 
 pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
-    let content = ctx.diagnostics
+    let content = ctx
+        .diagnostics
         .iter()
         .flat_map(|(filename, diagnostics)| {
             diagnostics
