@@ -325,6 +325,43 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         notification::DidSaveTextDocument::METHOD => {
             text_document_did_save(params, meta, &mut ctx);
         }
+        notification::DidChangeConfiguration::METHOD => {
+            warn!("Got DidChangeConfiguration: %{:?}", params);
+
+            let maybe_settings = params
+                .as_table()
+                .and_then(|table| table.get("settings"))
+                .and_then(|table| {
+                     match table.clone().try_into() {
+                         Ok(value) => Some(value),
+                         Err(e) => {
+                             warn!(
+                                 "Could not convert settings {:?} to JSON: {}",
+                                 table,
+                                 e,
+                             );
+                             None
+                         }
+                     }
+                });
+
+            let settings = match maybe_settings {
+                Some(table) => table,
+                None => {
+                    warn!(
+                        "Got DidChangeConfiguration with no settings: %{:?}",
+                        params,
+                    );
+                    return;
+                }
+            };
+
+            let params = DidChangeConfigurationParams { settings };
+            ctx.notify(
+                notification::DidChangeConfiguration::METHOD.into(),
+                params,
+            );
+        }
         request::Completion::METHOD => {
             completion::text_document_completion(params, meta, &mut ctx);
         }
