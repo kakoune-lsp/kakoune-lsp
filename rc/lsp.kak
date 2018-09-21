@@ -21,6 +21,8 @@ decl int lsp_tab_size 4
 # formatting: prefer spaces over tabs
 decl bool lsp_insert_spaces true
 
+# configuration to send in DidChangeNotification messages
+decl str-to-str-map lsp_server_configuration
 
 decl str lsp_diagnostic_line_error_sign '*'
 decl str lsp_diagnostic_line_warning_sign '!'
@@ -213,6 +215,30 @@ method  = "textDocument/didSave"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def -hidden lsp-did-change-config %{
+    echo -debug "Config-change detected:" %opt{lsp_server_configuration}
+    nop %sh{
+((printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "workspace/didChangeConfiguration"
+[params.settings]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}";
+eval set -- $kak_opt_lsp_server_configuration
+while [ $# -gt 0 ]; do
+    key=${1%%=*}
+    value=${1#*=}
+    quotedkey='"'$(printf %s "$key"|sed -e 's/\\/\\\\/' -e 's/"/\\"/')'"'
+
+    printf '%s = %s\n' "$quotedkey" "$value"
+
+    shift
+done
+) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 def -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
     nop %sh{ (printf '
 session = "%s"
@@ -394,9 +420,11 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
 
     hook -group lsp global BufCreate .* %{
         lsp-did-open
+        lsp-did-change-config
     }
     hook -group lsp global BufClose .* lsp-did-close
     hook -group lsp global BufWritePost .* lsp-did-save
+    hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
     hook -group lsp global NormalIdle .* lsp-did-change
     hook -group lsp global KakEnd .* lsp-exit
