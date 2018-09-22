@@ -32,8 +32,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ==== Linux
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v5.2.2/kak-lsp.x86_64-unknown-linux-musl.tar.gz
-tar xzvf kak-lsp.x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v5.2.2/kak-lsp-v5.2.2-x86_64-unknown-linux-musl.tar.gz
+tar xzvf kak-lsp-v5.2.2-x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
