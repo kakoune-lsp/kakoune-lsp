@@ -45,7 +45,8 @@ def -hidden lsp-did-change -docstring "Notify language server about buffer chang
         fi
     }
     nop %sh{ (
-lsp_draft=$(printf %s "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
+lsp_draft=$(printf '%s.' "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
+lsp_draft=${lsp_draft%.}
 printf '
 session = "%s"
 client  = "%s"
@@ -54,12 +55,13 @@ version = %d
 method  = "textDocument/didChange"
 [params]
 draft   = """
-%s
-"""
+%s"""
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null }
 }}
 
-def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
+def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
+lsp-did-change
+try %{
     # fail if preceding character is a whitespace
     eval -draft %opt{lsp_completion_trigger}
 
@@ -87,6 +89,7 @@ offset    = %d
 }}
 
 def lsp-hover -docstring "Request hover info for the main cursor position" %{
+    lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -100,6 +103,7 @@ character = %d
 }
 
 def lsp-definition -docstring "Go to definition" %{
+    lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -113,6 +117,7 @@ character = %d
 }
 
 def lsp-references -docstring "Open buffer with symbol references" %{
+    lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -126,6 +131,7 @@ character = %d
 }
 
 def lsp-signature-help -docstring "Request signature help for the main cursor position" %{
+    lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -139,6 +145,7 @@ character = %d
 }
 
 def lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
+    lsp-did-change
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -150,6 +157,7 @@ method  = "textDocument/diagnostics"
 }
 
 def lsp-document-symbol -docstring "Open buffer with document symbols" %{
+    lsp-did-change
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -161,6 +169,7 @@ method  = "textDocument/documentSymbol"
 }
 
 def lsp-capabilities -docstring "List available commands for current filetype" %{
+    lsp-did-change
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -227,6 +236,7 @@ method  = "stop"
 }
 
 def lsp-formatting -docstring "Format document" %{
+    lsp-did-change
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -387,10 +397,7 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     }
     hook -group lsp global BufClose .* lsp-did-close
     hook -group lsp global BufWritePost .* lsp-did-save
-    hook -group lsp global InsertIdle .* %{
-        lsp-did-change
-        lsp-completion
-    }
+    hook -group lsp global InsertIdle .* lsp-completion
     hook -group lsp global NormalIdle .* lsp-did-change
     hook -group lsp global KakEnd .* lsp-exit
 }
