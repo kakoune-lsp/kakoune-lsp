@@ -64,8 +64,7 @@ pub fn editor_document_symbol(
                 position.character + 1,
                 description
             )
-        })
-        .collect::<Vec<_>>()
+        }).collect::<Vec<_>>()
         .join("\n");
     let command = format!(
         "lsp-show-document-symbol %§{}§ %§{}§",

@@ -44,8 +44,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
                     _ => "DiagnosticWarning",
                 }
             )
-        })
-        .collect::<Vec<String>>()
+        }).collect::<Vec<String>>()
         .join(" ");
 
     let line_flags = ctx
@@ -63,8 +62,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
                     _ => "%opt[lsp_diagnostic_line_warning_sign]",
                 }
             )
-        })
-        .collect::<Vec<String>>()
+        }).collect::<Vec<String>>()
         .join(" ");
     let command = format!(
         // Allways show a space on line one if no other highlighter is there,
@@ -106,10 +104,8 @@ pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Co
                         },
                         x.message
                     )
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>()
+                }).collect::<Vec<_>>()
+        }).collect::<Vec<_>>()
         .join("\n");
     let command = format!(
         "lsp-show-diagnostics %§{}§ %§{}§",

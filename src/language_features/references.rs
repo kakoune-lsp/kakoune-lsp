@@ -102,11 +102,9 @@ pub fn editor_references(
                                 return String::new();
                             }
                         }
-                    })
-                    .collect::<Vec<String>>()
+                    }).collect::<Vec<String>>()
                     .join("\n");
-            })
-            .collect::<Vec<String>>()
+            }).collect::<Vec<String>>()
             .join("\n");
 
         let command = format!(

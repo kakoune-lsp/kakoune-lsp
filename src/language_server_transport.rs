@@ -108,8 +108,7 @@ fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Resu
             .ok_or(Error::new(
                 ErrorKind::Other,
                 "Failed to get Content-Length header",
-            ))?
-            .parse()
+            ))?.parse()
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to parse Content-Length header"))?;
         let mut content = vec![0; content_len];
         reader.read_exact(&mut content)?;

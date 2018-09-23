@@ -54,13 +54,11 @@ pub fn editor_hover(
                             || (start.line <= pos.line
                                 && end.line == pos.line
                                 && pos.character <= end.character)
-                    })
-                    .map(|x| format!("• {}", str::trim(&x.message)))
+                    }).map(|x| format!("• {}", str::trim(&x.message)))
                     .collect::<Vec<String>>()
                     .join("\n"),
             )
-        })
-        .unwrap_or_else(String::new);
+        }).unwrap_or_else(String::new);
     let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {

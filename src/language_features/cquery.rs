@@ -184,8 +184,7 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
                     ))
                 }
             })
-        })
-        .collect::<Vec<String>>()
+        }).collect::<Vec<String>>()
         .join(" ");
     let command = format!(
         "eval -buffer %§{}§ %§set buffer cquery_semhl {} {}§",

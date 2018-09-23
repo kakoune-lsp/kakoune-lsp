@@ -78,8 +78,7 @@ pub fn editor_completion(
                 escape(&doc),
                 escape(&entry),
             )
-        })
-        .collect::<Vec<String>>()
+        }).collect::<Vec<String>>()
         .join(" ");
     let p = params.position;
     let command = format!(

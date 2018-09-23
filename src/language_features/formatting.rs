@@ -101,8 +101,7 @@ pub fn editor_formatting(
                     },
                     content
                 )
-            })
-            .collect::<Vec<_>>()
+            }).collect::<Vec<_>>()
             .join("\n");
         let command = format!(
             "select {}
