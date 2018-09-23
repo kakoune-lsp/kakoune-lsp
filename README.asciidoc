@@ -113,6 +113,10 @@ To know which subset of kak-lsp commands is backed by current buffer filetype's 
 
 == Configuration
 
+kak-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration..
+
+=== Configuring kak-lsp
+
 kak-lsp is configured via configuration file in https://github.com/toml-lang/toml[TOML] format. By default kak-lsp tries to read `$HOME/.config/kak-lsp/kak-lsp.toml`, but you can override it with command-line option `--config`.
 
 Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
@@ -130,6 +134,23 @@ If you are setting any options to server via cli do not forget to append them to
 `~/.config/kak-lsp/kak-lsp.toml` file.
 
 Please let us know if you have any ideas about how to make default config more sensible.
+
+=== Configuring Kakoune
+
+kak-lsp's Kakoune integration declares the following options:
+
+* `lsp_completion_trigger` (str): This option is set to a Kakoune command, which is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a completion request to the language server.
+* `lsp_diagnostic_line_error_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an error, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
+* `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an warning, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
+* `lsp_hover_anchor` (bool): When using `lsp-hover` or `lsp-auto-hover-enable`, if this option is `true` then the hover information will be displayed next to the active selection. Otherwise, the information will be displayed in a box in the lower-right corner.
+* `lsp_hover_insert_mode_trigger` (str): This option is set to a Kakoune command. When using `lsp-auto-hover-insert-mode-enable`, this command is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a hover-information request for the text selected by the command.
+* `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
+* `lsp_server_configuration` (str-to-str-map): At startup, and when this option is modified, kak-lsp will send its contents to the language server in a `workspace/DidChangeConfiguration` notification. Some languages servers allow dynamic configuration in this way. See below for more information about this option.
+* `lsp_tab_size` (int): When using `lsp-formatting`, kak-lsp will ask the language server to assume tabs are this many spaces wide. It's similar to the standard Kakoune option `indent_width`.
+
+NOTE: The `lsp_server_configuration` option is awkward, since the Language Server Protocol ultimately wants an unstructured blob of JSON, kak-lsp works with the more limited TOML format, Kakoune's options are yet more limited, and most of the conversions are done in shell.
+
+
 
 == Troubleshooting
 
