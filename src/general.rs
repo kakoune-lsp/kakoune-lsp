@@ -29,6 +29,7 @@ pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ct
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: None,
         trace: Some(TraceOption::Off),
+        workspace_folders: None,
     };
 
     let id = ctx.next_request_id();
