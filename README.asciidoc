@@ -113,7 +113,7 @@ To know which subset of kak-lsp commands is backed by current buffer filetype's 
 
 == Configuration
 
-kak-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration..
+kak-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration.
 
 === Configuring kak-lsp
 
