@@ -22,6 +22,7 @@ use std::time::Duration;
 use text_sync::*;
 use toml;
 use types::*;
+use workspace;
 
 type Controllers = FnvHashMap<Route, Sender<EditorRequest>>;
 
@@ -324,6 +325,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
         notification::DidSaveTextDocument::METHOD => {
             text_document_did_save(params, meta, &mut ctx);
+        }
+        notification::DidChangeConfiguration::METHOD => {
+            workspace::did_change_configuration(params, meta, &mut ctx);
         }
         request::Completion::METHOD => {
             completion::text_document_completion(params, meta, &mut ctx);

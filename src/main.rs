@@ -38,6 +38,7 @@ mod project_root;
 mod text_sync;
 mod types;
 mod util;
+mod workspace;
 
 use clap::{App, Arg};
 use daemonize::Daemonize;
