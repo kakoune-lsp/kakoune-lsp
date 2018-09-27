@@ -431,3 +431,24 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
 }
 
 lsp-enable
+
+def lsp -params 1.. -shell-candidates %{
+    for cmd in start hover definition references signature-help diagnostics document-symbol\
+    capabilities stop formatting inline-diagnostics-enable inline-diagnostics-disable\
+    diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
+    auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
+    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable;
+        do echo $cmd;
+    done
+} %{ eval "lsp-%arg{1}" }
+
+declare-user-mode lsp
+map global lsp c '<esc>:lsp-capabilities<ret>'    -docstring 'capabilities'
+map global lsp d '<esc>:lsp-definition<ret>'      -docstring 'definition'
+map global lsp D '<esc>:lsp-diagnostics<ret>'     -docstring 'diagnostics'
+map global lsp f '<esc>:lsp-formatting<ret>'      -docstring 'formatting'
+map global lsp h '<esc>:lsp-hover<ret>'           -docstring 'hover'
+map global lsp r '<esc>:lsp-references<ret>'      -docstring 'references'
+map global lsp s '<esc>:lsp-signature-help<ret>'  -docstring 'signature help'
+map global lsp S '<esc>:lsp-document-symbol<ret>' -docstring 'document symbols'
+
