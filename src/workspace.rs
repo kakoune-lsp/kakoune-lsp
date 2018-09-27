@@ -12,46 +12,34 @@ fn insert_value<'a, 'b, P>(
     local_key: String,
     value: serde_json::Value,
 ) -> Result<(), String>
-    where P: Iterator<Item=&'a str>,
-    P: 'a
+where
+    P: Iterator<Item = &'a str>,
+    P: 'a,
 {
     match path.next() {
         Some(key) => {
             let mut maybe_new_target = target
                 .entry(key)
-                .or_insert_with(|| serde_json::Value::Object(
-                    serde_json::Map::new()
-                )).as_object_mut();
+                .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()))
+                .as_object_mut();
 
             if maybe_new_target.is_none() {
                 return Err(format!(
                     "Expected path {:?} to be object, found {:?}",
-                    key,
-                    &maybe_new_target,
+                    key, &maybe_new_target,
                 ));
             }
 
-            insert_value(
-                maybe_new_target.unwrap(),
-                path,
-                local_key,
-                value,
-            )
+            insert_value(maybe_new_target.unwrap(), path, local_key, value)
         }
-        None => {
-            match target.insert(local_key, value) {
-                Some(old_value) => Err(format!("Replaced old value: {:?}", old_value)),
-                None => Ok(()),
-            }
-        }
+        None => match target.insert(local_key, value) {
+            Some(old_value) => Err(format!("Replaced old value: {:?}", old_value)),
+            None => Ok(()),
+        },
     }
 }
 
-pub fn did_change_configuration(
-    params: EditorParams,
-    _meta: &EditorMeta,
-    ctx: &mut Context,
-) {
+pub fn did_change_configuration(params: EditorParams, _meta: &EditorMeta, ctx: &mut Context) {
     let default_settings = toml::value::Table::new();
 
     let raw_settings = params
@@ -68,7 +56,7 @@ pub fn did_change_configuration(
             Some(name) => name,
             None => {
                 warn!("Got a setting with an empty local name: {:?}", raw_key);
-                continue
+                continue;
             }
         };
 
@@ -76,7 +64,7 @@ pub fn did_change_configuration(
             Ok(value) => value,
             Err(e) => {
                 warn!("Could not convert setting {:?} to JSON: {}", raw_value, e,);
-                continue
+                continue;
             }
         };
 
@@ -84,13 +72,13 @@ pub fn did_change_configuration(
             Ok(_) => (),
             Err(e) => {
                 warn!("Could not set {:?} to {:?}: {}", raw_key, raw_value, e);
-                continue
+                continue;
             }
         }
     }
 
     let params = DidChangeConfigurationParams {
-        settings: serde_json::Value::Object(settings)
+        settings: serde_json::Value::Object(settings),
     };
     ctx.notify(notification::DidChangeConfiguration::METHOD.into(), params);
 }
