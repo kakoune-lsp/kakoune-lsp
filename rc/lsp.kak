@@ -3,8 +3,11 @@ set-face global DiagnosticError red
 set-face global DiagnosticWarning yellow
 # Line flags for errors and warnings both use this face
 set-face global LineFlagErrors red
+set-face global Reference MatchingChar
+
 
 decl str lsp_cmd '{{cmd}} --request {{args}}'
+
 
 # set to true to display hover info anchored to hovered position
 decl bool lsp_hover_anchor false
@@ -20,6 +23,8 @@ decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+\z<ret>'}
 decl int lsp_tab_size 4
 # formatting: prefer spaces over tabs
 decl bool lsp_insert_spaces true
+# set to true to automatically highlight references with Reference face
+decl bool lsp_auto_highlight_references false
 
 # configuration to send in DidChangeNotification messages
 decl str-to-str-map lsp_server_configuration
@@ -27,12 +32,14 @@ decl str-to-str-map lsp_server_configuration
 decl str lsp_diagnostic_line_error_sign '*'
 decl str lsp_diagnostic_line_warning_sign '!'
 
+
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
 decl -hidden line-specs lsp_error_lines
 decl -hidden range-specs cquery_semhl
 decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
+decl -hidden range-specs lsp_references
 
 # commands to make kak-lsp requests
 
@@ -126,6 +133,20 @@ client    = "%s"
 buffile   = "%s"
 version   = %d
 method    = "textDocument/references"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def lsp-highlight-references -docstring "Highlight symbol references" %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "textDocument/referencesHighlight"
 [params.position]
 line      = %d
 character = %d
@@ -407,11 +428,10 @@ def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune se
     alias global lsp-exit lsp-exit-editor-session
 }
 
-lsp-stop-on-exit-enable
-
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers option=lsp_completions %opt{completers}
     add-highlighter global/cquery_semhl ranges cquery_semhl
+    add-highlighter global/lsp_references ranges lsp_references
     lsp-inline-diagnostics-enable
     lsp-diagnostic-lines-enable
 
@@ -426,21 +446,24 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     hook -group lsp global BufWritePost .* lsp-did-save
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
-    hook -group lsp global NormalIdle .* lsp-did-change
+    hook -group lsp global NormalIdle .* %{
+        lsp-did-change
+        %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
+    }
     hook -group lsp global KakEnd .* lsp-exit
 }
 
-lsp-enable
 
 def lsp -params 1.. -shell-candidates %{
     for cmd in start hover definition references signature-help diagnostics document-symbol\
-    capabilities stop formatting inline-diagnostics-enable inline-diagnostics-disable\
+    capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
     auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
     auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable;
         do echo $cmd;
     done
 } %{ eval "lsp-%arg{1}" }
+
 
 declare-user-mode lsp
 map global lsp c '<esc>:lsp-capabilities<ret>'    -docstring 'capabilities'
@@ -452,3 +475,6 @@ map global lsp r '<esc>:lsp-references<ret>'      -docstring 'references'
 map global lsp s '<esc>:lsp-signature-help<ret>'  -docstring 'signature help'
 map global lsp S '<esc>:lsp-document-symbol<ret>' -docstring 'document symbols'
 
+
+lsp-stop-on-exit-enable
+lsp-enable

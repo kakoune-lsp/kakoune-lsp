@@ -2,6 +2,7 @@ use context::*;
 use languageserver_types::*;
 use std::path::Path;
 use types::*;
+use util::*;
 
 pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) {
     let session = ctx.session.clone();
@@ -21,24 +22,9 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         .unwrap()
         .iter()
         .map(|x| {
-            // LSP ranges are 0-based, but Kakoune's 1-based.
-            // LSP ranges are exclusive, but Kakoune's are inclusive.
-            // Also from LSP spec: If you want to specify a range that contains a line including
-            // the line ending character(s) then use an end position denoting the start of the next
-            // line.
-            let mut end_line = x.range.end.line;
-            let mut end_char = x.range.end.character;
-            if end_char > 0 {
-                end_line += 1;
-            } else {
-                end_char = 1_000_000;
-            }
             format!(
-                "{}.{},{}.{}|{}",
-                x.range.start.line + 1,
-                x.range.start.character + 1,
-                end_line,
-                end_char,
+                "{}|{}",
+                lsp_range_to_kakoune(x.range),
                 match x.severity {
                     Some(DiagnosticSeverity::Error) => "DiagnosticError",
                     _ => "DiagnosticWarning",

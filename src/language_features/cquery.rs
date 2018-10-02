@@ -4,6 +4,7 @@ use serde;
 use types::*;
 use url::Url;
 use url_serde;
+use util::*;
 
 enum_from_primitive!{
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -173,15 +174,7 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
                     warn!("No face found for {:?}", x);
                     Option::None
                 } else {
-                    Option::Some(format!(
-                        "{}.{},{}.{}|{}",
-                        r.start.line + 1,
-                        r.start.character + 1,
-                        r.end.line + 1,
-                        // LSP ranges are exclusive, but Kakoune's are inclusive
-                        r.end.character,
-                        face,
-                    ))
+                    Option::Some(format!("{}|{}", lsp_range_to_kakoune(*r), face))
                 }
             })
         }).collect::<Vec<String>>()

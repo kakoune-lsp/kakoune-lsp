@@ -359,6 +359,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "capabilities" => {
             general::capabilities(params, meta, &mut ctx);
         }
+        "textDocument/referencesHighlight" => {
+            references::text_document_references_highlight(params, meta, &mut ctx);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
         }
@@ -477,6 +480,14 @@ fn dispatch_server_response(
             for msg in requests.drain(..) {
                 dispatch_editor_request(msg, &mut ctx);
             }
+        }
+        "textDocument/referencesHighlight" => {
+            references::editor_references_highlight(
+                meta,
+                &PositionParams::deserialize(params).expect("Failed to parse params"),
+                serde_json::from_value(response).expect("Failed to parse references response"),
+                &mut ctx,
+            );
         }
         _ => {
             error!("Don't know how to handle response for method: {}", method);

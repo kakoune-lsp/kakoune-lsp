@@ -97,6 +97,7 @@ It adds:
   to automatically show hover when you move around use `lsp-auto-hover-enable`;
   to show hover anchored to hovered position do `set global lsp_hover_anchor true`
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
+* `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
@@ -147,6 +148,7 @@ kak-lsp's Kakoune integration declares the following options:
 * `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
 * `lsp_server_configuration` (str-to-str-map): At startup, and when this option is modified, kak-lsp will send its contents to the language server in a `workspace/DidChangeConfiguration` notification. Some languages servers allow dynamic configuration in this way. See below for more information about this option.
 * `lsp_tab_size` (int): When using `lsp-formatting`, kak-lsp will ask the language server to assume tabs are this many spaces wide. It's similar to the standard Kakoune option `indent_width`.
+* `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time user pauses in normal mode.
 
 The `lsp_server_configuration` option is unusual, since the language server wants deeply-nested JSON objects, which are hard to represent in Kakoune. If a language server's documentation says it wants a structure like this:
 

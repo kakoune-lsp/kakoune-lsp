@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn text_document_references(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -110,6 +111,69 @@ pub fn editor_references(
         let command = format!(
             "lsp-show-references %§{}§ %§{}§",
             ctx.root_path, content,
+        );
+        ctx.exec(meta.clone(), command);
+    };
+}
+
+pub fn text_document_references_highlight(
+    params: EditorParams,
+    meta: &EditorMeta,
+    ctx: &mut Context,
+) {
+    let req_params = PositionParams::deserialize(params.clone());
+    if req_params.is_err() {
+        error!("Params should follow PositionParams structure");
+        return;
+    }
+    let req_params = req_params.unwrap();
+    let position = req_params.position;
+    let req_params = ReferenceParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
+        },
+        position,
+        context: ReferenceContext {
+            include_declaration: true,
+        },
+    };
+    let id = ctx.next_request_id();
+    ctx.response_waitlist.insert(
+        id.clone(),
+        (
+            meta.clone(),
+            "textDocument/referencesHighlight".into(),
+            params,
+        ),
+    );
+    ctx.call(id, request::References::METHOD.into(), req_params);
+}
+
+pub fn editor_references_highlight(
+    meta: &EditorMeta,
+    _params: &PositionParams,
+    result: ReferencesResponse,
+    ctx: &mut Context,
+) {
+    if let Some(mut locations) = match result {
+        ReferencesResponse::Array(locations) => Some(locations),
+        ReferencesResponse::None => None,
+    } {
+        // Sort locations by (filename, line)
+        locations.sort_unstable_by_key(|location| {
+            (location.uri.to_file_path(), location.range.start.line)
+        });
+
+        let ranges = locations
+            .iter()
+            .filter(|location| {
+                location.uri.to_file_path().unwrap().to_str().unwrap() == meta.buffile
+            }).map(|location| format!("{}|Reference", lsp_range_to_kakoune(location.range)))
+            .collect::<Vec<String>>()
+            .join(" ");
+        let command = format!(
+            "set-option window lsp_references {} {}",
+            meta.version, ranges,
         );
         ctx.exec(meta.clone(), command);
     };
