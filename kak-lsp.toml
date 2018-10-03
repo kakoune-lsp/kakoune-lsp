@@ -75,3 +75,8 @@ extensions = ["sh", "bash", "zsh"]
 roots = [".git", ".hg"]
 command = "bash-language-server"
 args = ["start"]
+
+[language.dart]
+extensions = ["dart"]
+roots = ["pubspec.yaml", ".git"]
+command = "dart_language_server"
