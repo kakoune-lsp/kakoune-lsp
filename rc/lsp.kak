@@ -25,6 +25,8 @@ decl int lsp_tab_size 4
 decl bool lsp_insert_spaces true
 # set to true to automatically highlight references with Reference face
 decl bool lsp_auto_highlight_references false
+# number of diagnostics published for current buffer
+decl int lsp_diagnostic_count 0
 
 # configuration to send in DidChangeNotification messages
 decl str-to-str-map lsp_server_configuration

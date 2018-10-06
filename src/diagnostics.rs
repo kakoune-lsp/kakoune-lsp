@@ -16,10 +16,8 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         return;
     }
     let version = *version.unwrap();
-    let ranges = ctx
-        .diagnostics
-        .get(buffile)
-        .unwrap()
+    let diagnostics = ctx.diagnostics.get(buffile).unwrap();
+    let ranges = diagnostics
         .iter()
         .map(|x| {
             format!(
@@ -33,10 +31,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         }).collect::<Vec<String>>()
         .join(" ");
 
-    let line_flags = ctx
-        .diagnostics
-        .get(buffile)
-        .unwrap()
+    let line_flags = diagnostics
         .iter()
         .map(|x| {
             // See above
@@ -51,11 +46,21 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
         }).collect::<Vec<String>>()
         .join(" ");
     let command = format!(
-        // Allways show a space on line one if no other highlighter is there,
+        // Always show a space on line one if no other highlighter is there,
         // to make sure the column always has the right width
         // Also wrap it in another eval and quotes, to make sure the %opt[] tags are expanded
-        "eval -buffer %§{}§ %§set buffer lsp_errors {} {} ; eval \"set buffer lsp_error_lines {} {} '1| ' \" §",
-        buffile, version, ranges, version, line_flags
+        "
+        eval -buffer %§{}§ %§
+            set buffer lsp_diagnostic_count {}
+            set buffer lsp_errors {} {}
+            eval \"set buffer lsp_error_lines {} {} '1| ' \"
+        §",
+        buffile,
+        diagnostics.len(),
+        version,
+        ranges,
+        version,
+        line_flags
     );
     let meta = EditorMeta {
         session,
