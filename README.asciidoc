@@ -19,8 +19,8 @@ brew install ul/kak-lsp/kak-lsp
 ===== Manual
 
 ----
-curl -O -L https://github.com/ul/kak-lsp/releases/download/v5.4.0/kak-lsp-v5.4.0-x86_64-apple-darwin.tar.gz
-tar xzvf kak-lsp-v5.4.0-x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/ul/kak-lsp/releases/download/v5.5.0/kak-lsp-v5.5.0-x86_64-apple-darwin.tar.gz
+tar xzvf kak-lsp-v5.5.0-x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
@@ -32,8 +32,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ==== Linux
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v5.4.0/kak-lsp-v5.4.0-x86_64-unknown-linux-musl.tar.gz
-tar xzvf kak-lsp-v5.4.0-x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v5.5.0/kak-lsp-v5.5.0-x86_64-unknown-linux-musl.tar.gz
+tar xzvf kak-lsp-v5.5.0-x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
@@ -45,8 +45,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ==== FreeBSD
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v5.4.0/kak-lsp-v5.4.0-x86_64-unknown-freebsd.tar.gz
-tar xzvf kak-lsp-v5.4.0-x86_64-unknown-freebsd.tar.gz
+wget https://github.com/ul/kak-lsp/releases/download/v5.5.0/kak-lsp-v5.5.0-x86_64-unknown-freebsd.tar.gz
+tar xzvf kak-lsp-v5.5.0-x86_64-unknown-freebsd.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
