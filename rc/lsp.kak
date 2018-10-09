@@ -456,7 +456,12 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
 }
 
 
-def lsp -params 1.. -shell-candidates %{
+def lsp -params 1.. %sh{
+    if [ $kak_version \< "v2018.09.04-128-g5bdcfab0" ];
+    then echo "-shell-candidates";
+    else echo "-shell-script-candidates";
+    fi
+} %{
     for cmd in start hover definition references signature-help diagnostics document-symbol\
     capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
