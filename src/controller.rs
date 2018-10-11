@@ -472,6 +472,7 @@ fn dispatch_server_response(
                     .expect("Failed to parse initialized response")
                     .capabilities,
             );
+            ctx.notify(notification::Initialized::METHOD.into(), InitializedParams {});
             let mut requests = Vec::with_capacity(ctx.pending_requests.len());
             for msg in ctx.pending_requests.drain(..) {
                 requests.push(msg);
