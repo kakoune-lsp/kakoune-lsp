@@ -77,6 +77,13 @@ pub fn capabilities(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context)
     }
 
     if server_capabilities
+        .workspace_symbol_provider
+        .unwrap_or(false)
+    {
+        features.push("lsp-workspace-symbol");
+    }
+
+    if server_capabilities
         .document_formatting_provider
         .unwrap_or(false)
     {

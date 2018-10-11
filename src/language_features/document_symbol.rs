@@ -3,6 +3,7 @@ use languageserver_types::request::Request;
 use languageserver_types::*;
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn text_document_document_symbol(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
     let req_params = DocumentSymbolParams {
@@ -38,34 +39,7 @@ pub fn editor_document_symbol(
     if result.is_empty() {
         return;
     }
-    let content = result
-        .into_iter()
-        .map(|symbol| {
-            let SymbolInformation {
-                location,
-                name,
-                kind,
-                ..
-            } = symbol;
-            let filename = location.uri.to_file_path().unwrap();
-            let filename = filename
-                .strip_prefix(&ctx.root_path)
-                .ok()
-                .and_then(|p| Some(p.to_str().unwrap()))
-                .or_else(|| filename.to_str())
-                .unwrap();
-
-            let position = location.range.start;
-            let description = format!("{:?} {}", kind, name);
-            format!(
-                "{}:{}:{}:{}",
-                filename,
-                position.line + 1,
-                position.character + 1,
-                description
-            )
-        }).collect::<Vec<_>>()
-        .join("\n");
+    let content = format_symbol_information(result, ctx);
     let command = format!(
         "lsp-show-document-symbol %§{}§ %§{}§",
         ctx.root_path, content,

@@ -1,8 +1,11 @@
 use context::*;
-use languageserver_types::DidChangeConfigurationParams;
+use languageserver_types::request::Request;
+use languageserver_types::*;
+use serde::Deserialize;
 use serde_json;
 use toml;
 use types::*;
+use util::*;
 
 use languageserver_types::notification::{self, Notification};
 
@@ -81,4 +84,43 @@ pub fn did_change_configuration(params: EditorParams, _meta: &EditorMeta, ctx: &
         settings: serde_json::Value::Object(settings),
     };
     ctx.notify(notification::DidChangeConfiguration::METHOD.into(), params);
+}
+
+pub fn workspace_symbol(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+    let req_params = WorkspaceSymbolParams::deserialize(params.clone());
+    if req_params.is_err() {
+        error!("Params should follow WorkspaceSymbolParams structure");
+        return;
+    }
+    let req_params = req_params.unwrap();
+    let id = ctx.next_request_id();
+    ctx.response_waitlist.insert(
+        id.clone(),
+        (
+            meta.clone(),
+            request::WorkspaceSymbol::METHOD.into(),
+            params,
+        ),
+    );
+    ctx.call(id, request::WorkspaceSymbol::METHOD.into(), req_params);
+}
+
+pub fn editor_workspace_symbol(
+    meta: &EditorMeta,
+    result: Option<Vec<SymbolInformation>>,
+    ctx: &mut Context,
+) {
+    if result.is_none() {
+        return;
+    }
+    let result = result.unwrap();
+    if result.is_empty() {
+        return;
+    }
+    let content = format_symbol_information(result, ctx);
+    let command = format!(
+        "lsp-show-workspace-symbol %§{}§ %§{}§",
+        ctx.root_path, content,
+    );
+    ctx.exec(meta.clone(), command);
 }

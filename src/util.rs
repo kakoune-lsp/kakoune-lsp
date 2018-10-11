@@ -1,3 +1,4 @@
+use context::*;
 use languageserver_types::*;
 use std::os::unix::fs::DirBuilderExt;
 use std::{env, fs, path};
@@ -33,4 +34,35 @@ pub fn lsp_range_to_kakoune(range: Range) -> String {
         end_line,
         end_char,
     )
+}
+
+pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -> String {
+    items
+        .into_iter()
+        .map(|symbol| {
+            let SymbolInformation {
+                location,
+                name,
+                kind,
+                ..
+            } = symbol;
+            let filename = location.uri.to_file_path().unwrap();
+            let filename = filename
+                .strip_prefix(&ctx.root_path)
+                .ok()
+                .and_then(|p| Some(p.to_str().unwrap()))
+                .or_else(|| filename.to_str())
+                .unwrap();
+
+            let position = location.range.start;
+            let description = format!("{:?} {}", kind, name);
+            format!(
+                "{}:{}:{}:{}",
+                filename,
+                position.line + 1,
+                position.character + 1,
+                description
+            )
+        }).collect::<Vec<_>>()
+        .join("\n")
 }

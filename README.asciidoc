@@ -99,6 +99,7 @@ It adds:
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
 * `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
 * `lsp-document-symbol` command to list current buffer's symbols
+* `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
 * `lsp-formatting` command to format current buffer

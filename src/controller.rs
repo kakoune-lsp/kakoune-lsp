@@ -353,6 +353,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::Formatting::METHOD => {
             formatting::text_document_formatting(params, meta, &mut ctx);
         }
+        request::WorkspaceSymbol::METHOD => {
+            workspace::workspace_symbol(params, meta, &mut ctx);
+        }
         "textDocument/diagnostics" => {
             diagnostics::editor_diagnostics(params, meta, &mut ctx);
         }
@@ -472,7 +475,10 @@ fn dispatch_server_response(
                     .expect("Failed to parse initialized response")
                     .capabilities,
             );
-            ctx.notify(notification::Initialized::METHOD.into(), InitializedParams {});
+            ctx.notify(
+                notification::Initialized::METHOD.into(),
+                InitializedParams {},
+            );
             let mut requests = Vec::with_capacity(ctx.pending_requests.len());
             for msg in ctx.pending_requests.drain(..) {
                 requests.push(msg);
@@ -481,6 +487,14 @@ fn dispatch_server_response(
             for msg in requests.drain(..) {
                 dispatch_editor_request(msg, &mut ctx);
             }
+        }
+        request::WorkspaceSymbol::METHOD => {
+            workspace::editor_workspace_symbol(
+                meta,
+                serde_json::from_value(response)
+                    .expect("Failed to parse workspace symbol response"),
+                &mut ctx,
+            );
         }
         "textDocument/referencesHighlight" => {
             references::editor_references_highlight(

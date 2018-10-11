@@ -193,6 +193,19 @@ method  = "textDocument/documentSymbol"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{
+    lsp-did-change
+    nop %sh{ (printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "workspace/symbol"
+[params]
+query   = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${1}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 def lsp-capabilities -docstring "List available commands for current filetype" %{
     lsp-did-change
     nop %sh{ (printf '
@@ -345,6 +358,10 @@ def -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbo
      }
 }
 
+def -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace symbols" %{
+    lsp-show-document-symbol %arg{1} %arg{2}
+}
+
 def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
     echo %arg{2}
 }
@@ -462,7 +479,7 @@ def lsp -params 1.. %sh{
     else echo "-shell-script-candidates";
     fi
 } %{
-    for cmd in start hover definition references signature-help diagnostics document-symbol\
+    for cmd in start hover definition references signature-help diagnostics document-symbol workspace-symbol\
     capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
     auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
@@ -481,6 +498,7 @@ map global lsp h '<esc>:lsp-hover<ret>'           -docstring 'hover'
 map global lsp r '<esc>:lsp-references<ret>'      -docstring 'references'
 map global lsp s '<esc>:lsp-signature-help<ret>'  -docstring 'signature help'
 map global lsp S '<esc>:lsp-document-symbol<ret>' -docstring 'document symbols'
+map global lsp p '<esc>:lsp-workspace-symbol '    -docstring 'workspace symbols'
 
 
 lsp-stop-on-exit-enable
