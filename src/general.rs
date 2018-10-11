@@ -50,6 +50,7 @@ pub fn exit(_params: EditorParams, _meta: &EditorMeta, ctx: &mut Context) {
     ctx.notify(notification::Exit::METHOD.into(), params);
     ctx.lang_srv_poison_tx.send(());
     ctx.controller_poison_tx.send(());
+    ctx.lang_srv_tx = None;
 }
 
 pub fn capabilities(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
