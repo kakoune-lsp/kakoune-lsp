@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::{NumberOrString, Range};
 use serde;
 use types::*;
@@ -177,8 +178,7 @@ pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, 
                     Option::Some(format!("{}|{}", lsp_range_to_kakoune(*r), face))
                 }
             })
-        }).collect::<Vec<String>>()
-        .join(" ");
+        }).join(" ");
     let command = format!(
         "eval -buffer %§{}§ %§set buffer cquery_semhl {} {}§",
         buffile, version, ranges

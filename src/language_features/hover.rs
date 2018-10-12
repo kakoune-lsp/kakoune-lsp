@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
@@ -55,7 +56,6 @@ pub fn editor_hover(
                                 && end.line == pos.line
                                 && pos.character <= end.character)
                     }).map(|x| format!("• {}", str::trim(&x.message)))
-                    .collect::<Vec<String>>()
                     .join("\n"),
             )
         }).unwrap_or_else(String::new);
@@ -66,7 +66,6 @@ pub fn editor_hover(
             HoverContents::Array(contents) => contents
                 .into_iter()
                 .map(|x| format!("• {}", str::trim(&x.plaintext())))
-                .collect::<Vec<String>>()
                 .join("\n"),
             HoverContents::Markup(contents) => contents.value,
         },

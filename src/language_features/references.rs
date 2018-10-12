@@ -65,10 +65,7 @@ pub fn editor_references(
 
                 if file.is_err() {
                     error!("Failed to open referenced file: {}", name);
-                    return group
-                        .map(|_loc| String::new())
-                        .collect::<Vec<String>>()
-                        .join("\n");
+                    return group.map(|_loc| String::new()).join("\n");
                 }
                 let mut buffer = BufReader::new(file.unwrap()).lines();
                 let mut next_buf_line = 0;
@@ -103,10 +100,8 @@ pub fn editor_references(
                                 return String::new();
                             }
                         }
-                    }).collect::<Vec<String>>()
-                    .join("\n");
-            }).collect::<Vec<String>>()
-            .join("\n");
+                    }).join("\n");
+            }).join("\n");
 
         let command = format!(
             "lsp-show-references %§{}§ %§{}§",
@@ -169,7 +164,6 @@ pub fn editor_references_highlight(
             .filter(|location| {
                 location.uri.to_file_path().unwrap().to_str().unwrap() == meta.buffile
             }).map(|location| format!("{}|Reference", lsp_range_to_kakoune(location.range)))
-            .collect::<Vec<String>>()
             .join(" ");
         let command = format!(
             "set-option window lsp_references {} {}",

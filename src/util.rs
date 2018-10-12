@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::*;
 use std::os::unix::fs::DirBuilderExt;
 use std::{env, fs, path};
@@ -63,6 +64,5 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
                 position.character + 1,
                 description
             )
-        }).collect::<Vec<_>>()
-        .join("\n")
+        }).join("\n")
 }

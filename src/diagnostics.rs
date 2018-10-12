@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::*;
 use std::path::Path;
 use types::*;
@@ -28,8 +29,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
                     _ => "DiagnosticWarning",
                 }
             )
-        }).collect::<Vec<String>>()
-        .join(" ");
+        }).join(" ");
 
     let line_flags = diagnostics
         .iter()
@@ -43,8 +43,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
                     _ => "%opt[lsp_diagnostic_line_warning_sign]",
                 }
             )
-        }).collect::<Vec<String>>()
-        .join(" ");
+        }).join(" ");
     let command = format!(
         // Always show a space on line one if no other highlighter is there,
         // to make sure the column always has the right width
@@ -96,8 +95,7 @@ pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Co
                         x.message
                     )
                 }).collect::<Vec<_>>()
-        }).collect::<Vec<_>>()
-        .join("\n");
+        }).join("\n");
     let command = format!(
         "lsp-show-diagnostics %§{}§ %§{}§",
         ctx.root_path, content,

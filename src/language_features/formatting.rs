@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
@@ -80,7 +81,6 @@ pub fn editor_formatting(
         let select_edits = edits
             .iter()
             .map(|(start, end, _, _)| format!("{},{}", start, end))
-            .collect::<Vec<_>>()
             .join(" ");
         let apply_edits = edits
             .iter()
@@ -101,8 +101,7 @@ pub fn editor_formatting(
                     },
                     content
                 )
-            }).collect::<Vec<_>>()
-            .join("\n");
+            }).join("\n");
         let command = format!(
             "select {}
             exec -save-regs '' Z

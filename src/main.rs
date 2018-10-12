@@ -43,6 +43,7 @@ mod workspace;
 use clap::{App, Arg};
 use daemonize::Daemonize;
 use handlebars::{no_escape, Handlebars};
+use itertools::Itertools;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
@@ -204,7 +205,6 @@ fn kakoune(_config: &Config) {
     let args = env::args()
         .skip(1)
         .filter(|arg| arg != "--kakoune")
-        .collect::<Vec<_>>()
         .join(" ");
     let cmd = env::current_exe().unwrap().to_owned();
     handlebars

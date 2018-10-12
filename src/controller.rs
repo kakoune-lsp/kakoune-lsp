@@ -209,7 +209,10 @@ impl Controller {
                         let mut ctx = ctx.lock().expect("Failed to lock context");
                         match call {
                             Call::MethodCall(request) => {
-                                debug!("Requests from language server are not supported yet: {:?}", request);
+                                debug!(
+                                    "Requests from language server are not supported yet: {:?}",
+                                    request
+                                );
                             }
                             Call::Notification(notification) => {
                                 if notification.params.is_none() {
@@ -249,12 +252,14 @@ impl Controller {
                                 if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
                                     let (meta, method, _) = request;
                                     let msg = match failure.error.code {
-                                        ErrorCode::MethodNotFound => {
-                                            format!("{} language server doesn't support method {}", ctx.language_id, method)
-                                        }
-                                        _ => {
-                                            format!("{} language server error: {}", ctx.language_id, failure.error.message)
-                                        }
+                                        ErrorCode::MethodNotFound => format!(
+                                            "{} language server doesn't support method {}",
+                                            ctx.language_id, method
+                                        ),
+                                        _ => format!(
+                                            "{} language server error: {}",
+                                            ctx.language_id, failure.error.message
+                                        ),
                                     };
                                     ctx.exec(meta, format!("lsp-show-error %§{}§", msg));
                                 } else {

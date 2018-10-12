@@ -1,4 +1,5 @@
 use context::*;
+use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use regex::Regex;
@@ -78,8 +79,7 @@ pub fn editor_completion(
                 escape(&doc),
                 escape(&entry),
             )
-        }).collect::<Vec<String>>()
-        .join(" ");
+        }).join(" ");
     let p = params.position;
     let command = format!(
         "set window lsp_completions {}.{}@{} {}\n",
