@@ -11,7 +11,7 @@ pub struct Context {
     pub diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
     pub editor_tx: Sender<EditorResponse>,
     pub lang_srv_poison_tx: Sender<()>,
-    pub lang_srv_tx: Sender<ServerMessage>,
+    pub lang_srv_tx: Option<Sender<ServerMessage>>,
     pub language_id: String,
     pub pending_requests: Vec<EditorRequest>,
     pub request_counter: u64,
@@ -40,7 +40,7 @@ impl Context {
             diagnostics: FnvHashMap::default(),
             editor_tx,
             lang_srv_poison_tx,
-            lang_srv_tx,
+            lang_srv_tx: Some(lang_srv_tx),
             language_id: language_id.to_string(),
             pending_requests: vec![initial_request],
             request_counter: 0,
@@ -63,8 +63,9 @@ impl Context {
             method,
             params: Some(params.unwrap()),
         };
-        self.lang_srv_tx
-            .send(ServerMessage::Request(Call::MethodCall(call)));
+        if let Some(tx) = &self.lang_srv_tx {
+            tx.send(ServerMessage::Request(Call::MethodCall(call)));
+        }
     }
 
     pub fn notify(&mut self, method: String, params: impl ToParams) {
@@ -82,8 +83,9 @@ impl Context {
                 params => Some(params),
             },
         };
-        self.lang_srv_tx
-            .send(ServerMessage::Request(Call::Notification(notification)));
+        if let Some(tx) = &self.lang_srv_tx {
+            tx.send(ServerMessage::Request(Call::Notification(notification)))
+        }
     }
 
     pub fn exec(&self, meta: EditorMeta, command: String) {

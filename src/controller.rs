@@ -132,13 +132,6 @@ impl Controller {
         config: Config,
     ) -> Self {
         let (editor_reader_poison_tx, editor_reader_poison_rx) = bounded(1);
-        let (lang_srv_reader_poison_tx, lang_srv_reader_poison_rx) = bounded(1);
-        thread::spawn(move || {
-            for msg in controller_poison_rx {
-                editor_reader_poison_tx.send(msg);
-                lang_srv_reader_poison_tx.send(msg);
-            }
-        });
 
         let initial_request_meta = initial_request.meta.clone();
 
@@ -152,6 +145,16 @@ impl Controller {
             config.clone(),
             root_path.to_string(),
         )));
+
+        {
+            let ctx = Arc::clone(&ctx_src);
+            thread::spawn(move || {
+                for msg in controller_poison_rx {
+                    editor_reader_poison_tx.send(msg);
+                    ctx.lock().unwrap().lang_srv_tx = None;
+                }
+            });
+        }
 
         let ctx = Arc::clone(&ctx_src);
         let editor_reader_handle = thread::spawn(move || {
@@ -199,81 +202,70 @@ impl Controller {
         });
 
         let ctx = Arc::clone(&ctx_src);
-        let lang_srv_handle = thread::spawn(move || loop {
-            select! {
-                recv(lang_srv_rx, msg) => {
-                    if msg.is_none() {
-                        debug!("Stopping language server dispatcher");
-                        return;
-                    }
-                    let msg = msg.unwrap();
-                    match msg {
-                        ServerMessage::Request(call) => {
-                            let mut ctx = ctx.lock().expect("Failed to lock context");
-                            match call {
-                                Call::MethodCall(request) => {
-                                    debug!("Requests from language server are not supported yet: {:?}", request);
+        let lang_srv_handle = thread::spawn(move || {
+            for msg in lang_srv_rx {
+                match msg {
+                    ServerMessage::Request(call) => {
+                        let mut ctx = ctx.lock().expect("Failed to lock context");
+                        match call {
+                            Call::MethodCall(request) => {
+                                debug!("Requests from language server are not supported yet: {:?}", request);
+                            }
+                            Call::Notification(notification) => {
+                                if notification.params.is_none() {
+                                    error!("Missing notification params");
+                                    return;
                                 }
-                                Call::Notification(notification) => {
-                                    if notification.params.is_none() {
-                                        error!("Missing notification params");
-                                        return;
-                                    }
-                                    dispatch_server_notification(
-                                        &notification.method,
-                                        notification.params.unwrap(),
+                                dispatch_server_notification(
+                                    &notification.method,
+                                    notification.params.unwrap(),
+                                    &mut ctx,
+                                );
+                            }
+                            Call::Invalid(m) => {
+                                error!("Invalid call from language server: {:?}", m);
+                            }
+                        }
+                    }
+                    ServerMessage::Response(output) => {
+                        let mut ctx = ctx.lock().expect("Failed to lock context");
+                        match output {
+                            Output::Success(success) => {
+                                if let Some(request) = ctx.response_waitlist.remove(&success.id) {
+                                    let (meta, method, params) = request;
+                                    dispatch_server_response(
+                                        &meta,
+                                        &method,
+                                        params,
+                                        success.result,
                                         &mut ctx,
                                     );
-                                }
-                                Call::Invalid(m) => {
-                                    error!("Invalid call from language server: {:?}", m);
+                                } else {
+                                    error!("Id {:?} is not in waitlist!", success.id);
                                 }
                             }
-                        }
-                        ServerMessage::Response(output) => {
-                            let mut ctx = ctx.lock().expect("Failed to lock context");
-                            match output {
-                                Output::Success(success) => {
-                                    if let Some(request) = ctx.response_waitlist.remove(&success.id) {
-                                        let (meta, method, params) = request;
-                                        dispatch_server_response(
-                                            &meta,
-                                            &method,
-                                            params,
-                                            success.result,
-                                            &mut ctx,
-                                        );
-                                    } else {
-                                        error!("Id {:?} is not in waitlist!", success.id);
-                                    }
-                                }
-                                Output::Failure(failure) => {
-                                    error!("Error response from server: {:?}", failure);
-                                    if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
-                                        let (meta, method, _) = request;
-                                        let msg = match failure.error.code {
-                                            ErrorCode::MethodNotFound => {
-                                                format!("{} language server doesn't support method {}", ctx.language_id, method)
-                                            }
-                                            _ => {
-                                                format!("{} language server error: {}", ctx.language_id, failure.error.message)
-                                            }
-                                        };
-                                        ctx.exec(meta, format!("lsp-show-error %§{}§", msg));
-                                    } else {
-                                        error!("Id {:?} is not in waitlist!", failure.id);
-                                    }
+                            Output::Failure(failure) => {
+                                error!("Error response from server: {:?}", failure);
+                                if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
+                                    let (meta, method, _) = request;
+                                    let msg = match failure.error.code {
+                                        ErrorCode::MethodNotFound => {
+                                            format!("{} language server doesn't support method {}", ctx.language_id, method)
+                                        }
+                                        _ => {
+                                            format!("{} language server error: {}", ctx.language_id, failure.error.message)
+                                        }
+                                    };
+                                    ctx.exec(meta, format!("lsp-show-error %§{}§", msg));
+                                } else {
+                                    error!("Id {:?} is not in waitlist!", failure.id);
                                 }
                             }
                         }
                     }
                 }
-
-                recv(lang_srv_reader_poison_rx) => {
-                    debug!("Stopping language server dispatcher");
-                    return;
-                }
             }
+            debug!("Stopping language server dispatcher");
         });
 
         {
