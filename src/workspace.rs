@@ -114,9 +114,6 @@ pub fn editor_workspace_symbol(
         return;
     }
     let result = result.unwrap();
-    if result.is_empty() {
-        return;
-    }
     let content = format_symbol_information(result, ctx);
     let command = format!(
         "lsp-show-workspace-symbol %§{}§ %§{}§",

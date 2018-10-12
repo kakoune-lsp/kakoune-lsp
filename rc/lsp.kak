@@ -193,7 +193,17 @@ method  = "textDocument/documentSymbol"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{
+def -hidden lsp-workspace-symbol-buffer -params 3 -docstring %{
+    buffile timestamp query
+    Open buffer with a list of project-wide symbols matching the query
+    on behalf of the buffile at timestamp
+ } %{ try %{
+    eval %sh{
+        if [ -z "${3}" ];
+        then echo "fail";
+        else echo "nop";
+        fi
+    }
     lsp-did-change
     nop %sh{ (printf '
 session = "%s"
@@ -203,8 +213,8 @@ version = %d
 method  = "workspace/symbol"
 [params]
 query   = "%s"
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${1}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
-}
+' "${kak_session}" "${kak_client}" "${1}" "${2}" "${3}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}}
 
 def lsp-capabilities -docstring "List available commands for current filetype" %{
     lsp-did-change
@@ -326,40 +336,53 @@ def -hidden lsp-show-error -params 1 -docstring "Render error" %{
 }
 
 def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
-     eval -try-client %opt[toolsclient] %{
-         edit! -scratch *diagnostics*
-         cd %arg{1}
-         try %{ set buffer working_folder %sh{pwd} }
-         set buffer filetype make
-         set-register '"' %arg{2}
-         exec p
-     }
+    eval -try-client %opt[toolsclient] %{
+        edit! -scratch *diagnostics*
+        cd %arg{1}
+        try %{ set buffer working_folder %sh{pwd} }
+        set buffer filetype make
+        set-register '"' %arg{2}
+        exec Pgg
+    }
 }
 
 def -hidden lsp-show-references -params 2 -docstring "Render references" %{
-     eval -try-client %opt[toolsclient] %{
-         edit! -scratch *references*
-         cd %arg{1}
-         try %{ set buffer working_folder %sh{pwd} }
-         set buffer filetype grep
-         set-register '"' %arg{2}
-         exec p
-     }
+    eval -try-client %opt[toolsclient] %{
+        edit! -scratch *references*
+        cd %arg{1}
+        try %{ set buffer working_folder %sh{pwd} }
+        set buffer filetype grep
+        set-register '"' %arg{2}
+        exec Pgg
+    }
 }
 
 def -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
-     eval -try-client %opt[toolsclient] %{
-         edit! -scratch *symbols*
-         cd %arg{1}
-         try %{ set buffer working_folder %sh{pwd} }
-         set buffer filetype grep
-         set-register '"' %arg{2}
-         exec p
-     }
+    eval -try-client %opt[toolsclient] %{
+        edit! -scratch *symbols*
+        cd %arg{1}
+        try %{ set buffer working_folder %sh{pwd} }
+        set buffer filetype grep
+        set-register '"' %arg{2}
+        exec Pgg
+    }
+}
+
+def -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
+    cd %arg{1}
+    try %{ set buffer working_folder %sh{pwd} }
+    exec '<a-;>%<a-;>d'
+    set-register '"' %arg{2}
+    exec '<a-;>P<a-;>gg'
 }
 
 def -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace symbols" %{
-    lsp-show-document-symbol %arg{1} %arg{2}
+    eval %sh{
+        if [ "${kak_buffile}" = "*symbols*" ];
+        then echo 'lsp-update-workspace-symbol %arg{1} %arg{2}';
+        else echo 'lsp-show-document-symbol %arg{1} %arg{2}';
+        fi
+    }
 }
 
 def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
@@ -447,6 +470,64 @@ def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune se
     alias global lsp-exit lsp-exit-editor-session
 }
 
+
+def lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{ lsp-workspace-symbol-buffer %val{buffile} %val{timestamp} %arg{1} }
+
+def lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
+    decl -hidden str lsp_ws_buffile %val{buffile}
+    decl -hidden int lsp_ws_timestamp %val{timestamp}
+    decl -hidden str lsp_ws_query
+    edit! -scratch *symbols*
+    set buffer filetype grep
+    prompt -on-change %{ try %{
+        # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
+        # the following check prevents it
+        eval %sh{
+            if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
+            then echo 'fail';
+            else echo 'set current lsp_ws_query %val{text}';
+            fi
+        }
+        lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_timestamp} %val{text}
+    }} -on-abort %{exec ga} 'Query: ' nop
+}
+
+
+# lsp-* commands as subcommands of lsp command
+
+def lsp -params 1.. %sh{
+    if [ $kak_version \< "v2018.09.04-128-g5bdcfab0" ];
+    then echo "-shell-candidates";
+    else echo "-shell-script-candidates";
+    fi
+} %{
+    for cmd in start hover definition references signature-help diagnostics document-symbol\
+    workspace-symbol workspace-symbol-incr\
+    capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
+    diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
+    auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
+    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable;
+        do echo $cmd;
+    done
+} %{ eval "lsp-%arg{1}" }
+
+
+# user mode
+
+declare-user-mode lsp
+map global lsp c '<esc>:lsp-capabilities<ret>'          -docstring 'show language server capabilities'
+map global lsp d '<esc>:lsp-definition<ret>'            -docstring 'go to definition'
+map global lsp e '<esc>:lsp-diagnostics<ret>'           -docstring 'list project errors and warnings'
+map global lsp f '<esc>:lsp-formatting<ret>'            -docstring 'format buffer'
+map global lsp h '<esc>:lsp-hover<ret>'                 -docstring 'show info for current position'
+map global lsp r '<esc>:lsp-references<ret>'            -docstring 'list symbol references'
+map global lsp s '<esc>:lsp-signature-help<ret>'        -docstring 'show function signature help'
+map global lsp S '<esc>:lsp-document-symbol<ret>'       -docstring 'list document symbols'
+map global lsp p '<esc>:lsp-workspace-symbol-incr<ret>' -docstring 'search project symbols'
+
+
+# init
+
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers option=lsp_completions %opt{completers}
     add-highlighter global/cquery_semhl ranges cquery_semhl
@@ -471,35 +552,6 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     }
     hook -group lsp global KakEnd .* lsp-exit
 }
-
-
-def lsp -params 1.. %sh{
-    if [ $kak_version \< "v2018.09.04-128-g5bdcfab0" ];
-    then echo "-shell-candidates";
-    else echo "-shell-script-candidates";
-    fi
-} %{
-    for cmd in start hover definition references signature-help diagnostics document-symbol workspace-symbol\
-    capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
-    diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
-    auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
-    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable;
-        do echo $cmd;
-    done
-} %{ eval "lsp-%arg{1}" }
-
-
-declare-user-mode lsp
-map global lsp c '<esc>:lsp-capabilities<ret>'    -docstring 'capabilities'
-map global lsp d '<esc>:lsp-definition<ret>'      -docstring 'definition'
-map global lsp D '<esc>:lsp-diagnostics<ret>'     -docstring 'diagnostics'
-map global lsp f '<esc>:lsp-formatting<ret>'      -docstring 'formatting'
-map global lsp h '<esc>:lsp-hover<ret>'           -docstring 'hover'
-map global lsp r '<esc>:lsp-references<ret>'      -docstring 'references'
-map global lsp s '<esc>:lsp-signature-help<ret>'  -docstring 'signature help'
-map global lsp S '<esc>:lsp-document-symbol<ret>' -docstring 'document symbols'
-map global lsp p '<esc>:lsp-workspace-symbol '    -docstring 'workspace symbols'
-
 
 lsp-stop-on-exit-enable
 lsp-enable
