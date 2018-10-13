@@ -3,11 +3,12 @@ use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
+use serde_json::{self, Value};
 use std::str;
 use types::*;
 use url::Url;
 
-pub fn text_document_hover(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_hover(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
     if req_params.is_err() {
         error!("Params should follow PositionParams structure");
@@ -29,12 +30,13 @@ pub fn text_document_hover(params: EditorParams, meta: &EditorMeta, ctx: &mut Co
     ctx.call(id, request::HoverRequest::METHOD.into(), req_params);
 }
 
-pub fn editor_hover(
-    meta: &EditorMeta,
-    params: &PositionParams,
-    result: Option<Hover>,
-    ctx: &mut Context,
-) {
+pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx: &mut Context) {
+    let params = &PositionParams::deserialize(params).expect("Failed to parse params");
+    let result: Option<Hover> = if result.is_null() {
+        None
+    } else {
+        Some(serde_json::from_value(result).expect("Failed to parse hover response"))
+    };
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
     let pos = params.position;
     let diagnostics = diagnostics

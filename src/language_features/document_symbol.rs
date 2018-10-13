@@ -1,11 +1,12 @@
 use context::*;
 use languageserver_types::request::Request;
 use languageserver_types::*;
+use serde_json::{self, Value};
 use types::*;
 use url::Url;
 use util::*;
 
-pub fn text_document_document_symbol(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_document_symbol(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = DocumentSymbolParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -27,11 +28,9 @@ pub fn text_document_document_symbol(params: EditorParams, meta: &EditorMeta, ct
     );
 }
 
-pub fn editor_document_symbol(
-    meta: &EditorMeta,
-    result: Option<Vec<SymbolInformation>>,
-    ctx: &mut Context,
-) {
+pub fn editor_document_symbol(meta: &EditorMeta, result: Value, ctx: &mut Context) {
+    let result: Option<Vec<SymbolInformation>> =
+        serde_json::from_value(result).expect("Failed to parse document symbol response");
     if result.is_none() {
         return;
     }

@@ -3,13 +3,14 @@ use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
+use serde_json::{self, Value};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use types::*;
 use url::Url;
 use util::*;
 
-pub fn text_document_references(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_references(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
     if req_params.is_err() {
         error!("Params should follow PositionParams structure");
@@ -34,12 +35,8 @@ pub fn text_document_references(params: EditorParams, meta: &EditorMeta, ctx: &m
     ctx.call(id, request::References::METHOD.into(), req_params);
 }
 
-pub fn editor_references(
-    meta: &EditorMeta,
-    _params: &PositionParams,
-    result: ReferencesResponse,
-    ctx: &mut Context,
-) {
+pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
+    let result = serde_json::from_value(result).expect("Failed to parse references response");
     if let Some(mut locations) = match result {
         ReferencesResponse::Array(locations) => Some(locations),
         ReferencesResponse::None => None,
@@ -112,8 +109,8 @@ pub fn editor_references(
 }
 
 pub fn text_document_references_highlight(
-    params: EditorParams,
     meta: &EditorMeta,
+    params: EditorParams,
     ctx: &mut Context,
 ) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -144,12 +141,8 @@ pub fn text_document_references_highlight(
     ctx.call(id, request::References::METHOD.into(), req_params);
 }
 
-pub fn editor_references_highlight(
-    meta: &EditorMeta,
-    _params: &PositionParams,
-    result: ReferencesResponse,
-    ctx: &mut Context,
-) {
+pub fn editor_references_highlight(meta: &EditorMeta, result: Value, ctx: &mut Context) {
+    let result = serde_json::from_value(result).expect("Failed to parse references response");
     if let Some(mut locations) = match result {
         ReferencesResponse::Array(locations) => Some(locations),
         ReferencesResponse::None => None,

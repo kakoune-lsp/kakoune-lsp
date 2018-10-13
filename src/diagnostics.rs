@@ -1,11 +1,13 @@
 use context::*;
 use itertools::Itertools;
+use jsonrpc_core::Params;
 use languageserver_types::*;
 use std::path::Path;
 use types::*;
 use util::*;
 
-pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) {
+pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
+    let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
     let session = ctx.session.clone();
     let client = None;
     let path = params.uri.to_file_path().unwrap();
@@ -70,7 +72,7 @@ pub fn publish_diagnostics(params: PublishDiagnosticsParams, ctx: &mut Context) 
     ctx.exec(meta, command.to_string());
 }
 
-pub fn editor_diagnostics(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
     let content = ctx
         .diagnostics
         .iter()

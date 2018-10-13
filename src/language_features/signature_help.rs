@@ -2,10 +2,11 @@ use context::*;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
+use serde_json::{self, Value};
 use types::*;
 use url::Url;
 
-pub fn text_document_signature_help(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_signature_help(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
     if req_params.is_err() {
         error!("Params should follow PositionParams structure");
@@ -33,10 +34,13 @@ pub fn text_document_signature_help(params: EditorParams, meta: &EditorMeta, ctx
 
 pub fn editor_signature_help(
     meta: &EditorMeta,
-    params: &PositionParams,
-    result: Option<SignatureHelp>,
+    params: EditorParams,
+    result: Value,
     ctx: &mut Context,
 ) {
+    let params = PositionParams::deserialize(params).expect("Failed to parse params");
+    let result: Option<SignatureHelp> =
+        serde_json::from_value(result).expect("Failed to parse signature help response");
     if result.is_none() {
         return;
     }

@@ -11,7 +11,6 @@ use languageserver_types::notification::Notification;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use project_root::find_project_root;
-use serde::Deserialize;
 use serde_json::{self, Value};
 use std::io::{stderr, stdout, Write};
 use std::path::Path;
@@ -301,66 +300,62 @@ impl Controller {
 fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     let buffile = &request.meta.buffile;
     if !buffile.is_empty() && !ctx.versions.contains_key(buffile) {
-        text_document_did_open(
-            toml::Value::Table(toml::value::Table::default()),
-            &request.meta,
-            &mut ctx,
-        );
+        text_document_did_open(&request.meta, &mut ctx);
     }
     let meta = &request.meta;
     let params = request.params;
     let method: &str = &request.method;
     match method {
         notification::DidOpenTextDocument::METHOD => {
-            text_document_did_open(params, meta, &mut ctx);
+            text_document_did_open(meta, &mut ctx);
         }
         notification::DidChangeTextDocument::METHOD => {
-            text_document_did_change(params, meta, &mut ctx);
+            text_document_did_change(meta, params, &mut ctx);
         }
         notification::DidCloseTextDocument::METHOD => {
-            text_document_did_close(params, meta, &mut ctx);
+            text_document_did_close(meta, &mut ctx);
         }
         notification::DidSaveTextDocument::METHOD => {
-            text_document_did_save(params, meta, &mut ctx);
+            text_document_did_save(meta, &mut ctx);
         }
         notification::DidChangeConfiguration::METHOD => {
-            workspace::did_change_configuration(params, meta, &mut ctx);
+            workspace::did_change_configuration(params, &mut ctx);
         }
         request::Completion::METHOD => {
-            completion::text_document_completion(params, meta, &mut ctx);
+            completion::text_document_completion(meta, params, &mut ctx);
         }
         request::HoverRequest::METHOD => {
-            hover::text_document_hover(params, meta, &mut ctx);
+            hover::text_document_hover(meta, params, &mut ctx);
         }
         request::GotoDefinition::METHOD => {
-            definition::text_document_definition(params, meta, &mut ctx);
+            definition::text_document_definition(meta, params, &mut ctx);
         }
         request::References::METHOD => {
-            references::text_document_references(params, meta, &mut ctx);
+            references::text_document_references(meta, params, &mut ctx);
         }
         notification::Exit::METHOD => {
-            general::exit(params, meta, &mut ctx);
+            general::exit(&mut ctx);
         }
         request::SignatureHelpRequest::METHOD => {
-            signature_help::text_document_signature_help(params, meta, &mut ctx);
+            signature_help::text_document_signature_help(meta, params, &mut ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
-            document_symbol::text_document_document_symbol(params, meta, &mut ctx);
+            document_symbol::text_document_document_symbol(meta, params, &mut ctx);
         }
         request::Formatting::METHOD => {
-            formatting::text_document_formatting(params, meta, &mut ctx);
+            formatting::text_document_formatting(meta, params, &mut ctx);
         }
         request::WorkspaceSymbol::METHOD => {
-            workspace::workspace_symbol(params, meta, &mut ctx);
+            workspace::workspace_symbol(meta, params, &mut ctx);
         }
         "textDocument/diagnostics" => {
-            diagnostics::editor_diagnostics(params, meta, &mut ctx);
+            diagnostics::editor_diagnostics(meta, &mut ctx);
         }
         "capabilities" => {
-            general::capabilities(params, meta, &mut ctx);
+            general::capabilities(meta, &mut ctx);
         }
         "textDocument/referencesHighlight" => {
-            references::text_document_references_highlight(params, meta, &mut ctx);
+            references::text_document_references_highlight(meta, params, &mut ctx);
         }
         _ => {
             warn!("Unsupported method: {}", method);
@@ -371,16 +366,10 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
 fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Context) {
     match method {
         notification::PublishDiagnostics::METHOD => {
-            diagnostics::publish_diagnostics(
-                params.parse().expect("Failed to parse params"),
-                &mut ctx,
-            );
+            diagnostics::publish_diagnostics(params, &mut ctx);
         }
         "$cquery/publishSemanticHighlighting" => {
-            cquery::publish_semantic_highlighting(
-                params.parse().expect("Failed to parse semhl params"),
-                &mut ctx,
-            );
+            cquery::publish_semantic_highlighting(params, &mut ctx);
         }
         notification::Exit::METHOD => {
             debug!("Language server exited, poisoning controller");
@@ -407,64 +396,31 @@ fn dispatch_server_response(
 ) {
     match method {
         request::Completion::METHOD => {
-            completion::editor_completion(
-                meta,
-                &TextDocumentCompletionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse completion response"),
-                &mut ctx,
-            );
+            completion::editor_completion(meta, params, response, &mut ctx);
         }
         request::HoverRequest::METHOD => {
-            let response = if response.is_null() {
-                None
-            } else {
-                Some(serde_json::from_value(response).expect("Failed to parse hover response"))
-            };
-            hover::editor_hover(
-                meta,
-                &PositionParams::deserialize(params).expect("Failed to parse params"),
-                response,
-                &mut ctx,
-            );
+            hover::editor_hover(meta, params, response, &mut ctx);
         }
         request::GotoDefinition::METHOD => {
-            definition::editor_definition(
-                meta,
-                &PositionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse definition response"),
-                &mut ctx,
-            );
+            definition::editor_definition(meta, response, &mut ctx);
         }
         request::References::METHOD => {
-            references::editor_references(
-                meta,
-                &PositionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse references response"),
-                &mut ctx,
-            );
+            references::editor_references(meta, response, &mut ctx);
         }
         request::SignatureHelpRequest::METHOD => {
-            signature_help::editor_signature_help(
-                meta,
-                &PositionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse signature help response"),
-                &mut ctx,
-            );
+            signature_help::editor_signature_help(meta, params, response, &mut ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
-            document_symbol::editor_document_symbol(
-                meta,
-                serde_json::from_value(response).expect("Failed to parse document symbol response"),
-                &mut ctx,
-            );
+            document_symbol::editor_document_symbol(meta, response, &mut ctx);
         }
         request::Formatting::METHOD => {
-            formatting::editor_formatting(
-                meta,
-                &FormattingOptions::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse formatting response"),
-                &mut ctx,
-            );
+            formatting::editor_formatting(meta, response, &mut ctx);
+        }
+        request::WorkspaceSymbol::METHOD => {
+            workspace::editor_workspace_symbol(meta, response, &mut ctx);
+        }
+        "textDocument/referencesHighlight" => {
+            references::editor_references_highlight(meta, response, &mut ctx);
         }
         request::Initialize::METHOD => {
             ctx.capabilities = Some(
@@ -484,22 +440,6 @@ fn dispatch_server_response(
             for msg in requests.drain(..) {
                 dispatch_editor_request(msg, &mut ctx);
             }
-        }
-        request::WorkspaceSymbol::METHOD => {
-            workspace::editor_workspace_symbol(
-                meta,
-                serde_json::from_value(response)
-                    .expect("Failed to parse workspace symbol response"),
-                &mut ctx,
-            );
-        }
-        "textDocument/referencesHighlight" => {
-            references::editor_references_highlight(
-                meta,
-                &PositionParams::deserialize(params).expect("Failed to parse params"),
-                serde_json::from_value(response).expect("Failed to parse references response"),
-                &mut ctx,
-            );
         }
         _ => {
             error!("Don't know how to handle response for method: {}", method);

@@ -1,5 +1,6 @@
 use context::*;
 use itertools::Itertools;
+use jsonrpc_core::Params;
 use languageserver_types::{NumberOrString, Range};
 use serde;
 use types::*;
@@ -155,7 +156,9 @@ pub struct PublishSemanticHighlightingParams {
     pub symbols: Vec<SemanticSymbol>,
 }
 
-pub fn publish_semantic_highlighting(params: PublishSemanticHighlightingParams, ctx: &mut Context) {
+pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
+    let params: PublishSemanticHighlightingParams =
+        params.parse().expect("Failed to parse semhl params");
     let session = ctx.session.clone();
     let client = None;
     let path = params.uri.to_file_path().unwrap();

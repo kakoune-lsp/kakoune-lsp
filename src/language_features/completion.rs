@@ -4,11 +4,12 @@ use languageserver_types::request::Request;
 use languageserver_types::*;
 use regex::Regex;
 use serde::Deserialize;
+use serde_json::{self, Value};
 use std;
 use types::*;
 use url::Url;
 
-pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_completion(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = TextDocumentCompletionParams::deserialize(params.clone());
     if req_params.is_err() {
         error!("Params should follow TextDocumentCompletionParams structure");
@@ -34,10 +35,12 @@ pub fn text_document_completion(params: EditorParams, meta: &EditorMeta, ctx: &m
 
 pub fn editor_completion(
     meta: &EditorMeta,
-    params: &TextDocumentCompletionParams,
-    result: CompletionResponse,
+    params: EditorParams,
+    result: Value,
     ctx: &mut Context,
 ) {
+    let params = TextDocumentCompletionParams::deserialize(params).expect("Failed to parse params");
+    let result = serde_json::from_value(result).expect("Failed to parse completion response");
     let items = match result {
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,

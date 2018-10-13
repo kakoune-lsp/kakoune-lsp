@@ -2,7 +2,7 @@ use context::*;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
-use serde_json;
+use serde_json::{self, Value};
 use toml;
 use types::*;
 use util::*;
@@ -10,10 +10,10 @@ use util::*;
 use languageserver_types::notification::{self, Notification};
 
 fn insert_value<'a, 'b, P>(
-    target: &'b mut serde_json::map::Map<String, serde_json::Value>,
+    target: &'b mut serde_json::map::Map<String, Value>,
     mut path: P,
     local_key: String,
-    value: serde_json::Value,
+    value: Value,
 ) -> Result<(), String>
 where
     P: Iterator<Item = &'a str>,
@@ -23,7 +23,7 @@ where
         Some(key) => {
             let mut maybe_new_target = target
                 .entry(key)
-                .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()))
+                .or_insert_with(|| Value::Object(serde_json::Map::new()))
                 .as_object_mut();
 
             if maybe_new_target.is_none() {
@@ -42,7 +42,7 @@ where
     }
 }
 
-pub fn did_change_configuration(params: EditorParams, _meta: &EditorMeta, ctx: &mut Context) {
+pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
     let default_settings = toml::value::Table::new();
 
     let raw_settings = params
@@ -63,7 +63,7 @@ pub fn did_change_configuration(params: EditorParams, _meta: &EditorMeta, ctx: &
             }
         };
 
-        let value: serde_json::Value = match raw_value.clone().try_into() {
+        let value: Value = match raw_value.clone().try_into() {
             Ok(value) => value,
             Err(e) => {
                 warn!("Could not convert setting {:?} to JSON: {}", raw_value, e,);
@@ -81,12 +81,12 @@ pub fn did_change_configuration(params: EditorParams, _meta: &EditorMeta, ctx: &
     }
 
     let params = DidChangeConfigurationParams {
-        settings: serde_json::Value::Object(settings),
+        settings: Value::Object(settings),
     };
     ctx.notify(notification::DidChangeConfiguration::METHOD.into(), params);
 }
 
-pub fn workspace_symbol(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn workspace_symbol(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = WorkspaceSymbolParams::deserialize(params.clone());
     if req_params.is_err() {
         error!("Params should follow WorkspaceSymbolParams structure");
@@ -105,11 +105,9 @@ pub fn workspace_symbol(params: EditorParams, meta: &EditorMeta, ctx: &mut Conte
     ctx.call(id, request::WorkspaceSymbol::METHOD.into(), req_params);
 }
 
-pub fn editor_workspace_symbol(
-    meta: &EditorMeta,
-    result: Option<Vec<SymbolInformation>>,
-    ctx: &mut Context,
-) {
+pub fn editor_workspace_symbol(meta: &EditorMeta, result: Value, ctx: &mut Context) {
+    let result: Option<Vec<SymbolInformation>> =
+        serde_json::from_value(result).expect("Failed to parse workspace symbol response");
     if result.is_none() {
         return;
     }

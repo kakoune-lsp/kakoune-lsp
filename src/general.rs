@@ -44,7 +44,7 @@ pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ct
     ctx.call(id, request::Initialize::METHOD.into(), params);
 }
 
-pub fn exit(_params: EditorParams, _meta: &EditorMeta, ctx: &mut Context) {
+pub fn exit(ctx: &mut Context) {
     // NOTE we can't use Params::None because it's serialized as Value::Array([])
     let params: Option<u8> = None;
     ctx.notify(notification::Exit::METHOD.into(), params);
@@ -53,7 +53,7 @@ pub fn exit(_params: EditorParams, _meta: &EditorMeta, ctx: &mut Context) {
     ctx.lang_srv_tx = None;
 }
 
-pub fn capabilities(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {
     // NOTE controller should park request for capabilities until they are available thus it should
     // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)
 

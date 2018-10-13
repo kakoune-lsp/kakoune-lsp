@@ -3,10 +3,11 @@ use itertools::Itertools;
 use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
+use serde_json::{self, Value};
 use types::*;
 use url::Url;
 
-pub fn text_document_formatting(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_formatting(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let options = FormattingOptions::deserialize(params.clone());
     if options.is_err() {
         error!("Params should follow FormattingOptions structure");
@@ -30,12 +31,8 @@ fn escape(s: &str) -> String {
     s.replace("'", "''")
 }
 
-pub fn editor_formatting(
-    meta: &EditorMeta,
-    _params: &FormattingOptions,
-    result: TextEditResponse,
-    ctx: &mut Context,
-) {
+pub fn editor_formatting(meta: &EditorMeta, result: Value, ctx: &mut Context) {
+    let result = serde_json::from_value(result).expect("Failed to parse formatting response");
     if let TextEditResponse::Array(text_edits) = result {
         let edits = text_edits
             .iter()

@@ -7,7 +7,7 @@ use std::io::Read;
 use types::*;
 use url::Url;
 
-pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_did_open(meta: &EditorMeta, ctx: &mut Context) {
     let language_id = ctx.language_id.clone();
     let file = File::open(&meta.buffile);
     if file.is_err() {
@@ -31,7 +31,7 @@ pub fn text_document_did_open(_params: EditorParams, meta: &EditorMeta, ctx: &mu
     ctx.notify(notification::DidOpenTextDocument::METHOD.into(), params);
 }
 
-pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_did_change(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = TextDocumentDidChangeParams::deserialize(params);
     if params.is_err() {
         error!("Params should follow TextDocumentDidChangeParams structure");
@@ -60,7 +60,7 @@ pub fn text_document_did_change(params: EditorParams, meta: &EditorMeta, ctx: &m
     ctx.notify(notification::DidChangeTextDocument::METHOD.into(), params);
 }
 
-pub fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_did_close(meta: &EditorMeta, ctx: &mut Context) {
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
@@ -68,7 +68,7 @@ pub fn text_document_did_close(_params: EditorParams, meta: &EditorMeta, ctx: &m
     ctx.notify(notification::DidCloseTextDocument::METHOD.into(), params);
 }
 
-pub fn text_document_did_save(_params: EditorParams, meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_did_save(meta: &EditorMeta, ctx: &mut Context) {
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidSaveTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
