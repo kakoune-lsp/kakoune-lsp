@@ -9,10 +9,7 @@ use std::process::{Command, Stdio};
 use std::thread;
 use types::*;
 
-pub fn start(
-    cmd: &str,
-    args: &[String],
-) -> (Sender<ServerMessage>, Receiver<ServerMessage>, Sender<()>) {
+pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<ServerMessage>) {
     info!("Starting Language server `{} {}`", cmd, args.join(" "));
     let mut child = Command::new(cmd)
         .args(args)
@@ -24,11 +21,6 @@ pub fn start(
 
     let writer = BufWriter::new(child.stdin.take().expect("Failed to open stdin"));
     let reader = BufReader::new(child.stdout.take().expect("Failed to open stdout"));
-
-    // this channel is meant to send only one message to stop language server
-    // also we could make it rendezvous point by setting buffer to 0
-    // if we want to block sender, but we don't atm
-    let (poison_tx, poison_rx) = bounded(1);
 
     // XXX temporary way of tracing language server errors
     let mut stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
@@ -73,14 +65,14 @@ pub fn start(
     // NOTE 1024 is arbitrary
     let (writer_tx, writer_rx): (Sender<ServerMessage>, Receiver<ServerMessage>) = bounded(1024);
     thread::spawn(move || {
-        if writer_loop(writer, &writer_rx, &poison_rx).is_err() {
+        if writer_loop(writer, &writer_rx).is_err() {
             error!("Failed to write message to language server");
         }
         // NOTE we rely on assumption that if write failed then read is failed as well
         // or fill fail shortly and do all exiting stuff
     });
 
-    (writer_tx, reader_rx, poison_tx)
+    (writer_tx, reader_rx)
 }
 
 fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Result<()> {
@@ -128,38 +120,23 @@ fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Resu
     }
 }
 
-fn writer_loop(
-    mut writer: impl Write,
-    rx: &Receiver<ServerMessage>,
-    poison_rx: &Receiver<()>,
-) -> io::Result<()> {
-    loop {
-        select! {
-            recv(rx, request) => {
-                if request.is_none() {
-                    debug!("Received signal to stop language server, closing pipe");
-                    return Ok(())
-                }
-                let request = request.unwrap();
-                let request = match request {
-                    ServerMessage::Request(request) => serde_json::to_string(&request),
-                    ServerMessage::Response(response) => serde_json::to_string(&response),
-                }?;
-                debug!("To server: {}", request);
-                write!(
-                    writer,
-                    "Content-Length: {}\r\n\r\n{}",
-                    request.len(),
-                    request
-                )?;
-                writer.flush()?;
-            }
-            // NOTE we rely on the assumption that language server will exit when its stdin is closed
-            // without need to kill child process
-            recv(poison_rx) => {
-                debug!("Received signal to stop language server, closing pipe");
-                return Ok(())
-            }
-        }
+fn writer_loop(mut writer: impl Write, rx: &Receiver<ServerMessage>) -> io::Result<()> {
+    for request in rx {
+        let request = match request {
+            ServerMessage::Request(request) => serde_json::to_string(&request),
+            ServerMessage::Response(response) => serde_json::to_string(&response),
+        }?;
+        debug!("To server: {}", request);
+        write!(
+            writer,
+            "Content-Length: {}\r\n\r\n{}",
+            request.len(),
+            request
+        )?;
+        writer.flush()?;
     }
+    // NOTE we rely on the assumption that language server will exit when its stdin is closed
+    // without need to kill child process
+    debug!("Received signal to stop language server, closing pipe");
+    return Ok(());
 }

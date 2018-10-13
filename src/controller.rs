@@ -23,7 +23,7 @@ use toml;
 use types::*;
 use workspace;
 
-type Controllers = FnvHashMap<Route, Sender<EditorRequest>>;
+type Controllers = Arc<Mutex<FnvHashMap<Route, Sender<EditorRequest>>>>;
 
 pub fn start(config: &Config, initial_request: Option<&str>) {
     info!("Starting Controller");
@@ -33,82 +33,77 @@ pub fn start(config: &Config, initial_request: Option<&str>) {
 
     let (editor_tx, editor_rx) = editor_transport::start(config, initial_request);
 
-    let mut controllers: Controllers = FnvHashMap::default();
+    let controllers: Controllers = Arc::new(Mutex::new(FnvHashMap::default()));
     let (controller_remove_tx, controller_remove_rx) = bounded(1);
 
-    'event_loop: loop {
-        select! {
-            recv(editor_rx, request) => {
-                if request.is_none() {
-                    stop_session(&mut controllers);
-                }
-
-                let request = request.unwrap();
-
-                if request.method == "stop" {
-                    stop_session(&mut controllers);
-                }
-
-                if request.method == notification::Exit::METHOD {
-                    exit_editor_session(&mut controllers, &request);
-                    continue 'event_loop;
-                }
-
-                let language_id = path_to_language_id(&extensions, &request.meta.buffile);
-                if language_id.is_none() {
-                    debug!(
-                        "Language server is not configured for extension `{}`",
-                        ext_as_str(&request.meta.buffile)
-                    );
-                    continue 'event_loop;
-                }
-                let language_id = language_id.unwrap();
-
-                let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
-
-                let route = Route {
-                    session: request.meta.session.clone(),
-                    language: language_id.clone(),
-                    root: root_path.clone(),
-                };
-
-                debug!("Routing editor request to {:?}", route);
-
-                match controllers.get(&route).cloned() {
-                    Some(controller_tx) => {
-                        controller_tx.send(request);
-                    }
-                    None => {
-                        // because Kakoune triggers BufClose after KakEnd
-                        // we don't want textDocument/didClose to start server
-                        if request.method == notification::DidCloseTextDocument::METHOD {
-                            continue 'event_loop;
-                        }
-                        spawn_controller(
-                            &mut controllers,
-                            config,
-                            language_id,
-                            root_path,
-                            route,
-                            request,
-                            editor_tx.clone(),
-                            controller_remove_tx.clone()
-                        );
-                    }
-                }
-            }
-
-            recv(controller_remove_rx, route) => {
-                if route.is_none() {
-                    continue 'event_loop;
-                }
-                let route = route.unwrap();
-                controllers.remove(&route);
+    {
+        let controllers = Arc::clone(&controllers);
+        thread::spawn(move || {
+            for route in controller_remove_rx {
+                controllers.lock().unwrap().remove(&route);
                 debug!("Controller {:?} removed", route);
-                continue 'event_loop;
+            }
+        });
+    }
+
+    for request in editor_rx {
+        if request.method == "stop" {
+            stop_session(&controllers);
+        }
+
+        if request.method == notification::Exit::METHOD {
+            exit_editor_session(&controllers, &request);
+            continue;
+        }
+
+        let language_id = path_to_language_id(&extensions, &request.meta.buffile);
+        if language_id.is_none() {
+            debug!(
+                "Language server is not configured for extension `{}`",
+                ext_as_str(&request.meta.buffile)
+            );
+            continue;
+        }
+        let language_id = language_id.unwrap();
+
+        let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
+
+        let route = Route {
+            session: request.meta.session.clone(),
+            language: language_id.clone(),
+            root: root_path.clone(),
+        };
+
+        debug!("Routing editor request to {:?}", route);
+
+        let controller_tx = controllers.lock().unwrap().get(&route).cloned();
+
+        match controller_tx {
+            Some(controller_tx) => {
+                debug!("Controller found, sending request");
+                controller_tx.send(request);
+            }
+            None => {
+                // because Kakoune triggers BufClose after KakEnd
+                // we don't want textDocument/didClose to start server
+                if request.method == notification::DidCloseTextDocument::METHOD {
+                    continue;
+                }
+                debug!("Controller not found, spawning a new one");
+                spawn_controller(
+                    &controllers,
+                    &config,
+                    language_id,
+                    root_path,
+                    route,
+                    request,
+                    editor_tx.clone(),
+                    controller_remove_tx.clone(),
+                );
             }
         }
     }
+    stop_session(&controllers);
 }
 
 struct Controller {
@@ -124,9 +119,8 @@ impl Controller {
         lang_srv_rx: Receiver<ServerMessage>,
         editor_tx: Sender<EditorResponse>,
         editor_rx: Receiver<EditorRequest>,
-        lang_srv_poison_tx: Sender<()>,
-        controller_poison_tx: Sender<()>,
-        controller_poison_rx: Receiver<()>,
+        route: Route,
+        controller_remove_tx: Sender<Route>,
         initial_request: EditorRequest,
         config: Config,
     ) -> Self {
@@ -137,21 +131,11 @@ impl Controller {
             initial_request,
             lang_srv_tx,
             editor_tx,
-            lang_srv_poison_tx,
-            controller_poison_tx,
             config.clone(),
             root_path.to_string(),
+            route,
+            controller_remove_tx,
         )));
-
-        {
-            let ctx = Arc::clone(&ctx_src);
-            thread::spawn(move || {
-                for _msg in controller_poison_rx {
-                    ctx.lock().unwrap().editor_tx = None;
-                    ctx.lock().unwrap().lang_srv_tx = None;
-                }
-            });
-        }
 
         let ctx = Arc::clone(&ctx_src);
         let editor_reader_handle = thread::spawn(move || {
@@ -357,8 +341,8 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
             cquery::publish_semantic_highlighting(params, &mut ctx);
         }
         notification::Exit::METHOD => {
-            debug!("Language server exited, poisoning controller");
-            ctx.controller_poison_tx.send(());
+            debug!("Language server exited, poisoning context");
+            ctx.poison();
         }
         "window/logMessage" => {
             debug!("{:?}", params);
@@ -455,11 +439,12 @@ fn extension_to_language_id_map(config: &Config) -> FnvHashMap<String, String> {
     extensions
 }
 
-fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
+fn exit_editor_session(controllers: &Controllers, request: &EditorRequest) {
     info!(
         "Session `{}` closed, shutting down associated language servers",
         request.meta.session
     );
+    let mut controllers = controllers.lock().unwrap();
     for k in controllers.keys().cloned().collect::<Vec<_>>() {
         if k.session == request.meta.session {
             // should be safe to unwrap because we are iterating controllers' keys
@@ -470,7 +455,7 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
     }
 }
 
-fn stop_session(controllers: &mut Controllers) {
+fn stop_session(controllers: &Controllers) {
     let request = EditorRequest {
         meta: EditorMeta {
             session: "".to_string(),
@@ -482,6 +467,7 @@ fn stop_session(controllers: &mut Controllers) {
         params: toml::Value::Table(toml::value::Table::default()),
     };
     info!("Shutting down language servers and exiting");
+    let mut controllers = controllers.lock().unwrap();
     for k in controllers.keys().cloned().collect::<Vec<_>>() {
         // should be safe to unwrap because we are iterating controllers' keys
         let controller_tx = controllers.remove(&k).unwrap();
@@ -503,7 +489,7 @@ fn ext_as_str(path: &str) -> &str {
 }
 
 fn spawn_controller(
-    controllers: &mut Controllers,
+    controllers: &Controllers,
     config: &Config,
     language_id: String,
     root_path: String,
@@ -513,25 +499,19 @@ fn spawn_controller(
     controller_remove_tx: Sender<Route>,
 ) {
     // should be fine to unwrap because request was already routed which means
-    // language is configured with all mandatory fields in place
+    // language is configured with all mandatory fields in
     let (lang_srv_cmd, lang_srv_args) = language_id_to_server_cmd(config, &language_id).unwrap();
     // NOTE 1024 is arbitrary
     let (controller_tx, controller_rx) = bounded(1024);
-    controllers.insert(route.clone(), controller_tx);
+    controllers
+        .lock()
+        .unwrap()
+        .insert(route.clone(), controller_tx);
     let editor_tx = editor_tx.clone();
-    let (controller_poison_tx, controller_poison_rx) = bounded(1);
-    let (controller_poison_tx_mult, controller_poison_rx_mult) = bounded(1);
-    let controller_remove_tx = controller_remove_tx.clone();
-    let route_mult = route.clone();
-    thread::spawn(move || {
-        for _ in controller_poison_rx_mult {
-            controller_remove_tx.send(route_mult.clone());
-            controller_poison_tx.send(());
-        }
-    });
+
     let config = (*config).clone();
     thread::spawn(move || {
-        let (lang_srv_tx, lang_srv_rx, lang_srv_poison_tx) =
+        let (lang_srv_tx, lang_srv_rx) =
             language_server_transport::start(&lang_srv_cmd, &lang_srv_args);
         let controller = Controller::start(
             &language_id,
@@ -540,13 +520,12 @@ fn spawn_controller(
             lang_srv_rx,
             editor_tx,
             controller_rx,
-            lang_srv_poison_tx,
-            controller_poison_tx_mult,
-            controller_poison_rx,
+            route.clone(),
+            controller_remove_tx,
             request,
             config,
         );
-        controller.wait().expect("Failed to wait for controller");
+        controller.wait().expect("Failed  wait for controller");
         debug!("Controller {:?} exited", route);
     });
 }

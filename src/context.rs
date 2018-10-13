@@ -7,16 +7,16 @@ use types::*;
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
     pub config: Config,
-    pub controller_poison_tx: Sender<()>,
+    pub controller_remove_tx: Sender<Route>,
     pub diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
     pub editor_tx: Option<Sender<EditorResponse>>,
-    pub lang_srv_poison_tx: Sender<()>,
     pub lang_srv_tx: Option<Sender<ServerMessage>>,
     pub language_id: String,
     pub pending_requests: Vec<EditorRequest>,
     pub request_counter: u64,
     pub response_waitlist: FnvHashMap<Id, (EditorMeta, String, EditorParams)>,
     pub root_path: String,
+    pub route: Route,
     pub session: SessionId,
     pub versions: FnvHashMap<String, u64>,
 }
@@ -27,28 +27,32 @@ impl Context {
         initial_request: EditorRequest,
         lang_srv_tx: Sender<ServerMessage>,
         editor_tx: Sender<EditorResponse>,
-        lang_srv_poison_tx: Sender<()>,
-        controller_poison_tx: Sender<()>,
         config: Config,
         root_path: String,
+        route: Route,
+        controller_remove_tx: Sender<Route>,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
             capabilities: None,
             config,
-            controller_poison_tx,
+            controller_remove_tx,
             diagnostics: FnvHashMap::default(),
             editor_tx: Some(editor_tx),
-            lang_srv_poison_tx,
             lang_srv_tx: Some(lang_srv_tx),
             language_id: language_id.to_string(),
             pending_requests: vec![initial_request],
             request_counter: 0,
             response_waitlist: FnvHashMap::default(),
             root_path,
+            route,
             session,
             versions: FnvHashMap::default(),
         }
+    }
+
+    pub fn poison(&mut self) {
+        self.controller_remove_tx.send(self.route.clone());
     }
 
     pub fn call(&mut self, id: Id, method: String, params: impl ToParams) {
