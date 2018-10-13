@@ -9,7 +9,7 @@ pub struct Context {
     pub config: Config,
     pub controller_poison_tx: Sender<()>,
     pub diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
-    pub editor_tx: Sender<EditorResponse>,
+    pub editor_tx: Option<Sender<EditorResponse>>,
     pub lang_srv_poison_tx: Sender<()>,
     pub lang_srv_tx: Option<Sender<ServerMessage>>,
     pub language_id: String,
@@ -38,7 +38,7 @@ impl Context {
             config,
             controller_poison_tx,
             diagnostics: FnvHashMap::default(),
-            editor_tx,
+            editor_tx: Some(editor_tx),
             lang_srv_poison_tx,
             lang_srv_tx: Some(lang_srv_tx),
             language_id: language_id.to_string(),
@@ -89,7 +89,9 @@ impl Context {
     }
 
     pub fn exec(&self, meta: EditorMeta, command: String) {
-        self.editor_tx.send(EditorResponse { meta, command });
+        if let Some(editor_tx) = &self.editor_tx {
+            editor_tx.send(EditorResponse { meta, command });
+        }
     }
 
     pub fn next_request_id(&mut self) -> Id {

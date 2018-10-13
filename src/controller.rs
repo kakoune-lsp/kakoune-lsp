@@ -130,8 +130,6 @@ impl Controller {
         initial_request: EditorRequest,
         config: Config,
     ) -> Self {
-        let (editor_reader_poison_tx, editor_reader_poison_rx) = bounded(1);
-
         let initial_request_meta = initial_request.meta.clone();
 
         let ctx_src = Arc::new(Mutex::new(Context::new(
@@ -148,8 +146,8 @@ impl Controller {
         {
             let ctx = Arc::clone(&ctx_src);
             thread::spawn(move || {
-                for msg in controller_poison_rx {
-                    editor_reader_poison_tx.send(msg);
+                for _msg in controller_poison_rx {
+                    ctx.lock().unwrap().editor_tx = None;
                     ctx.lock().unwrap().lang_srv_tx = None;
                 }
             });
@@ -157,47 +155,34 @@ impl Controller {
 
         let ctx = Arc::clone(&ctx_src);
         let editor_reader_handle = thread::spawn(move || {
-            loop {
-                select! {
-                    recv(editor_rx, msg) =>{
-                        if msg.is_none() {
-                            debug!("Stopping editor dispatcher");
-                            return;
-                        }
-                        let msg = msg.unwrap();
-                        let mut ctx = ctx.lock().expect("Failed to lock context");
-                        // initialize request must be first request from client to language server
-                        // initialized response contains capabilities which we save for future use
-                        // capabilities also serve as a marker of completing initialization
-                        // we park all requests from editor before initialization is complete
-                        // and then dispatch them
-                        if ctx.capabilities.is_some() {
-                            dispatch_editor_request(msg, &mut ctx);
-                        } else {
-                            debug!("Language server is not initialized, parking request");
-                            {
-                                let method: &str = &msg.method;
-                                match method {
+            for msg in editor_rx {
+                let mut ctx = ctx.lock().expect("Failed to lock context");
+                // initialize request must be first request from client to language server
+                // initialized response contains capabilities which we save for future use
+                // capabilities also serve as a marker of completing initialization
+                // we park all requests from editor before initialization is complete
+                // and then dispatch them
+                if ctx.capabilities.is_some() {
+                    dispatch_editor_request(msg, &mut ctx);
+                } else {
+                    debug!("Language server is not initialized, parking request");
+                    {
+                        let method: &str = &msg.method;
+                        match method {
                                     notification::DidOpenTextDocument::METHOD => (),
                                     notification::DidChangeTextDocument::METHOD => (),
                                     notification::DidCloseTextDocument::METHOD => (),
                                     notification::DidSaveTextDocument::METHOD => (),
-                                    // TODO if auto-hover is not enabled we might want warning about parking as well
+                                    // TODO if auto-hover or auto-hl-references is not enabled we might want warning about parking as well
                                     request::HoverRequest::METHOD => (),
+                                    "textDocument/highlightReferences" => (),
                                     _ => ctx.exec(msg.meta.clone(), "lsp-show-error 'Language server is not initialized, parking request'".to_string())
                                 }
-                            }
-                            ctx.pending_requests.push(msg);
-
-                        }
                     }
-
-                    recv(editor_reader_poison_rx) => {
-                        debug!("Stopping editor dispatcher");
-                        return;
-                    }
+                    ctx.pending_requests.push(msg);
                 }
             }
+            debug!("Stopping editor dispatcher");
         });
 
         let ctx = Arc::clone(&ctx_src);
