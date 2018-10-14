@@ -48,7 +48,6 @@ pub fn exit(ctx: &mut Context) {
     // NOTE we can't use Params::None because it's serialized as Value::Array([])
     let params: Option<u8> = None;
     ctx.notify(notification::Exit::METHOD.into(), params);
-    ctx.poison();
 }
 
 pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {

@@ -35,6 +35,7 @@ mod general;
 mod language_features;
 mod language_server_transport;
 mod project_root;
+mod session;
 mod text_sync;
 mod types;
 mod util;
@@ -193,7 +194,7 @@ fn main() {
             error!("Failed to daemonize process");
             exit(1);
         } else {
-            controller::start(&config, matches.value_of("initial-request"));
+            session::start(&config, matches.value_of("initial-request"));
         }
     }
 }
