@@ -14,7 +14,7 @@ use types::*;
 use util::*;
 
 struct ControllerHandle {
-    sender: Sender<EditorRequest>,
+    sender: Option<Sender<EditorRequest>>,
     is_alive: Receiver<Void>,
     thread: JoinHandle<()>,
 }
@@ -107,7 +107,9 @@ pub fn start(config: &Config, initial_request: Option<&str>) {
 
                 if controllers.contains_key(&route) {
                     let controller = controllers.get(&route).unwrap();
-                    controller.sender.send(request);
+                    if let Some(sender) = controller.sender.as_ref() {
+                        sender.send(request);
+                    }
                 } else {
                     // because Kakoune triggers BufClose after KakEnd
                     // we don't want textDocument/didClose to spawn new controller
@@ -134,16 +136,16 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
         "Editor session `{}` closed, shutting down associated language servers",
         request.meta.session
     );
-    // have to clone keys as controllers are mutated inside loop
-    for route in controllers.keys().cloned().collect::<Vec<_>>() {
+    for (route, controller) in controllers.iter_mut() {
         if route.session == request.meta.session {
-            // should be safe to unwrap because we are iterating controllers' keys
-            let controller = controllers.remove(&route).unwrap();
             info!("Exit {} in project {}", route.language, route.root);
             // to notify kak-lsp about editor session end we use the same `exit` notification as
             // used in LSP spec to notify language server to exit, thus we can just clone request
             // and pass it along
-            controller.sender.send(request.clone());
+            if let Some(sender) = controller.sender.as_ref() {
+                sender.send(request.clone());
+            }
+            controller.sender = None;
         }
     }
 }
@@ -161,11 +163,12 @@ fn stop_session(controllers: &mut Controllers) {
         params: toml::Value::Table(toml::value::Table::default()),
     };
     info!("Shutting down language servers and exiting");
-    for k in controllers.keys().cloned().collect::<Vec<_>>() {
-        // should be safe to unwrap because we are iterating controllers' keys
-        let controller = controllers.remove(&k).unwrap();
-        controller.sender.send(request.clone());
-        info!("Exit {} in project {}", k.language, k.root);
+    for (route, controller) in controllers.iter_mut() {
+        if let Some(sender) = controller.sender.as_ref() {
+            sender.send(request.clone());
+        }
+        controller.sender = None;
+        info!("Exit {} in project {}", route.language, route.root);
     }
     stderr().flush().unwrap();
     stdout().flush().unwrap();
@@ -196,7 +199,7 @@ fn spawn_controller(
 
     ControllerHandle {
         is_alive: is_alive_rx,
-        sender: controller_tx,
+        sender: Some(controller_tx),
         thread,
     }
 }
