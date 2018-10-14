@@ -2,8 +2,6 @@
 
 kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for http://kakoune.org[Kakoune] implemented in https://www.rust-lang.org[Rust].
 
-NOTE: Version 5 is compatible with the latest breaking changes of Kakoune (as of 2018-07-11). If you haven't upgraded Kakoune yet then you might want to use version 4
-
 == Installation
 
 === Pre-built binaries
