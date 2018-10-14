@@ -438,11 +438,11 @@ Jump to the next or previous diagnostic error" %{
     evaluate-commands %sh{
         previous=false
         errorCompare="DiagnosticError"
-        if [[ $1 == "--previous" ]]; then
+        if [ $1 = "--previous" ]; then
             previous=true
             shift
         fi
-        if [[ $1 == "--include-warnings" ]]; then
+        if [ $1 = "--include-warnings" ]; then
             errorCompare="Diagnostic"
         fi
         #expand quoting, stores option in $@
@@ -452,19 +452,19 @@ Jump to the next or previous diagnostic error" %{
         current=""
         prev=""
         selection=""
-        for e in $@; do
-            if [[ $e == *"$errorCompare"* ]]; then
+        for e in "$@"; do
+            if [ -z "${e##*${errorCompare}*}" ]; then # e contains errorCompare
                 e=${e%,*}
                 line=${e%.*}
                 column=${e#*.}
-                if [[ $line -eq $kak_cursor_line && $column -eq $kak_cursor_column ]]; then
+                if [ $line -eq $kak_cursor_line ] && [ $column -eq $kak_cursor_column ]; then
                     continue #do not return the current location
                 fi
                 current="$line $column"
                 if [ -z "$first" ]; then
                     first="$current"
                 fi
-                if [[ $line -gt $kak_cursor_line || (($line -eq $kak_cursor_line) && ($column -gt $kak_cursor_column)) ]]; then
+                if [ $line -gt $kak_cursor_line ] || { [ $line -eq $kak_cursor_line ] && [ $column -gt $kak_cursor_column ]; }; then
                     #after the cursor
                     if $previous; then
                         selection="$prev"
@@ -491,9 +491,9 @@ Jump to the next or previous diagnostic error" %{
                 selection="$first"
             fi
         fi    
-        echo "edit $kak_buffile $selection"
-        }
+        printf "edit %b %b" "$kak_buffile" "$selection"
     }
+}
 
 def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
     hook -group lsp-auto-hover global NormalIdle .* %{
