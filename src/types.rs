@@ -6,6 +6,8 @@ use serde_json::Value;
 use std::io::Error;
 use toml;
 
+pub enum Void {}
+
 // Configuration
 
 #[derive(Clone, Deserialize, Debug)]
