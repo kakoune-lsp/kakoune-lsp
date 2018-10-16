@@ -1,5 +1,6 @@
 pub mod completion;
 pub mod cquery;
+pub mod ccls;
 pub mod definition;
 pub mod document_symbol;
 pub mod formatting;
