@@ -92,6 +92,7 @@ It adds:
 * completions
 * `lsp-definition` command to go to definition, mapped to `gd` by default
 * `lsp-hover` command to show hover info;
+* `lsp-find-error` command to jump to the next or previous error in the file;
   to automatically show hover when you move around use `lsp-auto-hover-enable`;
   to show hover anchored to hovered position do `set global lsp_hover_anchor true`
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default

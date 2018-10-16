@@ -433,6 +433,68 @@ def lsp-diagnostic-lines-disable -docstring "Disable diagnostics line flags"  %{
     remove-highlighter global/lsp_error_lines
 }
 
+def lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
+Jump to the next or previous diagnostic error" %{
+    evaluate-commands %sh{
+        previous=false
+        errorCompare="DiagnosticError"
+        if [ $1 = "--previous" ]; then
+            previous=true
+            shift
+        fi
+        if [ $1 = "--include-warnings" ]; then
+            errorCompare="Diagnostic"
+        fi
+        #expand quoting, stores option in $@
+        eval "set -- ${kak_opt_lsp_errors}"
+
+        first=""
+        current=""
+        prev=""
+        selection=""
+        for e in "$@"; do
+            if [ -z "${e##*${errorCompare}*}" ]; then # e contains errorCompare
+                e=${e%,*}
+                line=${e%.*}
+                column=${e#*.}
+                if [ $line -eq $kak_cursor_line ] && [ $column -eq $kak_cursor_column ]; then
+                    continue #do not return the current location
+                fi
+                current="$line $column"
+                if [ -z "$first" ]; then
+                    first="$current"
+                fi
+                if [ $line -gt $kak_cursor_line ] || { [ $line -eq $kak_cursor_line ] && [ $column -gt $kak_cursor_column ]; }; then
+                    #after the cursor
+                    if $previous; then
+                        selection="$prev"
+                    else 
+                        selection="$current"
+                    fi
+                    if [ ! -z "$selection" ]; then
+                        # if a selection is found
+                        break
+                    fi
+                else
+                    prev="$current"
+                fi
+            fi
+        done
+        if [ -z "$first" ]; then
+            # if nothing found
+            echo "echo -markup '{Error}No errors found'" 
+        fi
+        if [ -z "$selection" ]; then #if nothing found past the cursor
+            if $previous; then
+                selection="$current"
+            else 
+                selection="$first"
+            fi
+        fi    
+        printf "edit %b %b" "$kak_buffile" "$selection"
+    }
+}
+
 def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
     hook -group lsp-auto-hover global NormalIdle .* %{
         lsp-hover
@@ -506,7 +568,7 @@ def lsp -params 1.. %sh{
     capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
     auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
-    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable;
+    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable find-error;
         do echo $cmd;
     done
 } %{ eval "lsp-%arg{1}" }
@@ -524,6 +586,8 @@ map global lsp r '<esc>:lsp-references<ret>'            -docstring 'list symbol 
 map global lsp s '<esc>:lsp-signature-help<ret>'        -docstring 'show function signature help'
 map global lsp S '<esc>:lsp-document-symbol<ret>'       -docstring 'list document symbols'
 map global lsp p '<esc>:lsp-workspace-symbol-incr<ret>' -docstring 'search project symbols'
+map global lsp n '<esc>:lsp-find-error<ret>' -docstring 'find next error'
+map global lsp p '<esc>:lsp-find-error --previous<ret>' -docstring 'find previous error'
 
 
 # init
