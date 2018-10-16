@@ -1,3 +1,4 @@
+pub mod ccls;
 pub mod completion;
 pub mod cquery;
 pub mod definition;

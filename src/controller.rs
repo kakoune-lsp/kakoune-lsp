@@ -225,6 +225,24 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "textDocument/referencesHighlight" => {
             references::text_document_references_highlight(meta, params, &mut ctx);
         }
+
+        // CCLS
+        "$ccls/navigate" => {
+            ccls::navigate(meta, params, ctx);
+        }
+        "$ccls/vars" => {
+            ccls::vars(meta, params, ctx);
+        }
+        "$ccls/inheritance" => {
+            ccls::inheritance(meta, params, ctx);
+        }
+        "$ccls/call" => {
+            ccls::call(meta, params, ctx);
+        }
+        "$ccls/member" => {
+            ccls::member(meta, params, ctx);
+        }
+
         _ => {
             warn!("Unsupported method: {}", method);
         }
@@ -238,6 +256,9 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
         }
         "$cquery/publishSemanticHighlighting" => {
             cquery::publish_semantic_highlighting(params, &mut ctx);
+        }
+        "$ccls/publishSemanticHighlight" => {
+            ccls::publish_semantic_highlighting(params, &mut ctx);
         }
         notification::Exit::METHOD => {
             debug!("Language server exited");
@@ -310,6 +331,21 @@ fn dispatch_server_response(
             for msg in requests.drain(..) {
                 dispatch_editor_request(msg, &mut ctx);
             }
+        }
+        "$ccls/navigate" => {
+            ccls::navigate_response(meta, response, &mut ctx);
+        }
+        "$ccls/vars" => {
+            references::editor_references(meta, response, &mut ctx);
+        }
+        "$ccls/inheritance" => {
+            references::editor_references(meta, response, &mut ctx);
+        }
+        "$ccls/call" => {
+            references::editor_references(meta, response, &mut ctx);
+        }
+        "$ccls/member" => {
+            references::editor_references(meta, response, &mut ctx);
         }
         _ => {
             error!("Don't know how to handle response for method: {}", method);

@@ -346,6 +346,105 @@ cat ${pipe}
 rm -rf ${tmp}
 }}
 
+# CCLS Extension
+
+def ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "$ccls/navigate"
+[params]
+direction = "%s"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "$1" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def ccls-vars -docstring "ccls-vars: Find instances of symbol at point." %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "$ccls/vars"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def ccls-inheritance -params 1..2 -docstring "ccls-inheritance <derived|base> [levels]: Find base- or derived classes of symbol at point." %{
+    lsp-did-change
+    nop %sh{
+        derived="false"
+        if [ "$1" = "derived" ]; then
+            derived="true"
+        fi
+        levels="${2:-null}"
+        (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "$ccls/inheritance"
+[params]
+derived   = %s
+levels    = %d
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "$derived" "$levels" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def ccls-call -params 1 -docstring "ccls-call <caller|callee>: Find callers or callees of symbol at point." %{
+    lsp-did-change
+    nop %sh{
+        callee="false"
+        if [ "$1" = "callee" ]; then
+            callee="true"
+        fi
+        (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "$ccls/call"
+[params]
+callee    = %s
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "$callee" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def ccls-member -params 1 -docstring "ccls-member <vars|types|functions>: Find member variables/types/functions of symbol at point." %{
+    lsp-did-change
+    nop %sh{
+        kind=0
+        case "$1" in
+            *var*) kind=1;;
+            *type*) kind=2;;
+            *func*) kind=3;;
+        esac
+        (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "$ccls/member"
+[params]
+kind     = %d
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $kind $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
 # commands called as kak-lsp responses
 
 def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
