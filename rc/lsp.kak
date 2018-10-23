@@ -601,17 +601,18 @@ def lsp -params 1.. %sh{
 # user mode
 
 declare-user-mode lsp
-map global lsp c '<esc>:lsp-capabilities<ret>'          -docstring 'show language server capabilities'
-map global lsp d '<esc>:lsp-definition<ret>'            -docstring 'go to definition'
-map global lsp e '<esc>:lsp-diagnostics<ret>'           -docstring 'list project errors and warnings'
-map global lsp f '<esc>:lsp-formatting<ret>'            -docstring 'format buffer'
-map global lsp h '<esc>:lsp-hover<ret>'                 -docstring 'show info for current position'
-map global lsp r '<esc>:lsp-references<ret>'            -docstring 'list symbol references'
-map global lsp s '<esc>:lsp-signature-help<ret>'        -docstring 'show function signature help'
-map global lsp S '<esc>:lsp-document-symbol<ret>'       -docstring 'list document symbols'
-map global lsp p '<esc>:lsp-workspace-symbol-incr<ret>' -docstring 'search project symbols'
-map global lsp n '<esc>:lsp-find-error<ret>' -docstring 'find next error'
-map global lsp p '<esc>:lsp-find-error --previous<ret>' -docstring 'find previous error'
+map global lsp c '<esc>: lsp-capabilities<ret>'           -docstring 'show language server capabilities'
+map global lsp d '<esc>: lsp-definition<ret>'             -docstring 'go to definition'
+map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list project errors and warnings'
+map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buffer'
+map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
+map global lsp r '<esc>: lsp-references<ret>'             -docstring 'list symbol references'
+map global lsp s '<esc>: lsp-signature-help<ret>'         -docstring 'show function signature help'
+map global lsp S '<esc>: lsp-document-symbol<ret>'        -docstring 'list document symbols'
+map global lsp p '<esc>: lsp-workspace-symbol-incr<ret>'  -docstring 'search project symbols'
+map global lsp n '<esc>: lsp-find-error<ret>'             -docstring 'find next error'
+map global lsp p '<esc>: lsp-find-error --previous<ret>'  -docstring 'find previous error'
+map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highlight-references'
 
 
 # init
