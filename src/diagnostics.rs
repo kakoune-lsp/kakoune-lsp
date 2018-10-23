@@ -68,6 +68,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         client,
         buffile: buffile.to_string(),
         version,
+        fifo: None,
     };
     ctx.exec(meta, command.to_string());
 }

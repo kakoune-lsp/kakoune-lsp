@@ -2,6 +2,7 @@ use crossbeam_channel::Sender;
 use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Id, Params, Version};
 use languageserver_types::*;
+use std::fs;
 use types::*;
 
 pub struct Context {
@@ -81,7 +82,10 @@ impl Context {
     }
 
     pub fn exec(&self, meta: EditorMeta, command: String) {
-        self.editor_tx.send(EditorResponse { meta, command });
+        match meta.fifo {
+            Some(fifo) => fs::write(fifo, command).expect("Failed to write command to fifo"),
+            None => self.editor_tx.send(EditorResponse { meta, command }),
+        }
     }
 
     pub fn next_request_id(&mut self) -> Id {

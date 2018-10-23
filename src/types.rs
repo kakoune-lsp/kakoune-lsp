@@ -68,6 +68,7 @@ pub struct EditorMeta {
     pub client: Option<String>,
     pub buffile: String,
     pub version: u64,
+    pub fifo: Option<String>,
 }
 
 pub type EditorParams = toml::Value;

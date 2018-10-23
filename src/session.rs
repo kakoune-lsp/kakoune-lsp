@@ -158,6 +158,7 @@ fn stop_session(controllers: &mut Controllers) {
             buffile: "".to_string(),
             client: None,
             version: 0,
+            fifo: None,
         },
         method: notification::Exit::METHOD.to_string(),
         params: toml::Value::Table(toml::value::Table::default()),
