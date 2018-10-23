@@ -324,7 +324,7 @@ insertSpaces = %s
 def lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
     lsp-did-change
     eval -no-hooks %sh{
-tmp=$(mktemp -d -t lsp_formatting)
+tmp=$(mktemp -q -d -t 'lsp-formatting.XXXXXX' 2>/dev/null || mktemp -q -d)
 pipe=${tmp}/fifo
 mkfifo ${pipe}
 
