@@ -4,6 +4,7 @@ use languageserver_types::request::Request;
 use languageserver_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
+use std::fs;
 use types::*;
 use url::Url;
 
@@ -31,7 +32,12 @@ fn escape(s: &str) -> String {
     s.replace("'", "''")
 }
 
-pub fn editor_formatting(meta: &EditorMeta, result: Value, ctx: &mut Context) {
+pub fn editor_formatting(
+    meta: &EditorMeta,
+    params: EditorParams,
+    result: Value,
+    ctx: &mut Context,
+) {
     let result = serde_json::from_value(result).expect("Failed to parse formatting response");
     if let TextEditResponse::Array(text_edits) = result {
         let edits = text_edits
@@ -75,10 +81,12 @@ pub fn editor_formatting(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                 )
             })
             .collect::<Vec<_>>();
+
         let select_edits = edits
             .iter()
             .map(|(start, end, _, _)| format!("{},{}", start, end))
             .join(" ");
+
         let apply_edits = edits
             .iter()
             .enumerate()
@@ -99,6 +107,7 @@ pub fn editor_formatting(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                     content
                 )
             }).join("\n");
+
         let command = format!(
             "select {}
             exec -save-regs '' Z
@@ -106,6 +115,20 @@ pub fn editor_formatting(meta: &EditorMeta, result: Value, ctx: &mut Context) {
             select_edits, apply_edits
         );
         let command = format!("eval -draft -save-regs '^' '{}'", escape(&command));
-        ctx.exec(meta.clone(), command);
+
+        let params =
+            FormattingOptions::deserialize(params.clone()).expect("Failed to parse params");
+
+        let mut pipe: Option<String> = None;
+        if let Some(fifo) = params.properties.get("fifo") {
+            if let FormattingProperty::String(fifo) = fifo {
+                pipe = Some(fifo.to_string());
+            }
+        }
+
+        match pipe {
+            Some(pipe) => fs::write(pipe, command).expect("Failed to send formatting commands"),
+            None => ctx.exec(meta.clone(), command),
+        }
     }
 }

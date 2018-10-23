@@ -277,7 +277,7 @@ fn dispatch_server_response(
             document_symbol::editor_document_symbol(meta, response, &mut ctx);
         }
         request::Formatting::METHOD => {
-            formatting::editor_formatting(meta, response, &mut ctx);
+            formatting::editor_formatting(meta, params, response, &mut ctx);
         }
         request::WorkspaceSymbol::METHOD => {
             workspace::editor_workspace_symbol(meta, response, &mut ctx);

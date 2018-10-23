@@ -321,6 +321,29 @@ insertSpaces = %s
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_tab_size}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null }
 }
 
+def lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
+    lsp-did-change
+    eval -no-hooks %sh{
+tmp=$(mktemp -d -t lsp_formatting)
+pipe=${tmp}/fifo
+mkfifo ${pipe}
+
+(printf '
+session = "%s"
+client  = "%s"
+buffile = "%s"
+version = %d
+method  = "textDocument/formatting"
+[params]
+tabSize = %d
+insertSpaces = %s
+fifo = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "${kak_opt_lsp_tab_size}" "${kak_opt_lsp_insert_spaces}" ${pipe} | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null
+
+cat ${pipe}
+rm -rf ${tmp}
+}}
+
 # commands called as kak-lsp responses
 
 def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
@@ -565,7 +588,8 @@ def lsp -params 1.. %sh{
 } %{
     for cmd in start hover definition references signature-help diagnostics document-symbol\
     workspace-symbol workspace-symbol-incr\
-    capabilities stop formatting highlight-references inline-diagnostics-enable inline-diagnostics-disable\
+    capabilities stop formatting formatting-sync highlight-references\
+    inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
     auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
     auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable find-error;
