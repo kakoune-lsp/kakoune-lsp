@@ -39,6 +39,14 @@ pub fn editor_formatting(
 ) {
     let result = serde_json::from_value(result).expect("Failed to parse formatting response");
     if let TextEditResponse::Array(text_edits) = result {
+        // empty text edits processed as a special case because Kakoune's `select` command
+        // doesn't support empty arguments list
+        if text_edits.is_empty() {
+            // nothing to do, but sending command back to the editor is required to handle case when
+            // editor is blocked waiting for response via fifo
+            ctx.exec(meta.clone(), "nop".to_string());
+            return;
+        }
         let edits = text_edits
             .iter()
             .map(|text_edit| {
