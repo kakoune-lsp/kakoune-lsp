@@ -7,6 +7,7 @@ use serde_json::{self, Value};
 use std::str;
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn text_document_hover(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -80,14 +81,12 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
     let position = format!("{}.{}", pos.line + 1, pos.character + 1);
 
     let command = if diagnostics.is_empty() {
-        format!("lsp-show-hover {} %§{}§", position, contents)
+        format!("lsp-show-hover {} {}", position, editor_quote(&contents))
     } else if contents.is_empty() {
-        format!("lsp-show-hover {} %§{}§", position, diagnostics)
+        format!("lsp-show-hover {} {}", position, editor_quote(&diagnostics))
     } else {
-        format!(
-            "lsp-show-hover {} %§{}\n\n{}§",
-            position, contents, diagnostics
-        )
+        let info = format!("{}\n\n{}", contents, diagnostics);
+        format!("lsp-show-hover {} {}", position, editor_quote(&info))
     };
 
     ctx.exec(meta.clone(), command);

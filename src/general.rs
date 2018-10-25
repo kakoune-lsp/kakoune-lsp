@@ -7,6 +7,7 @@ use std::process;
 use toml;
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
@@ -91,9 +92,9 @@ pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {
     features.push("lsp-diagnostics");
 
     let command = format!(
-        "info %§kak-lsp commands supported by {} language server:\n\n{}§",
+        "info 'kak-lsp commands supported by {} language server:\n\n{}'",
         ctx.language_id,
-        features.join("\n")
+        editor_escape(&features.join("\n"))
     );
     ctx.exec(meta.clone(), command);
 }

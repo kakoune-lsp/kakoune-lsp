@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{self, Value};
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn text_document_signature_help(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -55,6 +56,10 @@ pub fn editor_signature_help(
     let contents = &active_signature.label;
     let position = params.position;
     let position = format!("{}.{}", position.line + 1, position.character + 1);
-    let command = format!("lsp-show-signature-help {} %§{}§", position, contents);
+    let command = format!(
+        "lsp-show-signature-help {} {}",
+        position,
+        editor_quote(&contents)
+    );
     ctx.exec(meta.clone(), command);
 }

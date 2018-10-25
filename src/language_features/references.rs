@@ -66,7 +66,7 @@ pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                 }
                 let mut buffer = BufReader::new(file.unwrap()).lines();
                 let mut next_buf_line = 0;
-                return group
+                group
                     .map(|location| {
                         let p = location.range.start;
                         let loc_line = p.line as usize;
@@ -87,22 +87,23 @@ pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                             }
                             Some(Err(e)) => {
                                 error!("Failed to read line {} in {}: {}", name, loc_line, e);
-                                return String::new();
+                                String::new()
                             }
                             None => {
                                 error!(
                                     "End of file reached, line {} not found in {}",
                                     loc_line, name,
                                 );
-                                return String::new();
+                                String::new()
                             }
                         }
-                    }).join("\n");
+                    }).join("\n")
             }).join("\n");
 
         let command = format!(
-            "lsp-show-references %§{}§ %§{}§",
-            ctx.root_path, content,
+            "lsp-show-references {} {}",
+            editor_quote(&ctx.root_path),
+            editor_quote(&content),
         );
         ctx.exec(meta.clone(), command);
     };

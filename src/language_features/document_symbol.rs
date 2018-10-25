@@ -40,8 +40,9 @@ pub fn editor_document_symbol(meta: &EditorMeta, result: Value, ctx: &mut Contex
     }
     let content = format_symbol_information(result, ctx);
     let command = format!(
-        "lsp-show-document-symbol %§{}§ %§{}§",
-        ctx.root_path, content,
+        "lsp-show-document-symbol {} {}",
+        editor_quote(&ctx.root_path),
+        editor_quote(&content),
     );
     ctx.exec(meta.clone(), command);
 }

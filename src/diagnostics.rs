@@ -47,21 +47,23 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             )
         }).join(" ");
     let command = format!(
-        // Always show a space on line one if no other highlighter is there,
-        // to make sure the column always has the right width
-        // Also wrap it in another eval and quotes, to make sure the %opt[] tags are expanded
-        "
-        eval -buffer %§{}§ %§
-            set buffer lsp_diagnostic_count {}
-            set buffer lsp_errors {} {}
-            eval \"set buffer lsp_error_lines {} {} '1| ' \"
-        §",
-        buffile,
+        "set buffer lsp_diagnostic_count {}
+         set buffer lsp_errors {} {}
+         eval \"set buffer lsp_error_lines {} {} '1| ' \"",
         diagnostics.len(),
         version,
         ranges,
         version,
         line_flags
+    );
+    let command = format!(
+        // Always show a space on line one if no other highlighter is there,
+        // to make sure the column always has the right width
+        // Also wrap it in another eval and quotes, to make sure the %opt[] tags are expanded
+        "
+        eval -buffer {} {}",
+        editor_quote(buffile),
+        editor_quote(&command)
     );
     let meta = EditorMeta {
         session,
@@ -100,8 +102,9 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
                 }).collect::<Vec<_>>()
         }).join("\n");
     let command = format!(
-        "lsp-show-diagnostics %§{}§ %§{}§",
-        ctx.root_path, content,
+        "lsp-show-diagnostics {} {}",
+        editor_quote(&ctx.root_path),
+        editor_quote(&content),
     );
     ctx.exec(meta.clone(), command);
 }

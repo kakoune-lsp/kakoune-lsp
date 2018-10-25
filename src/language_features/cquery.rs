@@ -182,9 +182,11 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
                 }
             })
         }).join(" ");
+    let command = format!("set buffer cquery_semhl {} {}", version, ranges);
     let command = format!(
-        "eval -buffer %§{}§ %§set buffer cquery_semhl {} {}§",
-        buffile, version, ranges
+        "eval -buffer {} {}",
+        editor_quote(buffile),
+        editor_quote(&command)
     );
     let meta = EditorMeta {
         session,

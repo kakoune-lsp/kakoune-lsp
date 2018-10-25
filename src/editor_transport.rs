@@ -8,7 +8,7 @@ use std::thread;
 use std::time::Duration;
 use toml;
 use types::*;
-use util;
+use util::*;
 
 pub fn start(
     config: &Config,
@@ -75,10 +75,11 @@ pub fn start(
                         }
                         let stdin = stdin.unwrap();
                         let command = match response.meta.client.clone() {
-                            Some(client) => {
-                                // NOTE fingers crossed no 🦀 will appear in response.command
-                                format!("eval -client {} %🦀{}🦀", client, response.command)
-                            }
+                            Some(client) => format!(
+                                "eval -client {} {}",
+                                client,
+                                editor_quote(&response.command)
+                            ),
                             None => response.command.to_string(),
                         };
                         debug!("To editor `{}`: {}", response.meta.session, command);
@@ -132,7 +133,7 @@ pub fn start_unix(
     reader_tx: Sender<EditorRequest>,
     timeout_tx: Option<Sender<()>>,
 ) {
-    let mut path = util::sock_dir();
+    let mut path = sock_dir();
     path.push(&session);
 
     if path.exists() {

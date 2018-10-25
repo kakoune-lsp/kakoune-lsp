@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde_json::{self, Value};
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn text_document_formatting(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let options = FormattingOptions::deserialize(params.clone());
@@ -25,10 +26,6 @@ pub fn text_document_formatting(meta: &EditorMeta, params: EditorParams, ctx: &m
         (meta.clone(), request::Formatting::METHOD.into(), params),
     );
     ctx.call(id, request::Formatting::METHOD.into(), req_params);
-}
-
-fn escape(s: &str) -> String {
-    s.replace("'", "''")
 }
 
 pub fn editor_formatting(
@@ -83,7 +80,7 @@ pub fn editor_formatting(
                         if !insert { start_char } else { end_char }
                     ),
                     format!("{}.{}", end_line, end_char),
-                    escape(&new_text),
+                    new_text,
                     insert,
                 )
             })
@@ -100,7 +97,7 @@ pub fn editor_formatting(
             .map(|(i, (_, _, content, insert))| {
                 format!(
                     "exec 'z{}<space>'
-                    {} '{}'",
+                    {} {}",
                     if i > 0 {
                         format!("{})", i)
                     } else {
@@ -111,7 +108,7 @@ pub fn editor_formatting(
                     } else {
                         "lsp-replace-selection"
                     },
-                    content
+                    editor_quote(&content)
                 )
             }).join("\n");
 
@@ -121,7 +118,7 @@ pub fn editor_formatting(
             {}",
             select_edits, apply_edits
         );
-        let command = format!("eval -draft -save-regs '^' '{}'", escape(&command));
+        let command = format!("eval -draft -save-regs '^' {}", editor_quote(&command));
         ctx.exec(meta.clone(), command);
     }
 }

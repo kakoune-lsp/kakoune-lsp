@@ -114,8 +114,9 @@ pub fn editor_workspace_symbol(meta: &EditorMeta, result: Value, ctx: &mut Conte
     let result = result.unwrap();
     let content = format_symbol_information(result, ctx);
     let command = format!(
-        "lsp-show-workspace-symbol %§{}§ %§{}§",
-        ctx.root_path, content,
+        "lsp-show-workspace-symbol {} {}",
+        editor_quote(&ctx.root_path),
+        editor_quote(&content),
     );
     ctx.exec(meta.clone(), command);
 }

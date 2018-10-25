@@ -11,6 +11,7 @@ use languageserver_types::*;
 use serde_json::{self, Value};
 use text_sync::*;
 use types::*;
+use util::*;
 use workspace;
 
 /// Start controller.
@@ -144,10 +145,10 @@ pub fn start(
                                         ),
                                         _ => format!(
                                             "{} language server error: {}",
-                                            ctx.language_id, failure.error.message
+                                            ctx.language_id, editor_quote(&failure.error.message)
                                         ),
                                     };
-                                    ctx.exec(meta, format!("lsp-show-error %§{}§", msg));
+                                    ctx.exec(meta, format!("lsp-show-error {}", editor_quote(&msg)));
                                 } else {
                                     error!("Id {:?} is not in waitlist!", failure.id);
                                 }

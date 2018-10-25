@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{self, Value};
 use types::*;
 use url::Url;
+use util::*;
 
 pub fn text_document_definition(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone());
@@ -41,7 +42,12 @@ pub fn editor_definition(meta: &EditorMeta, result: Value, ctx: &mut Context) {
         let path = location.uri.to_file_path().unwrap();
         let filename = path.to_str().unwrap();
         let p = location.range.start;
-        let command = format!("edit %§{}§ {} {}", filename, p.line + 1, p.character + 1);
+        let command = format!(
+            "edit {} {} {}",
+            editor_quote(filename),
+            p.line + 1,
+            p.character + 1
+        );
         ctx.exec(meta.clone(), command);
     };
 }

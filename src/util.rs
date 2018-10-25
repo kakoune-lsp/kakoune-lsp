@@ -97,3 +97,13 @@ pub fn ext_as_str(path: &str) -> &str {
         .to_str()
         .unwrap_or_default()
 }
+
+/// Escape Kakoune string wrapped into single quote
+pub fn editor_escape(s: &str) -> String {
+    s.replace("'", "''")
+}
+
+/// Convert to Kakoune string by wrapping into quotes and escaping
+pub fn editor_quote(s: &str) -> String {
+    format!("'{}'", editor_escape(s))
+}
