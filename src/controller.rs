@@ -244,6 +244,9 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
         "window/progress" => {
             debug!("{:?}", params);
         }
+        "telemetry/event" => {
+            debug!("{:?}", params);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
         }
