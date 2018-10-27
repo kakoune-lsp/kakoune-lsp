@@ -21,9 +21,9 @@ use workspace;
 /// responses back to editor.
 pub fn start(
     editor_tx: Sender<EditorResponse>,
-    editor_rx: Receiver<EditorRequest>,
+    editor_rx: &Receiver<EditorRequest>,
     is_alive: Sender<Void>,
-    route: Route,
+    route: &Route,
     initial_request: EditorRequest,
     config: Config,
 ) {
@@ -31,7 +31,7 @@ pub fn start(
     let options;
     {
         // should be fine to unwrap because request was already routed which means language is configured
-        let lang = config.language.get(&route.language).unwrap();
+        let lang = &config.language[&route.language];
         options = lang.initialization_options.clone();
         lang_srv = language_server_transport::start(&lang.command, &lang.args);
     }

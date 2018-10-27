@@ -44,11 +44,11 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> Result<EditorTra
                 return Err(1);
             }
         }
-        thread::spawn(move || start_unix(path, reader_tx))
+        thread::spawn(move || start_unix(&path, &reader_tx))
     } else {
         let port = config.server.port;
         let ip = config.server.ip.parse().expect("Failed to parse IP");
-        thread::spawn(move || start_tcp(ip, port, reader_tx))
+        thread::spawn(move || start_tcp(ip, port, &reader_tx))
     };
 
     // NOTE 1024 is arbitrary
@@ -100,7 +100,7 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> Result<EditorTra
     })
 }
 
-pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: Sender<EditorRequest>) {
+pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: &Sender<EditorRequest>) {
     info!("Starting editor transport on {}:{}", ip, port);
     let addr = SocketAddr::new(ip, port);
 
@@ -129,7 +129,7 @@ pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: Sender<EditorRequest>) {
     }
 }
 
-pub fn start_unix(path: path::PathBuf, reader_tx: Sender<EditorRequest>) {
+pub fn start_unix(path: &path::PathBuf, reader_tx: &Sender<EditorRequest>) {
     let listener = UnixListener::bind(&path);
 
     if listener.is_err() {

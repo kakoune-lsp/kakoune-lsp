@@ -120,7 +120,7 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
                 debug!("Routing editor request to {:?}", route);
 
                 if controllers.contains_key(&route) {
-                    let controller = controllers.get(&route).unwrap();
+                    let controller = &controllers[&route];
                     if let Some(sender) = controller.sender.as_ref() {
                         sender.send(request);
                     }
@@ -204,9 +204,9 @@ fn spawn_controller(
     let thread = thread::spawn(move || {
         controller::start(
             editor_tx,
-            controller_rx,
+            &controller_rx,
             is_alive_tx,
-            route.clone(),
+            &route,
             request,
             config,
         );

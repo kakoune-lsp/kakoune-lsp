@@ -49,9 +49,8 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
     let reader_thread = thread::spawn(move || {
-        match reader_loop(reader, &reader_tx) {
-            Err(msg) => error!("{}", msg),
-            _ => (),
+        if let Err(msg) = reader_loop(reader, &reader_tx) {
+            error!("{}", msg);
         }
         // NOTE prevent zombie
         debug!("Waiting for language server process end");
@@ -119,10 +118,8 @@ fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Resu
         }
         let content_len = headers
             .get("Content-Length")
-            .ok_or(Error::new(
-                ErrorKind::Other,
-                "Failed to get Content-Length header",
-            ))?.parse()
+            .ok_or_else(|| Error::new(ErrorKind::Other, "Failed to get Content-Length header"))?
+            .parse()
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to parse Content-Length header"))?;
         let mut content = vec![0; content_len];
         reader.read_exact(&mut content)?;

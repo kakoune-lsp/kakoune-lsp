@@ -19,7 +19,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         return;
     }
     let version = *version.unwrap();
-    let diagnostics = ctx.diagnostics.get(buffile).unwrap();
+    let diagnostics = &ctx.diagnostics[buffile];
     let ranges = diagnostics
         .iter()
         .map(|x| {
