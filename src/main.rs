@@ -54,8 +54,9 @@ use std::io::{stdin, stdout, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
-use std::process::{exit, Command};
+use std::process::Command;
 use types::*;
+use util::*;
 
 fn main() {
     let matches = App::new("kak-lsp")
@@ -186,15 +187,15 @@ fn main() {
         kakoune(&config);
     } else {
         let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
-        if matches.is_present("daemonize") && Daemonize::new()
-            .pid_file(format!("/tmp/kak-lsp-{}.pid", session))
-            .start()
-            .is_err()
+        let mut pid_path = util::temp_dir();
+        pid_path.push(format!("{}.pid", session));
+        if matches.is_present("daemonize") && Daemonize::new().pid_file(&pid_path).start().is_err()
         {
             error!("Failed to daemonize process");
-            exit(1);
+            goodbye(&config, 1);
         } else {
-            session::start(&config, matches.value_of("initial-request"));
+            let code = session::start(&config, matches.value_of("initial-request"));
+            goodbye(&config, code);
         }
     }
 }
@@ -225,7 +226,7 @@ fn request(config: &Config) {
         .read_to_end(&mut input)
         .expect("Failed to read stdin");
     if let Some(ref session) = config.server.session {
-        let mut path = util::sock_dir();
+        let mut path = util::temp_dir();
         path.push(session);
         if let Ok(mut stream) = UnixStream::connect(&path) {
             stream

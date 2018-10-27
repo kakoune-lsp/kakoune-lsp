@@ -1,19 +1,22 @@
-use crossbeam_channel::{after, bounded, Receiver, Sender};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use std::fs;
-use std::io::{stderr, stdout, Read, Write};
+use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::process::{exit, Command, Stdio};
+use std::path;
+use std::process::{Command, Stdio};
 use std::thread;
-use std::time::Duration;
 use toml;
 use types::*;
 use util::*;
 
-pub fn start(
-    config: &Config,
-    initial_request: Option<&str>,
-) -> (Sender<EditorResponse>, Receiver<EditorRequest>) {
+pub struct EditorTransport {
+    pub sender: Sender<EditorResponse>,
+    pub receiver: Receiver<EditorRequest>,
+    pub thread: thread::JoinHandle<()>,
+}
+
+pub fn start(config: &Config, initial_request: Option<&str>) -> Result<EditorTransport, i32> {
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
 
@@ -25,39 +28,32 @@ pub fn start(
 
     if let Some(ref session) = config.server.session {
         let session = session.to_string();
-        let timeout = config.server.timeout;
-
-        if timeout > 0 {
-            let (timeout_tx, timeout_rx) = bounded(1);
-            thread::spawn(move || {
-                let timeout = Duration::from_secs(timeout);
-                loop {
-                    select! {
-                        recv(timeout_rx) => {}
-                        recv(after(timeout)) => {
-                            info!("Exiting by timeout");
-                            stderr().flush().unwrap();
-                            stdout().flush().unwrap();
-                            thread::sleep(Duration::from_secs(1));
-                            // TODO clean exit
-                            exit(0);
-                        }
-                    }
-                }
-            });
-            thread::spawn(move || start_unix(session, reader_tx, Some(timeout_tx)));
-        } else {
-            thread::spawn(move || start_unix(session, reader_tx, None));
+        let mut path = temp_dir();
+        path.push(&session);
+        if path.exists() {
+            if UnixStream::connect(&path).is_err() {
+                if fs::remove_file(&path).is_err() {
+                    error!(
+                        "Failed to clean up dead session at {}",
+                        path.to_str().unwrap()
+                    );
+                    return Err(1);
+                };
+            } else {
+                error!("Server is already running for session {}", session);
+                return Err(1);
+            }
         }
+        thread::spawn(move || start_unix(path, reader_tx))
     } else {
         let port = config.server.port;
         let ip = config.server.ip.parse().expect("Failed to parse IP");
-        thread::spawn(move || start_tcp(ip, port, reader_tx));
-    }
+        thread::spawn(move || start_tcp(ip, port, reader_tx))
+    };
 
     // NOTE 1024 is arbitrary
     let (writer_tx, writer_rx): (Sender<EditorResponse>, Receiver<EditorResponse>) = bounded(1024);
-    thread::spawn(move || {
+    let writer_thread = thread::spawn(move || {
         for response in writer_rx {
             match Command::new("kak")
                 .args(&["-p", &response.meta.session])
@@ -96,7 +92,12 @@ pub fn start(
         }
     });
 
-    (writer_tx, reader_rx)
+    Ok(EditorTransport {
+        sender: writer_tx,
+        receiver: reader_rx,
+        // not joining reader thread because it's unclear how to stop it
+        thread: writer_thread,
+    })
 }
 
 pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: Sender<EditorRequest>) {
@@ -128,43 +129,12 @@ pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: Sender<EditorRequest>) {
     }
 }
 
-pub fn start_unix(
-    session: String,
-    reader_tx: Sender<EditorRequest>,
-    timeout_tx: Option<Sender<()>>,
-) {
-    let mut path = sock_dir();
-    path.push(&session);
-
-    if path.exists() {
-        if UnixStream::connect(&path).is_err() {
-            if fs::remove_file(&path).is_err() {
-                error!(
-                    "Failed to clean up dead session at {}",
-                    path.to_str().unwrap()
-                );
-                stderr().flush().unwrap();
-                stdout().flush().unwrap();
-                thread::sleep(Duration::from_secs(1));
-                exit(1);
-            };
-        } else {
-            error!("Server is already running for session {}", session);
-            stderr().flush().unwrap();
-            stdout().flush().unwrap();
-            thread::sleep(Duration::from_secs(1));
-            exit(1);
-        }
-    }
-
+pub fn start_unix(path: path::PathBuf, reader_tx: Sender<EditorRequest>) {
     let listener = UnixListener::bind(&path);
 
     if listener.is_err() {
         error!("Failed to bind {}", path.to_str().unwrap());
-        stderr().flush().unwrap();
-        stdout().flush().unwrap();
-        thread::sleep(Duration::from_secs(1));
-        exit(1);
+        return;
     }
 
     let listener = listener.unwrap();
@@ -182,9 +152,6 @@ pub fn start_unix(
                         let request: EditorRequest =
                             toml::from_str(&request).expect("Failed to parse editor request");
                         reader_tx.send(request);
-                        if let Some(ref timeout_tx) = timeout_tx {
-                            timeout_tx.send(());
-                        }
                     }
                     Err(e) => {
                         error!("Failed to read from stream: {}", e);

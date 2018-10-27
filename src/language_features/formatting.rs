@@ -83,8 +83,7 @@ pub fn editor_formatting(
                     new_text,
                     insert,
                 )
-            })
-            .collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
 
         let select_edits = edits
             .iter()

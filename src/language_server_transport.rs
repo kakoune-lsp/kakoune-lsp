@@ -9,7 +9,13 @@ use std::process::{Command, Stdio};
 use std::thread;
 use types::*;
 
-pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<ServerMessage>) {
+pub struct LanguageServerTransport {
+    pub sender: Sender<ServerMessage>,
+    pub receiver: Receiver<ServerMessage>,
+    pub thread: thread::JoinHandle<()>,
+}
+
+pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
     info!("Starting Language server `{} {}`", cmd, args.join(" "));
     let mut child = Command::new(cmd)
         .args(args)
@@ -24,7 +30,7 @@ pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<Ser
 
     // XXX temporary way of tracing language server errors
     let mut stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
-    thread::spawn(move || loop {
+    let error_thread = thread::spawn(move || loop {
         let mut buf = String::new();
         match stderr.read_to_string(&mut buf) {
             Ok(_) => {
@@ -42,7 +48,7 @@ pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<Ser
 
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
-    thread::spawn(move || {
+    let reader_thread = thread::spawn(move || {
         match reader_loop(reader, &reader_tx) {
             Err(msg) => error!("{}", msg),
             _ => (),
@@ -64,15 +70,31 @@ pub fn start(cmd: &str, args: &[String]) -> (Sender<ServerMessage>, Receiver<Ser
 
     // NOTE 1024 is arbitrary
     let (writer_tx, writer_rx): (Sender<ServerMessage>, Receiver<ServerMessage>) = bounded(1024);
-    thread::spawn(move || {
+    let writer_thread = thread::spawn(move || {
         if writer_loop(writer, &writer_rx).is_err() {
             error!("Failed to write message to language server");
         }
         // NOTE we rely on assumption that if write failed then read is failed as well
-        // or fill fail shortly and do all exiting stuff
+        // or will fail shortly and do all exiting stuff
     });
 
-    (writer_tx, reader_rx)
+    let rendezvous = thread::spawn(move || {
+        if error_thread.join().is_err() {
+            error!("Language server error monitoring thread panicked");
+        };
+        if reader_thread.join().is_err() {
+            error!("Language server reader thread panicked");
+        };
+        if writer_thread.join().is_err() {
+            error!("Language server writer thread panicked");
+        };
+    });
+
+    LanguageServerTransport {
+        sender: writer_tx,
+        receiver: reader_rx,
+        thread: rendezvous,
+    }
 }
 
 fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Result<()> {
@@ -138,5 +160,5 @@ fn writer_loop(mut writer: impl Write, rx: &Receiver<ServerMessage>) -> io::Resu
     // NOTE we rely on the assumption that language server will exit when its stdin is closed
     // without need to kill child process
     debug!("Received signal to stop language server, closing pipe");
-    return Ok(());
+    Ok(())
 }

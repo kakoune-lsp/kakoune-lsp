@@ -1,12 +1,10 @@
 use controller;
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam_channel::{after, bounded, Receiver, Sender};
 use editor_transport;
 use fnv::FnvHashMap;
 use languageserver_types::notification::Notification;
 use languageserver_types::*;
 use project_root::find_project_root;
-use std::io::{stderr, stdout, Write};
-use std::process;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use toml;
@@ -29,15 +27,21 @@ type Controllers = FnvHashMap<Route, ControllerHandle>;
 ///
 /// `initial_request` could be passed to avoid extra synchronization churn if event loop is started
 /// as a result of request from editor.
-pub fn start(config: &Config, initial_request: Option<&str>) {
+pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
     info!("Starting main event loop");
+
+    let editor = editor_transport::start(config, initial_request);
+    if let Err(code) = editor {
+        return code;
+    }
+    let editor = editor.unwrap();
 
     let extensions = extension_to_language_id_map(&config);
     let languages = config.language.clone();
 
-    let (editor_tx, editor_rx) = editor_transport::start(config, initial_request);
-
     let mut controllers: Controllers = FnvHashMap::default();
+
+    let timeout = config.server.timeout;
 
     'event_loop: loop {
         // have to clone & collect as we mutate controllers inside `select!`
@@ -46,7 +50,17 @@ pub fn start(config: &Config, initial_request: Option<&str>) {
             .map(|c| c.is_alive.clone())
             .collect::<Vec<_>>();
 
+        let timeout_channel = if timeout > 0 {
+            Some(after(Duration::from_secs(timeout)))
+        } else {
+            None
+        };
+
         select! {
+            recv(timeout_channel) => {
+                break 'event_loop
+            }
+
             recv(is_alive, msg, from) => {
                 assert!(msg.is_none()); // msg type is Void, so we only can get a closed event
                 let mut route: Option<Route> = None;
@@ -62,7 +76,7 @@ pub fn start(config: &Config, initial_request: Option<&str>) {
                 };
             }
 
-            recv(editor_rx, request) => {
+            recv(editor.receiver, request) => {
                 // editor_tx was closed, either because of the unrecoverable error or timeout
                 // nothing we can do except to gracefully exit by stopping session
                 // luckily, next `kak-lsp --request` invocation would spin up fresh session
@@ -120,7 +134,7 @@ pub fn start(config: &Config, initial_request: Option<&str>) {
                         config.clone(),
                         route.clone(),
                         request,
-                        editor_tx.clone(),
+                        editor.sender.clone(),
                     );
                     controllers.insert(route, controller);
                 }
@@ -128,6 +142,12 @@ pub fn start(config: &Config, initial_request: Option<&str>) {
         }
     }
     stop_session(&mut controllers);
+    // signal to editor transport to stop writer thread
+    drop(editor.sender);
+    if editor.thread.join().is_err() {
+        error!("Editor transport panicked");
+    }
+    0
 }
 
 /// Reap controllers associated with editor session.
@@ -164,17 +184,16 @@ fn stop_session(controllers: &mut Controllers) {
         params: toml::Value::Table(toml::value::Table::default()),
     };
     info!("Shutting down language servers and exiting");
-    for (route, controller) in controllers.iter_mut() {
+    for (route, mut controller) in controllers.drain() {
         if let Some(sender) = controller.sender.as_ref() {
             sender.send(request.clone());
         }
         controller.sender = None;
+        if controller.thread.join().is_err() {
+            error!("{:?} controller panicked", route);
+        };
         info!("Exit {} in project {}", route.language, route.root);
     }
-    stderr().flush().unwrap();
-    stdout().flush().unwrap();
-    thread::sleep(Duration::from_secs(1));
-    process::exit(0);
 }
 
 fn spawn_controller(

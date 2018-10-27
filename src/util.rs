@@ -2,11 +2,13 @@ use context::*;
 use fnv::FnvHashMap;
 use itertools::Itertools;
 use languageserver_types::*;
+use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
-use std::{env, fs, path};
+use std::time::Duration;
+use std::{env, fs, path, process, thread};
 use types::*;
 
-pub fn sock_dir() -> path::PathBuf {
+pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
     path.push("kak-lsp");
     fs::DirBuilder::new()
@@ -106,4 +108,26 @@ pub fn editor_escape(s: &str) -> String {
 /// Convert to Kakoune string by wrapping into quotes and escaping
 pub fn editor_quote(s: &str) -> String {
     format!("'{}'", editor_escape(s))
+}
+
+// Cleanup and gracefully exit
+pub fn goodbye(config: &Config, code: i32) {
+    if code == 0 {
+        if let Some(ref session) = config.server.session {
+            let path = temp_dir();
+            let sock_path = path.join(session);
+            let pid_path = path.join(format!("{}.pid", session));
+            if fs::remove_file(sock_path).is_err() {
+                warn!("Failed to remove socket file");
+            };
+            if pid_path.exists() && fs::remove_file(pid_path).is_err() {
+                warn!("Failed to remove pid file");
+            };
+        }
+    }
+    stderr().flush().unwrap();
+    stdout().flush().unwrap();
+    // give stdio a chance to actually flush
+    thread::sleep(Duration::from_secs(1));
+    process::exit(code);
 }

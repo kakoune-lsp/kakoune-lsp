@@ -27,16 +27,13 @@ pub fn start(
     initial_request: EditorRequest,
     config: Config,
 ) {
-    let lang_srv_tx: Sender<ServerMessage>;
-    let lang_srv_rx: Receiver<ServerMessage>;
+    let lang_srv: language_server_transport::LanguageServerTransport;
     let options;
     {
         // should be fine to unwrap because request was already routed which means language is configured
         let lang = config.language.get(&route.language).unwrap();
         options = lang.initialization_options.clone();
-        let srv = language_server_transport::start(&lang.command, &lang.args);
-        lang_srv_tx = srv.0;
-        lang_srv_rx = srv.1;
+        lang_srv = language_server_transport::start(&lang.command, &lang.args);
     }
 
     let initial_request_meta = initial_request.meta.clone();
@@ -44,7 +41,7 @@ pub fn start(
     let mut ctx = Context::new(
         &route.language,
         initial_request,
-        lang_srv_tx,
+        lang_srv.sender,
         editor_tx,
         config,
         route.root.clone(),
@@ -88,7 +85,7 @@ pub fn start(
                     ctx.pending_requests.push(msg);
                 }
             }
-            recv(lang_srv_rx, msg) => {
+            recv(lang_srv.receiver, msg) => {
                 if msg.is_none() {
                     break 'event_loop;
                 }
@@ -159,7 +156,13 @@ pub fn start(
             }
         }
     }
+    // signal to session that it's okay to join controller thread
     drop(is_alive);
+    // signal to language server transport to stop writer thread
+    drop(ctx.lang_srv_tx);
+    if lang_srv.thread.join().is_err() {
+        error!("Language thread panicked");
+    };
 }
 
 fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
