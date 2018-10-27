@@ -125,11 +125,6 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
                         sender.send(request);
                     }
                 } else {
-                    // because Kakoune triggers BufClose after KakEnd
-                    // we don't want textDocument/didClose to spawn new controller
-                    if request.method == notification::DidCloseTextDocument::METHOD {
-                        continue 'event_loop;
-                    }
                     let controller = spawn_controller(
                         config.clone(),
                         route.clone(),

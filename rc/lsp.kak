@@ -286,6 +286,7 @@ done
 }
 
 def -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
+    remove-hooks global lsp
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
@@ -297,6 +298,7 @@ method  = "exit"
 }
 
 def lsp-stop -docstring "Stop kak-lsp session" %{
+    remove-hooks global lsp
     nop %sh{ (printf '
 session = "%s"
 client  = "%s"
