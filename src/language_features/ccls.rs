@@ -349,7 +349,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         client,
         buffile: buffile.to_string(),
         version,
-        fifo: None
+        fifo: None,
     };
     ctx.exec(meta, command.to_string());
 }
