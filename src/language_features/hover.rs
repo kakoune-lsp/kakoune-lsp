@@ -58,7 +58,9 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
                             || (start.line <= pos.line
                                 && end.line == pos.line
                                 && pos.character <= end.character)
-                    }).map(|x| format!("• {}", str::trim(&x.message)))
+                    }).map(|x| str::trim(&x.message))
+                    .filter(|x| !x.is_empty())
+                    .map(|x| format!("• {}", x))
                     .join("\n"),
             )
         }).unwrap_or_else(String::new);
@@ -68,7 +70,9 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
             HoverContents::Scalar(contents) => contents.plaintext(),
             HoverContents::Array(contents) => contents
                 .into_iter()
-                .map(|x| format!("• {}", str::trim(&x.plaintext())))
+                .map(|x| str::trim(&x.plaintext()).to_owned())
+                .filter(|x| !x.is_empty())
+                .map(|x| format!("• {}", x))
                 .join("\n"),
             HoverContents::Markup(contents) => contents.value,
         },
