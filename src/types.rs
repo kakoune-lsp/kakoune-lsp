@@ -119,6 +119,13 @@ pub struct PositionParams {
     pub position: Position,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TextDocumentRenameParams {
+    pub position: Position,
+    pub new_name: String,
+}
+
 // Language Server
 
 // XXX serde(untagged) ?

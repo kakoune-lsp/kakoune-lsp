@@ -155,6 +155,26 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
 }
 
+def lsp-rename -params 1 -docstring "Rename symbol under the main cursor" %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+version   = %d
+method    = "textDocument/rename"
+[params]
+newName   = "%s"
+[params.position]
+line      = %d
+character = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_timestamp}" "$1" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & }
+}
+
+def lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
+    prompt 'New name: ' %{ lsp-rename %val{text} }
+}
+
 def lsp-signature-help -docstring "Request signature help for the main cursor position" %{
     lsp-did-change
     nop %sh{ (printf '
@@ -688,7 +708,7 @@ def lsp -params 1.. %sh{
     fi
 } %{
     for cmd in start hover definition references signature-help diagnostics document-symbol\
-    workspace-symbol workspace-symbol-incr\
+    workspace-symbol workspace-symbol-incr rename rename-prompt\
     capabilities stop formatting formatting-sync highlight-references\
     inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\

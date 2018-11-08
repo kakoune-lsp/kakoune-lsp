@@ -216,6 +216,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::WorkspaceSymbol::METHOD => {
             workspace::workspace_symbol(meta, params, &mut ctx);
         }
+        request::Rename::METHOD => {
+            rename::text_document_rename(meta, params, &mut ctx);
+        }
         "textDocument/diagnostics" => {
             diagnostics::editor_diagnostics(meta, &mut ctx);
         }
@@ -309,6 +312,9 @@ fn dispatch_server_response(
         }
         request::WorkspaceSymbol::METHOD => {
             workspace::editor_workspace_symbol(meta, response, &mut ctx);
+        }
+        request::Rename::METHOD => {
+            rename::editor_rename(meta, params, response, &mut ctx);
         }
         "textDocument/referencesHighlight" => {
             references::editor_references_highlight(meta, response, &mut ctx);

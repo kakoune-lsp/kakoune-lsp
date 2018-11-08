@@ -12,7 +12,18 @@ use util::*;
 pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {
         capabilities: ClientCapabilities {
-            workspace: Some(WorkspaceClientCapabilities::default()),
+            workspace: Some(WorkspaceClientCapabilities {
+                workspace_edit: Some(WorkspaceEditCapability {
+                    document_changes: Some(true),
+                    resource_operations: Some(vec![
+                        ResourceOperationKind::Create,
+                        ResourceOperationKind::Delete,
+                        ResourceOperationKind::Rename,
+                    ]),
+                    ..WorkspaceEditCapability::default()
+                }),
+                ..WorkspaceClientCapabilities::default()
+            }),
             text_document: Some(TextDocumentClientCapabilities {
                 completion: Some(CompletionCapability {
                     completion_item: Some(CompletionItemCapability {
@@ -87,6 +98,15 @@ pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {
         .unwrap_or(false)
     {
         features.push("lsp-formatting");
+    }
+
+    if let Some(ref rename_provider) = server_capabilities.rename_provider {
+        match rename_provider {
+            RenameProviderCapability::Simple(true) | RenameProviderCapability::Options(_) => {
+                features.push("lsp-rename")
+            }
+            _ => (),
+        }
     }
 
     features.push("lsp-diagnostics");
