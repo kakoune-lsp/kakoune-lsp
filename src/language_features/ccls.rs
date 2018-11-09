@@ -2,6 +2,8 @@ use context::*;
 use itertools::Itertools;
 use jsonrpc_core::{Params, Value};
 use languageserver_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
+use toml;
+use serde_json;
 use serde;
 use serde::Deserialize;
 use types::*;
