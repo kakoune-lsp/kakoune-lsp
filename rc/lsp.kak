@@ -559,6 +559,18 @@ def -hidden lsp-replace-selection -params 1 -docstring %{
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
 }
 
+def -hidden lsp-apply-edits-to-file -params 2 -docstring %{
+    lsp-apply-edits-to-file <path> <command>
+    Apply edits to the file's buffer if it's open, otherwise open file, apply edits, save and close file.
+} %{ eval -no-hooks %{ try %{
+        eval -buffer %arg{1} %arg{2}
+    } catch %{
+        edit %arg{1}
+        eval %arg{2}
+        write
+        delete-buffer
+}}}
+
 # convenient commands to set and remove hooks for common cases
 
 def lsp-inline-diagnostics-enable -docstring "Enable inline diagnostics highlighting" %{

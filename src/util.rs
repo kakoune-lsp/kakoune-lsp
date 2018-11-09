@@ -223,18 +223,10 @@ pub fn apply_text_edits(
     match uri {
         Some(uri) => {
             let buffile = uri.to_file_path().unwrap();
-            let bufname = editor_quote(buffile.to_str().unwrap());
-            let command = editor_quote(&command);
             let command = format!(
-                "try %[
-                eval -buffer {} {}
-            ] catch %[
-                edit {}
-                eval {}
-                write
-                delete-buffer
-            ]",
-                bufname, command, bufname, command
+                "lsp-apply-edits-to-file {} {}",
+                editor_quote(buffile.to_str().unwrap()),
+                editor_quote(&command)
             );
             ctx.exec(meta.clone(), command);
         }
