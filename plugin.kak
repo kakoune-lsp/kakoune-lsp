@@ -1,4 +1,4 @@
-decl str lsp_cmd "%sh{pwd}/target/release/kak-lsp"
+decl str lsp_cmd "%opt{plug_install_dir}/kak-lsp/target/release/kak-lsp"
 
 # faces used by inline diagnostics
 set-face global DiagnosticError red
