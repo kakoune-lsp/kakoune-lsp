@@ -189,7 +189,11 @@ fn main() {
         let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
         let mut pid_path = util::temp_dir();
         pid_path.push(format!("{}.pid", session));
-        if matches.is_present("daemonize") && Daemonize::new().pid_file(&pid_path).start().is_err()
+        if matches.is_present("daemonize") && Daemonize::new()
+            .pid_file(&pid_path)
+            .working_directory(std::env::current_dir().unwrap())
+            .start()
+            .is_err()
         {
             error!("Failed to daemonize process");
             goodbye(&config, 1);
