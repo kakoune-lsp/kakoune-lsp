@@ -67,6 +67,7 @@ pub struct EditorMeta {
     pub session: String,
     pub client: Option<String>,
     pub buffile: String,
+    pub filetype: String,
     pub version: u64,
     pub fifo: Option<String>,
 }

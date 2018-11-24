@@ -192,6 +192,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         session,
         client,
         buffile: buffile.to_string(),
+        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
         version,
         fifo: None,
     };

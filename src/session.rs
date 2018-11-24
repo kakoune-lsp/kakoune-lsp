@@ -9,7 +9,6 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use toml;
 use types::*;
-use util::*;
 
 struct ControllerHandle {
     sender: Option<Sender<EditorRequest>>,
@@ -36,7 +35,6 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
     }
     let editor = editor.unwrap();
 
-    let extensions = extension_to_language_id_map(&config);
     let languages = config.language.clone();
 
     let mut controllers: Controllers = FnvHashMap::default();
@@ -97,17 +95,14 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
                     continue 'event_loop;
                 }
 
-                let language_id = path_to_language_id(&extensions, &request.meta.buffile);
-                if language_id.is_none() {
+                let language_id = request.meta.filetype.to_owned();
+                if !languages.contains_key(&language_id) {
                     debug!(
-                        "Language server is not configured for extension `{}`",
-                        ext_as_str(&request.meta.buffile)
+                        "Language server is not configured for filetype `{}`",
+                        language_id
                     );
                     continue 'event_loop;
                 }
-                // is_none + unwrap pattern to reduce nesting again
-                // (is it a sign that block should be broken down into functions?)
-                let language_id = language_id.unwrap();
 
                 let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
 
@@ -171,6 +166,7 @@ fn stop_session(controllers: &mut Controllers) {
         meta: EditorMeta {
             session: "".to_string(),
             buffile: "".to_string(),
+            filetype: "".to_string(),
             client: None,
             version: 0,
             fifo: None,

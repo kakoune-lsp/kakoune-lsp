@@ -174,6 +174,10 @@ If you are setting any options to server via cli do not forget to append them to
 
 Please let us know if you have any ideas about how to make default config more sensible.
 
+NOTE: Language server configuration must have the same key as correspondent filetype in Kakoune.
+E.g. configuration for Rust language server must reside under `[language.rust]` section if you use default
+`rust.kak` which sets `filetype` to `rust` for `*.rs` files. 
+
 === Configuring Kakoune
 
 kak-lsp's Kakoune integration declares the following options:

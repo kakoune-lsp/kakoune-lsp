@@ -2,10 +2,10 @@ use context::*;
 use itertools::Itertools;
 use jsonrpc_core::{Params, Value};
 use languageserver_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
-use toml;
-use serde_json;
 use serde;
 use serde::Deserialize;
+use serde_json;
+use toml;
 use types::*;
 use url::Url;
 use url_serde;
@@ -350,6 +350,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         session,
         client,
         buffile: buffile.to_string(),
+        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
         version,
         fifo: None,
     };
