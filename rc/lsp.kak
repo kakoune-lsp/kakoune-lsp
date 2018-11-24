@@ -18,7 +18,7 @@ decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
 # for position at which it moves cursor; by default it ensures that cursor is after opening parens
 # and then moves cursor to opening parens to request hover info for current function; note that it
 # doesn't handle well nested function calls
-decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+\z<ret>'}
+decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
 # formatting: size of a tab in spaces
 decl int lsp_tab_size 4
 # formatting: prefer spaces over tabs
