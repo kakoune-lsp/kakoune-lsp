@@ -1,4 +1,5 @@
 use context::*;
+use fnv::FnvHashMap;
 use itertools::Itertools;
 use languageserver_types::*;
 use std::io::{stderr, stdout, Write};
@@ -202,4 +203,15 @@ pub fn apply_text_edits(
         }
         None => ctx.exec(meta.clone(), command),
     }
+}
+
+/// Convert language filetypes configuration into a more lookup-friendly form.
+pub fn filetype_to_language_id_map(config: &Config) -> FnvHashMap<String, String> {
+    let mut filetypes = FnvHashMap::default();
+    for (language_id, language) in &config.language {
+        for filetype in &language.filetypes {
+            filetypes.insert(filetype.clone(), language_id.clone());
+        }
+    }
+    filetypes
 }

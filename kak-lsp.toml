@@ -7,76 +7,76 @@ verbosity = 2
 timeout = 1800 # seconds = 30 minutes
 
 [language.rust]
-extensions = ["rs"]
+filetypes = ["rust"]
 roots = ["Cargo.toml"]
 command = "rls"
 
 [language.javascript]
-extensions = ["js", "jsx"]
+filetypes = ["javascript"]
 roots = ["package.json"]
 command = "flow"
 args = ["lsp"]
 
 [language.json]
-extensions = ["json"]
+filetypes = ["json"]
 roots = ["package.json"]
 command = "json-languageserver"
 args = ["--stdio"]
 
 [language.css]
-extensions = ["css"]
+filetypes = ["css"]
 roots = ["package.json"]
 command = "css-languageserver"
 args = ["--stdio"]
 
 [language.html]
-extensions = ["html"]
+filetypes = ["html"]
 roots = ["package.json"]
 command = "html-languageserver"
 args = ["--stdio"]
 
 [language.ocaml]
-extensions = ["ml", "mli"]
+filetypes = ["ocaml"]
 roots = ["Makefile", "opam", "*.opam"]
 command = "ocaml-language-server"
 args = ["--stdio"]
 
 [language.reason]
-extensions = ["re", "rei"]
+filetypes = ["reason"]
 roots = ["package.json", "Makefile", ".git", ".hg"]
 command = "ocaml-language-server"
 args = ["--stdio"]
 
 [language.python]
-extensions = ["py"]
+filetypes = ["python"]
 roots = ["requirements.txt", "setup.py", ".git", ".hg"]
 command = "pyls"
 
 [language.c_cpp]
-extensions = ["c", "h", "cc", "hh", "cpp", "hpp"]
+filetypes = ["c", "cpp"]
 roots = ["compile_commands.json", ".cquery"]
 command = "cquery"
 args = ["--init={\"cacheDirectory\":\"/tmp/cquery\"}"]
 
 [language.haskell]
-extensions = ["hs"]
+filetypes = ["haskell"]
 roots = ["Setup.hs", "stack.yaml", "*.cabal"]
 command = "hie"
 args = ["--lsp"]
 
 [language.go]
-extensions = ["go"]
+filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
 command = "go-langserver"
 args = ["-mode", "stdio", "-gocodecompletion"]
 
 [language.bash]
-extensions = ["sh", "bash", "zsh"]
+filetypes = ["sh"]
 roots = [".git", ".hg"]
 command = "bash-language-server"
 args = ["start"]
 
 [language.dart]
-extensions = ["dart"]
+filetypes = ["dart"]
 roots = ["pubspec.yaml", ".git"]
 command = "dart_language_server"

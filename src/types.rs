@@ -33,7 +33,7 @@ pub struct ServerConfig {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct LanguageConfig {
-    pub extensions: Vec<String>,
+    pub filetypes: Vec<String>,
     pub roots: Vec<String>,
     pub command: String,
     #[serde(default)]

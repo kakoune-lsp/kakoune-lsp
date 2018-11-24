@@ -9,6 +9,7 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use toml;
 use types::*;
+use util::*;
 
 struct ControllerHandle {
     sender: Option<Sender<EditorRequest>>,
@@ -36,6 +37,7 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
     let editor = editor.unwrap();
 
     let languages = config.language.clone();
+    let filetypes = filetype_to_language_id_map(config);
 
     let mut controllers: Controllers = FnvHashMap::default();
 
@@ -95,17 +97,17 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
                     continue 'event_loop;
                 }
 
-                let language_id = request.meta.filetype.to_owned();
-                if !languages.contains_key(&language_id) {
+                let language_id = filetypes.get(&request.meta.filetype);
+                if language_id.is_none() {
                     debug!(
                         "Language server is not configured for filetype `{}`",
-                        language_id
+                        &request.meta.filetype
                     );
                     continue 'event_loop;
                 }
+                let language_id = language_id.unwrap();
 
-                let root_path = find_project_root(&languages[&language_id].roots, &request.meta.buffile);
-
+                let root_path = find_project_root(&languages[language_id].roots, &request.meta.buffile);
                 let route = Route {
                     session: request.meta.session.clone(),
                     language: language_id.clone(),
