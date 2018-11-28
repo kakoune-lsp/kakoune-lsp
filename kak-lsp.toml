@@ -80,3 +80,8 @@ args = ["start"]
 filetypes = ["dart"]
 roots = ["pubspec.yaml", ".git"]
 command = "dart_language_server"
+
+[language.d]
+filetypes = ["d", "di"]
+roots = [".git", "dub.sdl", "dub.json"]
+command = "dls"
