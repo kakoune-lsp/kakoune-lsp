@@ -29,6 +29,12 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 ==== Linux
 
+===== Package managers
+
+* Arch Linux: `pacman -S kak-lsp` or https://aur.archlinux.org/packages/kak-lsp-git/[AUR/kak-lsp-git]
+
+===== Others
+
 ----
 wget https://github.com/ul/kak-lsp/releases/download/v5.10.0/kak-lsp-v5.10.0-x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp-v5.10.0-x86_64-unknown-linux-musl.tar.gz
@@ -54,8 +60,6 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 === From the source
-
-NOTE: ArchLinux users can automate most of the following steps with the https://aur.archlinux.org/packages/kak-lsp-git/[kak-lsp-git] AUR package.
 
 ----
 git clone https://github.com/ul/kak-lsp
