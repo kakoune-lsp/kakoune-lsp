@@ -179,7 +179,12 @@ character = %d
 }
 
 def lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
-    prompt 'New name: ' %{ lsp-rename %val{text} }
+    evaluate-commands -save-regs a %{
+        # It'd be more obvious to use "eval -draft" and %val{selection},
+        # but :prompt doesn't work inside a draft context for some reason.
+        execute-keys <space><a-i>w"ay
+        prompt -init "%reg{a}" 'New name: ' %{ lsp-rename %val{text} }
+    }
 }
 
 def lsp-signature-help -docstring "Request signature help for the main cursor position" %{
