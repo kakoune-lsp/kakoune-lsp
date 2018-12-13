@@ -33,6 +33,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             )
         }).join(" ");
 
+    let mut error_count = 0;
+    let mut warning_count = 0;
     let line_flags = diagnostics
         .iter()
         .map(|x| {
@@ -41,16 +43,24 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 "{}|{}",
                 x.range.start.line + 1,
                 match x.severity {
-                    Some(DiagnosticSeverity::Error) => "%opt[lsp_diagnostic_line_error_sign]",
-                    _ => "%opt[lsp_diagnostic_line_warning_sign]",
+                    Some(DiagnosticSeverity::Error) => {
+                        error_count += 1;
+                        "%opt[lsp_diagnostic_line_error_sign]"
+                    },
+                    _ => {
+                        warning_count += 1;
+                        "%opt[lsp_diagnostic_line_warning_sign]"
+                    }
                 }
             )
         }).join(" ");
     let command = format!(
-        "set buffer lsp_diagnostic_count {}
+        "set buffer lsp_diagnostic_error_count {}
+         set buffer lsp_diagnostic_warning_count {}
          set buffer lsp_errors {} {}
          eval \"set buffer lsp_error_lines {} {} '1| ' \"",
-        diagnostics.len(),
+        error_count,
+        warning_count,
         version,
         ranges,
         version,
