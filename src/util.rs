@@ -68,7 +68,8 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
                 position.character + 1,
                 description
             )
-        }).join("\n")
+        })
+        .join("\n")
 }
 
 /// Escape Kakoune string wrapped into single quote
@@ -156,7 +157,8 @@ pub fn apply_text_edits(
                 new_text,
                 insert,
             )
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     let select_edits = edits
         .iter()
@@ -182,7 +184,8 @@ pub fn apply_text_edits(
                 },
                 editor_quote(&content)
             )
-        }).join("\n");
+        })
+        .join("\n");
 
     let command = format!(
         "select {}

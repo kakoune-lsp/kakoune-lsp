@@ -67,61 +67,71 @@ fn main() {
             Arg::with_name("kakoune")
                 .long("kakoune")
                 .help("Generate commands for Kakoune to plug in kak-lsp"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("request")
                 .long("request")
                 .help("Forward stdin to kak-lsp server"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("config")
                 .short("c")
                 .long("config")
                 .value_name("FILE")
                 .help("Read config from FILE (default $HOME/.config/kak-lsp/kak-lsp.toml)")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("daemonize")
                 .short("d")
                 .long("daemonize")
                 .help("Daemonize kak-lsp process (server only)"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("session")
                 .short("s")
                 .long("session")
                 .value_name("SESSION")
                 .help("Session id to communicate via unix socket instead of tcp")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("timeout")
                 .short("t")
                 .long("timeout")
                 .value_name("TIMEOUT")
                 .help("Session timeout in seconds (default 1800)")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("port")
                 .short("p")
                 .long("port")
                 .value_name("PORT")
                 .help("Port to listen for commands from Kakoune (default 31337)")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("ip")
                 .long("ip")
                 .value_name("ADDR")
                 .help("Address to listen for commands from Kakoune (default 127.0.0.1)")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("initial-request")
                 .long("initial-request")
                 .value_name("REQUEST")
                 .help("Initial request to start server with")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("v")
                 .short("v")
                 .multiple(true)
                 .help("Sets the level of verbosity"),
-        ).get_matches();
+        )
+        .get_matches();
 
     let mut config = include_str!("../kak-lsp.toml").to_string();
 
@@ -189,11 +199,12 @@ fn main() {
         let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
         let mut pid_path = util::temp_dir();
         pid_path.push(format!("{}.pid", session));
-        if matches.is_present("daemonize") && Daemonize::new()
-            .pid_file(&pid_path)
-            .working_directory(std::env::current_dir().unwrap())
-            .start()
-            .is_err()
+        if matches.is_present("daemonize")
+            && Daemonize::new()
+                .pid_file(&pid_path)
+                .working_directory(std::env::current_dir().unwrap())
+                .start()
+                .is_err()
         {
             error!("Failed to daemonize process");
             goodbye(&config, 1);
@@ -221,7 +232,8 @@ fn kakoune(_config: &Config) {
                 "args": args,
             }),
             &mut stdout(),
-        ).unwrap();
+        )
+        .unwrap();
 }
 
 fn request(config: &Config) {

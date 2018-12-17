@@ -8,7 +8,7 @@ use url::Url;
 use url_serde;
 use util::*;
 
-enum_from_primitive!{
+enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum StorageClass {
     Invalid = 0,
@@ -42,7 +42,7 @@ impl serde::Serialize for StorageClass {
     }
 }
 
-enum_from_primitive!{
+enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum SemanticSymbolKind {
     Unknown = 0,
@@ -141,7 +141,8 @@ impl SemanticSymbol {
             SemanticSymbolKind::Namespace => "cqueryNamespaces",
             SemanticSymbolKind::Macro => "cqueryMacros",
             _ => "",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -181,7 +182,8 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
                     Option::Some(format!("{}|{}", lsp_range_to_kakoune(*r), face))
                 }
             })
-        }).join(" ");
+        })
+        .join(" ");
     let command = format!("set buffer cquery_semhl {} {}", version, ranges);
     let command = format!(
         "eval -buffer {} {}",

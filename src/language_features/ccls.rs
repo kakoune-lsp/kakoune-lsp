@@ -19,7 +19,8 @@ fn with_uri(params: &EditorParams, meta: &EditorMeta) -> EditorParams {
             "textDocument".to_string(),
             toml::Value::try_from(TextDocumentIdentifier {
                 uri: Url::from_file_path(&meta.buffile).unwrap(),
-            }).unwrap(),
+            })
+            .unwrap(),
         );
     }
     return params;
@@ -52,11 +53,13 @@ pub fn navigate_response(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     let result = serde_json::from_value(result).expect("Failed to parse definition response");
     if let Some(location) = match result {
         GotoDefinitionResponse::Scalar(location) => Some(location),
-        GotoDefinitionResponse::Array(mut locations) => if locations.is_empty() {
-            None
-        } else {
-            Some(locations.remove(0))
-        },
+        GotoDefinitionResponse::Array(mut locations) => {
+            if locations.is_empty() {
+                None
+            } else {
+                Some(locations.remove(0))
+            }
+        }
         GotoDefinitionResponse::None => None,
     } {
         let path = location.uri.to_file_path().unwrap();
@@ -169,7 +172,7 @@ pub fn member(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
 
 // Semantic Highlighting
 
-enum_from_primitive!{
+enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum StorageClass {
     None = 0,
@@ -202,7 +205,7 @@ impl serde::Serialize for StorageClass {
     }
 }
 
-enum_from_primitive!{
+enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum SemanticSymbolKind {
     Unknown = 0,
@@ -301,7 +304,8 @@ impl SemanticSymbol {
             SemanticSymbolKind::Namespace => "cqueryNamespaces",
             SemanticSymbolKind::Macro => "cqueryMacros",
             _ => "",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -341,7 +345,8 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
                     Option::Some(format!("{}|{}", lsp_range_to_kakoune(*r), face))
                 }
             })
-        }).join(" ");
+        })
+        .join(" ");
     let command = format!(
         "eval -buffer %§{}§ %§set buffer cquery_semhl {} {}§",
         buffile, version, ranges

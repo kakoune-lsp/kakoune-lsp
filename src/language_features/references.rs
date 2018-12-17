@@ -97,8 +97,10 @@ pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                                 String::new()
                             }
                         }
-                    }).join("\n")
-            }).join("\n");
+                    })
+                    .join("\n")
+            })
+            .join("\n");
 
         let command = format!(
             "lsp-show-references {} {}",
@@ -157,7 +159,8 @@ pub fn editor_references_highlight(meta: &EditorMeta, result: Value, ctx: &mut C
             .iter()
             .filter(|location| {
                 location.uri.to_file_path().unwrap().to_str().unwrap() == meta.buffile
-            }).map(|location| format!("{}|Reference", lsp_range_to_kakoune(location.range)))
+            })
+            .map(|location| format!("{}|Reference", lsp_range_to_kakoune(location.range)))
             .join(" ");
         let command = format!(
             "set-option window lsp_references {} {}",

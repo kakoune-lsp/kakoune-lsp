@@ -31,7 +31,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                     _ => "DiagnosticWarning",
                 }
             )
-        }).join(" ");
+        })
+        .join(" ");
 
     let mut error_count = 0;
     let mut warning_count = 0;
@@ -46,25 +47,21 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                     Some(DiagnosticSeverity::Error) => {
                         error_count += 1;
                         "%opt[lsp_diagnostic_line_error_sign]"
-                    },
+                    }
                     _ => {
                         warning_count += 1;
                         "%opt[lsp_diagnostic_line_warning_sign]"
                     }
                 }
             )
-        }).join(" ");
+        })
+        .join(" ");
     let command = format!(
         "set buffer lsp_diagnostic_error_count {}
          set buffer lsp_diagnostic_warning_count {}
          set buffer lsp_errors {} {}
          eval \"set buffer lsp_error_lines {} {} '1| ' \"",
-        error_count,
-        warning_count,
-        version,
-        ranges,
-        version,
-        line_flags
+        error_count, warning_count, version, ranges, version, line_flags
     );
     let command = format!(
         // Always show a space on line one if no other highlighter is there,
@@ -110,8 +107,10 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
                         },
                         x.message
                     )
-                }).collect::<Vec<_>>()
-        }).join("\n");
+                })
+                .collect::<Vec<_>>()
+        })
+        .join("\n");
     let command = format!(
         "lsp-show-diagnostics {} {}",
         editor_quote(&ctx.root_path),

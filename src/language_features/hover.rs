@@ -58,12 +58,14 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
                             || (start.line <= pos.line
                                 && end.line == pos.line
                                 && pos.character <= end.character)
-                    }).map(|x| str::trim(&x.message))
+                    })
+                    .map(|x| str::trim(&x.message))
                     .filter(|x| !x.is_empty())
                     .map(|x| format!("• {}", x))
                     .join("\n"),
             )
-        }).unwrap_or_else(String::new);
+        })
+        .unwrap_or_else(String::new);
     let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {

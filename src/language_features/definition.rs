@@ -32,11 +32,13 @@ pub fn editor_definition(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     let result = serde_json::from_value(result).expect("Failed to parse definition response");
     if let Some(location) = match result {
         GotoDefinitionResponse::Scalar(location) => Some(location),
-        GotoDefinitionResponse::Array(mut locations) => if locations.is_empty() {
-            None
-        } else {
-            Some(locations.remove(0))
-        },
+        GotoDefinitionResponse::Array(mut locations) => {
+            if locations.is_empty() {
+                None
+            } else {
+                Some(locations.remove(0))
+            }
+        }
         GotoDefinitionResponse::None => None,
     } {
         let path = location.uri.to_file_path().unwrap();
