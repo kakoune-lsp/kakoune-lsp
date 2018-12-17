@@ -28,6 +28,9 @@ decl bool lsp_auto_highlight_references false
 # number of diagnostics published for current buffer
 decl int lsp_diagnostic_error_count 0
 decl int lsp_diagnostic_warning_count 0
+# set it to a positive numer to limit size of lsp-hover output
+# (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
+decl int lsp_hover_max_lines 0
 
 # configuration to send in DidChangeNotification messages
 decl str-to-str-map lsp_server_configuration
@@ -499,9 +502,17 @@ character = %d
 # commands called as kak-lsp responses
 
 def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
+    content=$2
+
+    if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
+        content=$(printf %s "$2" | head -n $kak_opt_lsp_hover_max_lines)
+    fi
+
+    content=$(printf %s "$content" | sed s/\'/\'\'/g)
+
     case $kak_opt_lsp_hover_anchor in
-        true) echo 'info -anchor %arg{1} %arg{2}';;
-        *)    echo 'info %arg{2}';;
+        true) printf "info -anchor %%arg{1} '%s'" "$content";;
+        *)    printf "info '%s'" "$content";;
     esac
 }}
 
