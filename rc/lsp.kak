@@ -1,43 +1,57 @@
-# faces used by inline diagnostics
-set-face global DiagnosticError red
-set-face global DiagnosticWarning yellow
-# Line flags for errors and warnings both use this face
-set-face global LineFlagErrors red
-set-face global Reference MatchingChar
+### Options and faces ###
 
-
+# NOTE This is the only option without a sane default value.
+# You must set it manually when sourcing lsp.kak directly.
+# Sourcing via `kak-lsp --kakoune` fills template automatically.
 decl str lsp_cmd '{{cmd}} {{args}}'
 
+# Faces
 
-# set to true to display hover info anchored to hovered position
+# Faces used by inline diagnostics.
+set-face global DiagnosticError red
+set-face global DiagnosticWarning yellow
+# Line flags for errors and warnings both use this face.
+set-face global LineFlagErrors red
+# Face for highlighting references.
+set-face global Reference MatchingChar
+
+# Options for tuning kak-lsp behaviour.
+
+# Set to true to display hover info anchored to the hovered position.
 decl bool lsp_hover_anchor false
-# completions request is sent only when this expression doesn't fail
-# by default it ensures that preceding character is not a whitespace
+# Completions request is sent only when this expression doesn't fail.
+# By default, it ensures that preceding character is not a whitespace.
 decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
-# if hover in insert mode is enabled then request is made only when this expression doesn't fail and
-# for position at which it moves cursor; by default it ensures that cursor is after opening parens
+# If hover in insert mode is enabled then request is made only when this expression doesn't fail and
+# for position at which it moves cursor; by default, it ensures that cursor is after opening parens
 # and then moves cursor to opening parens to request hover info for current function; note that it
-# doesn't handle well nested function calls
+# doesn't handle well nested function calls.
 decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
-# formatting: size of a tab in spaces
+# Formatting: size of a tab in spaces.
 decl int lsp_tab_size 4
-# formatting: prefer spaces over tabs
+# Formatting: prefer spaces over tabs.
 decl bool lsp_insert_spaces true
-# set to true to automatically highlight references with Reference face
+# Set to true to automatically highlight references with Reference face.
 decl bool lsp_auto_highlight_references false
-# number of diagnostics published for current buffer
-decl int lsp_diagnostic_error_count 0
-decl int lsp_diagnostic_warning_count 0
-# set it to a positive numer to limit size of lsp-hover output
+# Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
 decl int lsp_hover_max_lines 0
-
-# configuration to send in DidChangeNotification messages
+# Configuration to send in DidChangeNotification messages.
 decl str-to-str-map lsp_server_configuration
-
+# Line flags for inline diagnostics.
 decl str lsp_diagnostic_line_error_sign '*'
 decl str lsp_diagnostic_line_warning_sign '!'
+# Another good default:
+# set global lsp_diagnostic_line_error_sign '▓'
+# set global lsp_diagnostic_line_warning_sign '▒'
 
+# Options for information exposed by kak-lsp.
+
+# Count of diagnostics published for the current buffer.
+decl int lsp_diagnostic_error_count 0
+decl int lsp_diagnostic_warning_count 0
+
+# Internal variables.
 
 decl -hidden completions lsp_completions
 decl -hidden range-specs lsp_errors
@@ -47,7 +61,7 @@ decl -hidden str lsp_draft
 decl -hidden int lsp_timestamp -1
 decl -hidden range-specs lsp_references
 
-# commands to make kak-lsp requests
+### Requests ###
 
 def lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & } }
 
@@ -499,7 +513,9 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $kind $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-# commands called as kak-lsp responses
+### Response handling ###
+
+# Feel free to override these commands in your config if you need to customise response handling.
 
 def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
     content=$2
@@ -582,7 +598,7 @@ def -hidden lsp-insert-after-selection -params 1 -docstring %{
     decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
     decl -hidden str lsp_text_edit_content %arg{1}
     exec %sh{
-        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp 
+        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
         printf "<a-!>cat %s<ret>" $kak_opt_lsp_text_edit_tmp
     }
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
@@ -595,7 +611,7 @@ def -hidden lsp-replace-selection -params 1 -docstring %{
     decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
     decl -hidden str lsp_text_edit_content %arg{1}
     exec %sh{
-        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp 
+        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
         printf "|cat %s<ret>" $kak_opt_lsp_text_edit_tmp
     }
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
@@ -613,23 +629,7 @@ def -hidden lsp-apply-edits-to-file -params 2 -docstring %{
         delete-buffer
 }}}
 
-# convenient commands to set and remove hooks for common cases
-
-def lsp-inline-diagnostics-enable -params 1 -docstring "Enable inline diagnostics highlighting" %{
-    add-highlighter "%arg{1}/lsp_errors" ranges lsp_errors
-}
-
-def lsp-inline-diagnostics-disable -params 1 -docstring "Disable inline diagnostics highlighting"  %{
-    remove-highlighter "%arg{1}/lsp_errors"
-}
-
-def lsp-diagnostic-lines-enable -params 1 -docstring "Enable diagnostics line flags" %{
-    add-highlighter "%arg{1}/lsp_error_lines" flag-lines LineFlagErrors lsp_error_lines
-}
-
-def lsp-diagnostic-lines-disable -params 1 -docstring "Disable diagnostics line flags"  %{
-    remove-highlighter "%arg{1}/lsp_error_lines"
-}
+### Other commands ###
 
 def lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
 Jump to the next or previous diagnostic error" %{
@@ -666,7 +666,7 @@ Jump to the next or previous diagnostic error" %{
                     #after the cursor
                     if $previous; then
                         selection="$prev"
-                    else 
+                    else
                         selection="$current"
                     fi
                     if [ ! -z "$selection" ]; then
@@ -680,17 +680,57 @@ Jump to the next or previous diagnostic error" %{
         done
         if [ -z "$first" ]; then
             # if nothing found
-            echo "echo -markup '{Error}No errors found'" 
+            echo "echo -markup '{Error}No errors found'"
         fi
         if [ -z "$selection" ]; then #if nothing found past the cursor
             if $previous; then
                 selection="$current"
-            else 
+            else
                 selection="$first"
             fi
-        fi    
+        fi
         printf "edit %b %b" "$kak_buffile" "$selection"
     }
+}
+
+def lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{ lsp-workspace-symbol-buffer %val{buffile} %opt{filetype} %val{timestamp} %arg{1} }
+
+def lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
+    decl -hidden str lsp_ws_buffile %val{buffile}
+    decl -hidden str lsp_ws_filetype %opt{filetype}
+    decl -hidden int lsp_ws_timestamp %val{timestamp}
+    decl -hidden str lsp_ws_query
+    edit! -scratch *symbols*
+    set buffer filetype grep
+    prompt -on-change %{ try %{
+        # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
+        # the following check prevents it
+        eval %sh{
+            if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
+            then echo 'fail';
+            else echo 'set current lsp_ws_query %val{text}';
+            fi
+        }
+        lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_filetype} %opt{lsp_ws_timestamp} %val{text}
+    }} -on-abort %{exec ga} 'Query: ' nop
+}
+
+### Hooks and highlighters ###
+
+def lsp-inline-diagnostics-enable -params 1 -docstring "Enable inline diagnostics highlighting" %{
+    add-highlighter "%arg{1}/lsp_errors" ranges lsp_errors
+}
+
+def lsp-inline-diagnostics-disable -params 1 -docstring "Disable inline diagnostics highlighting"  %{
+    remove-highlighter "%arg{1}/lsp_errors"
+}
+
+def lsp-diagnostic-lines-enable -params 1 -docstring "Enable diagnostics line flags" %{
+    add-highlighter "%arg{1}/lsp_error_lines" flag-lines LineFlagErrors lsp_error_lines
+}
+
+def lsp-diagnostic-lines-disable -params 1 -docstring "Disable diagnostics line flags"  %{
+    remove-highlighter "%arg{1}/lsp_error_lines"
 }
 
 def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
@@ -730,31 +770,7 @@ def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune se
     alias global lsp-exit lsp-exit-editor-session
 }
 
-
-def lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{ lsp-workspace-symbol-buffer %val{buffile} %opt{filetype} %val{timestamp} %arg{1} }
-
-def lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
-    decl -hidden str lsp_ws_buffile %val{buffile}
-    decl -hidden str lsp_ws_filetype %opt{filetype}
-    decl -hidden int lsp_ws_timestamp %val{timestamp}
-    decl -hidden str lsp_ws_query
-    edit! -scratch *symbols*
-    set buffer filetype grep
-    prompt -on-change %{ try %{
-        # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
-        # the following check prevents it
-        eval %sh{
-            if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
-            then echo 'fail';
-            else echo 'set current lsp_ws_query %val{text}';
-            fi
-        }
-        lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_filetype} %opt{lsp_ws_timestamp} %val{text}
-    }} -on-abort %{exec ga} 'Query: ' nop
-}
-
-
-# lsp-* commands as subcommands of lsp command
+### lsp-* commands as subcommands of lsp command ###
 
 def lsp -params 1.. %sh{
     if [ $kak_version \< "v2018.09.04-128-g5bdcfab0" ];
@@ -774,7 +790,7 @@ def lsp -params 1.. %sh{
 } %{ eval "lsp-%arg{1}" }
 
 
-# user mode
+### User mode ###
 
 declare-user-mode lsp
 map global lsp c '<esc>: lsp-capabilities<ret>'           -docstring 'show language server capabilities'
@@ -790,8 +806,7 @@ map global lsp n '<esc>: lsp-find-error<ret>'             -docstring 'find next 
 map global lsp p '<esc>: lsp-find-error --previous<ret>'  -docstring 'find previous error'
 map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highlight-references'
 
-
-# init
+### Default integration ###
 
 def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     set global completers option=lsp_completions %opt{completers}
@@ -842,7 +857,5 @@ def lsp-enable-window -docstring "Default integration with kak-lsp in the window
     lsp-did-open
     lsp-did-change-config
 }
-
-#
 
 lsp-stop-on-exit-enable
