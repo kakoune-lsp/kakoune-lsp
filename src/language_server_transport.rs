@@ -41,6 +41,7 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
             }
             Err(e) => {
                 error!("Failed to read from language server stderr: {}", e);
+                return;
             }
         }
     });
