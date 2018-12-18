@@ -5,7 +5,7 @@ authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>"]
 
 [dependencies]
 clap = "2"
-crossbeam-channel = "0"
+crossbeam-channel = "0.2.6"
 daemonize = "0"
 dirs = "1"
 enum_primitive = "0"
