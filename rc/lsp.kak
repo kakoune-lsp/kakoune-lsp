@@ -1,9 +1,8 @@
 ### Options and faces ###
 
-# NOTE This is the only option without a sane default value.
-# You must set it manually when sourcing lsp.kak directly.
-# Sourcing via `kak-lsp --kakoune` fills template automatically.
-decl str lsp_cmd '{{cmd}} {{args}}'
+# Feel free to update path and arguments according to your setup when sourcing lsp.kak directly.
+# Sourcing via `kak-lsp --kakoune` does it automatically.
+decl str lsp_cmd "kak-lsp -s %val{session}"
 
 # Faces
 

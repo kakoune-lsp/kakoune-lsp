@@ -6,12 +6,10 @@ extern crate daemonize;
 extern crate dirs;
 extern crate fnv;
 extern crate glob;
-extern crate handlebars;
 extern crate itertools;
 extern crate jsonrpc_core;
 extern crate languageserver_types;
 extern crate regex;
-#[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
@@ -43,14 +41,13 @@ mod workspace;
 
 use clap::{App, Arg};
 use daemonize::Daemonize;
-use handlebars::{no_escape, Handlebars};
 use itertools::Itertools;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
 use std::env;
 use std::fs;
-use std::io::{stdin, stdout, Read, Write};
+use std::io::{stdin, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
@@ -216,24 +213,19 @@ fn main() {
 }
 
 fn kakoune(_config: &Config) {
-    let mut handlebars = Handlebars::new();
-    handlebars.register_escape_fn(no_escape);
-    let template: &str = include_str!("../rc/lsp.kak");
+    let script: &str = include_str!("../rc/lsp.kak");
     let args = env::args()
         .skip(1)
         .filter(|arg| arg != "--kakoune")
         .join(" ");
-    let cmd = env::current_exe().unwrap().to_owned();
-    handlebars
-        .render_template_to_write(
-            template,
-            &json!({
-                "cmd": cmd,
-                "args": args,
-            }),
-            &mut stdout(),
-        )
-        .unwrap();
+    let cmd = env::current_exe().unwrap();
+    let cmd = cmd.to_str().unwrap();
+    let lsp_cmd = format!(
+        "set global lsp_cmd '{} {}'",
+        editor_escape(cmd),
+        editor_escape(&args)
+    );
+    println!("{}\n{}", script, lsp_cmd);
 }
 
 fn request(config: &Config) {
