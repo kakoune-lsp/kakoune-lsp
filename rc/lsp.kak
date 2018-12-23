@@ -635,11 +635,11 @@ Jump to the next or previous diagnostic error" %{
     evaluate-commands %sh{
         previous=false
         errorCompare="DiagnosticError"
-        if [ $1 = "--previous" ]; then
+        if [ "$1" = "--previous" ]; then
             previous=true
             shift
         fi
-        if [ $1 = "--include-warnings" ]; then
+        if [ "$1" = "--include-warnings" ]; then
             errorCompare="Diagnostic"
         fi
         #expand quoting, stores option in $@
