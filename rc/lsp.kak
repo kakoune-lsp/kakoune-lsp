@@ -2,7 +2,7 @@
 
 # Feel free to update path and arguments according to your setup when sourcing lsp.kak directly.
 # Sourcing via `kak-lsp --kakoune` does it automatically.
-decl str lsp_cmd "kak-lsp -s %val{session}"
+declare-option str lsp_cmd "kak-lsp -s %val{session}"
 
 # Faces
 
@@ -17,59 +17,59 @@ set-face global Reference MatchingChar
 # Options for tuning kak-lsp behaviour.
 
 # Set to true to display hover info anchored to the hovered position.
-decl bool lsp_hover_anchor false
+declare-option bool lsp_hover_anchor false
 # Completions request is sent only when this expression doesn't fail.
 # By default, it ensures that preceding character is not a whitespace.
-decl str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
+declare-option str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
 # If hover in insert mode is enabled then request is made only when this expression doesn't fail and
 # for position at which it moves cursor; by default, it ensures that cursor is after opening parens
 # and then moves cursor to opening parens to request hover info for current function; note that it
 # doesn't handle well nested function calls.
-decl str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
+declare-option str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
 # Formatting: size of a tab in spaces.
-decl int lsp_tab_size 4
+declare-option int lsp_tab_size 4
 # Formatting: prefer spaces over tabs.
-decl bool lsp_insert_spaces true
+declare-option bool lsp_insert_spaces true
 # Set to true to automatically highlight references with Reference face.
-decl bool lsp_auto_highlight_references false
+declare-option bool lsp_auto_highlight_references false
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
-decl int lsp_hover_max_lines 0
+declare-option int lsp_hover_max_lines 0
 # Configuration to send in DidChangeNotification messages.
-decl str-to-str-map lsp_server_configuration
+declare-option str-to-str-map lsp_server_configuration
 # Line flags for inline diagnostics.
-decl str lsp_diagnostic_line_error_sign '*'
-decl str lsp_diagnostic_line_warning_sign '!'
+declare-option str lsp_diagnostic_line_error_sign '*'
+declare-option str lsp_diagnostic_line_warning_sign '!'
 # Another good default:
-# set global lsp_diagnostic_line_error_sign '▓'
-# set global lsp_diagnostic_line_warning_sign '▒'
+# set-option global lsp_diagnostic_line_error_sign '▓'
+# set-option global lsp_diagnostic_line_warning_sign '▒'
 
 # Options for information exposed by kak-lsp.
 
 # Count of diagnostics published for the current buffer.
-decl int lsp_diagnostic_error_count 0
-decl int lsp_diagnostic_warning_count 0
+declare-option int lsp_diagnostic_error_count 0
+declare-option int lsp_diagnostic_warning_count 0
 
 # Internal variables.
 
-decl -hidden completions lsp_completions
-decl -hidden range-specs lsp_errors
-decl -hidden line-specs lsp_error_lines
-decl -hidden range-specs cquery_semhl
-decl -hidden str lsp_draft
-decl -hidden int lsp_timestamp -1
-decl -hidden range-specs lsp_references
+declare-option -hidden completions lsp_completions
+declare-option -hidden range-specs lsp_errors
+declare-option -hidden line-specs lsp_error_lines
+declare-option -hidden range-specs cquery_semhl
+declare-option -hidden str lsp_draft
+declare-option -hidden int lsp_timestamp -1
+declare-option -hidden range-specs lsp_references
 
 ### Requests ###
 
-def lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & } }
+define-command lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & } }
 
-def -hidden lsp-did-change -docstring "Notify language server about buffer change" %{ try %{
+define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{ try %{
     evaluate-commands %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
         else
-            echo "eval -draft -no-hooks %{set buffer lsp_timestamp %val{timestamp}; exec '%'; set buffer lsp_draft %val{selection}}"
+            echo "evaluate-commands -draft -no-hooks %{set-option buffer lsp_timestamp %val{timestamp}; execute-keys '%'; set-option buffer lsp_draft %val{selection}}"
         fi
     }
     nop %sh{ (
@@ -88,19 +88,19 @@ draft    = """
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
 }}
 
-def -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
+define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
 lsp-did-change
 try %{
     # fail if preceding character is a whitespace
-    eval -draft %opt{lsp_completion_trigger}
+    evaluate-commands -draft %opt{lsp_completion_trigger}
 
-    decl -hidden str lsp_completion_offset
+    declare-option -hidden str lsp_completion_offset
 
-    eval -draft %{ try %{
+    evaluate-commands -draft %{ try %{
         execute-keys <esc><a-h>s\$?\w+.\z<ret>
-        set window lsp_completion_offset %sh{echo $((${#kak_selection} - 1))}
+        set-option window lsp_completion_offset %sh{echo $((${#kak_selection} - 1))}
     } catch %{
-        set window lsp_completion_offset "0"
+        set-option window lsp_completion_offset "0"
     }}
 
     nop %sh{ (printf '
@@ -118,7 +118,7 @@ offset    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }}
 
-def lsp-hover -docstring "Request hover info for the main cursor position" %{
+define-command lsp-hover -docstring "Request hover info for the main cursor position" %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -133,7 +133,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-definition -docstring "Go to definition" %{
+define-command lsp-definition -docstring "Go to definition" %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -148,7 +148,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-references -docstring "Open buffer with symbol references" %{
+define-command lsp-references -docstring "Open buffer with symbol references" %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -163,7 +163,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-highlight-references -docstring "Highlight symbol references" %{
+define-command lsp-highlight-references -docstring "Highlight symbol references" %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -178,7 +178,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-rename -params 1 -docstring "Rename symbol under the main cursor" %{
+define-command lsp-rename -params 1 -docstring "Rename symbol under the main cursor" %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -195,16 +195,16 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
+define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
     evaluate-commands -save-regs a %{
-        # It'd be more obvious to use "eval -draft" and %val{selection},
+        # It'd be more obvious to use "evaluate-commands -draft" and %val{selection},
         # but :prompt doesn't work inside a draft context for some reason.
         execute-keys <space><a-i>w"ay
         prompt -init "%reg{a}" 'New name: ' %{ lsp-rename %val{text} }
     }
 }
 
-def lsp-signature-help -docstring "Request signature help for the main cursor position" %{
+define-command lsp-signature-help -docstring "Request signature help for the main cursor position" %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -219,7 +219,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
+define-command lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
     lsp-did-change
     nop %sh{ (printf '
 session  = "%s"
@@ -232,7 +232,7 @@ method   = "textDocument/diagnostics"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-document-symbol -docstring "Open buffer with document symbols" %{
+define-command lsp-document-symbol -docstring "Open buffer with document symbols" %{
     lsp-did-change
     nop %sh{ (printf '
 session  = "%s"
@@ -245,12 +245,12 @@ method   = "textDocument/documentSymbol"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
+define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
     buffile filetype timestamp query
     Open buffer with a list of project-wide symbols matching the query
     on behalf of the buffile at timestamp
  } %{ try %{
-    eval %sh{
+    evaluate-commands %sh{
         if [ -z "${4}" ];
         then echo "fail";
         else echo "nop";
@@ -269,7 +269,7 @@ query    = "%s"
 ' "${kak_session}" "${kak_client}" "${1}" "${2}" "${3}" "${4}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }}
 
-def lsp-capabilities -docstring "List available commands for current filetype" %{
+define-command lsp-capabilities -docstring "List available commands for current filetype" %{
     lsp-did-change
     nop %sh{ (printf '
 session  = "%s"
@@ -282,7 +282,7 @@ method   = "capabilities"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-did-open %{
+define-command -hidden lsp-did-open %{
     nop %sh{ (printf '
 session  = "%s"
 client   = "%s"
@@ -294,7 +294,7 @@ method   = "textDocument/didOpen"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-did-close %{
+define-command -hidden lsp-did-close %{
     nop %sh{ (printf '
 session  = "%s"
 client   = "%s"
@@ -306,7 +306,7 @@ method   = "textDocument/didClose"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-did-save %{
+define-command -hidden lsp-did-save %{
     nop %sh{ (printf '
 session  = "%s"
 client   = "%s"
@@ -318,7 +318,7 @@ method   = "textDocument/didSave"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-did-change-config %{
+define-command -hidden lsp-did-change-config %{
     echo -debug "Config-change detected:" %opt{lsp_server_configuration}
     nop %sh{
 ((printf '
@@ -343,7 +343,7 @@ done
 ) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
+define-command -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
     remove-hooks global lsp
     nop %sh{ (printf '
 session  = "%s"
@@ -356,7 +356,7 @@ method   = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-stop -docstring "Stop kak-lsp session" %{
+define-command lsp-stop -docstring "Stop kak-lsp session" %{
     remove-hooks global lsp
     nop %sh{ (printf '
 session  = "%s"
@@ -369,7 +369,7 @@ method   = "stop"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def lsp-formatting -docstring "Format document" %{
+define-command lsp-formatting -docstring "Format document" %{
     lsp-did-change
     nop %sh{ (printf '
 session      = "%s"
@@ -384,9 +384,9 @@ insertSpaces = %s
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_lsp_tab_size}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
 }
 
-def lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
+define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
     lsp-did-change
-    eval -no-hooks %sh{
+    evaluate-commands -no-hooks %sh{
 tmp=$(mktemp -q -d -t 'lsp-formatting.XXXXXX' 2>/dev/null || mktemp -q -d)
 pipe=${tmp}/fifo
 mkfifo ${pipe}
@@ -410,7 +410,7 @@ rm -rf ${tmp}
 
 # CCLS Extension
 
-def ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
+define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -427,7 +427,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def ccls-vars -docstring "ccls-vars: Find instances of symbol at point." %{
+define-command ccls-vars -docstring "ccls-vars: Find instances of symbol at point." %{
     lsp-did-change
     nop %sh{ (printf '
 session   = "%s"
@@ -442,7 +442,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def ccls-inheritance -params 1..2 -docstring "ccls-inheritance <derived|base> [levels]: Find base- or derived classes of symbol at point." %{
+define-command ccls-inheritance -params 1..2 -docstring "ccls-inheritance <derived|base> [levels]: Find base- or derived classes of symbol at point." %{
     lsp-did-change
     nop %sh{
         derived="false"
@@ -466,7 +466,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$derived" "$levels" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def ccls-call -params 1 -docstring "ccls-call <caller|callee>: Find callers or callees of symbol at point." %{
+define-command ccls-call -params 1 -docstring "ccls-call <caller|callee>: Find callers or callees of symbol at point." %{
     lsp-did-change
     nop %sh{
         callee="false"
@@ -488,7 +488,7 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$callee" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-def ccls-member -params 1 -docstring "ccls-member <vars|types|functions>: Find member variables/types/functions of symbol at point." %{
+define-command ccls-member -params 1 -docstring "ccls-member <vars|types|functions>: Find member variables/types/functions of symbol at point." %{
     lsp-did-change
     nop %sh{
         kind=0
@@ -516,7 +516,7 @@ character = %d
 
 # Feel free to override these commands in your config if you need to customise response handling.
 
-def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
+define-command -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
     content=$2
 
     if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
@@ -531,54 +531,54 @@ def -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-
     esac
 }}
 
-def -hidden lsp-show-error -params 1 -docstring "Render error" %{
+define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
     echo -debug "kak-lsp:" %arg{1}
     info %arg{1}
 }
 
-def -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
-    eval -try-client %opt[toolsclient] %{
+define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
+    evaluate-commands -try-client %opt[toolsclient] %{
         edit! -scratch *diagnostics*
         cd %arg{1}
-        try %{ set buffer working_folder %sh{pwd} }
-        set buffer filetype make
+        try %{ set-option buffer working_folder %sh{pwd} }
+        set-option buffer filetype make
         set-register '"' %arg{2}
-        exec Pgg
+        execute-keys Pgg
     }
 }
 
-def -hidden lsp-show-references -params 2 -docstring "Render references" %{
-    eval -try-client %opt[toolsclient] %{
+define-command -hidden lsp-show-references -params 2 -docstring "Render references" %{
+    evaluate-commands -try-client %opt[toolsclient] %{
         edit! -scratch *references*
         cd %arg{1}
-        try %{ set buffer working_folder %sh{pwd} }
-        set buffer filetype grep
+        try %{ set-option buffer working_folder %sh{pwd} }
+        set-option buffer filetype grep
         set-register '"' %arg{2}
-        exec Pgg
+        execute-keys Pgg
     }
 }
 
-def -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
-    eval -try-client %opt[toolsclient] %{
+define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
+    evaluate-commands -try-client %opt[toolsclient] %{
         edit! -scratch *symbols*
         cd %arg{1}
-        try %{ set buffer working_folder %sh{pwd} }
-        set buffer filetype grep
+        try %{ set-option buffer working_folder %sh{pwd} }
+        set-option buffer filetype grep
         set-register '"' %arg{2}
-        exec Pgg
+        execute-keys Pgg
     }
 }
 
-def -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
+define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
     cd %arg{1}
-    try %{ set buffer working_folder %sh{pwd} }
-    exec '<a-;>%<a-;>d'
+    try %{ set-option buffer working_folder %sh{pwd} }
+    execute-keys '<a-;>%<a-;>d'
     set-register '"' %arg{2}
-    exec '<a-;>P<a-;>gg'
+    execute-keys '<a-;>P<a-;>gg'
 }
 
-def -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace symbols" %{
-    eval %sh{
+define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace symbols" %{
+    evaluate-commands %sh{
         if [ "${kak_buffile}" = "*symbols*" ];
         then echo 'lsp-update-workspace-symbol %arg{1} %arg{2}';
         else echo 'lsp-show-document-symbol %arg{1} %arg{2}';
@@ -586,51 +586,51 @@ def -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace sym
     }
 }
 
-def -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
+define-command -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
     echo %arg{2}
 }
 
-def -hidden lsp-insert-after-selection -params 1 -docstring %{
+define-command -hidden lsp-insert-after-selection -params 1 -docstring %{
     Insert content after current selections while keeping cursor intact.
     It is used to apply text edits from language server.
 } %{
-    decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    decl -hidden str lsp_text_edit_content %arg{1}
-    exec %sh{
+    declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
+    declare-option -hidden str lsp_text_edit_content %arg{1}
+    execute-keys %sh{
         printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
         printf "<a-!>cat %s<ret>" $kak_opt_lsp_text_edit_tmp
     }
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
 }
 
-def -hidden lsp-replace-selection -params 1 -docstring %{
+define-command -hidden lsp-replace-selection -params 1 -docstring %{
     Replace content of current selections while keeping cursor intact.
     It is used to apply text edits from language server.
 } %{
-    decl -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    decl -hidden str lsp_text_edit_content %arg{1}
-    exec %sh{
+    declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
+    declare-option -hidden str lsp_text_edit_content %arg{1}
+    execute-keys %sh{
         printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
         printf "|cat %s<ret>" $kak_opt_lsp_text_edit_tmp
     }
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
 }
 
-def -hidden lsp-apply-edits-to-file -params 2 -docstring %{
+define-command -hidden lsp-apply-edits-to-file -params 2 -docstring %{
     lsp-apply-edits-to-file <path> <command>
     Apply edits to the file's buffer if it's open, otherwise open file, apply edits, save and close file.
-} %{ eval -no-hooks %{ try %{
-        eval -buffer %arg{1} %arg{2}
+} %{ evaluate-commands -no-hooks %{ try %{
+        evaluate-commands -buffer %arg{1} %arg{2}
     } catch %{
         edit %arg{1}
-        eval %arg{2}
+        evaluate-commands %arg{2}
         write
         delete-buffer
 }}}
 
 ### Other commands ###
 
-def lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
+define-command lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
 Jump to the next or previous diagnostic error" %{
     evaluate-commands %sh{
         previous=false
@@ -692,86 +692,86 @@ Jump to the next or previous diagnostic error" %{
     }
 }
 
-def lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{ lsp-workspace-symbol-buffer %val{buffile} %opt{filetype} %val{timestamp} %arg{1} }
+define-command lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{ lsp-workspace-symbol-buffer %val{buffile} %opt{filetype} %val{timestamp} %arg{1} }
 
-def lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
-    decl -hidden str lsp_ws_buffile %val{buffile}
-    decl -hidden str lsp_ws_filetype %opt{filetype}
-    decl -hidden int lsp_ws_timestamp %val{timestamp}
-    decl -hidden str lsp_ws_query
+define-command lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
+    declare-option -hidden str lsp_ws_buffile %val{buffile}
+    declare-option -hidden str lsp_ws_filetype %opt{filetype}
+    declare-option -hidden int lsp_ws_timestamp %val{timestamp}
+    declare-option -hidden str lsp_ws_query
     edit! -scratch *symbols*
-    set buffer filetype grep
+    set-option buffer filetype grep
     prompt -on-change %{ try %{
         # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
         # the following check prevents it
-        eval %sh{
+        evaluate-commands %sh{
             if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
             then echo 'fail';
             else echo 'set current lsp_ws_query %val{text}';
             fi
         }
         lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_filetype} %opt{lsp_ws_timestamp} %val{text}
-    }} -on-abort %{exec ga} 'Query: ' nop
+    }} -on-abort %{execute-keys ga} 'Query: ' nop
 }
 
 ### Hooks and highlighters ###
 
-def lsp-inline-diagnostics-enable -params 1 -docstring "Enable inline diagnostics highlighting" %{
+define-command lsp-inline-diagnostics-enable -params 1 -docstring "Enable inline diagnostics highlighting" %{
     add-highlighter "%arg{1}/lsp_errors" ranges lsp_errors
 }
 
-def lsp-inline-diagnostics-disable -params 1 -docstring "Disable inline diagnostics highlighting"  %{
+define-command lsp-inline-diagnostics-disable -params 1 -docstring "Disable inline diagnostics highlighting"  %{
     remove-highlighter "%arg{1}/lsp_errors"
 }
 
-def lsp-diagnostic-lines-enable -params 1 -docstring "Enable diagnostics line flags" %{
+define-command lsp-diagnostic-lines-enable -params 1 -docstring "Enable diagnostics line flags" %{
     add-highlighter "%arg{1}/lsp_error_lines" flag-lines LineFlagErrors lsp_error_lines
 }
 
-def lsp-diagnostic-lines-disable -params 1 -docstring "Disable diagnostics line flags"  %{
+define-command lsp-diagnostic-lines-disable -params 1 -docstring "Disable diagnostics line flags"  %{
     remove-highlighter "%arg{1}/lsp_error_lines"
 }
 
-def lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
+define-command lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
     hook -group lsp-auto-hover global NormalIdle .* %{
         lsp-hover
     }
 }
 
-def lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
+define-command lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
     remove-hooks global lsp-auto-hover
 }
 
-def lsp-auto-hover-insert-mode-enable -docstring "Enable auto-requesting hover info for current function in insert mode" %{
-    hook -group lsp-auto-hover-insert-mode global InsertIdle .* %{ try %{ eval -draft %{
-        eval %opt{lsp_hover_insert_mode_trigger}
+define-command lsp-auto-hover-insert-mode-enable -docstring "Enable auto-requesting hover info for current function in insert mode" %{
+    hook -group lsp-auto-hover-insert-mode global InsertIdle .* %{ try %{ evaluate-commands -draft %{
+        evaluate-commands %opt{lsp_hover_insert_mode_trigger}
         lsp-hover
     }}}
 }
 
-def lsp-auto-hover-insert-mode-disable -docstring "Disable auto-requesting hover info for current function in insert mode" %{
+define-command lsp-auto-hover-insert-mode-disable -docstring "Disable auto-requesting hover info for current function in insert mode" %{
     remove-hooks global lsp-auto-hover-insert-mode
 }
 
-def lsp-auto-signature-help-enable -docstring "Enable auto-requesting signature help in insert mode" %{
+define-command lsp-auto-signature-help-enable -docstring "Enable auto-requesting signature help in insert mode" %{
     hook -group lsp-auto-signature-help global InsertIdle .* lsp-signature-help
 }
 
-def lsp-auto-signature-help-disable -docstring "Disable auto-requesting signature help in insert mode" %{
+define-command lsp-auto-signature-help-disable -docstring "Disable auto-requesting signature help in insert mode" %{
     remove-hooks global lsp-auto-signature-help
 }
 
-def lsp-stop-on-exit-enable -docstring "End kak-lsp session on Kakoune session end" %{
+define-command lsp-stop-on-exit-enable -docstring "End kak-lsp session on Kakoune session end" %{
     alias global lsp-exit lsp-stop
 }
 
-def lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune session end" %{
+define-command lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune session end" %{
     alias global lsp-exit lsp-exit-editor-session
 }
 
 ### lsp-* commands as subcommands of lsp command ###
 
-def lsp -params 1.. %sh{
+define-command lsp -params 1.. %sh{
     if [ $kak_version \< "v2018.09.04-128-g5bdcfab0" ];
     then echo "-shell-candidates";
     else echo "-shell-script-candidates";
@@ -786,7 +786,7 @@ def lsp -params 1.. %sh{
     auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable find-error;
         do echo $cmd;
     done
-} %{ eval "lsp-%arg{1}" }
+} %{ evaluate-commands "lsp-%arg{1}" }
 
 
 ### User mode ###
@@ -807,8 +807,8 @@ map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highli
 
 ### Default integration ###
 
-def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
-    set global completers option=lsp_completions %opt{completers}
+define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
+    set-option global completers option=lsp_completions %opt{completers}
     add-highlighter global/cquery_semhl ranges cquery_semhl
     add-highlighter global/lsp_references ranges lsp_references
     lsp-inline-diagnostics-enable global
@@ -832,8 +832,8 @@ def -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
     hook -group lsp global KakEnd .* lsp-exit
 }
 
-def lsp-enable-window -docstring "Default integration with kak-lsp in the window scope" %{
-    set window completers option=lsp_completions %opt{completers}
+define-command lsp-enable-window -docstring "Default integration with kak-lsp in the window scope" %{
+    set-option window completers option=lsp_completions %opt{completers}
 
     add-highlighter window/cquery_semhl ranges cquery_semhl
     add-highlighter window/lsp_references ranges lsp_references
