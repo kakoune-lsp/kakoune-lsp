@@ -80,12 +80,12 @@ cp kak-lsp.toml ~/.config/kak-lsp/
 If you don't mind using plugin manager, you can install kak-lsp
 with https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
 
----
+----
 plug "ul/kak-lsp" do %{
     cargo build --release
     cargo install
 }
----
+----
 
 You can replace `cargo install` with `ln -s target/release/kak-lsp ~/.local/bin/`
 where `~/local/bin/` can be replaced to something in your `$PATH`.
