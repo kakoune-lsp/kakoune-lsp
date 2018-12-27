@@ -87,8 +87,8 @@ plug "ul/kak-lsp" do %{
 }
 ----
 
-You can replace `cargo install` with `ln -s target/release/kak-lsp ~/.local/bin/`
-where `~/local/bin/` can be replaced to something in your `$PATH`.
+You can replace `cargo install` with `ln -sf target/release/kak-lsp ~/.local/bin/`
+where `~/.local/bin/` can be replaced to something in your `$PATH`.
 
 == Language servers
 
