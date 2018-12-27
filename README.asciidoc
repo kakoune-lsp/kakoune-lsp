@@ -23,8 +23,8 @@ tar xzvf kak-lsp-v6.0.0-x86_64-apple-darwin.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 
-mkdir -p ~/.config/kak-lsp 
-mv kak-lsp.toml ~/.config/kak-lsp/ 
+mkdir -p ~/.config/kak-lsp
+mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 ==== Linux
@@ -42,8 +42,8 @@ tar xzvf kak-lsp-v6.0.0-x86_64-unknown-linux-musl.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 
-mkdir -p ~/.config/kak-lsp 
-mv kak-lsp.toml ~/.config/kak-lsp/ 
+mkdir -p ~/.config/kak-lsp
+mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 ==== FreeBSD
@@ -55,8 +55,8 @@ tar xzvf kak-lsp-v6.0.0-x86_64-unknown-freebsd.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 
-mkdir -p ~/.config/kak-lsp 
-mv kak-lsp.toml ~/.config/kak-lsp/ 
+mkdir -p ~/.config/kak-lsp
+mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 === From the source
@@ -70,10 +70,25 @@ cargo build --release
 # replace `~/.local/bin/` with something on your `$PATH`
 ln -s $PWD/target/release/kak-lsp ~/.local/bin/
 
-mkdir -p ~/.config/kak-lsp 
+mkdir -p ~/.config/kak-lsp
 # or just link if you are okay with default config
 cp kak-lsp.toml ~/.config/kak-lsp/
 ----
+
+=== With plug.kak
+
+If you don't mind using plugin manager, you can install kak-lsp
+with https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
+
+----
+plug "ul/kak-lsp" do %{
+    cargo build --release
+    cargo install
+}
+----
+
+You can replace `cargo install` with `ln -sf target/release/kak-lsp ~/.local/bin/`
+where `~/.local/bin/` can be replaced to something in your `$PATH`.
 
 == Language servers
 
