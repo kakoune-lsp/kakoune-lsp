@@ -771,12 +771,7 @@ define-command lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on
 
 ### lsp-* commands as subcommands of lsp command ###
 
-define-command lsp -params 1.. %sh{
-    if [ $kak_version \< "v2018.09.04-128-g5bdcfab0" ];
-    then echo "-shell-candidates";
-    else echo "-shell-script-candidates";
-    fi
-} %{
+define-command lsp -params 1.. -shell-script-candidates %{
     for cmd in start hover definition references signature-help diagnostics document-symbol\
     workspace-symbol workspace-symbol-incr rename rename-prompt\
     capabilities stop formatting formatting-sync highlight-references\
