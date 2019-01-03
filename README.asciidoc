@@ -121,6 +121,7 @@ It adds:
   to show hover anchored to hovered position do `set global lsp_hover_anchor true`
 * `lsp-find-error` command to jump to the next or previous error in the file
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
+  `\*references*` buffer has `grep` filetype so you can use all commands provided by `grep.kak`, including `grep-jump`.
 * `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
