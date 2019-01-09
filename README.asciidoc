@@ -84,16 +84,13 @@ with https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `ka
 plug "ul/kak-lsp" do %{
     cargo build --release --locked
     cargo install --force
-} config %{
-    hook global WinSetOption filetype=rust %{
-        lsp-start
-        lsp-enable
-    }
 }
 ----
 
 You can replace `cargo install` with `ln -sf target/release/kak-lsp ~/.local/bin/`
 where `~/.local/bin/` can be replaced to something in your `$PATH`.
+
+Examples of configuration with plug.kak can be found at https://github.com/ul/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
 
 == Language servers
 
