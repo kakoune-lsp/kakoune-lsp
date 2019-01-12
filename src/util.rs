@@ -104,19 +104,13 @@ pub fn goodbye(config: &Config, code: i32) {
     process::exit(code);
 }
 
-pub fn apply_text_edits(
-    uri: Option<&Url>,
-    text_edits: &[TextEdit],
-    meta: &EditorMeta,
-    ctx: &mut Context,
-) {
+pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
     // empty text edits processed as a special case because Kakoune's `select` command
     // doesn't support empty arguments list
     if text_edits.is_empty() {
         // nothing to do, but sending command back to the editor is required to handle case when
         // editor is blocked waiting for response via fifo
-        ctx.exec(meta.clone(), "nop".to_string());
-        return;
+        return "nop".to_string();
     }
     let edits = text_edits
         .iter()
@@ -197,14 +191,13 @@ pub fn apply_text_edits(
     match uri {
         Some(uri) => {
             let buffile = uri.to_file_path().unwrap();
-            let command = format!(
+            format!(
                 "lsp-apply-edits-to-file {} {}",
                 editor_quote(buffile.to_str().unwrap()),
                 editor_quote(&command)
-            );
-            ctx.exec(meta.clone(), command);
+            )
         }
-        None => ctx.exec(meta.clone(), command),
+        None => command,
     }
 }
 

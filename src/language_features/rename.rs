@@ -41,14 +41,14 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
                     // TODO handle version
-                    apply_text_edits(Some(&edit.text_document.uri), &edit.edits, meta, ctx);
+                    ctx.exec(meta.clone(), apply_text_edits(Some(&edit.text_document.uri), &edit.edits));
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
                         DocumentChangeOperation::Edit(edit) => {
-                            apply_text_edits(Some(&edit.text_document.uri), &edit.edits, meta, ctx)
+                            ctx.exec(meta.clone(), apply_text_edits(Some(&edit.text_document.uri), &edit.edits))
                         }
                         DocumentChangeOperation::Op(op) => match op {
                             ResourceOp::Create(op) => {
@@ -122,7 +122,7 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         }
     } else if let Some(changes) = result.changes {
         for (uri, change) in &changes {
-            apply_text_edits(Some(uri), &change, meta, ctx);
+            ctx.exec(meta.clone(), apply_text_edits(Some(uri), &change))
         }
     }
 }

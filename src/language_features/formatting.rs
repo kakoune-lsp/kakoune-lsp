@@ -42,7 +42,7 @@ pub fn editor_formatting(
             return;
         }
         TextEditResponse::Array(text_edits) => {
-            apply_text_edits(None, &text_edits, meta, ctx);
+            ctx.exec(meta.clone(), apply_text_edits(None, &text_edits));
         }
     }
 }
