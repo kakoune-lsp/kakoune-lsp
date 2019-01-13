@@ -167,15 +167,15 @@ pub fn start(
 
 fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     let buffile = &request.meta.buffile;
-    if !buffile.is_empty() && !ctx.versions.contains_key(buffile) {
-        text_document_did_open(&request.meta, &mut ctx);
-    }
     let meta = &request.meta;
     let params = request.params;
     let method: &str = &request.method;
+    if !buffile.is_empty() && !ctx.versions.contains_key(buffile) {
+        text_document_did_open(&request.meta, params.clone(), &mut ctx);
+    }
     match method {
         notification::DidOpenTextDocument::METHOD => {
-            text_document_did_open(meta, &mut ctx);
+            text_document_did_open(meta, params, &mut ctx);
         }
         notification::DidChangeTextDocument::METHOD => {
             text_document_did_change(meta, params, &mut ctx);

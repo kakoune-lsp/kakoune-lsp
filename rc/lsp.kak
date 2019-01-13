@@ -283,7 +283,17 @@ method   = "capabilities"
 }
 
 define-command -hidden lsp-did-open %{
-    nop %sh{ (printf '
+    evaluate-commands %sh{
+        if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
+            echo "fail"
+        else
+            echo "evaluate-commands -draft -no-hooks %{set-option buffer lsp_timestamp %val{timestamp}; execute-keys '%'; set-option buffer lsp_draft %val{selection}}"
+        fi
+    }
+    nop %sh{ (
+lsp_draft=$(printf '%s.' "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
+lsp_draft=${lsp_draft%.}
+printf '
 session  = "%s"
 client   = "%s"
 buffile  = "%s"
@@ -291,7 +301,9 @@ filetype = "%s"
 version  = %d
 method   = "textDocument/didOpen"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+draft    = """
+%s"""
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-did-close %{

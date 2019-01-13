@@ -2,29 +2,23 @@ use context::*;
 use languageserver_types::notification::Notification;
 use languageserver_types::*;
 use serde::Deserialize;
-use std::fs::File;
-use std::io::Read;
 use types::*;
 use url::Url;
 
-pub fn text_document_did_open(meta: &EditorMeta, ctx: &mut Context) {
+pub fn text_document_did_open(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = TextDocumentDidOpenParams::deserialize(params);
+    if params.is_err() {
+        error!("Params should follow TextDocumentDidOpenParams structure");
+        return;
+    }
+    let params = params.unwrap();
     let language_id = ctx.language_id.clone();
-    let file = File::open(&meta.buffile);
-    if file.is_err() {
-        error!("Failed to open file");
-        return;
-    }
-    let mut text = String::new();
-    if file.unwrap().read_to_string(&mut text).is_err() {
-        error!("Failed to read from file: {}", meta.buffile);
-        return;
-    }
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
             language_id,
             version: meta.version,
-            text,
+            text: params.draft,
         },
     };
     ctx.versions.insert(meta.buffile.clone(), meta.version);

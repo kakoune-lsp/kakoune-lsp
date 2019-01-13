@@ -105,6 +105,11 @@ pub struct EditorCompletion {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct TextDocumentDidOpenParams {
+    pub draft: String,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct TextDocumentDidChangeParams {
     pub draft: String,
 }
