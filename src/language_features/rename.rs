@@ -41,15 +41,19 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
                     // TODO handle version
-                    ctx.exec(meta.clone(), apply_text_edits(Some(&edit.text_document.uri), &edit.edits));
+                    ctx.exec(
+                        meta.clone(),
+                        apply_text_edits(Some(&edit.text_document.uri), &edit.edits),
+                    );
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
-                        DocumentChangeOperation::Edit(edit) => {
-                            ctx.exec(meta.clone(), apply_text_edits(Some(&edit.text_document.uri), &edit.edits))
-                        }
+                        DocumentChangeOperation::Edit(edit) => ctx.exec(
+                            meta.clone(),
+                            apply_text_edits(Some(&edit.text_document.uri), &edit.edits),
+                        ),
                         DocumentChangeOperation::Op(op) => match op {
                             ResourceOp::Create(op) => {
                                 let path = Url::parse(&op.uri).unwrap().to_file_path().unwrap();
