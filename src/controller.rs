@@ -166,13 +166,10 @@ pub fn start(
 }
 
 fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
-    let buffile = &request.meta.buffile;
+    ensure_did_open(&request, ctx);
     let meta = &request.meta;
     let params = request.params;
     let method: &str = &request.method;
-    if !buffile.is_empty() && !ctx.versions.contains_key(buffile) {
-        text_document_did_open(&request.meta, params.clone(), &mut ctx);
-    }
     match method {
         notification::DidOpenTextDocument::METHOD => {
             text_document_did_open(meta, params, &mut ctx);
@@ -357,4 +354,25 @@ fn dispatch_server_response(
             error!("Don't know how to handle response for method: {}", method);
         }
     }
+}
+
+fn ensure_did_open(request: &EditorRequest, mut ctx: &mut Context) {
+    let buffile = &request.meta.buffile;
+    if buffile.is_empty() || ctx.versions.contains_key(buffile) {
+        return;
+    };
+    if request.method == notification::DidChangeTextDocument::METHOD {
+        return text_document_did_open(&request.meta, request.params.clone(), &mut ctx);
+    }
+    match std::fs::read_to_string(buffile) {
+        Ok(draft) => {
+            let mut params = toml::value::Table::default();
+            params.insert("draft".to_string(), toml::Value::String(draft));
+            text_document_did_open(&request.meta, toml::Value::Table(params), &mut ctx);
+        }
+        Err(_) => error!(
+            "Failed to read file {} to simulate textDocument/didOpen",
+            buffile
+        ),
+    };
 }
