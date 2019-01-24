@@ -2,7 +2,7 @@
 
 # Feel free to update path and arguments according to your setup when sourcing lsp.kak directly.
 # Sourcing via `kak-lsp --kakoune` does it automatically.
-declare-option str lsp_cmd "kak-lsp -s %val{session}"
+declare-option -docstring "Command with which lsp is run" str lsp_cmd "kak-lsp -s %val{session}"
 
 # Faces
 
@@ -16,30 +16,31 @@ set-face global Reference MatchingChar
 
 # Options for tuning kak-lsp behaviour.
 
-# Set to true to display hover info anchored to the hovered position.
-declare-option bool lsp_hover_anchor false
+# Display hover info anchored to the hovered position.
+declare-option -docstring "Display hover info anchored to the hovered position" bool lsp_hover_anchor false
 # Completions request is sent only when this expression doesn't fail.
 # By default, it ensures that preceding character is not a whitespace.
-declare-option str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
+declare-option -docstring "Completions request is sent only when this expression does not fail" str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
 # If hover in insert mode is enabled then request is made only when this expression doesn't fail and
 # for position at which it moves cursor; by default, it ensures that cursor is after opening parens
 # and then moves cursor to opening parens to request hover info for current function; note that it
 # doesn't handle well nested function calls.
-declare-option str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
+declare-option -docstring "If hover in insert mode is enabled then request is made only when this expression does not fail and for position at which it moves cursor" \
+str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
 # Formatting: size of a tab in spaces.
-declare-option int lsp_tab_size 4
+declare-option -docstring "Size of a tab in spaces" int lsp_tab_size 4
 # Formatting: prefer spaces over tabs.
-declare-option bool lsp_insert_spaces true
+declare-option -docstring "Prefer spaces over tabs" bool lsp_insert_spaces true
 # Set to true to automatically highlight references with Reference face.
-declare-option bool lsp_auto_highlight_references false
+declare-option -docstring "Automatically highlight references with Reference face" bool lsp_auto_highlight_references false
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
-declare-option int lsp_hover_max_lines 0
+declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
 # Configuration to send in DidChangeNotification messages.
-declare-option str-to-str-map lsp_server_configuration
+declare-option -docstring "Configuration to send in DidChangeNotification messages" str-to-str-map lsp_server_configuration
 # Line flags for inline diagnostics.
-declare-option str lsp_diagnostic_line_error_sign '*'
-declare-option str lsp_diagnostic_line_warning_sign '!'
+declare-option -docstring "Character to signal an error in the gutter" str lsp_diagnostic_line_error_sign '*'
+declare-option -docstring "Character to signal a warning in the gutter" str lsp_diagnostic_line_warning_sign '!'
 # Another good default:
 # set-option global lsp_diagnostic_line_error_sign '▓'
 # set-option global lsp_diagnostic_line_warning_sign '▒'
@@ -47,8 +48,8 @@ declare-option str lsp_diagnostic_line_warning_sign '!'
 # Options for information exposed by kak-lsp.
 
 # Count of diagnostics published for the current buffer.
-declare-option int lsp_diagnostic_error_count 0
-declare-option int lsp_diagnostic_warning_count 0
+declare-option -docstring "Number of errors" int lsp_diagnostic_error_count 0
+declare-option -docstring "Number of warnings" int lsp_diagnostic_warning_count 0
 
 # Internal variables.
 
