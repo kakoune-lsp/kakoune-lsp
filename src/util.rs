@@ -1,7 +1,7 @@
 use context::*;
 use fnv::FnvHashMap;
 use itertools::Itertools;
-use languageserver_types::*;
+use lsp_types::*;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;

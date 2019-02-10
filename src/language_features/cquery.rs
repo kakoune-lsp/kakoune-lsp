@@ -1,7 +1,7 @@
 use context::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
-use languageserver_types::{NumberOrString, Range};
+use lsp_types::{NumberOrString, Range};
 use serde;
 use types::*;
 use url::Url;

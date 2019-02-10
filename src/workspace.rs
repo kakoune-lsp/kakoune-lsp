@@ -1,13 +1,13 @@
 use context::*;
-use languageserver_types::request::Request;
-use languageserver_types::*;
+use lsp_types::request::Request;
+use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use toml;
 use types::*;
 use util::*;
 
-use languageserver_types::notification::{self, Notification};
+use lsp_types::notification::{self, Notification};
 
 fn insert_value<'a, 'b, P>(
     target: &'b mut serde_json::map::Map<String, Value>,

@@ -1,7 +1,7 @@
 use context::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
-use languageserver_types::*;
+use lsp_types::*;
 use std::path::Path;
 use types::*;
 use util::*;

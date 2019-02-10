@@ -1,8 +1,8 @@
 use crossbeam_channel::{bounded, Receiver, Sender};
 use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Output, Params, Version};
-use languageserver_types::notification::Notification;
-use languageserver_types::*;
+use lsp_types::notification::Notification;
+use lsp_types::*;
 use serde_json;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};

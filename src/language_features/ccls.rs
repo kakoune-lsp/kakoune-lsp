@@ -1,7 +1,7 @@
 use context::*;
 use itertools::Itertools;
 use jsonrpc_core::{Params, Value};
-use languageserver_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
+use lsp_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
 use serde;
 use serde::Deserialize;
 use serde_json;

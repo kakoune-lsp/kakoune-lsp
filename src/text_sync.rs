@@ -1,6 +1,6 @@
 use context::*;
-use languageserver_types::notification::Notification;
-use languageserver_types::*;
+use lsp_types::notification::Notification;
+use lsp_types::*;
 use serde::Deserialize;
 use types::*;
 use url::Url;

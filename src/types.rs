@@ -1,6 +1,6 @@
 use fnv::FnvHashMap;
 use jsonrpc_core::{Call, Output, Params};
-use languageserver_types::*;
+use lsp_types::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::io::Error;

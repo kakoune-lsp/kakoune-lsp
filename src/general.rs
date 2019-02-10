@@ -1,7 +1,7 @@
 use context::*;
-use languageserver_types::notification::Notification;
-use languageserver_types::request::Request;
-use languageserver_types::*;
+use lsp_types::notification::Notification;
+use lsp_types::request::Request;
+use lsp_types::*;
 use serde_json::Value;
 use std::process;
 use toml;
