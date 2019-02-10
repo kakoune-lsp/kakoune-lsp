@@ -27,8 +27,6 @@ declare-option -docstring "Completions request is sent only when this expression
 # doesn't handle well nested function calls.
 declare-option -docstring "If hover in insert mode is enabled then request is made only when this expression does not fail and for position at which it moves cursor" \
 str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
-# Formatting: size of a tab in spaces.
-declare-option -docstring "Size of a tab in spaces" int lsp_tab_size 4
 # Formatting: prefer spaces over tabs.
 declare-option -docstring "Prefer spaces over tabs" bool lsp_insert_spaces true
 # Set to true to automatically highlight references with Reference face.
@@ -394,7 +392,7 @@ method       = "textDocument/formatting"
 [params]
 tabSize      = %d
 insertSpaces = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_lsp_tab_size}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
 }
 
 define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
@@ -415,7 +413,7 @@ method       = "textDocument/formatting"
 [params]
 tabSize      = %d
 insertSpaces = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_lsp_tab_size}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
 
 cat ${pipe}
 rm -rf ${tmp}
