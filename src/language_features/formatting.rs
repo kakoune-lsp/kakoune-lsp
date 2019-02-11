@@ -1,6 +1,6 @@
 use context::*;
-use languageserver_types::request::Request;
-use languageserver_types::*;
+use lsp_types::request::Request;
+use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use types::*;

@@ -1,7 +1,7 @@
 use context::*;
 use itertools::Itertools;
 use jsonrpc_core::{Params, Value};
-use languageserver_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
+use lsp_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
 use serde;
 use serde::Deserialize;
 use serde_json;
@@ -51,17 +51,7 @@ pub fn navigate(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
 
 pub fn navigate_response(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     let result = serde_json::from_value(result).expect("Failed to parse definition response");
-    if let Some(location) = match result {
-        GotoDefinitionResponse::Scalar(location) => Some(location),
-        GotoDefinitionResponse::Array(mut locations) => {
-            if locations.is_empty() {
-                None
-            } else {
-                Some(locations.remove(0))
-            }
-        }
-        GotoDefinitionResponse::None => None,
-    } {
+    if let Some(location) = goto_definition_response_to_location(result) {
         let path = location.uri.to_file_path().unwrap();
         let filename = path.to_str().unwrap();
         let p = location.range.start;

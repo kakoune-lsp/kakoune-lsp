@@ -1,7 +1,8 @@
 use context::*;
 use fnv::FnvHashMap;
 use itertools::Itertools;
-use languageserver_types::*;
+use lsp_types::request::GotoDefinitionResponse;
+use lsp_types::*;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
@@ -210,4 +211,40 @@ pub fn filetype_to_language_id_map(config: &Config) -> FnvHashMap<String, String
         }
     }
     filetypes
+}
+
+/// Convert `GotoDefinitionResponse` into `Option<Location>`.
+///
+/// If multiple locations are present, returns the first one. Transforms LocationLink into Location
+/// by dropping source information.
+pub fn goto_definition_response_to_location(
+    result: Option<GotoDefinitionResponse>,
+) -> Option<Location> {
+    match result {
+        Some(GotoDefinitionResponse::Scalar(location)) => Some(location),
+        Some(GotoDefinitionResponse::Array(mut locations)) => {
+            if locations.is_empty() {
+                None
+            } else {
+                Some(locations.remove(0))
+            }
+        }
+        Some(GotoDefinitionResponse::Link(mut locations)) => {
+            if locations.is_empty() {
+                None
+            } else {
+                let LocationLink {
+                    target_uri,
+                    target_range,
+                    ..
+                } = locations.remove(0);
+
+                Some(Location {
+                    uri: target_uri,
+                    range: target_range,
+                })
+            }
+        }
+        None => None,
+    }
 }

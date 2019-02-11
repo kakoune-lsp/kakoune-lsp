@@ -1,7 +1,7 @@
 use crossbeam_channel::Sender;
 use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Id, Params, Version};
-use languageserver_types::*;
+use lsp_types::*;
 use std::fs;
 use types::*;
 

@@ -1,6 +1,6 @@
 use context::*;
-use languageserver_types::request::Request;
-use languageserver_types::*;
+use lsp_types::request::Request;
+use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use std::fs;
@@ -56,7 +56,7 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
                         ),
                         DocumentChangeOperation::Op(op) => match op {
                             ResourceOp::Create(op) => {
-                                let path = Url::parse(&op.uri).unwrap().to_file_path().unwrap();
+                                let path = op.uri.to_file_path().unwrap();
                                 let ignore_if_exists = if let Some(options) = op.options {
                                     !options.overwrite.unwrap_or(false)
                                         && options.ignore_if_exists.unwrap_or(false)
@@ -73,7 +73,7 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
                                 }
                             }
                             ResourceOp::Delete(op) => {
-                                let path = Url::parse(&op.uri).unwrap().to_file_path().unwrap();
+                                let path = op.uri.to_file_path().unwrap();
                                 if path.is_dir() {
                                     let recursive = if let Some(options) = op.options {
                                         options.recursive.unwrap_or(false)
@@ -101,8 +101,8 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
                                 }
                             }
                             ResourceOp::Rename(op) => {
-                                let from = Url::parse(&op.old_uri).unwrap().to_file_path().unwrap();
-                                let to = Url::parse(&op.new_uri).unwrap().to_file_path().unwrap();
+                                let from = op.old_uri.to_file_path().unwrap();
+                                let to = op.new_uri.to_file_path().unwrap();
                                 let ignore_if_exists = if let Some(options) = op.options {
                                     !options.overwrite.unwrap_or(false)
                                         && options.ignore_if_exists.unwrap_or(false)

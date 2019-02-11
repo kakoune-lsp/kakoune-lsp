@@ -1,6 +1,6 @@
 use fnv::FnvHashMap;
 use jsonrpc_core::{Call, Output, Params};
-use languageserver_types::*;
+use lsp_types::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::io::Error;
@@ -163,14 +163,6 @@ where
 
         Ok(params)
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GotoDefinitionResponse {
-    None,
-    Scalar(Location),
-    Array(Vec<Location>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
