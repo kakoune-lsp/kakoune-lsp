@@ -1,5 +1,5 @@
 use context::*;
-use lsp_types::request::{GotoDefinitionResponse, Request};
+use lsp_types::request::{Request};
 use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
@@ -30,33 +30,7 @@ pub fn text_document_definition(meta: &EditorMeta, params: EditorParams, ctx: &m
 
 pub fn editor_definition(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     let result = serde_json::from_value(result).expect("Failed to parse definition response");
-    if let Some(location) = match result {
-        Some(GotoDefinitionResponse::Scalar(location)) => Some(location),
-        Some(GotoDefinitionResponse::Array(mut locations)) => {
-            if locations.is_empty() {
-                None
-            } else {
-                Some(locations.remove(0))
-            }
-        }
-        Some(GotoDefinitionResponse::Link(mut locations)) => {
-            if locations.is_empty() {
-                None
-            } else {
-                let LocationLink {
-                    target_uri,
-                    target_range,
-                    ..
-                } = locations.remove(0);
-
-                Some(Location {
-                    uri: target_uri,
-                    range: target_range,
-                })
-            }
-        }
-        None => None,
-    } {
+    if let Some(location) = goto_definition_response_to_location(result) {
         let path = location.uri.to_file_path().unwrap();
         let filename = path.to_str().unwrap();
         let p = location.range.start;
