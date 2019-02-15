@@ -83,7 +83,7 @@ pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                                     p.line + 1,
                                     p.character + 1,
                                     line
-                                )
+                                );
                             }
                             Some(Err(e)) => {
                                 error!("Failed to read line {} in {}: {}", name, loc_line, e);
