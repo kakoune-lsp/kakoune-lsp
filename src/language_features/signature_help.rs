@@ -42,24 +42,20 @@ pub fn editor_signature_help(
     let params = PositionParams::deserialize(params).expect("Failed to parse params");
     let result: Option<SignatureHelp> =
         serde_json::from_value(result).expect("Failed to parse signature help response");
-    if result.is_none() {
-        return;
+    if let Some(result) = result {
+        let active_signature = result.active_signature.unwrap_or(0);
+        if let Some(active_signature) = result.signatures.get(active_signature as usize) {
+            // TODO decide how to use it
+            // let active_parameter = result.active_parameter.unwrap_or(0);
+            let contents = &active_signature.label;
+            let position = params.position;
+            let position = format!("{}.{}", position.line + 1, position.character + 1);
+            let command = format!(
+                "lsp-show-signature-help {} {}",
+                position,
+                editor_quote(&contents)
+            );
+            ctx.exec(meta.clone(), command);
+        }
     }
-    let result = result.unwrap();
-    if result.signatures.is_empty() {
-        return;
-    }
-    let active_signature = result.active_signature.unwrap_or(0);
-    let active_signature = &result.signatures[active_signature as usize];
-    // TODO decide how to use it
-    // let active_parameter = result.active_parameter.unwrap_or(0);
-    let contents = &active_signature.label;
-    let position = params.position;
-    let position = format!("{}.{}", position.line + 1, position.character + 1);
-    let command = format!(
-        "lsp-show-signature-help {} {}",
-        position,
-        editor_quote(&contents)
-    );
-    ctx.exec(meta.clone(), command);
 }
