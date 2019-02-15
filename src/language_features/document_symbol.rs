@@ -29,16 +29,22 @@ pub fn text_document_document_symbol(meta: &EditorMeta, params: EditorParams, ct
 }
 
 pub fn editor_document_symbol(meta: &EditorMeta, result: Value, ctx: &mut Context) {
-    let result: Option<Vec<SymbolInformation>> =
+    let result: DocumentSymbolResponse =
         serde_json::from_value(result).expect("Failed to parse document symbol response");
-    if result.is_none() {
-        return;
-    }
-    let result = result.unwrap();
-    if result.is_empty() {
-        return;
-    }
-    let content = format_symbol_information(result, ctx);
+    let content = match result {
+        DocumentSymbolResponse::Flat(result) => {
+            if result.is_empty() {
+                return;
+            }
+            format_symbol_information(result, ctx)
+        }
+        DocumentSymbolResponse::Nested(result) => {
+            if result.is_empty() {
+                return;
+            }
+            format_document_symbol(result, meta, ctx)
+        }
+    };
     let command = format!(
         "lsp-show-document-symbol {} {}",
         editor_quote(&ctx.root_path),

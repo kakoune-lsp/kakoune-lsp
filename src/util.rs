@@ -42,6 +42,8 @@ pub fn lsp_range_to_kakoune(range: Range) -> String {
     )
 }
 
+/// Represent list of symbol information as filetype=grep buffer content.
+/// Paths are converted into relative to project root.
 pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -> String {
     items
         .into_iter()
@@ -56,11 +58,44 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
             let filename = filename
                 .strip_prefix(&ctx.root_path)
                 .ok()
-                .and_then(|p| Some(p.to_str().unwrap()))
+                .and_then(|p| p.to_str())
                 .or_else(|| filename.to_str())
                 .unwrap();
 
             let position = location.range.start;
+            let description = format!("{:?} {}", kind, name);
+            format!(
+                "{}:{}:{}:{}",
+                filename,
+                position.line + 1,
+                position.character + 1,
+                description
+            )
+        })
+        .join("\n")
+}
+
+/// Represent list of document symbol as filetype=grep buffer content.
+/// Paths are converted into relative to project root.
+pub fn format_document_symbol(
+    items: Vec<DocumentSymbol>,
+    meta: &EditorMeta,
+    ctx: &Context,
+) -> String {
+    items
+        .into_iter()
+        .map(|symbol| {
+            let DocumentSymbol {
+                range, name, kind, ..
+            } = symbol;
+            let filename = path::PathBuf::from(&meta.buffile);
+            let filename = filename
+                .strip_prefix(&ctx.root_path)
+                .ok()
+                .and_then(|p| p.to_str())
+                .unwrap_or(&meta.buffile);
+
+            let position = range.start;
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
