@@ -820,8 +820,8 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
 
-    map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
-    map global goto r '<esc>:lsp-references<ret>' -docstring 'references'
+    map global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
+    map global goto r '<esc>: lsp-references<ret>' -docstring 'references'
 
     hook -group lsp global BufCreate .* %{
         lsp-did-open
@@ -847,8 +847,8 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
 
-    map window goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
-    map window goto r '<esc>:lsp-references<ret>' -docstring 'references'
+    map window goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
+    map window goto r '<esc>: lsp-references<ret>' -docstring 'references'
 
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window BufWritePost .* lsp-did-save
