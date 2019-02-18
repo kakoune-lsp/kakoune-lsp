@@ -116,19 +116,31 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
 
                 debug!("Routing editor request to {:?}", route);
 
-                if controllers.contains_key(&route) {
-                    let controller = &controllers[&route];
-                    if let Some(sender) = controller.sender.as_ref() {
-                        sender.send(request);
+                use std::collections::hash_map::Entry;
+                match controllers.entry(route.clone()) {
+                    Entry::Occupied(controller_entry) => {
+                        if let Some(sender) = controller_entry.get().sender.as_ref() {
+                            sender.send(request);
+                        }
                     }
-                } else {
-                    let controller = spawn_controller(
-                        config.clone(),
-                        route.clone(),
-                        request,
-                        editor.sender.clone(),
-                    );
-                    controllers.insert(route, controller);
+                    Entry::Vacant(controller_entry) => {
+                        // When server is not running it's better to cancel blocking request.
+                        // Because server can take a long time to initialize or can fail to start.
+                        // We assume that it's less annoying for user to just repeat command later
+                        // than to wait, cancel, and repeat.
+                        if let Some(fifo) = request.meta.fifo {
+                            debug!("Blocking request but LSP server is not running");
+                            let command = "lsp-show-error 'Language server is not running, cancelling blocking request'";
+                            std::fs::write(fifo, command).expect("Failed to write command to fifo");
+                        } else {
+                            controller_entry.insert(spawn_controller(
+                                config.clone(),
+                                route,
+                                request,
+                                editor.sender.clone(),
+                            ));
+                        }
+                    }
                 }
             }
         }
