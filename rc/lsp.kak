@@ -162,6 +162,14 @@ character = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $((${kak_cursor_line} - 1)) $((${kak_cursor_column} - 1)) | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-references-next-match -docstring 'Jump to the next references match' %{
+    lsp-next-match '*references*'
+}
+
+define-command lsp-references-previous-match -docstring 'Jump to the previous references match' %{
+    lsp-previous-match '*references*'
+}
+
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
     lsp-did-change
     nop %sh{ (printf '
@@ -242,6 +250,14 @@ version  = %d
 method   = "textDocument/documentSymbol"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command lsp-symbols-next-match -docstring 'Jump to the next symbols match' %{
+    lsp-next-match '*symbols*'
+}
+
+define-command lsp-symbols-previous-match -docstring 'Jump to the previous symbols match' %{
+    lsp-previous-match '*symbols*'
 }
 
 define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
@@ -564,6 +580,7 @@ define-command -hidden lsp-show-references -params 2 -docstring "Render referenc
         cd %arg{1}
         try %{ set-option buffer working_folder %sh{pwd} }
         set-option buffer filetype grep
+        set-option buffer grep_current_line 0
         set-register '"' %arg{2}
         execute-keys Pgg
     }
@@ -575,9 +592,34 @@ define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render doc
         cd %arg{1}
         try %{ set-option buffer working_folder %sh{pwd} }
         set-option buffer filetype grep
+        set-option buffer grep_current_line 0
         set-register '"' %arg{2}
         execute-keys Pgg
     }
+}
+
+define-command -hidden lsp-next-match -params 1 -docstring %{
+    buffile
+    Jump to next match in grep filetype buffile
+} %{
+    evaluate-commands -try-client %opt{jumpclient} %{
+        buffer %arg{1}
+        execute-keys "ge %opt{grep_current_line}g<a-l> /^[^:]+:\d+:<ret>"
+        grep-jump
+    }
+    try %{ evaluate-commands -client %opt{toolsclient} %{ execute-keys gg %opt{grep_current_line}g } }
+}
+
+define-command -hidden lsp-previous-match -params 1 -docstring %{
+    buffile
+    Jump to previous match in grep filetype buffile
+} %{
+    evaluate-commands -try-client %opt{jumpclient} %{
+        buffer %arg{1}
+        execute-keys "ge %opt{grep_current_line}g<a-h> <a-/>^[^:]+:\d+:<ret>"
+        grep-jump
+    }
+    try %{ evaluate-commands -client %opt{toolsclient} %{ execute-keys gg %opt{grep_current_line}g } }
 }
 
 define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
@@ -712,6 +754,7 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
     declare-option -hidden str lsp_ws_query
     edit! -scratch *symbols*
     set-option buffer filetype grep
+    set-option buffer grep_current_line 0
     prompt -on-change %{ try %{
         # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
         # the following check prevents it
