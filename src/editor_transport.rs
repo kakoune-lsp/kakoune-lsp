@@ -70,13 +70,15 @@ pub fn start(config: &Config, initial_request: Option<&str>) -> Result<EditorTra
                             return;
                         }
                         let stdin = stdin.unwrap();
-                        let command = match response.meta.client.clone() {
-                            Some(client) => format!(
+                        let client = response.meta.client.as_ref();
+                        let command = if client.is_some() && !client.unwrap().is_empty() {
+                            format!(
                                 "eval -client {} {}",
-                                client,
+                                client.unwrap(),
                                 editor_quote(&response.command)
-                            ),
-                            None => response.command.to_string(),
+                            )
+                        } else {
+                            response.command.to_string()
                         };
                         debug!("To editor `{}`: {}", response.meta.session, command);
                         if stdin.write_all(command.as_bytes()).is_err() {
