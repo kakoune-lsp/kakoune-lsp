@@ -16,7 +16,7 @@ pub struct EditorTransport {
     pub thread: thread::JoinHandle<()>,
 }
 
-pub fn start(config: &Config, initial_request: Option<&str>) -> Result<EditorTransport, i32> {
+pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorTransport, i32> {
     // NOTE 1024 is arbitrary
     let (reader_tx, reader_rx) = bounded(1024);
 

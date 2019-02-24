@@ -27,7 +27,7 @@ type Controllers = FnvHashMap<Route, ControllerHandle>;
 ///
 /// `initial_request` could be passed to avoid extra synchronization churn if event loop is started
 /// as a result of request from editor.
-pub fn start(config: &Config, initial_request: Option<&str>) -> i32 {
+pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     info!("Starting main event loop");
 
     let editor = editor_transport::start(config, initial_request);

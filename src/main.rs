@@ -51,7 +51,7 @@ use std::io::{stdin, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use types::*;
 use util::*;
 
@@ -118,9 +118,7 @@ fn main() {
         .arg(
             Arg::with_name("initial-request")
                 .long("initial-request")
-                .value_name("REQUEST")
-                .help("Initial request to start server with")
-                .takes_value(true),
+                .help("Read initial request from stdin"),
         )
         .arg(
             Arg::with_name("v")
@@ -193,6 +191,17 @@ fn main() {
     } else if matches.is_present("kakoune") {
         kakoune(&config);
     } else {
+        // It's important to read input before daemonizing even if we don't use it.
+        // Otherwise it will be empty.
+        let initial_request = if matches.is_present("initial-request") {
+            let mut input = Vec::new();
+            stdin()
+                .read_to_end(&mut input)
+                .expect("Failed to read stdin");
+            Some(String::from_utf8_lossy(&input).to_string())
+        } else {
+            None
+        };
         let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
         let mut pid_path = util::temp_dir();
         pid_path.push(format!("{}.pid", session));
@@ -206,7 +215,7 @@ fn main() {
             error!("Failed to daemonize process");
             goodbye(&config, 1);
         } else {
-            let code = session::start(&config, matches.value_of("initial-request"));
+            let code = session::start(&config, initial_request);
             goodbye(&config, code);
         }
     }
@@ -258,13 +267,21 @@ fn request(config: &Config) {
 }
 
 fn spin_up_server(input: &[u8]) {
-    let input = String::from_utf8_lossy(&input);
     let args = env::args()
         .filter(|arg| arg != "--request")
         .collect::<Vec<_>>();
     let mut cmd = Command::new(&args[0]);
-    cmd.args(&args[1..])
-        .args(&["--daemonize", "--initial-request", &input])
-        .output()
+    let mut child = cmd
+        .args(&args[1..])
+        .args(&["--daemonize", "--initial-request"])
+        .stdin(Stdio::piped())
+        .spawn()
         .expect("Failed to run server");
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input)
+        .expect("Failed to write initial request");
+    child.wait().expect("Failed to daemonize server");
 }
