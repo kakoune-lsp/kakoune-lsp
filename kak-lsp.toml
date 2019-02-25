@@ -56,7 +56,7 @@ command = "pyls"
 filetypes = ["c", "cpp"]
 roots = ["compile_commands.json", ".cquery"]
 command = "cquery"
-args = ["--init={\"cacheDirectory\":\"/tmp/cquery\"}"]
+args = ["--init={\"cacheDirectory\":\"/tmp/cquery\",\"highlight\":{\"enabled\":true}}"]
 
 [language.haskell]
 filetypes = ["haskell"]
