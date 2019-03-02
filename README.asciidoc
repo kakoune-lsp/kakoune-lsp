@@ -32,6 +32,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ===== Package managers
 
 * Arch Linux: `pacman -S kak-lsp` or https://aur.archlinux.org/packages/kak-lsp-git/[AUR/kak-lsp-git]
+* Void Linux: `xbps -S kak-lsp`
 
 ===== Others
 
