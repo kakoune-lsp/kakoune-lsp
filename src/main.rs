@@ -24,6 +24,7 @@ extern crate url;
 extern crate url_serde;
 #[macro_use]
 extern crate enum_primitive;
+extern crate whoami;
 
 mod context;
 mod controller;

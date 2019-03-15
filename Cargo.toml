@@ -24,6 +24,7 @@ sloggers = "0"
 toml = "0"
 url = "1"
 url_serde = "0"
+whoami = "0"
 
 [profile.release]
 lto = true

@@ -8,10 +8,17 @@ use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{env, fs, path, process, thread};
 use types::*;
+use whoami;
 
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
     path.push("kak-lsp");
+    fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o777)
+        .create(&path)
+        .unwrap();
+    path.push(whoami::username());
     fs::DirBuilder::new()
         .recursive(true)
         .mode(0o700)
