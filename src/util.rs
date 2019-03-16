@@ -1,6 +1,7 @@
 use context::*;
 use fnv::FnvHashMap;
 use itertools::Itertools;
+use libc;
 use lsp_types::request::GotoDefinitionResponse;
 use lsp_types::*;
 use std::io::{stderr, stdout, Write};
@@ -13,11 +14,15 @@ use whoami;
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
     path.push("kak-lsp");
-    fs::DirBuilder::new()
+    let old_mask = unsafe { libc::umask(0) };
+    // Ignoring possible error during $TMPDIR/kak-lsp creation to have a chance to restore umask.
+    let _ = fs::DirBuilder::new()
         .recursive(true)
-        .mode(0o777)
-        .create(&path)
-        .unwrap();
+        .mode(0o1777)
+        .create(&path);
+    unsafe {
+        libc::umask(old_mask);
+    }
     path.push(whoami::username());
     fs::DirBuilder::new()
         .recursive(true)

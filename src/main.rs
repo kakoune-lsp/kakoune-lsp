@@ -8,6 +8,7 @@ extern crate fnv;
 extern crate glob;
 extern crate itertools;
 extern crate jsonrpc_core;
+extern crate libc;
 extern crate lsp_types;
 extern crate regex;
 extern crate serde_json;
