@@ -1,3 +1,5 @@
+use crate::types::*;
+use crate::util::*;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::fs;
 use std::io::{Read, Write};
@@ -7,8 +9,6 @@ use std::path;
 use std::process::{Command, Stdio};
 use std::thread;
 use toml;
-use types::*;
-use util::*;
 
 pub struct EditorTransport {
     pub sender: Sender<EditorResponse>,

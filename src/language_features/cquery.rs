@@ -1,12 +1,12 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
+use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::{NumberOrString, Range};
 use serde;
-use types::*;
 use url::Url;
 use url_serde;
-use util::*;
 
 enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]

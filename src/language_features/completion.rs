@@ -1,4 +1,5 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
 use itertools::Itertools;
 use lsp_types::request::Request;
 use lsp_types::*;
@@ -6,7 +7,6 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use std;
-use types::*;
 use url::Url;
 
 pub fn text_document_completion(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {

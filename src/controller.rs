@@ -1,18 +1,18 @@
-use context::*;
-use crossbeam_channel::{Receiver, Sender};
-use diagnostics;
-use general;
+use crate::context::*;
+use crate::diagnostics;
+use crate::general;
+use crate::language_features::*;
+use crate::language_server_transport;
+use crate::text_sync::*;
+use crate::types::*;
+use crate::util::*;
+use crate::workspace;
+use crossbeam_channel::{select, Receiver, Sender};
 use jsonrpc_core::{Call, ErrorCode, Output, Params};
-use language_features::*;
-use language_server_transport;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde_json::{self, Value};
-use text_sync::*;
-use types::*;
-use util::*;
-use workspace;
 
 /// Start controller.
 ///

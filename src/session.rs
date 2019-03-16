@@ -1,15 +1,15 @@
-use controller;
-use crossbeam_channel::{after, bounded, Receiver, Sender};
-use editor_transport;
+use crate::controller;
+use crate::editor_transport;
+use crate::project_root::find_project_root;
+use crate::types::*;
+use crate::util::*;
+use crossbeam_channel::{after, bounded, select, Receiver, Sender};
 use fnv::FnvHashMap;
 use lsp_types::notification::Notification;
 use lsp_types::*;
-use project_root::find_project_root;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use toml;
-use types::*;
-use util::*;
 
 struct ControllerHandle {
     sender: Option<Sender<EditorRequest>>,

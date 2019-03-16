@@ -1,10 +1,10 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
+use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
 use std::path::Path;
-use types::*;
-use util::*;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");

@@ -1,13 +1,13 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
+use crate::util::*;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde_json::Value;
 use std::process;
 use toml;
-use types::*;
 use url::Url;
-use util::*;
 
 pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ctx: &mut Context) {
     let params = InitializeParams {

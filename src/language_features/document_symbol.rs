@@ -1,10 +1,10 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
+use crate::util::*;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde_json::{self, Value};
-use types::*;
 use url::Url;
-use util::*;
 
 pub fn text_document_document_symbol(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = DocumentSymbolParams {

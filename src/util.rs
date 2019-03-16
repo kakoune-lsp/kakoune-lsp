@@ -1,4 +1,5 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
 use fnv::FnvHashMap;
 use itertools::Itertools;
 use libc;
@@ -8,7 +9,6 @@ use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{env, fs, path, process, thread};
-use types::*;
 use whoami;
 
 pub fn temp_dir() -> path::PathBuf {

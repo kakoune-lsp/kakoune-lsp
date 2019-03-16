@@ -1,31 +1,11 @@
 #[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate crossbeam_channel;
-extern crate daemonize;
-extern crate dirs;
-extern crate fnv;
-extern crate glob;
-extern crate itertools;
-extern crate jsonrpc_core;
-extern crate libc;
-extern crate lsp_types;
-extern crate regex;
-extern crate serde_json;
+extern crate enum_primitive;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 #[macro_use]
 extern crate slog;
-extern crate sloggers;
 #[macro_use]
 extern crate slog_scope;
-extern crate toml;
-extern crate url;
-extern crate url_serde;
-#[macro_use]
-extern crate enum_primitive;
-extern crate whoami;
 
 mod context;
 mod controller;
@@ -41,7 +21,9 @@ mod types;
 mod util;
 mod workspace;
 
-use clap::{App, Arg};
+use crate::types::*;
+use crate::util::*;
+use clap::{crate_version, App, Arg};
 use daemonize::Daemonize;
 use itertools::Itertools;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
@@ -54,8 +36,6 @@ use std::net::{SocketAddr, TcpStream};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use types::*;
-use util::*;
 
 fn main() {
     let matches = App::new("kak-lsp")

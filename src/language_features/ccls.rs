@@ -1,4 +1,6 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
+use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::{Params, Value};
 use lsp_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
@@ -6,10 +8,8 @@ use serde;
 use serde::Deserialize;
 use serde_json;
 use toml;
-use types::*;
 use url::Url;
 use url_serde;
-use util::*;
 
 // Add a textDocument field from EditorMeta
 fn with_uri(params: &EditorParams, meta: &EditorMeta) -> EditorParams {
@@ -23,7 +23,7 @@ fn with_uri(params: &EditorParams, meta: &EditorMeta) -> EditorParams {
             .unwrap(),
         );
     }
-    return params;
+    params
 }
 
 // Navigate

@@ -1,3 +1,4 @@
+use crate::types::*;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Output, Params, Version};
@@ -7,7 +8,6 @@ use serde_json;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 use std::thread;
-use types::*;
 
 pub struct LanguageServerTransport {
     pub sender: Sender<ServerMessage>,

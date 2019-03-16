@@ -1,11 +1,11 @@
-use context::*;
+use crate::context::*;
+use crate::types::*;
+use crate::util::*;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use toml;
-use types::*;
-use util::*;
 
 use lsp_types::notification::{self, Notification};
 
@@ -21,7 +21,7 @@ where
 {
     match path.next() {
         Some(key) => {
-            let mut maybe_new_target = target
+            let maybe_new_target = target
                 .entry(key)
                 .or_insert_with(|| Value::Object(serde_json::Map::new()))
                 .as_object_mut();
