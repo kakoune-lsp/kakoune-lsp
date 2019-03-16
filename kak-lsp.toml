@@ -67,8 +67,7 @@ args = ["--lsp"]
 [language.go]
 filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
-command = "go-langserver"
-args = ["-mode", "stdio", "-gocodecompletion"]
+command = "bingo"
 
 [language.bash]
 filetypes = ["sh"]
