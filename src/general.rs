@@ -9,7 +9,14 @@ use std::process;
 use toml;
 use url::Url;
 
-pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ctx: &mut Context) {
+pub fn initialize(
+    root_path: &str,
+    initialization_options: Option<Value>,
+    meta: &EditorMeta,
+    ctx: &mut Context,
+) {
+    let initialization_options =
+        request_initialization_options_from_kakoune(meta, ctx).or(initialization_options);
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
@@ -36,7 +43,7 @@ pub fn initialize(root_path: &str, options: Option<Value>, meta: &EditorMeta, ct
             }),
             experimental: None,
         },
-        initialization_options: options,
+        initialization_options,
         process_id: Some(process::id().into()),
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: None,
@@ -117,4 +124,46 @@ pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {
         editor_escape(&features.join("\n"))
     );
     ctx.exec(meta.clone(), command);
+}
+
+/// User may override `initialization_options` provided in kak-lsp.toml on per-language server basis
+/// with `lsp_server_initialization_options` option in Kakoune
+/// (i.e. to customize it for specific project).
+/// This function asks Kakoune to give such override if any.
+fn request_initialization_options_from_kakoune(
+    meta: &EditorMeta,
+    ctx: &mut Context,
+) -> Option<Value> {
+    let mut path = temp_dir();
+    path.push(format!("{:x}", rand::random::<u64>()));
+    let path = path.to_str().unwrap();
+    let fifo_result = unsafe {
+        let path = std::ffi::CString::new(path).unwrap();
+        libc::mkfifo(path.as_ptr(), 0o600)
+    };
+    if fifo_result != 0 {
+        return None;
+    }
+    ctx.exec(
+        meta.clone(),
+        format!(
+            "lsp-get-server-initialization-options {}",
+            editor_quote(path)
+        ),
+    );
+    let options = std::fs::read_to_string(path).unwrap();
+    debug!("lsp_server_initialization_options:\n{}", options);
+    let _ = std::fs::remove_file(path);
+    if options.trim().is_empty() {
+        None
+    } else {
+        let options = toml::from_str::<Value>(&options);
+        match options {
+            Ok(options) => Some(options),
+            Err(e) => {
+                error!("Failed to parse lsp_server_initialization_options: {:?}", e);
+                None
+            }
+        }
+    }
 }
