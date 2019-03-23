@@ -17,6 +17,8 @@ pub struct Config {
     pub server: ServerConfig,
     #[serde(default)]
     pub verbosity: u8,
+    #[serde(default)]
+    pub snippet_support: bool,
 }
 
 #[derive(Clone, Deserialize, Debug)]

@@ -1,3 +1,4 @@
+snippet_support = false
 verbosity = 2
 
 [server]

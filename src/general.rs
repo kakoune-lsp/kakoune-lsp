@@ -35,6 +35,7 @@ pub fn initialize(
                 completion: Some(CompletionCapability {
                     completion_item: Some(CompletionItemCapability {
                         documentation_format: Some(vec![MarkupKind::PlainText]),
+                        snippet_support: Some(ctx.config.snippet_support),
                         ..CompletionItemCapability::default()
                     }),
                     ..CompletionCapability::default()
