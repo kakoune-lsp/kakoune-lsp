@@ -792,19 +792,19 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
 
 ### Hooks and highlighters ###
 
-define-command lsp-inline-diagnostics-enable -params 1 -docstring "Enable inline diagnostics highlighting" %{
+define-command lsp-inline-diagnostics-enable -params 1 -docstring "lsp-inline-diagnostics-enable <scope>: Enable inline diagnostics highlighting for <scope>" %{
     add-highlighter "%arg{1}/lsp_errors" ranges lsp_errors
 }
 
-define-command lsp-inline-diagnostics-disable -params 1 -docstring "Disable inline diagnostics highlighting"  %{
+define-command lsp-inline-diagnostics-disable -params 1 -docstring "lsp-inline-diagnostics-disable <scope>: Disable inline diagnostics highlighting for <scope>"  %{
     remove-highlighter "%arg{1}/lsp_errors"
 }
 
-define-command lsp-diagnostic-lines-enable -params 1 -docstring "Enable diagnostics line flags" %{
+define-command lsp-diagnostic-lines-enable -params 1 -docstring "lsp-diagnostic-lines-enable <scope>: Show flags on lines with diagnostics in <scope>" %{
     add-highlighter "%arg{1}/lsp_error_lines" flag-lines LineFlagErrors lsp_error_lines
 }
 
-define-command lsp-diagnostic-lines-disable -params 1 -docstring "Disable diagnostics line flags"  %{
+define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic-lines-disable <scope>: Hide flags on lines with diagnostics in <scope>"  %{
     remove-highlighter "%arg{1}/lsp_error_lines"
 }
 
