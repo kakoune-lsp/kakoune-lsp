@@ -131,6 +131,7 @@ It adds:
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
+* flags in the left margin on lines with errors or warnings; could be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
 
