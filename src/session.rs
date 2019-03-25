@@ -107,7 +107,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 }
                 let language_id = language_id.unwrap();
 
-                let root_path = find_project_root(&languages[language_id].roots, &request.meta.buffile);
+                let root_path = find_project_root(&language_id, &languages[language_id].roots, &request.meta.buffile);
                 let route = Route {
                     session: request.meta.session.clone(),
                     language: language_id.clone(),
