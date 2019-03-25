@@ -38,17 +38,26 @@ pub fn lsp_range_to_kakoune(range: Range) -> String {
     // Also from LSP spec: If you want to specify a range that contains a line including
     // the line ending character(s) then use an end position denoting the start of the next
     // line.
+    let start_line = range.start.line;
+    let start_char = range.start.character;
     let mut end_line = range.end.line;
     let mut end_char = range.end.character;
+
+    // Some language servers tend to return 0-length ranges.
+    if start_line == end_line && start_char == end_char {
+        end_char += 1;
+    }
+
     if end_char > 0 {
         end_line += 1;
     } else {
         end_char = 1_000_000;
     }
+
     format!(
         "{}.{},{}.{}",
-        range.start.line + 1,
-        range.start.character + 1,
+        start_line + 1,
+        start_char + 1,
         end_line,
         end_char,
     )
