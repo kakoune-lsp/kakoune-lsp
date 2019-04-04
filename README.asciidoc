@@ -132,7 +132,7 @@ It adds:
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or warnings; could be disabled with `lsp-diagnostic-lines-disable` command
-* `lsp-formatting` command to format current buffer
+* `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
 
 ----
@@ -210,7 +210,6 @@ kak-lsp's Kakoune integration declares the following options:
 * `lsp_hover_max_lines` (int): If greater than 0 then limit rendered hover information to the given number of lines.
 * `lsp_hover_insert_mode_trigger` (str): This option is set to a Kakoune command. When using `lsp-auto-hover-insert-mode-enable`, this command is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a hover-information request for the text selected by the command.
 * `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
-* `lsp_tab_size` (int): When using `lsp-formatting`, kak-lsp will ask the language server to assume tabs are this many spaces wide. It's similar to the standard Kakoune option `indent_width`.
 * `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time user pauses in normal mode.
 * `lsp_server_configuration` (str-to-str-map): At startup, and when this option is modified, kak-lsp
 will send its contents to the language server in a `workspace/DidChangeConfiguration` notification.
