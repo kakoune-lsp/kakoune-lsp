@@ -82,8 +82,11 @@ impl Context {
     }
 
     pub fn exec(&self, meta: EditorMeta, command: String) {
-        match meta.fifo {
-            Some(fifo) => fs::write(fifo, command).expect("Failed to write command to fifo"),
+        match meta.fifo.as_ref() {
+            Some(fifo) => {
+                debug!("To editor `{}`: {}", meta.session, command);
+                fs::write(fifo, command).expect("Failed to write command to fifo")
+            }
             None => self.editor_tx.send(EditorResponse { meta, command }),
         }
     }

@@ -183,7 +183,9 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
             let mut end_line = range.end.line;
             let mut end_char = range.end.character;
 
-            if start_line == end_line && start_char == end_char && start_char == 0 {
+            let insert = start_line == end_line && start_char == end_char;
+
+            if insert && start_char == 0 {
                 start_char = 1_000_000;
             } else {
                 start_line += 1;
@@ -195,8 +197,6 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
             } else {
                 end_char = 1_000_000;
             }
-
-            let insert = start_line == end_line && start_char - 1 == end_char;
 
             (
                 format!(
