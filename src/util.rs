@@ -266,6 +266,8 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
                 command,
                 editor_quote(&content)
             );
+            // Replacing selection with empty content effectively removes it and requires one less
+            // selection cycle after the next restore to get to the next selection.
             if !content.is_empty() {
                 selection_index += 1;
             }
