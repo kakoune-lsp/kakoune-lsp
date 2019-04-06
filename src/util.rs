@@ -184,29 +184,64 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
             let mut end_char = range.end.character;
 
             let insert = start_line == end_line && start_char == end_char;
+            // Beginning of line is a very special case as we need to produce selection on the line
+            // to insert, and then insert before that selection. Selecting end of the previous line
+            // and inserting after selection doesn't work well for delete+insert cases like this:
+            /*
+                [
+                  {
+                    "range": {
+                      "start": {
+                        "line": 5,
+                        "character": 0
+                      },
+                      "end": {
+                        "line": 6,
+                        "character": 0
+                      }
+                    },
+                    "newText": ""
+                  },
+                  {
+                    "range": {
+                      "start": {
+                        "line": 6,
+                        "character": 0
+                      },
+                      "end": {
+                        "line": 6,
+                        "character": 0
+                      }
+                    },
+                    "newText": "	fmt.Println(\"Hello, world!\")\n"
+                  }
+                ]
+            */
+            let bol_insert = insert && end_char == 0;
 
-            if insert && start_char == 0 {
-                start_char = 1_000_000;
-            } else {
-                start_line += 1;
-                start_char += 1;
-            }
+            start_line += 1;
+            start_char += 1;
 
             if end_char > 0 {
                 end_line += 1;
+            } else if bol_insert {
+                end_line += 1;
+                end_char = 1;
             } else {
                 end_char = 1_000_000;
             }
 
             (
-                format!(
-                    "{}.{}",
-                    start_line,
-                    if !insert { start_char } else { end_char }
-                ),
+                format!("{}.{}", start_line, start_char),
                 format!("{}.{}", end_line, end_char),
                 new_text,
-                insert,
+                if bol_insert {
+                    "lsp-insert-before-selection"
+                } else if insert {
+                    "lsp-insert-after-selection"
+                } else {
+                    "lsp-replace-selection"
+                },
             )
         })
         .collect::<Vec<_>>();
@@ -216,25 +251,25 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
         .map(|(start, end, _, _)| format!("{},{}", start, end))
         .join(" ");
 
+    let mut selection_index = 0;
     let apply_edits = edits
         .iter()
-        .enumerate()
-        .map(|(i, (_, _, content, insert))| {
-            format!(
+        .map(|(_, _, content, command)| {
+            let command = format!(
                 "exec 'z{}<space>'
                     {} {}",
-                if i > 0 {
-                    format!("{})", i)
+                if selection_index > 0 {
+                    format!("{})", selection_index)
                 } else {
                     "".to_string()
                 },
-                if *insert {
-                    "lsp-insert-after-selection"
-                } else {
-                    "lsp-replace-selection"
-                },
+                command,
                 editor_quote(&content)
-            )
+            );
+            if !content.is_empty() {
+                selection_index += 1;
+            }
+            command
         })
         .join("\n");
 
