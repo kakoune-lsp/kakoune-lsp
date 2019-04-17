@@ -224,6 +224,9 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
 
             if end_char > 0 {
                 end_line += 1;
+                if insert {
+                    start_char = end_char;
+                }
             } else if bol_insert {
                 end_line += 1;
                 end_char = 1;
