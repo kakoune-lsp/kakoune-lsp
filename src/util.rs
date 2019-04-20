@@ -5,6 +5,7 @@ use itertools::Itertools;
 use libc;
 use lsp_types::request::GotoDefinitionResponse;
 use lsp_types::*;
+use std::collections::HashSet;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
@@ -169,113 +170,92 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
         // editor is blocked waiting for response via fifo
         return "nop".to_string();
     }
-    let edits = text_edits
+    let mut edits = text_edits
         .iter()
-        .map(|text_edit| {
-            let TextEdit { range, new_text } = text_edit;
-            // LSP ranges are 0-based, but Kakoune's 1-based.
-            // LSP ranges are exclusive, but Kakoune's are inclusive.
-            // Also from LSP spec: If you want to specify a range that contains a line including
-            // the line ending character(s) then use an end position denoting the start of the next
-            // line.
-            let mut start_line = range.start.line;
-            let mut start_char = range.start.character;
-            let mut end_line = range.end.line;
-            let mut end_char = range.end.character;
-
-            let insert = start_line == end_line && start_char == end_char;
-            // Beginning of line is a very special case as we need to produce selection on the line
-            // to insert, and then insert before that selection. Selecting end of the previous line
-            // and inserting after selection doesn't work well for delete+insert cases like this:
-            /*
-                [
-                  {
-                    "range": {
-                      "start": {
-                        "line": 5,
-                        "character": 0
-                      },
-                      "end": {
-                        "line": 6,
-                        "character": 0
-                      }
-                    },
-                    "newText": ""
-                  },
-                  {
-                    "range": {
-                      "start": {
-                        "line": 6,
-                        "character": 0
-                      },
-                      "end": {
-                        "line": 6,
-                        "character": 0
-                      }
-                    },
-                    "newText": "	fmt.Println(\"Hello, world!\")\n"
-                  }
-                ]
-            */
-            let bol_insert = insert && end_char == 0;
-
-            start_line += 1;
-            start_char += 1;
-
-            if end_char > 0 {
-                end_line += 1;
-                if insert {
-                    start_char = end_char;
-                }
-            } else if bol_insert {
-                end_line += 1;
-                end_char = 1;
-            } else {
-                end_char = 1_000_000;
-            }
-
-            (
-                format!("{}.{}", start_line, start_char),
-                format!("{}.{}", end_line, end_char),
-                new_text,
-                if bol_insert {
-                    "lsp-insert-before-selection"
-                } else if insert {
-                    "lsp-insert-after-selection"
-                } else {
-                    "lsp-replace-selection"
-                },
-            )
-        })
+        .map(lsp_text_edit_to_kakoune)
         .collect::<Vec<_>>();
+
+    // Adjoin selections detection and Kakoune side editing relies on edits being ordered left to
+    // right. Language servers usually send them such, but spec doesn't say anything about the order
+    // hence we ensure it by sorting. It's improtant to use stable sort to handle properly cases
+    // like multiple inserts in the same place.
+    edits.sort_by_key(|x| {
+        (
+            x.range.start.line,
+            x.range.start.character,
+            x.range.end.line,
+            x.range.end.character,
+        )
+    });
 
     let select_edits = edits
         .iter()
-        .map(|(start, end, _, _)| format!("{},{}", start, end))
+        .map(
+            |KakouneTextEdit {
+                 range: Range { start, end },
+                 ..
+             }| {
+                format!(
+                    "{}.{},{}.{}",
+                    start.line, start.character, end.line, end.character
+                )
+            },
+        )
         .join(" ");
+
+    let adjoin_selections = edits
+        .windows(2)
+        .enumerate()
+        .filter_map(|(i, pair)| {
+            let end = pair[0].range.end;
+            let start = pair[1].range.start;
+            if (end.line == start.line && end.character + 1 == start.character)
+                || (end.line + 1 == start.line
+                    && end.character == 1_000_000
+                    && start.character == 1)
+            {
+                Some(i)
+            } else {
+                None
+            }
+        })
+        .collect::<HashSet<_>>();
 
     let mut selection_index = 0;
     let apply_edits = edits
         .iter()
-        .map(|(_, _, content, command)| {
-            let command = format!(
-                "exec 'z{}<space>'
-                    {} {}",
-                if selection_index > 0 {
-                    format!("{})", selection_index)
-                } else {
-                    "".to_string()
+        .enumerate()
+        .map(
+            |(
+                i,
+                KakouneTextEdit {
+                    new_text, command, ..
                 },
-                command,
-                editor_quote(&content)
-            );
-            // Replacing selection with empty content effectively removes it and requires one less
-            // selection cycle after the next restore to get to the next selection.
-            if !content.is_empty() {
-                selection_index += 1;
-            }
-            command
-        })
+            )| {
+                let command = match command {
+                    KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
+                    KakouneTextEditCommand::InsertAfter => "lsp-insert-after-selection",
+                    KakouneTextEditCommand::Replace => "lsp-replace-selection",
+                };
+                let command = format!(
+                    "exec 'z{}<space>'
+                    {} {}",
+                    if selection_index > 0 {
+                        format!("{})", selection_index)
+                    } else {
+                        String::new()
+                    },
+                    command,
+                    editor_quote(&new_text)
+                );
+                // Replacing adjoin selection with empty content effectively removes it and requires one
+                // less selection cycle after the next restore to get to the next selection.
+                if !(adjoin_selections.contains(&i) && new_text.is_empty()) {
+                    selection_index += 1;
+                }
+                command
+            },
+        )
         .join("\n");
 
     let command = format!(
@@ -295,6 +275,103 @@ pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
             )
         }
         None => command,
+    }
+}
+
+enum KakouneTextEditCommand {
+    InsertBefore,
+    InsertAfter,
+    Replace,
+}
+
+struct KakouneTextEdit {
+    range: Range,
+    new_text: String,
+    command: KakouneTextEditCommand,
+}
+
+fn lsp_text_edit_to_kakoune(text_edit: &TextEdit) -> KakouneTextEdit {
+    let TextEdit { range, new_text } = text_edit;
+    // LSP ranges are 0-based, but Kakoune's 1-based.
+    // LSP ranges are exclusive, but Kakoune's are inclusive.
+    // Also from LSP spec: If you want to specify a range that contains a line including
+    // the line ending character(s) then use an end position denoting the start of the next
+    // line.
+    let mut start_line = range.start.line;
+    let mut start_char = range.start.character;
+    let mut end_line = range.end.line;
+    let mut end_char = range.end.character;
+
+    let insert = start_line == end_line && start_char == end_char;
+    // Beginning of line is a very special case as we need to produce selection on the line
+    // to insert, and then insert before that selection. Selecting end of the previous line
+    // and inserting after selection doesn't work well for delete+insert cases like this:
+    /*
+        [
+          {
+            "range": {
+              "start": {
+                "line": 5,
+                "character": 0
+              },
+              "end": {
+                "line": 6,
+                "character": 0
+              }
+            },
+            "newText": ""
+          },
+          {
+            "range": {
+              "start": {
+                "line": 6,
+                "character": 0
+              },
+              "end": {
+                "line": 6,
+                "character": 0
+              }
+            },
+            "newText": "	fmt.Println(\"Hello, world!\")\n"
+          }
+        ]
+    */
+    let bol_insert = insert && end_char == 0;
+
+    start_line += 1;
+    start_char += 1;
+
+    if end_char > 0 {
+        end_line += 1;
+        if insert {
+            start_char = end_char;
+        }
+    } else if bol_insert {
+        end_line += 1;
+        end_char = 1;
+    } else {
+        end_char = 1_000_000;
+    }
+
+    KakouneTextEdit {
+        range: Range {
+            start: Position {
+                line: start_line,
+                character: start_char,
+            },
+            end: Position {
+                line: end_line,
+                character: end_char,
+            },
+        },
+        new_text: new_text.to_owned(),
+        command: if bol_insert {
+            KakouneTextEditCommand::InsertBefore
+        } else if insert {
+            KakouneTextEditCommand::InsertAfter
+        } else {
+            KakouneTextEditCommand::Replace
+        },
     }
 }
 
