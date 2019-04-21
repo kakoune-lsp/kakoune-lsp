@@ -1,5 +1,6 @@
 use crate::context::*;
 use crate::types::*;
+use crate::util::*;
 use itertools::Itertools;
 use lsp_types::request::Request;
 use lsp_types::*;
@@ -47,7 +48,7 @@ pub fn editor_completion(
     };
     let unescape_markdown_re = Regex::new(r"\\(?P<c>.)").unwrap();
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
-    let escape = |s: &str| s.replace("'", "''").replace("|", r"\|");
+    let escape_bar = |s: &str| s.replace("|", r"\|");
 
     let items = items
         .into_iter()
@@ -69,6 +70,7 @@ pub fn editor_completion(
             if let Some(d) = x.detail {
                 doc = format!("{}\n\n{}", d, doc);
             }
+            let doc = format!("info -style menu {}", editor_quote(&doc));
             let mut entry = x.label.clone();
             if let Some(k) = x.kind {
                 entry += &std::iter::repeat(" ")
@@ -76,12 +78,12 @@ pub fn editor_completion(
                     .collect::<String>();
                 entry += &format!(" {{MenuInfo}}{:?}", k);
             }
-            format!(
-                "'{}|{}|{}'",
-                escape(&x.insert_text.unwrap_or(x.label)),
-                escape(&doc),
-                escape(&entry),
-            )
+            editor_quote(&format!(
+                "{}|{}|{}",
+                escape_bar(&x.insert_text.unwrap_or(x.label)),
+                escape_bar(&doc),
+                escape_bar(&entry),
+            ))
         })
         .join(" ");
     let p = params.position;
