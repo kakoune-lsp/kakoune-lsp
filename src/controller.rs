@@ -100,13 +100,9 @@ pub fn start(
                                 );
                             }
                             Call::Notification(notification) => {
-                                if notification.params.is_none() {
-                                    error!("Missing notification params");
-                                    return;
-                                }
                                 dispatch_server_notification(
                                     &notification.method,
-                                    notification.params.unwrap(),
+                                    notification.params,
                                     &mut ctx,
                                 );
                             }
@@ -249,16 +245,16 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     }
 }
 
-fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Context) {
+fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &mut Context) {
     match method {
         notification::PublishDiagnostics::METHOD => {
-            diagnostics::publish_diagnostics(params, &mut ctx);
+            diagnostics::publish_diagnostics(params.unwrap(), &mut ctx);
         }
         "$cquery/publishSemanticHighlighting" => {
-            cquery::publish_semantic_highlighting(params, &mut ctx);
+            cquery::publish_semantic_highlighting(params.unwrap(), &mut ctx);
         }
         "$ccls/publishSemanticHighlight" => {
-            ccls::publish_semantic_highlighting(params, &mut ctx);
+            ccls::publish_semantic_highlighting(params.unwrap(), &mut ctx);
         }
         notification::Exit::METHOD => {
             debug!("Language server exited");

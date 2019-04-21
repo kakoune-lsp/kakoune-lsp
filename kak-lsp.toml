@@ -85,3 +85,12 @@ command = "dart_language_server"
 filetypes = ["d", "di"]
 roots = [".git", "dub.sdl", "dub.json"]
 command = "dls"
+
+[language.php]
+filetypes = ["php"]
+roots = [".htaccess", "composer.json"]
+command = "intelephense"
+args = ["--stdio"]
+
+[language.php.initialization_options]
+storagePath = "/tmp/intelephense"
