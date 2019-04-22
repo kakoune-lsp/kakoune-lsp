@@ -1,10 +1,10 @@
 use crate::context::*;
 use crate::types::*;
-use fnv::FnvHashMap;
 use itertools::Itertools;
 use libc;
 use lsp_types::request::GotoDefinitionResponse;
 use lsp_types::*;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
@@ -376,8 +376,8 @@ fn lsp_text_edit_to_kakoune(text_edit: &TextEdit) -> KakouneTextEdit {
 }
 
 /// Convert language filetypes configuration into a more lookup-friendly form.
-pub fn filetype_to_language_id_map(config: &Config) -> FnvHashMap<String, String> {
-    let mut filetypes = FnvHashMap::default();
+pub fn filetype_to_language_id_map(config: &Config) -> HashMap<String, String> {
+    let mut filetypes = HashMap::default();
     for (language_id, language) in &config.language {
         for filetype in &language.filetypes {
             filetypes.insert(filetype.clone(), language_id.clone());

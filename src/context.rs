@@ -1,23 +1,23 @@
 use crate::types::*;
 use crossbeam_channel::Sender;
-use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Id, Params, Version};
 use lsp_types::*;
+use std::collections::HashMap;
 use std::fs;
 
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
     pub config: Config,
-    pub diagnostics: FnvHashMap<String, Vec<Diagnostic>>,
+    pub diagnostics: HashMap<String, Vec<Diagnostic>>,
     pub editor_tx: Sender<EditorResponse>,
     pub lang_srv_tx: Sender<ServerMessage>,
     pub language_id: String,
     pub pending_requests: Vec<EditorRequest>,
     pub request_counter: u64,
-    pub response_waitlist: FnvHashMap<Id, (EditorMeta, String, EditorParams)>,
+    pub response_waitlist: HashMap<Id, (EditorMeta, String, EditorParams)>,
     pub root_path: String,
     pub session: SessionId,
-    pub versions: FnvHashMap<String, u64>,
+    pub versions: HashMap<String, u64>,
 }
 
 impl Context {
@@ -33,16 +33,16 @@ impl Context {
         Context {
             capabilities: None,
             config,
-            diagnostics: FnvHashMap::default(),
+            diagnostics: HashMap::default(),
             editor_tx,
             lang_srv_tx,
             language_id: language_id.to_string(),
             pending_requests: vec![initial_request],
             request_counter: 0,
-            response_waitlist: FnvHashMap::default(),
+            response_waitlist: HashMap::default(),
             root_path,
             session,
-            versions: FnvHashMap::default(),
+            versions: HashMap::default(),
         }
     }
 

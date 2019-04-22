@@ -4,9 +4,9 @@ use crate::project_root::find_project_root;
 use crate::types::*;
 use crate::util::*;
 use crossbeam_channel::{after, bounded, select, Receiver, Sender};
-use fnv::FnvHashMap;
 use lsp_types::notification::Notification;
 use lsp_types::*;
+use std::collections::HashMap;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use toml;
@@ -17,7 +17,7 @@ struct ControllerHandle {
     thread: JoinHandle<()>,
 }
 
-type Controllers = FnvHashMap<Route, ControllerHandle>;
+type Controllers = HashMap<Route, ControllerHandle>;
 
 /// Start the main event loop.
 ///
@@ -39,7 +39,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     let languages = config.language.clone();
     let filetypes = filetype_to_language_id_map(config);
 
-    let mut controllers: Controllers = FnvHashMap::default();
+    let mut controllers: Controllers = HashMap::default();
 
     let timeout = config.server.timeout;
 

@@ -1,8 +1,8 @@
-use fnv::FnvHashMap;
 use jsonrpc_core::{Call, Output, Params};
 use lsp_types::*;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::io::Error;
 use toml;
 
@@ -12,7 +12,7 @@ pub enum Void {}
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
-    pub language: FnvHashMap<String, LanguageConfig>,
+    pub language: HashMap<String, LanguageConfig>,
     #[serde(default)]
     pub server: ServerConfig,
     #[serde(default)]

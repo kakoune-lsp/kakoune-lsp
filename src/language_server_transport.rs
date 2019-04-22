@@ -1,10 +1,10 @@
 use crate::types::*;
 use crossbeam_channel::{bounded, Receiver, Sender};
-use fnv::FnvHashMap;
 use jsonrpc_core::{self, Call, Output, Params, Version};
 use lsp_types::notification::Notification;
 use lsp_types::*;
 use serde_json;
+use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 use std::thread;
@@ -98,7 +98,7 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
 }
 
 fn reader_loop(mut reader: impl BufRead, tx: &Sender<ServerMessage>) -> io::Result<()> {
-    let mut headers = FnvHashMap::default();
+    let mut headers: HashMap<String, String> = HashMap::default();
     loop {
         headers.clear();
         loop {
