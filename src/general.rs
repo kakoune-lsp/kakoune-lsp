@@ -43,6 +43,7 @@ pub fn initialize(
                 ..TextDocumentClientCapabilities::default()
             }),
             experimental: None,
+            ..ClientCapabilities::default()
         },
         initialization_options,
         process_id: Some(process::id().into()),
