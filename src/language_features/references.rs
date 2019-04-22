@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -146,6 +147,11 @@ pub fn text_document_references_highlight(
 
 pub fn editor_references_highlight(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     let result = serde_json::from_value(result).expect("Failed to parse references response");
+    let document = ctx.documents.get(&meta.buffile);
+    if document.is_none() {
+        return;
+    }
+    let document = document.unwrap();
     if let Some(mut locations) = match result {
         ReferencesResponse::Array(locations) => Some(locations),
         ReferencesResponse::None => None,
@@ -160,7 +166,12 @@ pub fn editor_references_highlight(meta: &EditorMeta, result: Value, ctx: &mut C
             .filter(|location| {
                 location.uri.to_file_path().unwrap().to_str().unwrap() == meta.buffile
             })
-            .map(|location| format!("{}|Reference", lsp_range_to_kakoune(location.range)))
+            .map(|location| {
+                format!(
+                    "{}|Reference",
+                    lsp_range_to_kakoune(&location.range, &document.text, &ctx.offset_encoding)
+                )
+            })
             .join(" ");
         let command = format!(
             "set-option window lsp_references {} {}",

@@ -41,6 +41,8 @@ pub struct LanguageConfig {
     #[serde(default)]
     pub args: Vec<String>,
     pub initialization_options: Option<Value>,
+    #[serde(default = "default_offset_encoding")]
+    pub offset_encoding: String,
 }
 
 impl Default for ServerConfig {
@@ -55,11 +57,15 @@ impl Default for ServerConfig {
 }
 
 fn default_ip() -> String {
-    "127.0.0.1".to_string()
+    String::from("127.0.0.1")
 }
 
 fn default_port() -> u16 {
     31337
+}
+
+fn default_offset_encoding() -> String {
+    String::from("utf-16")
 }
 
 // Editor

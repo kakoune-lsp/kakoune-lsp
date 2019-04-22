@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -14,18 +15,19 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let buffile = path.to_str().unwrap();
     ctx.diagnostics
         .insert(buffile.to_string(), params.diagnostics);
-    let version = ctx.versions.get(buffile);
-    if version.is_none() {
+    let document = ctx.documents.get(buffile);
+    if document.is_none() {
         return;
     }
-    let version = *version.unwrap();
+    let document = document.unwrap();
+    let version = document.version;
     let diagnostics = &ctx.diagnostics[buffile];
     let ranges = diagnostics
         .iter()
         .map(|x| {
             format!(
                 "{}|{}",
-                lsp_range_to_kakoune(x.range),
+                lsp_range_to_kakoune(&x.range, &document.text, &ctx.offset_encoding),
                 match x.severity {
                     Some(DiagnosticSeverity::Error) => "DiagnosticError",
                     _ => "DiagnosticWarning",

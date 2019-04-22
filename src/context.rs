@@ -2,8 +2,14 @@ use crate::types::*;
 use crossbeam_channel::Sender;
 use jsonrpc_core::{self, Call, Id, Params, Version};
 use lsp_types::*;
+use ropey;
 use std::collections::HashMap;
 use std::fs;
+
+pub struct Document {
+    pub version: u64,
+    pub text: ropey::Rope,
+}
 
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
@@ -17,7 +23,8 @@ pub struct Context {
     pub response_waitlist: HashMap<Id, (EditorMeta, String, EditorParams)>,
     pub root_path: String,
     pub session: SessionId,
-    pub versions: HashMap<String, u64>,
+    pub documents: HashMap<String, Document>,
+    pub offset_encoding: String,
 }
 
 impl Context {
@@ -28,6 +35,7 @@ impl Context {
         editor_tx: Sender<EditorResponse>,
         config: Config,
         root_path: String,
+        offset_encoding: String,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
@@ -42,7 +50,8 @@ impl Context {
             response_waitlist: HashMap::default(),
             root_path,
             session,
-            versions: HashMap::default(),
+            documents: HashMap::default(),
+            offset_encoding,
         }
     }
 

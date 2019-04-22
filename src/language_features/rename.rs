@@ -1,6 +1,6 @@
 use crate::context::*;
+use crate::text_edit::apply_text_edits_to_buffer;
 use crate::types::*;
-use crate::util::*;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::Deserialize;
@@ -29,6 +29,7 @@ pub fn text_document_rename(meta: &EditorMeta, params: EditorParams, ctx: &mut C
     ctx.call(id, request::Rename::METHOD.into(), req_params);
 }
 
+// TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
 pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ctx: &mut Context) {
     let result: Option<WorkspaceEdit> =
         serde_json::from_value(result).expect("Failed to parse formatting response");
@@ -36,24 +37,48 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         return;
     }
     let result = result.unwrap();
+    let get_document = |uri: &Url| {
+        ctx.documents
+            .get(uri.to_file_path().unwrap().to_str().unwrap())
+    };
+    let offset_encoding = &ctx.offset_encoding;
     if let Some(document_changes) = result.document_changes {
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    // TODO handle version
-                    ctx.exec(
-                        meta.clone(),
-                        apply_text_edits(Some(&edit.text_document.uri), &edit.edits),
-                    );
+                    if let Some(document) = get_document(&edit.text_document.uri) {
+                        ctx.exec(
+                            meta.clone(),
+                            apply_text_edits_to_buffer(
+                                Some(&edit.text_document.uri),
+                                &edit.edits,
+                                &document.text,
+                                offset_encoding,
+                            ),
+                        );
+                    } else {
+                        unimplemented!("apply_text_edits_to_file");
+                    }
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
-                        DocumentChangeOperation::Edit(edit) => ctx.exec(
-                            meta.clone(),
-                            apply_text_edits(Some(&edit.text_document.uri), &edit.edits),
-                        ),
+                        DocumentChangeOperation::Edit(edit) => {
+                            if let Some(document) = get_document(&edit.text_document.uri) {
+                                ctx.exec(
+                                    meta.clone(),
+                                    apply_text_edits_to_buffer(
+                                        Some(&edit.text_document.uri),
+                                        &edit.edits,
+                                        &document.text,
+                                        offset_encoding,
+                                    ),
+                                )
+                            } else {
+                                unimplemented!("apply_text_edits_to_file");
+                            }
+                        }
                         DocumentChangeOperation::Op(op) => match op {
                             ResourceOp::Create(op) => {
                                 let path = op.uri.to_file_path().unwrap();
@@ -126,7 +151,14 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         }
     } else if let Some(changes) = result.changes {
         for (uri, change) in &changes {
-            ctx.exec(meta.clone(), apply_text_edits(Some(uri), &change))
+            if let Some(document) = get_document(uri) {
+                ctx.exec(
+                    meta.clone(),
+                    apply_text_edits_to_buffer(Some(uri), &change, &document.text, offset_encoding),
+                )
+            } else {
+                unimplemented!("apply_text_edits_to_file");
+            }
         }
     }
 }

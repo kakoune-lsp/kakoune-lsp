@@ -52,6 +52,7 @@ args = ["--stdio"]
 filetypes = ["python"]
 roots = ["requirements.txt", "setup.py", ".git", ".hg"]
 command = "pyls"
+offset_encoding = "utf-8"
 
 [language.c_cpp]
 filetypes = ["c", "cpp"]

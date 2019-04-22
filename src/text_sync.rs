@@ -2,6 +2,7 @@ use crate::context::*;
 use crate::types::*;
 use lsp_types::notification::Notification;
 use lsp_types::*;
+use ropey::Rope;
 use serde::Deserialize;
 use url::Url;
 
@@ -21,7 +22,11 @@ pub fn text_document_did_open(meta: &EditorMeta, params: EditorParams, ctx: &mut
             text: params.draft,
         },
     };
-    ctx.versions.insert(meta.buffile.clone(), meta.version);
+    let document = Document {
+        version: meta.version,
+        text: Rope::from_str(&params.text_document.text),
+    };
+    ctx.documents.insert(meta.buffile.clone(), document);
     ctx.notify(notification::DidOpenTextDocument::METHOD.into(), params);
 }
 
@@ -34,11 +39,19 @@ pub fn text_document_did_change(meta: &EditorMeta, params: EditorParams, ctx: &m
     let params = params.unwrap();
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let version = meta.version;
-    let old_version = ctx.versions.get(&meta.buffile).cloned().unwrap_or(0);
+    let old_version = ctx
+        .documents
+        .get(&meta.buffile)
+        .and_then(|doc| Some(doc.version))
+        .unwrap_or(0);
     if old_version >= version {
         return;
     }
-    ctx.versions.insert(meta.buffile.clone(), version);
+    let document = Document {
+        version,
+        text: Rope::from_str(&params.draft),
+    };
+    ctx.documents.insert(meta.buffile.clone(), document);
     ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
     let params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
