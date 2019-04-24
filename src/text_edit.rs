@@ -1,11 +1,48 @@
 use crate::position::*;
+use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
 use lsp_types::*;
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Write};
 
-pub fn apply_text_edits_to_file(uri: Option<&Url>, text_edits: &[TextEdit]) {}
+pub fn apply_text_edits_to_file(uri: &Url, text_edits: &[TextEdit], offset_encoding: &str) {
+    let path = uri.to_file_path().unwrap();
+    let filename = path.to_str().unwrap();
+    let text = Rope::from_reader(BufReader::new(File::open(filename).unwrap())).unwrap();
+    let mut output = BufWriter::new(File::create(filename).unwrap());
+    let character_to_char = match offset_encoding {
+        "utf-8" => character_to_char_utf_8_bytes,
+        _ => character_to_char_utf_8_scalar,
+    };
+    let mut cursor = 0;
+    for TextEdit { range, new_text } in text_edits {
+        let column_to_char =
+            character_to_char(text.line(range.start.line as _), range.start.character as _);
+        let start = text.line_to_char(range.start.line as _) + column_to_char;
+        let column_to_char =
+            character_to_char(text.line(range.end.line as _), range.end.character as _);
+        let end = text.line_to_char(range.end.line as _) + column_to_char;
+        for chunk in text.slice(cursor..start).chunks() {
+            output.write_all(chunk.as_bytes()).unwrap();
+        }
+        output.write_all(new_text.as_bytes()).unwrap();
+        cursor = end;
+    }
+    for chunk in text.slice(cursor..).chunks() {
+        output.write_all(chunk.as_bytes()).unwrap();
+    }
+}
+
+fn character_to_char_utf_8_scalar(_line: RopeSlice, character: usize) -> usize {
+    character
+}
+
+fn character_to_char_utf_8_bytes(line: RopeSlice, character: usize) -> usize {
+    line.byte_to_char(character)
+}
 
 pub fn apply_text_edits_to_buffer(
     uri: Option<&Url>,
@@ -104,7 +141,7 @@ pub fn apply_text_edits_to_buffer(
         Some(uri) => {
             let buffile = uri.to_file_path().unwrap();
             format!(
-                "lsp-apply-edits-to-file {} {}",
+                "evaluate-commands -buffer {} {}",
                 editor_quote(buffile.to_str().unwrap()),
                 editor_quote(&command)
             )

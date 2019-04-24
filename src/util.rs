@@ -1,11 +1,14 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use itertools::Itertools;
 use libc;
 use lsp_types::request::GotoDefinitionResponse;
 use lsp_types::*;
+use ropey::Rope;
 use std::collections::HashMap;
-use std::io::{stderr, stdout, Write};
+use std::fs::File;
+use std::io::{stderr, stdout, BufReader, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{env, fs, path, process, thread};
@@ -52,14 +55,11 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
                 .or_else(|| filename.to_str())
                 .unwrap();
 
-            let position = location.range.start;
+            let position = get_kakoune_position(filename, &location.range.start, ctx);
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename,
-                position.line + 1,
-                position.character + 1,
-                description
+                filename, position.line, position.byte, description
             )
         })
         .join("\n")
@@ -175,4 +175,32 @@ pub fn goto_definition_response_to_location(
         }
         None => None,
     }
+}
+
+pub fn get_lsp_position(
+    filename: &str,
+    position: &KakounePosition,
+    ctx: &Context,
+) -> Option<Position> {
+    ctx.documents.get(filename).and_then(|document| {
+        Some(kakoune_position_to_lsp(
+            position,
+            &document.text,
+            &ctx.offset_encoding,
+        ))
+    })
+}
+
+pub fn get_kakoune_position(filename: &str, position: &Position, ctx: &Context) -> KakounePosition {
+    let text = ctx
+        .documents
+        .get(filename)
+        .and_then(|doc| Some(doc.text.clone()))
+        .or_else(|| {
+            File::open(filename)
+                .ok()
+                .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
+        })
+        .unwrap();
+    lsp_position_to_kakoune(&position, &text, &ctx.offset_encoding)
 }

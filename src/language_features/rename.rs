@@ -1,6 +1,7 @@
 use crate::context::*;
-use crate::text_edit::apply_text_edits_to_buffer;
+use crate::text_edit::*;
 use crate::types::*;
+use crate::util::*;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::Deserialize;
@@ -9,16 +10,12 @@ use std::fs;
 use url::Url;
 
 pub fn text_document_rename(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let options = TextDocumentRenameParams::deserialize(params.clone());
-    if options.is_err() {
-        error!("Params should follow TextDocumentRenameParams structure");
-    }
-    let options = options.unwrap();
+    let options = TextDocumentRenameParams::deserialize(params.clone()).unwrap();
     let req_params = RenameParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: options.position,
+        position: get_lsp_position(&meta.buffile, &options.position, ctx).unwrap(),
         new_name: options.new_name,
     };
     let id = ctx.next_request_id();
@@ -57,7 +54,11 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
                             ),
                         );
                     } else {
-                        unimplemented!("apply_text_edits_to_file");
+                        apply_text_edits_to_file(
+                            &edit.text_document.uri,
+                            &edit.edits,
+                            offset_encoding,
+                        );
                     }
                 }
             }
@@ -76,7 +77,11 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
                                     ),
                                 )
                             } else {
-                                unimplemented!("apply_text_edits_to_file");
+                                apply_text_edits_to_file(
+                                    &edit.text_document.uri,
+                                    &edit.edits,
+                                    offset_encoding,
+                                );
                             }
                         }
                         DocumentChangeOperation::Op(op) => match op {
@@ -154,10 +159,10 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
             if let Some(document) = get_document(uri) {
                 ctx.exec(
                     meta.clone(),
-                    apply_text_edits_to_buffer(Some(uri), &change, &document.text, offset_encoding),
+                    apply_text_edits_to_buffer(Some(uri), change, &document.text, offset_encoding),
                 )
             } else {
-                unimplemented!("apply_text_edits_to_file");
+                apply_text_edits_to_file(uri, change, offset_encoding);
             }
         }
     }

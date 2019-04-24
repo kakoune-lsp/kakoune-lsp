@@ -24,32 +24,11 @@
 //! * It works for at least Basic Latin when language server sends offset in UTF-8 bytes
 //!   (i.e. pyls, clangd with offsetEncoding: utf-8).
 //!   And just works when `offset_encoding: utf-8` is provided in the config.
+use crate::types::*;
 use lsp_types::*;
 use ropey::Rope;
-use std::fmt::Display;
 
 pub const EOL_OFFSET: u64 = 1_000_000;
-
-pub struct KakounePosition {
-    pub line: u64,
-    pub byte: u64,
-}
-pub struct KakouneRange {
-    pub start: KakounePosition,
-    pub end: KakounePosition,
-}
-
-impl Display for KakounePosition {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}.{}", self.line, self.byte)
-    }
-}
-
-impl Display for KakouneRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{},{}", self.start, self.end)
-    }
-}
 
 /// Convert LSP Range to Kakoune's range-spec.
 pub fn lsp_range_to_kakoune(range: &Range, text: &Rope, offset_encoding: &str) -> KakouneRange {
@@ -59,41 +38,45 @@ pub fn lsp_range_to_kakoune(range: &Range, text: &Rope, offset_encoding: &str) -
     }
 }
 
+pub fn lsp_position_to_kakoune(
+    position: &Position,
+    text: &Rope,
+    offset_encoding: &str,
+) -> KakounePosition {
+    match offset_encoding {
+        "utf-8" => lsp_position_to_kakoune_utf_8_bytes(position),
+        _ => lsp_position_to_kakoune_utf_8_scalar(position, text),
+    }
+}
+
+pub fn kakoune_position_to_lsp(
+    position: &KakounePosition,
+    text: &Rope,
+    offset_encoding: &str,
+) -> Position {
+    match offset_encoding {
+        "utf-8" => kakoune_position_to_lsp_utf_8_bytes(position),
+        _ => kakoune_position_to_lsp_utf_8_scalar(position, text),
+    }
+}
+
 fn lsp_range_to_kakoune_utf_8_scalar(range: &Range, text: &Rope) -> KakouneRange {
     let Range { start, end } = range;
     let start_line = text.line(start.line as _);
     let start_byte = start_line.char_to_byte(start.character as _) as u64;
+    let end_line = text.line(end.line as _);
+    let end_byte = end_line.char_to_byte(end.character as _) as u64;
 
-    let end_byte: u64;
-    // Exclusive->inclusive range.end conversion will make 0-length LSP range into the 2-length
-    // Kakoune range, but we want 1-length (the closest to 0 it can get in Kakoune ;-)).
-    if start.line == end.line && start.character == end.character {
-        end_byte = start_byte;
-    } else if end.character > 0 {
-        let end_line = text.line(end.line as _);
-        // -1 because LSP ranges are exclusive, but Kakoune's are inclusive.
-        end_byte = (end_line.char_to_byte(end.character as _) - 1) as _;
-    } else {
-        end_byte = EOL_OFFSET;
-    }
-
-    let end_line = if end.character > 0 {
-        end.line
-    } else {
-        end.line - 1
-    };
-
-    // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
-    KakouneRange {
-        start: KakounePosition {
-            line: start.line + 1,
-            byte: start_byte + 1,
+    lsp_range_to_kakoune_utf_8_bytes(&Range {
+        start: Position {
+            line: start.line,
+            character: start_byte,
         },
-        end: KakounePosition {
-            line: end_line + 1,
-            byte: end_byte + 1,
+        end: Position {
+            line: end.line,
+            character: end_byte,
         },
-    }
+    })
 }
 
 fn lsp_range_to_kakoune_utf_8_bytes(range: &Range) -> KakouneRange {
@@ -128,5 +111,39 @@ fn lsp_range_to_kakoune_utf_8_bytes(range: &Range) -> KakouneRange {
             line: end_line + 1,
             byte: end_byte + 1,
         },
+    }
+}
+
+fn kakoune_position_to_lsp_utf_8_scalar(position: &KakounePosition, text: &Rope) -> Position {
+    // -1 because LSP & Rope ranges are 0-based, but Kakoune's are 1-based.
+    let line = position.line - 1;
+    let character = text.line(line as _).byte_to_char((position.byte - 1) as _) as _;
+    Position { line, character }
+}
+
+fn kakoune_position_to_lsp_utf_8_bytes(position: &KakounePosition) -> Position {
+    // -1 because LSP ranges are 0-based, but Kakoune's are 1-based.
+    Position {
+        line: position.line - 1,
+        character: position.byte - 1,
+    }
+}
+
+fn lsp_position_to_kakoune_utf_8_scalar(position: &Position, text: &Rope) -> KakounePosition {
+    let byte: u64 = text
+        .line(position.line as _)
+        .char_to_byte(position.character as _) as _;
+    // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
+    KakounePosition {
+        line: position.line + 1,
+        byte: byte + 1,
+    }
+}
+
+fn lsp_position_to_kakoune_utf_8_bytes(position: &Position) -> KakounePosition {
+    // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
+    KakounePosition {
+        line: position.line + 1,
+        byte: position.character + 1,
     }
 }

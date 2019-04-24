@@ -3,6 +3,7 @@ use lsp_types::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::io::Error;
 use toml;
 
@@ -124,19 +125,19 @@ pub struct TextDocumentDidChangeParams {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TextDocumentCompletionParams {
-    pub position: Position,
+    pub position: KakounePosition,
     pub completion: EditorCompletion,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct PositionParams {
-    pub position: Position,
+    pub position: KakounePosition,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TextDocumentRenameParams {
-    pub position: Position,
+    pub position: KakounePosition,
     pub new_name: String,
 }
 
@@ -185,4 +186,27 @@ pub enum ReferencesResponse {
 pub enum TextEditResponse {
     None,
     Array(Vec<TextEdit>),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct KakounePosition {
+    pub line: u64,
+    pub byte: u64,
+}
+
+pub struct KakouneRange {
+    pub start: KakounePosition,
+    pub end: KakounePosition,
+}
+
+impl Display for KakounePosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}.{}", self.line, self.byte)
+    }
+}
+
+impl Display for KakouneRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{},{}", self.start, self.end)
+    }
 }

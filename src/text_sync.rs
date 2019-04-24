@@ -68,6 +68,7 @@ pub fn text_document_did_change(meta: &EditorMeta, params: EditorParams, ctx: &m
 }
 
 pub fn text_document_did_close(meta: &EditorMeta, ctx: &mut Context) {
+    ctx.documents.remove(&meta.buffile);
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
