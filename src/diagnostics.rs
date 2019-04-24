@@ -92,7 +92,7 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
             diagnostics
                 .iter()
                 .map(|x| {
-                    let p = get_kakoune_position(filename, &x.range.start, ctx);
+                    let p = get_kakoune_position(filename, &x.range.start, ctx).unwrap();
                     format!(
                         "{}:{}:{}: {}:{}",
                         Path::new(filename)
@@ -102,7 +102,7 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
                             .or_else(|| Some(filename))
                             .unwrap(),
                         p.line,
-                        p.byte,
+                        p.column,
                         match x.severity {
                             Some(DiagnosticSeverity::Error) => "error",
                             _ => "warning",

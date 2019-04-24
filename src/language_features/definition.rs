@@ -28,8 +28,8 @@ pub fn editor_definition(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     if let Some(location) = goto_definition_response_to_location(result) {
         let path = location.uri.to_file_path().unwrap();
         let filename = path.to_str().unwrap();
-        let p = get_kakoune_position(filename, &location.range.start, ctx);
-        let command = format!("edit {} {} {}", editor_quote(filename), p.line, p.byte);
+        let p = get_kakoune_position(filename, &location.range.start, ctx).unwrap();
+        let command = format!("edit {} {} {}", editor_quote(filename), p.line, p.column);
         ctx.exec(meta.clone(), command);
     };
 }

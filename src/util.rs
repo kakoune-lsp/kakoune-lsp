@@ -55,11 +55,15 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
                 .or_else(|| filename.to_str())
                 .unwrap();
 
-            let position = get_kakoune_position(filename, &location.range.start, ctx);
+            let position = get_kakoune_position(filename, &location.range.start, ctx)
+                .unwrap_or_else(|| KakounePosition {
+                    line: location.range.start.line + 1,
+                    column: location.range.start.character + 1,
+                });
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename, position.line, position.byte, description
+                filename, position.line, position.column, description
             )
         })
         .join("\n")
@@ -67,6 +71,7 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
 
 /// Represent list of document symbol as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
+
 pub fn format_document_symbol(
     items: Vec<DocumentSymbol>,
     meta: &EditorMeta,
@@ -85,14 +90,16 @@ pub fn format_document_symbol(
                 .and_then(|p| p.to_str())
                 .unwrap_or(&meta.buffile);
 
-            let position = range.start;
+            let position = get_kakoune_position(filename, &range.start, ctx).unwrap_or_else(|| {
+                KakounePosition {
+                    line: range.start.line + 1,
+                    column: range.start.character + 1,
+                }
+            });
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename,
-                position.line + 1,
-                position.character + 1,
-                description
+                filename, position.line, position.column, description
             )
         })
         .join("\n")
@@ -191,9 +198,12 @@ pub fn get_lsp_position(
     })
 }
 
-pub fn get_kakoune_position(filename: &str, position: &Position, ctx: &Context) -> KakounePosition {
-    let text = ctx
-        .documents
+pub fn get_kakoune_position(
+    filename: &str,
+    position: &Position,
+    ctx: &Context,
+) -> Option<KakounePosition> {
+    ctx.documents
         .get(filename)
         .and_then(|doc| Some(doc.text.clone()))
         .or_else(|| {
@@ -201,6 +211,11 @@ pub fn get_kakoune_position(filename: &str, position: &Position, ctx: &Context) 
                 .ok()
                 .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
         })
-        .unwrap();
-    lsp_position_to_kakoune(&position, &text, &ctx.offset_encoding)
+        .and_then(|text| {
+            Some(lsp_position_to_kakoune(
+                &position,
+                &text,
+                &ctx.offset_encoding,
+            ))
+        })
 }

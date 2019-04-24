@@ -105,11 +105,11 @@ fn lsp_range_to_kakoune_utf_8_bytes(range: &Range) -> KakouneRange {
     KakouneRange {
         start: KakounePosition {
             line: start.line + 1,
-            byte: start_byte + 1,
+            column: start_byte + 1,
         },
         end: KakounePosition {
             line: end_line + 1,
-            byte: end_byte + 1,
+            column: end_byte + 1,
         },
     }
 }
@@ -117,7 +117,9 @@ fn lsp_range_to_kakoune_utf_8_bytes(range: &Range) -> KakouneRange {
 fn kakoune_position_to_lsp_utf_8_scalar(position: &KakounePosition, text: &Rope) -> Position {
     // -1 because LSP & Rope ranges are 0-based, but Kakoune's are 1-based.
     let line = position.line - 1;
-    let character = text.line(line as _).byte_to_char((position.byte - 1) as _) as _;
+    let character = text
+        .line(line as _)
+        .byte_to_char((position.column - 1) as _) as _;
     Position { line, character }
 }
 
@@ -125,7 +127,7 @@ fn kakoune_position_to_lsp_utf_8_bytes(position: &KakounePosition) -> Position {
     // -1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     Position {
         line: position.line - 1,
-        character: position.byte - 1,
+        character: position.column - 1,
     }
 }
 
@@ -136,7 +138,7 @@ fn lsp_position_to_kakoune_utf_8_scalar(position: &Position, text: &Rope) -> Kak
     // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     KakounePosition {
         line: position.line + 1,
-        byte: byte + 1,
+        column: byte + 1,
     }
 }
 
@@ -144,6 +146,6 @@ fn lsp_position_to_kakoune_utf_8_bytes(position: &Position) -> KakounePosition {
     // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     KakounePosition {
         line: position.line + 1,
-        byte: position.character + 1,
+        column: position.character + 1,
     }
 }

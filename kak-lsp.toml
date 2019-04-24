@@ -70,6 +70,7 @@ args = ["--lsp"]
 filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
 command = "bingo"
+offset_encoding = "utf-8"
 
 [language.bash]
 filetypes = ["sh"]

@@ -69,9 +69,9 @@ pub fn apply_text_edits_to_buffer(
     edits.sort_by_key(|x| {
         (
             x.range.start.line,
-            x.range.start.byte,
+            x.range.start.column,
             x.range.end.line,
-            x.range.end.byte,
+            x.range.end.column,
         )
     });
 
@@ -83,8 +83,8 @@ pub fn apply_text_edits_to_buffer(
         .filter_map(|(i, pair)| {
             let end = &pair[0].range.end;
             let start = &pair[1].range.start;
-            if (end.line == start.line && end.byte + 1 == start.byte)
-                || (end.line + 1 == start.line && end.byte == EOL_OFFSET && start.byte == 1)
+            if (end.line == start.line && end.column + 1 == start.column)
+                || (end.line + 1 == start.line && end.column == EOL_OFFSET && start.column == 1)
             {
                 Some(i)
             } else {
@@ -212,7 +212,7 @@ fn lsp_text_edit_to_kakoune(
             start,
             end: KakounePosition {
                 line: end.line + 1,
-                byte: 1,
+                column: 1,
             },
         }
     } else {

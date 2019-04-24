@@ -68,7 +68,7 @@ pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                         if loc_line < text.len_lines() {
                             let line = text.line(loc_line);
                             let p = lsp_position_to_kakoune(&position, &text, &ctx.offset_encoding);
-                            format!("{}:{}:{}:{}", name, p.line, p.byte, line)
+                            format!("{}:{}:{}:{}", name, p.line, p.column, line)
                         } else {
                             error!(
                                 "End of file reached, line {} not found in {}",

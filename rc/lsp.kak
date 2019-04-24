@@ -111,7 +111,7 @@ version   = %d
 method    = "textDocument/completion"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 [params.completion]
 offset    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} ${kak_opt_lsp_completion_offset} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
@@ -128,7 +128,7 @@ version   = %d
 method    = "textDocument/hover"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -143,7 +143,7 @@ version   = %d
 method    = "textDocument/definition"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -158,7 +158,7 @@ version   = %d
 method    = "textDocument/references"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -181,7 +181,7 @@ version   = %d
 method    = "textDocument/referencesHighlight"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -198,7 +198,7 @@ method    = "textDocument/rename"
 newName   = "%s"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -222,7 +222,7 @@ version   = %d
 method    = "textDocument/signatureHelp"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -450,7 +450,7 @@ method    = "$ccls/navigate"
 direction = "%s"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -465,7 +465,7 @@ version   = %d
 method    = "$ccls/vars"
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -489,7 +489,7 @@ derived   = %s
 levels    = %d
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$derived" "$levels" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -511,7 +511,7 @@ method    = "$ccls/call"
 callee    = %s
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$callee" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -535,7 +535,7 @@ method    = "$ccls/member"
 kind     = %d
 [params.position]
 line      = %d
-byte      = %d
+column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $kind ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 

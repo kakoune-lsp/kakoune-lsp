@@ -191,7 +191,7 @@ pub enum TextEditResponse {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct KakounePosition {
     pub line: u64,
-    pub byte: u64,
+    pub column: u64, // in bytes, not chars!!!
 }
 
 pub struct KakouneRange {
@@ -201,7 +201,7 @@ pub struct KakouneRange {
 
 impl Display for KakounePosition {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}.{}", self.line, self.byte)
+        write!(f, "{}.{}", self.line, self.column)
     }
 }
 
