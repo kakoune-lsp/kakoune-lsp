@@ -1,5 +1,4 @@
 use crate::context::*;
-use crate::text_edit::*;
 use crate::types::*;
 use crate::util::*;
 use lsp_types::request::Request;
@@ -34,55 +33,18 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         return;
     }
     let result = result.unwrap();
-    let get_document = |uri: &Url| {
-        ctx.documents
-            .get(uri.to_file_path().unwrap().to_str().unwrap())
-    };
-    let offset_encoding = &ctx.offset_encoding;
     if let Some(document_changes) = result.document_changes {
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    if let Some(document) = get_document(&edit.text_document.uri) {
-                        ctx.exec(
-                            meta.clone(),
-                            apply_text_edits_to_buffer(
-                                Some(&edit.text_document.uri),
-                                &edit.edits,
-                                &document.text,
-                                offset_encoding,
-                            ),
-                        );
-                    } else {
-                        apply_text_edits_to_file(
-                            &edit.text_document.uri,
-                            &edit.edits,
-                            offset_encoding,
-                        );
-                    }
+                    apply_text_edits(meta, &edit.text_document.uri, &edit.edits, ctx);
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
                         DocumentChangeOperation::Edit(edit) => {
-                            if let Some(document) = get_document(&edit.text_document.uri) {
-                                ctx.exec(
-                                    meta.clone(),
-                                    apply_text_edits_to_buffer(
-                                        Some(&edit.text_document.uri),
-                                        &edit.edits,
-                                        &document.text,
-                                        offset_encoding,
-                                    ),
-                                )
-                            } else {
-                                apply_text_edits_to_file(
-                                    &edit.text_document.uri,
-                                    &edit.edits,
-                                    offset_encoding,
-                                );
-                            }
+                            apply_text_edits(meta, &edit.text_document.uri, &edit.edits, ctx);
                         }
                         DocumentChangeOperation::Op(op) => match op {
                             ResourceOp::Create(op) => {
@@ -156,14 +118,7 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         }
     } else if let Some(changes) = result.changes {
         for (uri, change) in &changes {
-            if let Some(document) = get_document(uri) {
-                ctx.exec(
-                    meta.clone(),
-                    apply_text_edits_to_buffer(Some(uri), change, &document.text, offset_encoding),
-                )
-            } else {
-                apply_text_edits_to_file(uri, change, offset_encoding);
-            }
+            apply_text_edits(meta, uri, change, ctx);
         }
     }
 }

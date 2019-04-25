@@ -1,5 +1,6 @@
 use crate::context::*;
 use crate::position::*;
+use crate::text_edit::*;
 use crate::types::*;
 use itertools::Itertools;
 use libc;
@@ -218,4 +219,18 @@ pub fn get_kakoune_position(
                 &ctx.offset_encoding,
             ))
         })
+}
+
+pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &Context) {
+    if let Some(document) = ctx
+        .documents
+        .get(uri.to_file_path().unwrap().to_str().unwrap())
+    {
+        ctx.exec(
+            meta.clone(),
+            apply_text_edits_to_buffer(Some(uri), edits, &document.text, &ctx.offset_encoding),
+        );
+    } else {
+        apply_text_edits_to_file(uri, edits, &ctx.offset_encoding);
+    }
 }
