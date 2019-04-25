@@ -8,14 +8,19 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-pub fn apply_text_edits_to_file(uri: &Url, text_edits: &[TextEdit], offset_encoding: &str) {
+pub fn apply_text_edits_to_file(
+    uri: &Url,
+    text_edits: &[TextEdit],
+    offset_encoding: &OffsetEncoding,
+) {
     let path = uri.to_file_path().unwrap();
     let filename = path.to_str().unwrap();
     let text = Rope::from_reader(BufReader::new(File::open(filename).unwrap())).unwrap();
     let mut output = BufWriter::new(File::create(filename).unwrap());
     let character_to_char = match offset_encoding {
-        "utf-8" => character_to_char_utf_8_bytes,
-        _ => character_to_char_utf_8_scalar,
+        OffsetEncoding::Utf8 => character_to_char_utf_8_bytes,
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => character_to_char_utf_8_scalar,
     };
     let mut cursor = 0;
     for TextEdit { range, new_text } in text_edits {
@@ -48,7 +53,7 @@ pub fn apply_text_edits_to_buffer(
     uri: Option<&Url>,
     text_edits: &[TextEdit],
     text: &Rope,
-    offset_encoding: &str,
+    offset_encoding: &OffsetEncoding,
 ) -> String {
     // Empty text edits processed as a special case because Kakoune's `select` command
     // doesn't support empty arguments list.
@@ -165,7 +170,7 @@ struct KakouneTextEdit {
 fn lsp_text_edit_to_kakoune(
     text_edit: &TextEdit,
     text: &Rope,
-    offset_encoding: &str,
+    offset_encoding: &OffsetEncoding,
 ) -> KakouneTextEdit {
     let TextEdit { range, new_text } = text_edit;
     let Range { start, end } = range;

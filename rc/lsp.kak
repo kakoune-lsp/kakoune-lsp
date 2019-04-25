@@ -92,9 +92,12 @@ draft    = """
 define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
 lsp-did-change
 try %{
-    # fail if preceding character is a whitespace
+    # Fail if preceding character is a whitespace (by default; the trigger could be customized).
     evaluate-commands -draft %opt{lsp_completion_trigger}
 
+    # Kakoune requires completions to point fragment start rather than cursor position.
+    # We try to detect it and put into lsp_completion_offset and then pass via completion.offset
+    # parameter to the kak-lsp server so it can use it when sending completions back.
     declare-option -hidden str lsp_completion_offset
 
     evaluate-commands -draft %{

@@ -43,7 +43,7 @@ pub struct LanguageConfig {
     pub args: Vec<String>,
     pub initialization_options: Option<Value>,
     #[serde(default = "default_offset_encoding")]
-    pub offset_encoding: String,
+    pub offset_encoding: OffsetEncoding,
 }
 
 impl Default for ServerConfig {
@@ -65,8 +65,8 @@ fn default_port() -> u16 {
     31337
 }
 
-fn default_offset_encoding() -> String {
-    String::from("utf-16")
+fn default_offset_encoding() -> OffsetEncoding {
+    OffsetEncoding::Utf16
 }
 
 // Editor
@@ -209,4 +209,15 @@ impl Display for KakouneRange {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{},{}", self.start, self.end)
     }
+}
+
+/// Represents how language server interprets LSP's `Position.character`
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum OffsetEncoding {
+    /// UTF-8 code units aka bytes
+    #[serde(rename = "utf-8")]
+    Utf8,
+    /// UTF-16 code units
+    #[serde(rename = "utf-16")]
+    Utf16,
 }

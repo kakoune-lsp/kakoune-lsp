@@ -31,32 +31,39 @@ use ropey::Rope;
 pub const EOL_OFFSET: u64 = 1_000_000;
 
 /// Convert LSP Range to Kakoune's range-spec.
-pub fn lsp_range_to_kakoune(range: &Range, text: &Rope, offset_encoding: &str) -> KakouneRange {
+pub fn lsp_range_to_kakoune(
+    range: &Range,
+    text: &Rope,
+    offset_encoding: &OffsetEncoding,
+) -> KakouneRange {
     match offset_encoding {
-        "utf-8" => lsp_range_to_kakoune_utf_8_bytes(range),
-        _ => lsp_range_to_kakoune_utf_8_scalar(range, text),
+        OffsetEncoding::Utf8 => lsp_range_to_kakoune_utf_8_bytes(range),
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => lsp_range_to_kakoune_utf_8_scalar(range, text),
     }
 }
 
 pub fn lsp_position_to_kakoune(
     position: &Position,
     text: &Rope,
-    offset_encoding: &str,
+    offset_encoding: &OffsetEncoding,
 ) -> KakounePosition {
     match offset_encoding {
-        "utf-8" => lsp_position_to_kakoune_utf_8_bytes(position),
-        _ => lsp_position_to_kakoune_utf_8_scalar(position, text),
+        OffsetEncoding::Utf8 => lsp_position_to_kakoune_utf_8_bytes(position),
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => lsp_position_to_kakoune_utf_8_scalar(position, text),
     }
 }
 
 pub fn kakoune_position_to_lsp(
     position: &KakounePosition,
     text: &Rope,
-    offset_encoding: &str,
+    offset_encoding: &OffsetEncoding,
 ) -> Position {
     match offset_encoding {
-        "utf-8" => kakoune_position_to_lsp_utf_8_bytes(position),
-        _ => kakoune_position_to_lsp_utf_8_scalar(position, text),
+        OffsetEncoding::Utf8 => kakoune_position_to_lsp_utf_8_bytes(position),
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => kakoune_position_to_lsp_utf_8_scalar(position, text),
     }
 }
 
