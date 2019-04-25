@@ -41,10 +41,12 @@ pub fn apply_text_edits_to_file(
     }
 }
 
+// Position.character in UTF-8 code points.
 fn character_to_char_utf_8_scalar(_line: RopeSlice, character: usize) -> usize {
     character
 }
 
+// Position.character in UTF-8 code units.
 fn character_to_char_utf_8_bytes(line: RopeSlice, character: usize) -> usize {
     line.byte_to_char(character)
 }

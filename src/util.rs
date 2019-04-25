@@ -185,6 +185,7 @@ pub fn goto_definition_response_to_location(
     }
 }
 
+/// Wrapper for kakoune_position_to_lsp which uses context to get buffer content and offset encoding.
 pub fn get_lsp_position(
     filename: &str,
     position: &KakounePosition,
@@ -199,6 +200,8 @@ pub fn get_lsp_position(
     })
 }
 
+/// Wrapper for lsp_position_to_kakoune which uses context to get buffer content and offset encoding.
+/// Reads the file directly if it is not present in context (is not open in editor).
 pub fn get_kakoune_position(
     filename: &str,
     position: &Position,
@@ -221,6 +224,8 @@ pub fn get_kakoune_position(
         })
 }
 
+/// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
+/// buffer or by editing file directly when it's not open in editor.
 pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &Context) {
     if let Some(document) = ctx
         .documents
