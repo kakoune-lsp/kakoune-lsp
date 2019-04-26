@@ -236,6 +236,8 @@ pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &
             apply_text_edits_to_buffer(Some(uri), edits, &document.text, &ctx.offset_encoding),
         );
     } else {
-        apply_text_edits_to_file(uri, edits, &ctx.offset_encoding);
+        if let Err(e) = apply_text_edits_to_file(uri, edits, &ctx.offset_encoding) {
+            error!("Failed to apply edits to file {} ({})", uri, e);
+        };
     }
 }

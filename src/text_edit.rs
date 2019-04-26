@@ -12,43 +12,118 @@ pub fn apply_text_edits_to_file(
     uri: &Url,
     text_edits: &[TextEdit],
     offset_encoding: &OffsetEncoding,
-) {
+) -> std::io::Result<()> {
+    let mut temp_path = temp_dir();
+    temp_path.push(format!("{:x}", rand::random::<u64>()));
+
     let path = uri.to_file_path().unwrap();
     let filename = path.to_str().unwrap();
-    let text = Rope::from_reader(BufReader::new(File::open(filename).unwrap())).unwrap();
-    let mut output = BufWriter::new(File::create(filename).unwrap());
-    let character_to_char = match offset_encoding {
-        OffsetEncoding::Utf8 => character_to_char_utf_8_bytes,
-        // Not a proper UTF-16 code units handling, but works within BMP
-        OffsetEncoding::Utf16 => character_to_char_utf_8_scalar,
-    };
-    let mut cursor = 0;
-    for TextEdit { range, new_text } in text_edits {
-        let column_to_char =
-            character_to_char(text.line(range.start.line as _), range.start.character as _);
-        let start = text.line_to_char(range.start.line as _) + column_to_char;
-        let column_to_char =
-            character_to_char(text.line(range.end.line as _), range.end.character as _);
-        let end = text.line_to_char(range.end.line as _) + column_to_char;
-        for chunk in text.slice(cursor..start).chunks() {
-            output.write_all(chunk.as_bytes()).unwrap();
+
+    let path = std::ffi::CString::new(filename).unwrap();
+    let mut stat;
+    if unsafe {
+        stat = std::mem::zeroed();
+        libc::stat(path.as_ptr(), &mut stat)
+    } != 0
+    {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!("Failed to stat {}", filename),
+        ));
+    }
+
+    let file = File::open(filename)?;
+    let text = Rope::from_reader(BufReader::new(file))?;
+
+    let temp_file = File::create(&temp_path)?;
+
+    fn apply_text_edits_to_file_impl(
+        text: Rope,
+        temp_file: File,
+        text_edits: &[TextEdit],
+        offset_encoding: &OffsetEncoding,
+    ) -> Result<(), std::io::Error> {
+        let mut output = BufWriter::new(temp_file);
+
+        let character_to_offset = match offset_encoding {
+            OffsetEncoding::Utf8 => character_to_offset_utf_8_bytes,
+            // Not a proper UTF-16 code units handling, but works within BMP
+            OffsetEncoding::Utf16 => character_to_offset_utf_8_scalar,
+        };
+
+        let text_len_lines = text.len_lines() as u64;
+        let mut cursor = 0;
+
+        for TextEdit {
+            range: Range { start, end },
+            new_text,
+        } in text_edits
+        {
+            if start.line >= text_len_lines || end.line >= text_len_lines {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Text edit range extends past end of file.",
+                ));
+            }
+
+            let start_offset =
+                character_to_offset(text.line(start.line as _), start.character as _);
+            let end_offset = character_to_offset(text.line(end.line as _), end.character as _);
+
+            if start_offset.is_none() || end_offset.is_none() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Text edit range points past end of line.",
+                ));
+            }
+
+            let start_char = text.line_to_char(start.line as _) + start_offset.unwrap();
+            let end_char = text.line_to_char(end.line as _) + end_offset.unwrap();
+
+            for chunk in text.slice(cursor..start_char).chunks() {
+                output.write_all(chunk.as_bytes())?;
+            }
+
+            output.write_all(new_text.as_bytes())?;
+            cursor = end_char;
         }
-        output.write_all(new_text.as_bytes()).unwrap();
-        cursor = end;
+
+        for chunk in text.slice(cursor..).chunks() {
+            output.write_all(chunk.as_bytes())?;
+        }
+
+        Ok(())
     }
-    for chunk in text.slice(cursor..).chunks() {
-        output.write_all(chunk.as_bytes()).unwrap();
-    }
+
+    apply_text_edits_to_file_impl(text, temp_file, text_edits, offset_encoding)
+        .and_then(|_| std::fs::rename(&temp_path, filename))
+        .and_then(|_| {
+            Ok(unsafe {
+                libc::chmod(path.as_ptr(), stat.st_mode);
+            })
+        })
+        .or_else(|e| {
+            let _ = std::fs::remove_file(&temp_path);
+            Err(e)
+        })
 }
 
 // Position.character in UTF-8 code points.
-fn character_to_char_utf_8_scalar(_line: RopeSlice, character: usize) -> usize {
-    character
+fn character_to_offset_utf_8_scalar(line: RopeSlice, character: usize) -> Option<usize> {
+    if character < line.len_chars() {
+        Some(character)
+    } else {
+        None
+    }
 }
 
 // Position.character in UTF-8 code units.
-fn character_to_char_utf_8_bytes(line: RopeSlice, character: usize) -> usize {
-    line.byte_to_char(character)
+fn character_to_offset_utf_8_bytes(line: RopeSlice, character: usize) -> Option<usize> {
+    if character < line.len_bytes() {
+        Some(line.byte_to_char(character))
+    } else {
+        None
+    }
 }
 
 pub fn apply_text_edits_to_buffer(
