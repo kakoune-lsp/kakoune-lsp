@@ -46,9 +46,9 @@ pub fn apply_text_edits_to_file(
         let mut output = BufWriter::new(temp_file);
 
         let character_to_offset = match offset_encoding {
-            OffsetEncoding::Utf8 => character_to_offset_utf_8_bytes,
+            OffsetEncoding::Utf8 => character_to_offset_utf_8_code_units,
             // Not a proper UTF-16 code units handling, but works within BMP
-            OffsetEncoding::Utf16 => character_to_offset_utf_8_scalar,
+            OffsetEncoding::Utf16 => character_to_offset_utf_8_code_points,
         };
 
         let text_len_lines = text.len_lines() as u64;
@@ -108,8 +108,7 @@ pub fn apply_text_edits_to_file(
         })
 }
 
-// Position.character in UTF-8 code points.
-fn character_to_offset_utf_8_scalar(line: RopeSlice, character: usize) -> Option<usize> {
+fn character_to_offset_utf_8_code_points(line: RopeSlice, character: usize) -> Option<usize> {
     if character < line.len_chars() {
         Some(character)
     } else {
@@ -117,8 +116,7 @@ fn character_to_offset_utf_8_scalar(line: RopeSlice, character: usize) -> Option
     }
 }
 
-// Position.character in UTF-8 code units.
-fn character_to_offset_utf_8_bytes(line: RopeSlice, character: usize) -> Option<usize> {
+fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<usize> {
     if character < line.len_bytes() {
         Some(line.byte_to_char(character))
     } else {
