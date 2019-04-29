@@ -12,7 +12,6 @@ use jsonrpc_core::{Call, ErrorCode, Output, Params};
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
-use serde_json::{self, Value};
 
 /// Start controller.
 ///
@@ -50,7 +49,7 @@ pub fn start(
         offset_encoding,
     );
 
-    general::initialize(&route.root, options, &initial_request_meta, &mut ctx);
+    general::initialize(&route.root, options, initial_request_meta, &mut ctx);
 
     'event_loop: loop {
         select! {
@@ -117,15 +116,8 @@ pub fn start(
                     ServerMessage::Response(output) => {
                         match output {
                             Output::Success(success) => {
-                                if let Some(request) = ctx.response_waitlist.remove(&success.id) {
-                                    let (meta, method, params) = request;
-                                    dispatch_server_response(
-                                        &meta,
-                                        &method,
-                                        params,
-                                        success.result,
-                                        &mut ctx,
-                                    );
+                                if let Some((meta, _, mut callback)) = ctx.response_waitlist.remove(&success.id) {
+                                  callback(&mut ctx, meta, success.result);
                                 } else {
                                     error!("Id {:?} is not in waitlist!", success.id);
                                 }
@@ -164,9 +156,17 @@ pub fn start(
     };
 }
 
+pub fn dispatch_pending_editor_requests(mut ctx: &mut Context) {
+    let mut requests = std::mem::replace(&mut ctx.pending_requests, vec![]);
+
+    for msg in requests.drain(..) {
+        dispatch_editor_request(msg, &mut ctx);
+    }
+}
+
 fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     ensure_did_open(&request, ctx);
-    let meta = &request.meta;
+    let meta = request.meta;
     let params = request.params;
     let method: &str = &request.method;
     match method {
@@ -204,7 +204,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             signature_help::text_document_signature_help(meta, params, &mut ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
-            document_symbol::text_document_document_symbol(meta, params, &mut ctx);
+            document_symbol::text_document_document_symbol(meta, &mut ctx);
         }
         request::Formatting::METHOD => {
             formatting::text_document_formatting(meta, params, &mut ctx);
@@ -226,19 +226,19 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
 
         // CCLS
-        "$ccls/navigate" => {
+        ccls::NavigateRequest::METHOD => {
             ccls::navigate(meta, params, ctx);
         }
-        "$ccls/vars" => {
+        ccls::VarsRequest::METHOD => {
             ccls::vars(meta, params, ctx);
         }
-        "$ccls/inheritance" => {
+        ccls::InheritanceRequest::METHOD => {
             ccls::inheritance(meta, params, ctx);
         }
-        "$ccls/call" => {
+        ccls::CallRequest::METHOD => {
             ccls::call(meta, params, ctx);
         }
-        "$ccls/member" => {
+        ccls::MemberRequest::METHOD => {
             ccls::member(meta, params, ctx);
         }
 
@@ -277,84 +277,6 @@ fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &
     }
 }
 
-fn dispatch_server_response(
-    meta: &EditorMeta,
-    method: &str,
-    params: EditorParams,
-    response: Value,
-    mut ctx: &mut Context,
-) {
-    match method {
-        request::Completion::METHOD => {
-            completion::editor_completion(meta, params, response, &mut ctx);
-        }
-        request::HoverRequest::METHOD => {
-            hover::editor_hover(meta, params, response, &mut ctx);
-        }
-        request::GotoDefinition::METHOD => {
-            definition::editor_definition(meta, response, &mut ctx);
-        }
-        request::References::METHOD => {
-            references::editor_references(meta, response, &mut ctx);
-        }
-        request::SignatureHelpRequest::METHOD => {
-            signature_help::editor_signature_help(meta, params, response, &mut ctx);
-        }
-        request::DocumentSymbolRequest::METHOD => {
-            document_symbol::editor_document_symbol(meta, response, &mut ctx);
-        }
-        request::Formatting::METHOD => {
-            formatting::editor_formatting(meta, params, response, &mut ctx);
-        }
-        request::WorkspaceSymbol::METHOD => {
-            workspace::editor_workspace_symbol(meta, response, &mut ctx);
-        }
-        request::Rename::METHOD => {
-            rename::editor_rename(meta, params, response, &mut ctx);
-        }
-        "textDocument/referencesHighlight" => {
-            references::editor_references_highlight(meta, response, &mut ctx);
-        }
-        request::Initialize::METHOD => {
-            ctx.capabilities = Some(
-                serde_json::from_value::<InitializeResult>(response)
-                    .expect("Failed to parse initialized response")
-                    .capabilities,
-            );
-            ctx.notify(
-                notification::Initialized::METHOD.into(),
-                InitializedParams {},
-            );
-            let mut requests = Vec::with_capacity(ctx.pending_requests.len());
-            for msg in ctx.pending_requests.drain(..) {
-                requests.push(msg);
-            }
-
-            for msg in requests.drain(..) {
-                dispatch_editor_request(msg, &mut ctx);
-            }
-        }
-        "$ccls/navigate" => {
-            ccls::navigate_response(meta, response, &mut ctx);
-        }
-        "$ccls/vars" => {
-            references::editor_references(meta, response, &mut ctx);
-        }
-        "$ccls/inheritance" => {
-            references::editor_references(meta, response, &mut ctx);
-        }
-        "$ccls/call" => {
-            references::editor_references(meta, response, &mut ctx);
-        }
-        "$ccls/member" => {
-            references::editor_references(meta, response, &mut ctx);
-        }
-        _ => {
-            error!("Don't know how to handle response for method: {}", method);
-        }
-    }
-}
-
 /// Ensure that textDocument/didOpen is sent for the given buffer before any other request, if possible.
 ///
 /// kak-lsp tries to not bother Kakoune side of the plugin with bookkeeping status of kak-lsp server
@@ -373,13 +295,13 @@ fn ensure_did_open(request: &EditorRequest, mut ctx: &mut Context) {
         return;
     };
     if request.method == notification::DidChangeTextDocument::METHOD {
-        return text_document_did_open(&request.meta, request.params.clone(), &mut ctx);
+        return text_document_did_open(request.meta.clone(), request.params.clone(), &mut ctx);
     }
     match std::fs::read_to_string(buffile) {
         Ok(draft) => {
             let mut params = toml::value::Table::default();
             params.insert("draft".to_string(), toml::Value::String(draft));
-            text_document_did_open(&request.meta, toml::Value::Table(params), &mut ctx);
+            text_document_did_open(request.meta.clone(), toml::Value::Table(params), &mut ctx);
         }
         Err(_) => error!(
             "Failed to read file {} to simulate textDocument/didOpen",

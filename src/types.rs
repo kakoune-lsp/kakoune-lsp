@@ -1,5 +1,4 @@
 use jsonrpc_core::{Call, Output, Params};
-use lsp_types::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -172,20 +171,6 @@ where
 
         Ok(params)
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ReferencesResponse {
-    None,
-    Array(Vec<Location>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum TextEditResponse {
-    None,
-    Array(Vec<TextEdit>),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

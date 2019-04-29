@@ -1,48 +1,43 @@
 use crate::context::*;
 use crate::types::*;
 use crate::util::*;
-use lsp_types::request::Request;
+use lsp_types::request::*;
 use lsp_types::*;
-use serde_json::{self, Value};
 use url::Url;
 
-pub fn text_document_document_symbol(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
     let req_params = DocumentSymbolParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (
-            meta.clone(),
-            request::DocumentSymbolRequest::METHOD.into(),
-            params,
-        ),
-    );
-    ctx.call(
-        id,
-        request::DocumentSymbolRequest::METHOD.into(),
+    ctx.call::<DocumentSymbolRequest, _>(
+        meta,
         req_params,
+        move |ctx: &mut Context, meta, result| editor_document_symbol(meta, result, ctx),
     );
 }
 
-pub fn editor_document_symbol(meta: &EditorMeta, result: Value, ctx: &mut Context) {
-    let result: DocumentSymbolResponse =
-        serde_json::from_value(result).expect("Failed to parse document symbol response");
+pub fn editor_document_symbol(
+    meta: EditorMeta,
+    result: Option<DocumentSymbolResponse>,
+    ctx: &mut Context,
+) {
     let content = match result {
-        DocumentSymbolResponse::Flat(result) => {
+        Some(DocumentSymbolResponse::Flat(result)) => {
             if result.is_empty() {
                 return;
             }
             format_symbol_information(result, ctx)
         }
-        DocumentSymbolResponse::Nested(result) => {
+        Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            format_document_symbol(result, meta, ctx)
+            format_document_symbol(result, &meta, ctx)
+        }
+        None => {
+            return;
         }
     };
     let command = format!(
@@ -50,5 +45,5 @@ pub fn editor_document_symbol(meta: &EditorMeta, result: Value, ctx: &mut Contex
         editor_quote(&ctx.root_path),
         editor_quote(&content),
     );
-    ctx.exec(meta.clone(), command);
+    ctx.exec(meta, command);
 }

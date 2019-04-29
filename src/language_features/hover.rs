@@ -2,36 +2,31 @@ use crate::context::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
-use lsp_types::request::Request;
+use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use serde_json::{self, Value};
 use std::str;
 use url::Url;
 
-pub fn text_document_hover(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone()).unwrap();
+pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = PositionParams::deserialize(params).unwrap();
     let req_params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (meta.clone(), request::HoverRequest::METHOD.into(), params),
-    );
-    ctx.call(id, request::HoverRequest::METHOD.into(), req_params);
+    ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        editor_hover(meta, params, result, ctx)
+    });
 }
 
-pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx: &mut Context) {
-    let params = &PositionParams::deserialize(params).expect("Failed to parse params");
-    let result: Option<Hover> = if result.is_null() {
-        None
-    } else {
-        Some(serde_json::from_value(result).expect("Failed to parse hover response"))
-    };
+pub fn editor_hover(
+    meta: EditorMeta,
+    params: PositionParams,
+    result: Option<Hover>,
+    ctx: &mut Context,
+) {
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
     let pos = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
     let diagnostics = diagnostics
@@ -95,7 +90,7 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
         format!("lsp-show-hover {} {}", params.position, editor_quote(&info))
     };
 
-    ctx.exec(meta.clone(), command);
+    ctx.exec(meta, command);
 }
 
 trait PlainText {

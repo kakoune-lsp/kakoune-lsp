@@ -1,8 +1,9 @@
 use crate::context::*;
+use crate::controller;
 use crate::types::*;
 use crate::util::*;
-use lsp_types::notification::Notification;
-use lsp_types::request::Request;
+use lsp_types::notification::*;
+use lsp_types::request::*;
 use lsp_types::*;
 use serde_json::Value;
 use std::process;
@@ -12,11 +13,11 @@ use url::Url;
 pub fn initialize(
     root_path: &str,
     initialization_options: Option<Value>,
-    meta: &EditorMeta,
+    meta: EditorMeta,
     ctx: &mut Context,
 ) {
     let initialization_options =
-        request_initialization_options_from_kakoune(meta, ctx).or(initialization_options);
+        request_initialization_options_from_kakoune(&meta, ctx).or(initialization_options);
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
@@ -53,25 +54,18 @@ pub fn initialize(
         workspace_folders: None,
     };
 
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (
-            meta.clone(),
-            request::Initialize::METHOD.into(),
-            toml::Value::Table(toml::value::Table::default()),
-        ),
-    );
-    ctx.call(id, request::Initialize::METHOD.into(), params);
+    ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
+        ctx.capabilities = Some(result.capabilities);
+        ctx.notify::<Initialized>(InitializedParams {});
+        controller::dispatch_pending_editor_requests(ctx)
+    });
 }
 
 pub fn exit(ctx: &mut Context) {
-    // NOTE we can't use Params::None because it's serialized as Value::Array([])
-    let params: Option<u8> = None;
-    ctx.notify(notification::Exit::METHOD.into(), params);
+    ctx.notify::<Exit>(());
 }
 
-pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {
+pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     // NOTE controller should park request for capabilities until they are available thus it should
     // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)
 
@@ -125,7 +119,7 @@ pub fn capabilities(meta: &EditorMeta, ctx: &mut Context) {
         ctx.language_id,
         editor_escape(&features.join("\n"))
     );
-    ctx.exec(meta.clone(), command);
+    ctx.exec(meta, command);
 }
 
 /// User may override `initialization_options` provided in kak-lsp.toml on per-language server basis
