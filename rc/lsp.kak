@@ -685,6 +685,11 @@ define-command -hidden lsp-replace-selection -params 1 -docstring %{
     nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
 }
 
+define-command -hidden lsp-handle-progress -params 4 -docstring %{
+  lsp-handle-progress <title> <message> <percentage> <done>
+  Handle progress messages sent from the language server. Override to handle this.
+} %{ nop }
+
 ### Handling requests from server ###
 
 define-command -hidden lsp-get-server-initialization-options -params 1 -docstring %{

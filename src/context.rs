@@ -111,4 +111,27 @@ impl Context {
         self.request_counter += 1;
         id
     }
+
+    pub fn meta_for_session(&self) -> EditorMeta {
+        EditorMeta {
+            session: self.session.clone(),
+            client: None,
+            buffile: "".to_string(),
+            filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
+            version: 0,
+            fifo: None,
+        }
+    }
+
+    pub fn meta_for_buffer(&self, buffile: String) -> Option<EditorMeta> {
+        let document = self.documents.get(&buffile)?;
+        Some(EditorMeta {
+            session: self.session.clone(),
+            client: None,
+            buffile: buffile,
+            filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
+            version: document.version,
+            fifo: None,
+        })
+    }
 }
