@@ -1,6 +1,7 @@
 use crate::context::*;
 use crate::types::*;
 use crate::util::*;
+use jsonrpc_core::{Id, Params};
 use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -106,7 +107,42 @@ pub fn editor_workspace_symbol(
     let command = format!(
         "lsp-show-workspace-symbol {} {}",
         editor_quote(&ctx.root_path),
-        editor_quote(&content),
+        editor_quote(&editor_quote(&content)),
     );
     ctx.exec(meta, command);
+}
+
+#[derive(Deserialize)]
+struct EditorExecuteCommand {
+    command: String,
+    arguments: String,
+}
+
+pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = EditorExecuteCommand::deserialize(params)
+        .expect("Params should follow ExecuteCommand structure");
+    let req_params = ExecuteCommandParams {
+        command: params.command,
+        // arguments is quoted to avoid parsing issues
+        arguments: serde_json::from_str(&params.arguments).unwrap(),
+    };
+    ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
+}
+
+pub fn apply_edit(id: Id, params: Option<Params>, ctx: &mut Context) {
+    let params: ApplyWorkspaceEditParams = params.unwrap().parse().expect("Failed to parse params");
+    let meta = ctx.meta_for_session();
+    let applied = if let Some(changes) = params.edit.changes {
+        for (url, edits) in changes {
+            apply_text_edits(&meta, &url, &edits, &ctx);
+        }
+        true
+    } else {
+        warn!("kak-lsp doesn't yet support DocumentChanges");
+        false
+    };
+    ctx.reply(
+        id,
+        Ok(serde_json::to_value(ApplyWorkspaceEditResponse { applied }).unwrap()),
+    );
 }

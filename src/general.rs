@@ -41,6 +41,25 @@ pub fn initialize(
                     }),
                     ..CompletionCapability::default()
                 }),
+                code_action: Some(CodeActionCapability {
+                    code_action_literal_support: Some(CodeActionLiteralSupport {
+                        code_action_kind: CodeActionKindLiteralSupport {
+                            value_set: vec![
+                                "quickfix",
+                                "refactor",
+                                "refactor.extract",
+                                "refactor.inline",
+                                "refactor.rewrite",
+                                "source",
+                                "source.organizeImports",
+                            ]
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect(),
+                        },
+                    }),
+                    ..CodeActionCapability::default()
+                }),
                 ..TextDocumentClientCapabilities::default()
             }),
             experimental: None,

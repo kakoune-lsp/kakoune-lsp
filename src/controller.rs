@@ -8,7 +8,7 @@ use crate::types::*;
 use crate::util::*;
 use crate::workspace;
 use crossbeam_channel::{select, Receiver, Sender};
-use jsonrpc_core::{Call, ErrorCode, Output, Params};
+use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
@@ -96,10 +96,7 @@ pub fn start(
                     ServerMessage::Request(call) => {
                         match call {
                             Call::MethodCall(request) => {
-                                debug!(
-                                    "Requests from language server are not supported yet: {:?}",
-                                    request
-                                );
+                              dispatch_server_request(request, &mut ctx);
                             }
                             Call::Notification(notification) => {
                                 dispatch_server_notification(
@@ -188,6 +185,12 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::Completion::METHOD => {
             completion::text_document_completion(meta, params, &mut ctx);
         }
+        request::CodeActionRequest::METHOD => {
+            codeaction::text_document_codeaction(meta, params, &mut ctx);
+        }
+        request::ExecuteCommand::METHOD => {
+            workspace::execute_command(meta, params, &mut ctx);
+        }
         request::HoverRequest::METHOD => {
             hover::text_document_hover(meta, params, &mut ctx);
         }
@@ -248,6 +251,18 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     }
 }
 
+fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
+    let method: &str = &request.method;
+    match method {
+        request::ApplyWorkspaceEdit::METHOD => {
+            workspace::apply_edit(request.id, request.params, ctx);
+        }
+        _ => {
+            warn!("Unsupported method: {}", method);
+        }
+    }
+}
+
 fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &mut Context) {
     match method {
         notification::PublishDiagnostics::METHOD => {
@@ -263,18 +278,16 @@ fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &
             debug!("Language server exited");
         }
         "window/logMessage" => {
-            debug!("{:?}", &params);
             let params: LogMessageParams = params
                 .unwrap()
                 .parse()
                 .expect("Failed to parse LogMessageParams params");
             ctx.exec(
                 ctx.meta_for_session(),
-                format!("echo -debug {}", editor_quote(&params.message)),
+                format!("echo -debug LSP: {}", editor_quote(&params.message)),
             );
         }
         "window/progress" => {
-            debug!("{:?}", &params);
             let params: WindowProgress = params
                 .unwrap()
                 .parse()

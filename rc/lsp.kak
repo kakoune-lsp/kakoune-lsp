@@ -150,6 +150,38 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-code-actions -docstring "Request code actions for the main cursor position" %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/codeAction"
+[params.position]
+line      = %d
+column    = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+
+define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "workspace/executeCommand"
+[params]
+command = "%s"
+arguments = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" "$2" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+
 define-command lsp-references -docstring "Open buffer with symbol references" %{
     lsp-did-change
     nop %sh{ (printf '
@@ -870,6 +902,7 @@ define-command lsp -params 1.. -shell-script-candidates %{
 ### User mode ###
 
 declare-user-mode lsp
+map global lsp a '<esc>: lsp-code-actions<ret>'           -docstring 'show code actions for current position'
 map global lsp c '<esc>: lsp-capabilities<ret>'           -docstring 'show language server capabilities'
 map global lsp d '<esc>: lsp-definition<ret>'             -docstring 'go to definition'
 map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list project errors and warnings'
