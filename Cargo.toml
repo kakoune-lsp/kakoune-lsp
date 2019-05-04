@@ -3,6 +3,7 @@ name = "kak-lsp"
 version = "6.1.0"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>"]
 edition = "2018"
+license = "Unlicense/MIT"
 
 [dependencies]
 clap = "2"

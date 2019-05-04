@@ -13,6 +13,9 @@ $ZIP = "$SRC_DIR\$($Env:CRATE_NAME)-$($Env:APPVEYOR_REPO_TAG_NAME)-$($Env:TARGET
 Copy-Item "$SRC_DIR\target\$($Env:TARGET)\release\kak-lsp.exe" '.\'
 Copy-Item "$SRC_DIR\kak-lsp.toml" '.\'
 Copy-Item "$SRC_DIR\README.asciidoc" '.\'
+Copy-Item "$SRC_DIR\COPYING" '.\'
+Copy-Item "$SRC_DIR\MIT" '.\'
+Copy-Item "$SRC_DIR\UNLICENSE" '.\'
 
 7z a "$ZIP" *
 

@@ -22,6 +22,9 @@ main() {
     cp target/$TARGET/release/kak-lsp $stage/
     cp kak-lsp.toml $stage/
     cp README.asciidoc $stage/
+    cp COPYING $stage/
+    cp MIT $stage/
+    cp UNLICENSE $stage/
 
     case $TRAVIS_OS_NAME in
         linux)
