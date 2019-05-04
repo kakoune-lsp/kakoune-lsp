@@ -11,19 +11,12 @@ use std;
 use url::Url;
 
 pub fn text_document_completion(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = TextDocumentCompletionParams::deserialize(params.clone());
-    if req_params.is_err() {
-        error!("Params should follow TextDocumentCompletionParams structure");
-        return;
-    }
-    let req_params = req_params.unwrap();
-    let position = req_params.position;
-
+    let req_params = TextDocumentCompletionParams::deserialize(params.clone()).unwrap();
     let req_params = CompletionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position,
+        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
         context: None,
     };
     let id = ctx.next_request_id();
@@ -89,10 +82,7 @@ pub fn editor_completion(
     let p = params.position;
     let command = format!(
         "set window lsp_completions {}.{}@{} {}\n",
-        p.line + 1,
-        p.character + 1 - params.completion.offset,
-        meta.version,
-        items
+        p.line, params.completion.offset, meta.version, items
     );
     ctx.exec(meta.clone(), command);
 }

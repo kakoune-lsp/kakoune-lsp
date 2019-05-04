@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -164,22 +165,28 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
     let client = None;
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
-    let version = ctx.versions.get(buffile);
-    if version.is_none() {
+    let document = ctx.documents.get(buffile);
+    if document.is_none() {
         return;
     }
-    let version = *version.unwrap();
+    let document = document.unwrap();
+    let version = document.version;
     let ranges = params
         .symbols
         .iter()
         .flat_map(|x| {
             let face = x.get_face();
+            let offset_encoding = ctx.offset_encoding.to_owned();
             x.ranges.iter().filter_map(move |r| {
                 if face.is_empty() {
                     warn!("No face found for {:?}", x);
                     Option::None
                 } else {
-                    Option::Some(format!("{}|{}", lsp_range_to_kakoune(*r), face))
+                    Option::Some(format!(
+                        "{}|{}",
+                        lsp_range_to_kakoune(r, &document.text, &offset_encoding),
+                        face
+                    ))
                 }
             })
         })

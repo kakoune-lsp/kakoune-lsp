@@ -10,18 +10,12 @@ use std::str;
 use url::Url;
 
 pub fn text_document_hover(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone());
-    if req_params.is_err() {
-        error!("Params should follow PositionParams structure");
-        return;
-    }
-    let req_params = req_params.unwrap();
-    let position = req_params.position;
+    let req_params = PositionParams::deserialize(params.clone()).unwrap();
     let req_params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position,
+        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
     };
     let id = ctx.next_request_id();
     ctx.response_waitlist.insert(
@@ -39,7 +33,7 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
         Some(serde_json::from_value(result).expect("Failed to parse hover response"))
     };
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
-    let pos = params.position;
+    let pos = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
     let diagnostics = diagnostics
         .and_then(|x| {
             Some(
@@ -84,15 +78,21 @@ pub fn editor_hover(meta: &EditorMeta, params: EditorParams, result: Value, ctx:
         return;
     }
 
-    let position = format!("{}.{}", pos.line + 1, pos.character + 1);
-
     let command = if diagnostics.is_empty() {
-        format!("lsp-show-hover {} {}", position, editor_quote(&contents))
+        format!(
+            "lsp-show-hover {} {}",
+            params.position,
+            editor_quote(&contents)
+        )
     } else if contents.is_empty() {
-        format!("lsp-show-hover {} {}", position, editor_quote(&diagnostics))
+        format!(
+            "lsp-show-hover {} {}",
+            params.position,
+            editor_quote(&diagnostics)
+        )
     } else {
         let info = format!("{}\n\n{}", contents, diagnostics);
-        format!("lsp-show-hover {} {}", position, editor_quote(&info))
+        format!("lsp-show-hover {} {}", params.position, editor_quote(&info))
     };
 
     ctx.exec(meta.clone(), command);

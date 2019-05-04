@@ -1,6 +1,6 @@
 use crate::context::*;
+use crate::text_edit::apply_text_edits_to_buffer;
 use crate::types::*;
-use crate::util::*;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::Deserialize;
@@ -34,15 +34,26 @@ pub fn editor_formatting(
     ctx: &mut Context,
 ) {
     let result = serde_json::from_value(result).expect("Failed to parse formatting response");
+    let document = ctx.documents.get(&meta.buffile);
+    if document.is_none() {
+        // Nothing to do, but sending command back to the editor is required to handle case when
+        // editor is blocked waiting for response via fifo.
+        ctx.exec(meta.clone(), "nop".to_string());
+        return;
+    }
+    let document = document.unwrap();
     match result {
         TextEditResponse::None => {
-            // nothing to do, but sending command back to the editor is required to handle case when
-            // editor is blocked waiting for response via fifo
+            // Nothing to do, but sending command back to the editor is required to handle case when
+            // editor is blocked waiting for response via fifo.
             ctx.exec(meta.clone(), "nop".to_string());
             return;
         }
         TextEditResponse::Array(text_edits) => {
-            ctx.exec(meta.clone(), apply_text_edits(None, &text_edits));
+            ctx.exec(
+                meta.clone(),
+                apply_text_edits_to_buffer(None, &text_edits, &document.text, &ctx.offset_encoding),
+            );
         }
     }
 }

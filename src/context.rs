@@ -2,8 +2,20 @@ use crate::types::*;
 use crossbeam_channel::Sender;
 use jsonrpc_core::{self, Call, Id, Params, Version};
 use lsp_types::*;
+use ropey;
 use std::collections::HashMap;
 use std::fs;
+
+// Copy of Kakoune's timestamped buffer content.
+pub struct Document {
+    // Corresponds to Kakoune's timestamp.
+    // It's passed to a language server as a version and is used to tag selections, highlighters and
+    // other timestamp sensitive parameters in commands sent to kakoune.
+    pub version: u64,
+    // Buffer content.
+    // It's used to translate between LSP and Kakoune coordinates.
+    pub text: ropey::Rope,
+}
 
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
@@ -17,7 +29,8 @@ pub struct Context {
     pub response_waitlist: HashMap<Id, (EditorMeta, String, EditorParams)>,
     pub root_path: String,
     pub session: SessionId,
-    pub versions: HashMap<String, u64>,
+    pub documents: HashMap<String, Document>,
+    pub offset_encoding: OffsetEncoding,
 }
 
 impl Context {
@@ -28,6 +41,7 @@ impl Context {
         editor_tx: Sender<EditorResponse>,
         config: Config,
         root_path: String,
+        offset_encoding: OffsetEncoding,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
@@ -42,7 +56,8 @@ impl Context {
             response_waitlist: HashMap::default(),
             root_path,
             session,
-            versions: HashMap::default(),
+            documents: HashMap::default(),
+            offset_encoding,
         }
     }
 

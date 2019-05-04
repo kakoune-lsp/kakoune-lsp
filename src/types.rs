@@ -3,6 +3,7 @@ use lsp_types::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::io::Error;
 use toml;
 
@@ -41,6 +42,8 @@ pub struct LanguageConfig {
     #[serde(default)]
     pub args: Vec<String>,
     pub initialization_options: Option<Value>,
+    #[serde(default = "default_offset_encoding")]
+    pub offset_encoding: OffsetEncoding,
 }
 
 impl Default for ServerConfig {
@@ -55,11 +58,15 @@ impl Default for ServerConfig {
 }
 
 fn default_ip() -> String {
-    "127.0.0.1".to_string()
+    String::from("127.0.0.1")
 }
 
 fn default_port() -> u16 {
     31337
+}
+
+fn default_offset_encoding() -> OffsetEncoding {
+    OffsetEncoding::Utf16
 }
 
 // Editor
@@ -118,19 +125,19 @@ pub struct TextDocumentDidChangeParams {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TextDocumentCompletionParams {
-    pub position: Position,
+    pub position: KakounePosition,
     pub completion: EditorCompletion,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct PositionParams {
-    pub position: Position,
+    pub position: KakounePosition,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TextDocumentRenameParams {
-    pub position: Position,
+    pub position: KakounePosition,
     pub new_name: String,
 }
 
@@ -179,4 +186,38 @@ pub enum ReferencesResponse {
 pub enum TextEditResponse {
     None,
     Array(Vec<TextEdit>),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct KakounePosition {
+    pub line: u64,
+    pub column: u64, // in bytes, not chars!!!
+}
+
+pub struct KakouneRange {
+    pub start: KakounePosition,
+    pub end: KakounePosition,
+}
+
+impl Display for KakounePosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}.{}", self.line, self.column)
+    }
+}
+
+impl Display for KakouneRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{},{}", self.start, self.end)
+    }
+}
+
+/// Represents how language server interprets LSP's `Position.character`
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum OffsetEncoding {
+    /// UTF-8 code units aka bytes
+    #[serde(rename = "utf-8")]
+    Utf8,
+    /// UTF-16 code units
+    #[serde(rename = "utf-16")]
+    Utf16,
 }

@@ -1,12 +1,15 @@
 use crate::context::*;
+use crate::position::*;
+use crate::text_edit::*;
 use crate::types::*;
 use itertools::Itertools;
 use libc;
 use lsp_types::request::GotoDefinitionResponse;
 use lsp_types::*;
+use ropey::Rope;
 use std::collections::HashMap;
-use std::collections::HashSet;
-use std::io::{stderr, stdout, Write};
+use std::fs::File;
+use std::io::{stderr, stdout, BufReader, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{env, fs, path, process, thread};
@@ -33,37 +36,6 @@ pub fn temp_dir() -> path::PathBuf {
     path
 }
 
-pub fn lsp_range_to_kakoune(range: Range) -> String {
-    // LSP ranges are 0-based, but Kakoune's 1-based.
-    // LSP ranges are exclusive, but Kakoune's are inclusive.
-    // Also from LSP spec: If you want to specify a range that contains a line including
-    // the line ending character(s) then use an end position denoting the start of the next
-    // line.
-    let start_line = range.start.line;
-    let start_char = range.start.character;
-    let mut end_line = range.end.line;
-    let mut end_char = range.end.character;
-
-    // Some language servers tend to return 0-length ranges.
-    if start_line == end_line && start_char == end_char {
-        end_char += 1;
-    }
-
-    if end_char > 0 {
-        end_line += 1;
-    } else {
-        end_char = 1_000_000;
-    }
-
-    format!(
-        "{}.{},{}.{}",
-        start_line + 1,
-        start_char + 1,
-        end_line,
-        end_char,
-    )
-}
-
 /// Represent list of symbol information as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
 pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -> String {
@@ -84,14 +56,15 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
                 .or_else(|| filename.to_str())
                 .unwrap();
 
-            let position = location.range.start;
+            let position = get_kakoune_position(filename, &location.range.start, ctx)
+                .unwrap_or_else(|| KakounePosition {
+                    line: location.range.start.line + 1,
+                    column: location.range.start.character + 1,
+                });
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename,
-                position.line + 1,
-                position.character + 1,
-                description
+                filename, position.line, position.column, description
             )
         })
         .join("\n")
@@ -99,6 +72,7 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
 
 /// Represent list of document symbol as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
+
 pub fn format_document_symbol(
     items: Vec<DocumentSymbol>,
     meta: &EditorMeta,
@@ -117,14 +91,16 @@ pub fn format_document_symbol(
                 .and_then(|p| p.to_str())
                 .unwrap_or(&meta.buffile);
 
-            let position = range.start;
+            let position = get_kakoune_position(filename, &range.start, ctx).unwrap_or_else(|| {
+                KakounePosition {
+                    line: range.start.line + 1,
+                    column: range.start.character + 1,
+                }
+            });
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename,
-                position.line + 1,
-                position.character + 1,
-                description
+                filename, position.line, position.column, description
             )
         })
         .join("\n")
@@ -160,219 +136,6 @@ pub fn goodbye(config: &Config, code: i32) {
     // give stdio a chance to actually flush
     thread::sleep(Duration::from_secs(1));
     process::exit(code);
-}
-
-pub fn apply_text_edits(uri: Option<&Url>, text_edits: &[TextEdit]) -> String {
-    // empty text edits processed as a special case because Kakoune's `select` command
-    // doesn't support empty arguments list
-    if text_edits.is_empty() {
-        // nothing to do, but sending command back to the editor is required to handle case when
-        // editor is blocked waiting for response via fifo
-        return "nop".to_string();
-    }
-    let mut edits = text_edits
-        .iter()
-        .map(lsp_text_edit_to_kakoune)
-        .collect::<Vec<_>>();
-
-    // Adjoin selections detection and Kakoune side editing relies on edits being ordered left to
-    // right. Language servers usually send them such, but spec doesn't say anything about the order
-    // hence we ensure it by sorting. It's improtant to use stable sort to handle properly cases
-    // like multiple inserts in the same place.
-    edits.sort_by_key(|x| {
-        (
-            x.range.start.line,
-            x.range.start.character,
-            x.range.end.line,
-            x.range.end.character,
-        )
-    });
-
-    let select_edits = edits
-        .iter()
-        .map(
-            |KakouneTextEdit {
-                 range: Range { start, end },
-                 ..
-             }| {
-                format!(
-                    "{}.{},{}.{}",
-                    start.line, start.character, end.line, end.character
-                )
-            },
-        )
-        .join(" ");
-
-    let adjoin_selections = edits
-        .windows(2)
-        .enumerate()
-        .filter_map(|(i, pair)| {
-            let end = pair[0].range.end;
-            let start = pair[1].range.start;
-            if (end.line == start.line && end.character + 1 == start.character)
-                || (end.line + 1 == start.line
-                    && end.character == 1_000_000
-                    && start.character == 1)
-            {
-                Some(i)
-            } else {
-                None
-            }
-        })
-        .collect::<HashSet<_>>();
-
-    let mut selection_index = 0;
-    let apply_edits = edits
-        .iter()
-        .enumerate()
-        .map(
-            |(
-                i,
-                KakouneTextEdit {
-                    new_text, command, ..
-                },
-            )| {
-                let command = match command {
-                    KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
-                    KakouneTextEditCommand::InsertAfter => "lsp-insert-after-selection",
-                    KakouneTextEditCommand::Replace => "lsp-replace-selection",
-                };
-                let command = format!(
-                    "exec 'z{}<space>'
-                    {} {}",
-                    if selection_index > 0 {
-                        format!("{})", selection_index)
-                    } else {
-                        String::new()
-                    },
-                    command,
-                    editor_quote(&new_text)
-                );
-                // Replacing adjoin selection with empty content effectively removes it and requires one
-                // less selection cycle after the next restore to get to the next selection.
-                if !(adjoin_selections.contains(&i) && new_text.is_empty()) {
-                    selection_index += 1;
-                }
-                command
-            },
-        )
-        .join("\n");
-
-    let command = format!(
-        "select {}
-            exec -save-regs '' Z
-            {}",
-        select_edits, apply_edits
-    );
-    let command = format!("eval -draft -save-regs '^' {}", editor_quote(&command));
-    match uri {
-        Some(uri) => {
-            let buffile = uri.to_file_path().unwrap();
-            format!(
-                "lsp-apply-edits-to-file {} {}",
-                editor_quote(buffile.to_str().unwrap()),
-                editor_quote(&command)
-            )
-        }
-        None => command,
-    }
-}
-
-enum KakouneTextEditCommand {
-    InsertBefore,
-    InsertAfter,
-    Replace,
-}
-
-struct KakouneTextEdit {
-    range: Range,
-    new_text: String,
-    command: KakouneTextEditCommand,
-}
-
-fn lsp_text_edit_to_kakoune(text_edit: &TextEdit) -> KakouneTextEdit {
-    let TextEdit { range, new_text } = text_edit;
-    // LSP ranges are 0-based, but Kakoune's 1-based.
-    // LSP ranges are exclusive, but Kakoune's are inclusive.
-    // Also from LSP spec: If you want to specify a range that contains a line including
-    // the line ending character(s) then use an end position denoting the start of the next
-    // line.
-    let mut start_line = range.start.line;
-    let mut start_char = range.start.character;
-    let mut end_line = range.end.line;
-    let mut end_char = range.end.character;
-
-    let insert = start_line == end_line && start_char == end_char;
-    // Beginning of line is a very special case as we need to produce selection on the line
-    // to insert, and then insert before that selection. Selecting end of the previous line
-    // and inserting after selection doesn't work well for delete+insert cases like this:
-    /*
-        [
-          {
-            "range": {
-              "start": {
-                "line": 5,
-                "character": 0
-              },
-              "end": {
-                "line": 6,
-                "character": 0
-              }
-            },
-            "newText": ""
-          },
-          {
-            "range": {
-              "start": {
-                "line": 6,
-                "character": 0
-              },
-              "end": {
-                "line": 6,
-                "character": 0
-              }
-            },
-            "newText": "	fmt.Println(\"Hello, world!\")\n"
-          }
-        ]
-    */
-    let bol_insert = insert && end_char == 0;
-
-    start_line += 1;
-    start_char += 1;
-
-    if end_char > 0 {
-        end_line += 1;
-        if insert {
-            start_char = end_char;
-        }
-    } else if bol_insert {
-        end_line += 1;
-        end_char = 1;
-    } else {
-        end_char = 1_000_000;
-    }
-
-    KakouneTextEdit {
-        range: Range {
-            start: Position {
-                line: start_line,
-                character: start_char,
-            },
-            end: Position {
-                line: end_line,
-                character: end_char,
-            },
-        },
-        new_text: new_text.to_owned(),
-        command: if bol_insert {
-            KakouneTextEditCommand::InsertBefore
-        } else if insert {
-            KakouneTextEditCommand::InsertAfter
-        } else {
-            KakouneTextEditCommand::Replace
-        },
-    }
 }
 
 /// Convert language filetypes configuration into a more lookup-friendly form.
@@ -419,5 +182,62 @@ pub fn goto_definition_response_to_location(
             }
         }
         None => None,
+    }
+}
+
+/// Wrapper for kakoune_position_to_lsp which uses context to get buffer content and offset encoding.
+pub fn get_lsp_position(
+    filename: &str,
+    position: &KakounePosition,
+    ctx: &Context,
+) -> Option<Position> {
+    ctx.documents.get(filename).and_then(|document| {
+        Some(kakoune_position_to_lsp(
+            position,
+            &document.text,
+            &ctx.offset_encoding,
+        ))
+    })
+}
+
+/// Wrapper for lsp_position_to_kakoune which uses context to get buffer content and offset encoding.
+/// Reads the file directly if it is not present in context (is not open in editor).
+pub fn get_kakoune_position(
+    filename: &str,
+    position: &Position,
+    ctx: &Context,
+) -> Option<KakounePosition> {
+    ctx.documents
+        .get(filename)
+        .and_then(|doc| Some(doc.text.clone()))
+        .or_else(|| {
+            File::open(filename)
+                .ok()
+                .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
+        })
+        .and_then(|text| {
+            Some(lsp_position_to_kakoune(
+                &position,
+                &text,
+                &ctx.offset_encoding,
+            ))
+        })
+}
+
+/// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
+/// buffer or by editing file directly when it's not open in editor.
+pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &Context) {
+    if let Some(document) = ctx
+        .documents
+        .get(uri.to_file_path().unwrap().to_str().unwrap())
+    {
+        ctx.exec(
+            meta.clone(),
+            apply_text_edits_to_buffer(Some(uri), edits, &document.text, &ctx.offset_encoding),
+        );
+    } else {
+        if let Err(e) = apply_text_edits_to_file(uri, edits, &ctx.offset_encoding) {
+            error!("Failed to apply edits to file {} ({})", uri, e);
+        };
     }
 }

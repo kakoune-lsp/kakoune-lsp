@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -14,18 +15,19 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let buffile = path.to_str().unwrap();
     ctx.diagnostics
         .insert(buffile.to_string(), params.diagnostics);
-    let version = ctx.versions.get(buffile);
-    if version.is_none() {
+    let document = ctx.documents.get(buffile);
+    if document.is_none() {
         return;
     }
-    let version = *version.unwrap();
+    let document = document.unwrap();
+    let version = document.version;
     let diagnostics = &ctx.diagnostics[buffile];
     let ranges = diagnostics
         .iter()
         .map(|x| {
             format!(
                 "{}|{}",
-                lsp_range_to_kakoune(x.range),
+                lsp_range_to_kakoune(&x.range, &document.text, &ctx.offset_encoding),
                 match x.severity {
                     Some(DiagnosticSeverity::Error) => "DiagnosticError",
                     _ => "DiagnosticWarning",
@@ -39,7 +41,6 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let line_flags = diagnostics
         .iter()
         .map(|x| {
-            // See above
             format!(
                 "{}|{}",
                 x.range.start.line + 1,
@@ -91,6 +92,7 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
             diagnostics
                 .iter()
                 .map(|x| {
+                    let p = get_kakoune_position(filename, &x.range.start, ctx).unwrap();
                     format!(
                         "{}:{}:{}: {}:{}",
                         Path::new(filename)
@@ -99,8 +101,8 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
                             .and_then(|p| Some(p.to_str().unwrap()))
                             .or_else(|| Some(filename))
                             .unwrap(),
-                        x.range.start.line + 1,
-                        x.range.start.character + 1,
+                        p.line,
+                        p.column,
                         match x.severity {
                             Some(DiagnosticSeverity::Error) => "error",
                             _ => "warning",

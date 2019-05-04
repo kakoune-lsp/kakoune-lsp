@@ -1,28 +1,24 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
 use lsp_types::request::Request;
 use lsp_types::*;
+use ropey::Rope;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
 use url::Url;
 
 pub fn text_document_references(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone());
-    if req_params.is_err() {
-        error!("Params should follow PositionParams structure");
-        return;
-    }
-    let req_params = req_params.unwrap();
-    let position = req_params.position;
+    let req_params = PositionParams::deserialize(params.clone()).unwrap();
     let req_params = ReferenceParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position,
+        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
         context: ReferenceContext {
             include_declaration: true,
         },
@@ -64,43 +60,26 @@ pub fn editor_references(meta: &EditorMeta, result: Value, ctx: &mut Context) {
                     error!("Failed to open referenced file: {}", name);
                     return group.map(|_loc| String::new()).join("\n");
                 }
-                let mut buffer = BufReader::new(file.unwrap()).lines();
-                let mut next_buf_line = 0;
+                let text = Rope::from_reader(BufReader::new(file.unwrap())).unwrap();
                 group
                     .map(|location| {
-                        let p = location.range.start;
-                        let loc_line = p.line as usize;
-                        while next_buf_line != loc_line {
-                            buffer.next();
-                            next_buf_line += 1;
-                        }
-                        next_buf_line += 1;
-                        match buffer.next() {
-                            Some(Ok(line)) => {
-                                return format!(
-                                    "{}:{}:{}:{}",
-                                    name,
-                                    p.line + 1,
-                                    p.character + 1,
-                                    line
-                                );
-                            }
-                            Some(Err(e)) => {
-                                error!("Failed to read line {} in {}: {}", name, loc_line, e);
-                                String::new()
-                            }
-                            None => {
-                                error!(
-                                    "End of file reached, line {} not found in {}",
-                                    loc_line, name,
-                                );
-                                String::new()
-                            }
+                        let position = location.range.start;
+                        let loc_line = position.line as usize;
+                        if loc_line < text.len_lines() {
+                            let line = text.line(loc_line);
+                            let p = lsp_position_to_kakoune(&position, &text, &ctx.offset_encoding);
+                            format!("{}:{}:{}:{}", name, p.line, p.column, line)
+                        } else {
+                            error!(
+                                "End of file reached, line {} not found in {}",
+                                loc_line, name,
+                            );
+                            String::from("\n")
                         }
                     })
-                    .join("\n")
+                    .join("")
             })
-            .join("\n");
+            .join("");
 
         let command = format!(
             "lsp-show-references {} {}",
@@ -116,18 +95,12 @@ pub fn text_document_references_highlight(
     params: EditorParams,
     ctx: &mut Context,
 ) {
-    let req_params = PositionParams::deserialize(params.clone());
-    if req_params.is_err() {
-        error!("Params should follow PositionParams structure");
-        return;
-    }
-    let req_params = req_params.unwrap();
-    let position = req_params.position;
+    let req_params = PositionParams::deserialize(params.clone()).unwrap();
     let req_params = ReferenceParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position,
+        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
         context: ReferenceContext {
             include_declaration: true,
         },
@@ -146,6 +119,11 @@ pub fn text_document_references_highlight(
 
 pub fn editor_references_highlight(meta: &EditorMeta, result: Value, ctx: &mut Context) {
     let result = serde_json::from_value(result).expect("Failed to parse references response");
+    let document = ctx.documents.get(&meta.buffile);
+    if document.is_none() {
+        return;
+    }
+    let document = document.unwrap();
     if let Some(mut locations) = match result {
         ReferencesResponse::Array(locations) => Some(locations),
         ReferencesResponse::None => None,
@@ -160,7 +138,12 @@ pub fn editor_references_highlight(meta: &EditorMeta, result: Value, ctx: &mut C
             .filter(|location| {
                 location.uri.to_file_path().unwrap().to_str().unwrap() == meta.buffile
             })
-            .map(|location| format!("{}|Reference", lsp_range_to_kakoune(location.range)))
+            .map(|location| {
+                format!(
+                    "{}|Reference",
+                    lsp_range_to_kakoune(&location.range, &document.text, &ctx.offset_encoding)
+                )
+            })
             .join(" ");
         let command = format!(
             "set-option window lsp_references {} {}",
