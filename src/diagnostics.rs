@@ -84,7 +84,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     ctx.exec(meta, command.to_string());
 }
 
-pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
+pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
     let content = ctx
         .diagnostics
         .iter()
@@ -118,5 +118,5 @@ pub fn editor_diagnostics(meta: &EditorMeta, ctx: &mut Context) {
         editor_quote(&ctx.root_path),
         editor_quote(&content),
     );
-    ctx.exec(meta.clone(), command);
+    ctx.exec(meta, command);
 }

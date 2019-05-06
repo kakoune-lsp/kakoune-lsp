@@ -2,40 +2,34 @@ use crate::context::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
-use lsp_types::request::Request;
+use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
 use serde::Deserialize;
-use serde_json::{self, Value};
 use std;
 use url::Url;
 
-pub fn text_document_completion(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = TextDocumentCompletionParams::deserialize(params.clone()).unwrap();
+pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = TextDocumentCompletionParams::deserialize(params).unwrap();
     let req_params = CompletionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         context: None,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (meta.clone(), request::Completion::METHOD.into(), params),
-    );
-    ctx.call(id, request::Completion::METHOD.into(), req_params);
+    ctx.call::<Completion, _>(meta, req_params, |ctx: &mut Context, meta, result| {
+        editor_completion(meta, params, result, ctx)
+    });
 }
 
 pub fn editor_completion(
-    meta: &EditorMeta,
-    params: EditorParams,
-    result: Value,
+    meta: EditorMeta,
+    params: TextDocumentCompletionParams,
+    result: Option<CompletionResponse>,
     ctx: &mut Context,
 ) {
-    let params = TextDocumentCompletionParams::deserialize(params).expect("Failed to parse params");
-    let result = serde_json::from_value(result).expect("Failed to parse completion response");
-    let items = match result {
+    let items = match result.unwrap() {
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
     };

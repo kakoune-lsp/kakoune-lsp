@@ -1,13 +1,12 @@
 use crate::context::*;
 use crate::text_edit::apply_text_edits_to_buffer;
 use crate::types::*;
-use lsp_types::request::Request;
+use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use serde_json::{self, Value};
 use url::Url;
 
-pub fn text_document_formatting(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let options = FormattingOptions::deserialize(params.clone());
     if options.is_err() {
         error!("Params should follow FormattingOptions structure");
@@ -19,39 +18,30 @@ pub fn text_document_formatting(meta: &EditorMeta, params: EditorParams, ctx: &m
         },
         options,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (meta.clone(), request::Formatting::METHOD.into(), params),
-    );
-    ctx.call(id, request::Formatting::METHOD.into(), req_params);
+    ctx.call::<Formatting, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        editor_formatting(meta, result, ctx)
+    });
 }
 
-pub fn editor_formatting(
-    meta: &EditorMeta,
-    _params: EditorParams,
-    result: Value,
-    ctx: &mut Context,
-) {
-    let result = serde_json::from_value(result).expect("Failed to parse formatting response");
+pub fn editor_formatting(meta: EditorMeta, result: Option<Vec<TextEdit>>, ctx: &mut Context) {
     let document = ctx.documents.get(&meta.buffile);
     if document.is_none() {
         // Nothing to do, but sending command back to the editor is required to handle case when
         // editor is blocked waiting for response via fifo.
-        ctx.exec(meta.clone(), "nop".to_string());
+        ctx.exec(meta, "nop".to_string());
         return;
     }
     let document = document.unwrap();
     match result {
-        TextEditResponse::None => {
+        None => {
             // Nothing to do, but sending command back to the editor is required to handle case when
             // editor is blocked waiting for response via fifo.
-            ctx.exec(meta.clone(), "nop".to_string());
+            ctx.exec(meta, "nop".to_string());
             return;
         }
-        TextEditResponse::Array(text_edits) => {
+        Some(text_edits) => {
             ctx.exec(
-                meta.clone(),
+                meta,
                 apply_text_edits_to_buffer(None, &text_edits, &document.text, &ctx.offset_encoding),
             );
         }

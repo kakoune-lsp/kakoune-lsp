@@ -1,14 +1,13 @@
 use crate::context::*;
 use crate::types::*;
 use crate::util::*;
-use lsp_types::request::Request;
+use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use serde_json::{self, Value};
 use std::fs;
 use url::Url;
 
-pub fn text_document_rename(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let options = TextDocumentRenameParams::deserialize(params.clone()).unwrap();
     let req_params = RenameParams {
         text_document: TextDocumentIdentifier {
@@ -17,18 +16,13 @@ pub fn text_document_rename(meta: &EditorMeta, params: EditorParams, ctx: &mut C
         position: get_lsp_position(&meta.buffile, &options.position, ctx).unwrap(),
         new_name: options.new_name,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (meta.clone(), request::Rename::METHOD.into(), params),
-    );
-    ctx.call(id, request::Rename::METHOD.into(), req_params);
+    ctx.call::<Rename, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        editor_rename(meta, result, ctx)
+    });
 }
 
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
-pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ctx: &mut Context) {
-    let result: Option<WorkspaceEdit> =
-        serde_json::from_value(result).expect("Failed to parse formatting response");
+pub fn editor_rename(meta: EditorMeta, result: Option<WorkspaceEdit>, ctx: &mut Context) {
     if result.is_none() {
         return;
     }
@@ -37,14 +31,14 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    apply_text_edits(meta, &edit.text_document.uri, &edit.edits, ctx);
+                    apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
                         DocumentChangeOperation::Edit(edit) => {
-                            apply_text_edits(meta, &edit.text_document.uri, &edit.edits, ctx);
+                            apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
                         }
                         DocumentChangeOperation::Op(op) => match op {
                             ResourceOp::Create(op) => {
@@ -118,7 +112,7 @@ pub fn editor_rename(meta: &EditorMeta, _params: EditorParams, result: Value, ct
         }
     } else if let Some(changes) = result.changes {
         for (uri, change) in &changes {
-            apply_text_edits(meta, uri, change, ctx);
+            apply_text_edits(&meta, uri, change, ctx);
         }
     }
 }

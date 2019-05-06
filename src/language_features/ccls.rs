@@ -1,13 +1,14 @@
 use crate::context::*;
+use crate::language_features::references;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
-use jsonrpc_core::{Params, Value};
-use lsp_types::{NumberOrString, Position, Range, TextDocumentIdentifier};
+use jsonrpc_core::Params;
+use lsp_types::request::{GotoDefinitionResponse, Request};
+use lsp_types::*;
 use serde;
 use serde::Deserialize;
-use serde_json;
 use url::Url;
 use url_serde;
 
@@ -27,7 +28,15 @@ pub struct KakouneNavigateParams {
     pub direction: String,
 }
 
-pub fn navigate(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub struct NavigateRequest {}
+
+impl Request for NavigateRequest {
+    type Params = NavigateParams;
+    type Result = Option<GotoDefinitionResponse>;
+    const METHOD: &'static str = "$ccls/navigate";
+}
+
+pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = KakouneNavigateParams::deserialize(params.clone()).unwrap();
     let req_params = NavigateParams {
         text_document: TextDocumentIdentifier {
@@ -36,20 +45,24 @@ pub fn navigate(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
         position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
         direction: req_params.direction,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist
-        .insert(id.clone(), (meta.clone(), "$ccls/navigate".into(), params));
-    ctx.call(id, "$ccls/navigate".into(), req_params);
+    ctx.call::<NavigateRequest, _>(
+        meta,
+        req_params,
+        move |ctx: &mut Context, meta, response| navigate_response(meta, response, ctx),
+    );
 }
 
-pub fn navigate_response(meta: &EditorMeta, result: Value, ctx: &mut Context) {
-    let result = serde_json::from_value(result).expect("Failed to parse definition response");
+pub fn navigate_response(
+    meta: EditorMeta,
+    result: Option<GotoDefinitionResponse>,
+    ctx: &mut Context,
+) {
     if let Some(location) = goto_definition_response_to_location(result) {
         let path = location.uri.to_file_path().unwrap();
         let filename = path.to_str().unwrap();
         let p = get_kakoune_position(filename, &location.range.start, ctx).unwrap();
         let command = format!("edit %§{}§ {} {}", filename, p.line, p.column);
-        ctx.exec(meta.clone(), command);
+        ctx.exec(meta, command);
     };
 }
 
@@ -65,7 +78,15 @@ pub struct VarsParams {
     pub position: Position,
 }
 
-pub fn vars(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub struct VarsRequest {}
+
+impl Request for VarsRequest {
+    type Params = VarsParams;
+    type Result = Option<Vec<Location>>;
+    const METHOD: &'static str = "$ccls/vars";
+}
+
+pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = PositionParams::deserialize(params.clone()).unwrap();
     let req_params = VarsParams {
         text_document: TextDocumentIdentifier {
@@ -73,10 +94,9 @@ pub fn vars(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
         },
         position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist
-        .insert(id.clone(), (meta.clone(), "$ccls/vars".into(), params));
-    ctx.call(id, "$ccls/vars".into(), req_params);
+    ctx.call::<VarsRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        references::editor_references(meta, result, ctx)
+    });
 }
 
 // $ccls/inheritance
@@ -97,7 +117,15 @@ pub struct KakouneInheritanceParams {
     pub derived: bool,
 }
 
-pub fn inheritance(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub struct InheritanceRequest {}
+
+impl Request for InheritanceRequest {
+    type Params = InheritanceParams;
+    type Result = Option<Vec<Location>>;
+    const METHOD: &'static str = "$ccls/inheritance";
+}
+
+pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = KakouneInheritanceParams::deserialize(params.clone()).unwrap();
     let req_params = InheritanceParams {
         text_document: TextDocumentIdentifier {
@@ -107,12 +135,9 @@ pub fn inheritance(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
         levels: req_params.levels,
         derived: req_params.derived,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (meta.clone(), "$ccls/inheritance".into(), params),
-    );
-    ctx.call(id, "$ccls/inheritance".into(), req_params);
+    ctx.call::<InheritanceRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        references::editor_references(meta, result, ctx)
+    });
 }
 
 // $ccls/call
@@ -131,7 +156,15 @@ pub struct KakouneCallParams {
     pub callee: bool,
 }
 
-pub fn call(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub struct CallRequest {}
+
+impl Request for CallRequest {
+    type Params = CallParams;
+    type Result = Option<Vec<Location>>;
+    const METHOD: &'static str = "$ccls/call";
+}
+
+pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = KakouneCallParams::deserialize(params.clone()).unwrap();
     let req_params = CallParams {
         text_document: TextDocumentIdentifier {
@@ -140,10 +173,9 @@ pub fn call(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
         position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
         callee: req_params.callee,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist
-        .insert(id.clone(), (meta.clone(), "$ccls/call".into(), params));
-    ctx.call(id, "$ccls/call".into(), req_params);
+    ctx.call::<CallRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        references::editor_references(meta, result, ctx)
+    });
 }
 
 // $ccls/member
@@ -162,7 +194,15 @@ pub struct KakouneMemberParams {
     pub kind: u8, // 1: variable, 2: type, 3: function
 }
 
-pub fn member(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub struct MemberRequest {}
+
+impl Request for MemberRequest {
+    type Params = MemberParams;
+    type Result = Option<Vec<Location>>;
+    const METHOD: &'static str = "$ccls/member";
+}
+
+pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = KakouneMemberParams::deserialize(params.clone()).unwrap();
     let req_params = MemberParams {
         text_document: TextDocumentIdentifier {
@@ -171,10 +211,9 @@ pub fn member(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
         position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
         kind: req_params.kind,
     };
-    let id = ctx.next_request_id();
-    ctx.response_waitlist
-        .insert(id.clone(), (meta.clone(), "$ccls/member".into(), params));
-    ctx.call(id, "$ccls/member".into(), req_params);
+    ctx.call::<MemberRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        references::editor_references(meta, result, ctx)
+    });
 }
 
 // Semantic Highlighting

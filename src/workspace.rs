@@ -1,13 +1,12 @@
 use crate::context::*;
 use crate::types::*;
 use crate::util::*;
-use lsp_types::request::Request;
+use lsp_types::notification::*;
+use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use toml;
-
-use lsp_types::notification::{self, Notification};
 
 fn insert_value<'a, 'b, P>(
     target: &'b mut serde_json::map::Map<String, Value>,
@@ -83,31 +82,26 @@ pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
     let params = DidChangeConfigurationParams {
         settings: Value::Object(settings),
     };
-    ctx.notify(notification::DidChangeConfiguration::METHOD.into(), params);
+    ctx.notify::<DidChangeConfiguration>(params);
 }
 
-pub fn workspace_symbol(meta: &EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = WorkspaceSymbolParams::deserialize(params.clone());
+pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let req_params = WorkspaceSymbolParams::deserialize(params);
     if req_params.is_err() {
         error!("Params should follow WorkspaceSymbolParams structure");
         return;
     }
     let req_params = req_params.unwrap();
-    let id = ctx.next_request_id();
-    ctx.response_waitlist.insert(
-        id.clone(),
-        (
-            meta.clone(),
-            request::WorkspaceSymbol::METHOD.into(),
-            params,
-        ),
-    );
-    ctx.call(id, request::WorkspaceSymbol::METHOD.into(), req_params);
+    ctx.call::<WorkspaceSymbol, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        editor_workspace_symbol(meta, result, ctx)
+    });
 }
 
-pub fn editor_workspace_symbol(meta: &EditorMeta, result: Value, ctx: &mut Context) {
-    let result: Option<Vec<SymbolInformation>> =
-        serde_json::from_value(result).expect("Failed to parse workspace symbol response");
+pub fn editor_workspace_symbol(
+    meta: EditorMeta,
+    result: Option<Vec<SymbolInformation>>,
+    ctx: &mut Context,
+) {
     if result.is_none() {
         return;
     }
@@ -118,5 +112,5 @@ pub fn editor_workspace_symbol(meta: &EditorMeta, result: Value, ctx: &mut Conte
         editor_quote(&ctx.root_path),
         editor_quote(&content),
     );
-    ctx.exec(meta.clone(), command);
+    ctx.exec(meta, command);
 }
