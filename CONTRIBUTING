@@ -1,7 +1,8 @@
 The preferred way to contribute would be through github pull requests,
 but other forms (i.e. patches via email) are gladly accepted.
 
-If you contribute under the terms of Unlicense:
+By contributing you agree to release your code under the project's licensing
+model (see COPYING for details).
 
 When contributing your first changes, please include an empty commit for
 copyright waiver using the following message (replace 'John Doe' with
