@@ -263,10 +263,32 @@ fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &
             debug!("Language server exited");
         }
         "window/logMessage" => {
-            debug!("{:?}", params);
+            debug!("{:?}", &params);
+            let params: LogMessageParams = params
+                .unwrap()
+                .parse()
+                .expect("Failed to parse LogMessageParams params");
+            ctx.exec(
+                ctx.meta_for_session(),
+                format!("echo -debug {}", editor_quote(&params.message)),
+            );
         }
         "window/progress" => {
-            debug!("{:?}", params);
+            debug!("{:?}", &params);
+            let params: WindowProgress = params
+                .unwrap()
+                .parse()
+                .expect("Failed to parse WindowProgress params");
+            ctx.exec(
+                ctx.meta_for_session(),
+                format!(
+                    "lsp-handle-progress {} {} {} {}",
+                    editor_quote(&params.title),
+                    editor_quote(&params.message.unwrap_or_default()),
+                    editor_quote(&params.percentage.unwrap_or_default()),
+                    editor_quote(params.done.map_or("", |_| "done"))
+                ),
+            );
         }
         "telemetry/event" => {
             debug!("{:?}", params);

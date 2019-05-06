@@ -141,6 +141,14 @@ pub struct TextDocumentRenameParams {
     pub new_name: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct WindowProgress {
+    pub title: String,
+    pub message: Option<String>,
+    pub percentage: Option<String>,
+    pub done: Option<bool>,
+}
+
 // Language Server
 
 // XXX serde(untagged) ?

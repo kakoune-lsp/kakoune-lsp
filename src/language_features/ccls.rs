@@ -330,16 +330,16 @@ pub struct PublishSemanticHighlightingParams {
 pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
-    let session = ctx.session.clone();
-    let client = None;
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
-    let document = ctx.documents.get(buffile);
-    if document.is_none() {
-        return;
-    }
-    let document = document.unwrap();
-    let version = document.version;
+    let document = match ctx.documents.get(buffile) {
+        Some(document) => document,
+        None => return,
+    };
+    let meta = match ctx.meta_for_buffer(buffile.to_string()) {
+        Some(meta) => meta,
+        None => return,
+    };
     let ranges = params
         .symbols
         .iter()
@@ -362,15 +362,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         .join(" ");
     let command = format!(
         "eval -buffer %§{}§ %§set buffer cquery_semhl {} {}§",
-        buffile, version, ranges
+        buffile, meta.version, ranges
     );
-    let meta = EditorMeta {
-        session,
-        client,
-        buffile: buffile.to_string(),
-        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
-        version,
-        fifo: None,
-    };
     ctx.exec(meta, command.to_string());
 }
