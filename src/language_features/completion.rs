@@ -78,5 +78,5 @@ pub fn editor_completion(
         "set window lsp_completions {}.{}@{} {}\n",
         p.line, params.completion.offset, meta.version, items
     );
-    ctx.exec(meta.clone(), command);
+    ctx.exec(meta, command);
 }

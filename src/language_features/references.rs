@@ -12,12 +12,12 @@ use std::io::BufReader;
 use url::Url;
 
 pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone()).unwrap();
+    let params = PositionParams::deserialize(params).unwrap();
     let req_params = ReferenceParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         context: ReferenceContext {
             include_declaration: true,
         },
@@ -87,12 +87,12 @@ pub fn text_document_references_highlight(
     params: EditorParams,
     ctx: &mut Context,
 ) {
-    let req_params = PositionParams::deserialize(params.clone()).unwrap();
+    let params = PositionParams::deserialize(params).unwrap();
     let req_params = ReferenceParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         context: ReferenceContext {
             include_declaration: true,
         },

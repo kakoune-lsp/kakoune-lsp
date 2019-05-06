@@ -7,16 +7,13 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let options = FormattingOptions::deserialize(params.clone());
-    if options.is_err() {
-        error!("Params should follow FormattingOptions structure");
-    }
-    let options = options.unwrap();
+    let params = FormattingOptions::deserialize(params)
+        .expect("Params should follow FormattingOptions structure");
     let req_params = DocumentFormattingParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        options,
+        options: params,
     };
     ctx.call::<Formatting, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_formatting(meta, result, ctx)

@@ -7,12 +7,8 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = TextDocumentDidOpenParams::deserialize(params);
-    if params.is_err() {
-        error!("Params should follow TextDocumentDidOpenParams structure");
-        return;
-    }
-    let params = params.unwrap();
+    let params = TextDocumentDidOpenParams::deserialize(params)
+        .expect("Params should follow TextDocumentDidOpenParams structure");
     let language_id = ctx.language_id.clone();
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
@@ -31,12 +27,8 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
 }
 
 pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = TextDocumentDidChangeParams::deserialize(params);
-    if params.is_err() {
-        error!("Params should follow TextDocumentDidChangeParams structure");
-        return;
-    }
-    let params = params.unwrap();
+    let params = TextDocumentDidChangeParams::deserialize(params)
+        .expect("Params should follow TextDocumentDidChangeParams structure");
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let version = meta.version;
     let old_version = ctx
