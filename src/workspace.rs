@@ -86,13 +86,9 @@ pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
 }
 
 pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = WorkspaceSymbolParams::deserialize(params);
-    if req_params.is_err() {
-        error!("Params should follow WorkspaceSymbolParams structure");
-        return;
-    }
-    let req_params = req_params.unwrap();
-    ctx.call::<WorkspaceSymbol, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+    let params = WorkspaceSymbolParams::deserialize(params)
+        .expect("Params should follow WorkspaceSymbolParams structure");
+    ctx.call::<WorkspaceSymbol, _>(meta, params, move |ctx: &mut Context, meta, result| {
         editor_workspace_symbol(meta, result, ctx)
     });
 }

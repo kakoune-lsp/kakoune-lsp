@@ -7,12 +7,12 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone()).unwrap();
+    let params = PositionParams::deserialize(params).unwrap();
     let req_params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
     };
     ctx.call::<GotoDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_definition(meta, result, ctx)
@@ -29,6 +29,6 @@ pub fn editor_definition(
         let filename = path.to_str().unwrap();
         let p = get_kakoune_position(filename, &location.range.start, ctx).unwrap();
         let command = format!("edit {} {} {}", editor_quote(filename), p.line, p.column);
-        ctx.exec(meta.clone(), command);
+        ctx.exec(meta, command);
     };
 }

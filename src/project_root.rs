@@ -40,7 +40,6 @@ pub fn gather_env_roots(language: &str) -> HashSet<PathBuf> {
     let prefix = format!("KAK_LSP_PROJECT_ROOT_{}", language.to_uppercase());
     debug!("Searching for vars starting with {}", prefix);
     env::vars()
-        .into_iter()
         .filter(|(k, _v)| k.starts_with(&prefix))
         .map(|(_k, v)| PathBuf::from(v))
         .collect()

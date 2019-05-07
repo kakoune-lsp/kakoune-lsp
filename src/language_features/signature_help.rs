@@ -38,7 +38,7 @@ pub fn editor_signature_help(
                 params.position,
                 editor_quote(&contents)
             );
-            ctx.exec(meta.clone(), command);
+            ctx.exec(meta, command);
         }
     }
 }

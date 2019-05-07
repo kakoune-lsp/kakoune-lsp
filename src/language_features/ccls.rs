@@ -37,13 +37,13 @@ impl Request for NavigateRequest {
 }
 
 pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = KakouneNavigateParams::deserialize(params.clone()).unwrap();
+    let params = KakouneNavigateParams::deserialize(params).unwrap();
     let req_params = NavigateParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
-        direction: req_params.direction,
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        direction: params.direction,
     };
     ctx.call::<NavigateRequest, _>(
         meta,
@@ -87,12 +87,12 @@ impl Request for VarsRequest {
 }
 
 pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = PositionParams::deserialize(params.clone()).unwrap();
+    let params = PositionParams::deserialize(params).unwrap();
     let req_params = VarsParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
     };
     ctx.call::<VarsRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         references::editor_references(meta, result, ctx)
@@ -126,14 +126,14 @@ impl Request for InheritanceRequest {
 }
 
 pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = KakouneInheritanceParams::deserialize(params.clone()).unwrap();
+    let params = KakouneInheritanceParams::deserialize(params).unwrap();
     let req_params = InheritanceParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
-        levels: req_params.levels,
-        derived: req_params.derived,
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        levels: params.levels,
+        derived: params.derived,
     };
     ctx.call::<InheritanceRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         references::editor_references(meta, result, ctx)
@@ -165,13 +165,13 @@ impl Request for CallRequest {
 }
 
 pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = KakouneCallParams::deserialize(params.clone()).unwrap();
+    let params = KakouneCallParams::deserialize(params).unwrap();
     let req_params = CallParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
-        callee: req_params.callee,
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        callee: params.callee,
     };
     ctx.call::<CallRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         references::editor_references(meta, result, ctx)
@@ -203,13 +203,13 @@ impl Request for MemberRequest {
 }
 
 pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let req_params = KakouneMemberParams::deserialize(params.clone()).unwrap();
+    let params = KakouneMemberParams::deserialize(params).unwrap();
     let req_params = MemberParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &req_params.position, ctx).unwrap(),
-        kind: req_params.kind,
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        kind: params.kind,
     };
     ctx.call::<MemberRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         references::editor_references(meta, result, ctx)
