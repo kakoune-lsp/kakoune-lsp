@@ -88,21 +88,56 @@ fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> Kakoune
 
 fn lsp_range_to_kakoune_utf_8_code_units(range: &Range) -> KakouneRange {
     let Range { start, end } = range;
+    let insert = start.line == end.line && start.character == end.character;
+    // Beginning of line is a very special case as we need to produce selection on the line
+    // to insert, and then insert before that selection. Selecting end of the previous line
+    // and inserting after selection doesn't work well for delete+insert cases like this:
+    /*
+        [
+          {
+            "range": {
+              "start": {
+                "line": 5,
+                "character": 0
+              },
+              "end": {
+                "line": 6,
+                "character": 0
+              }
+            },
+            "newText": ""
+          },
+          {
+            "range": {
+              "start": {
+                "line": 6,
+                "character": 0
+              },
+              "end": {
+                "line": 6,
+                "character": 0
+              }
+            },
+            "newText": "	fmt.Println(\"Hello, world!\")\n"
+          }
+        ]
+    */
+    let bol_insert = insert && end.character == 0;
     let start_byte = start.character;
-
     let end_byte;
-    // Exclusive->inclusive range.end conversion will make 0-length LSP range into the 2-length
-    // Kakoune range, but we want 1-length (the closest to 0 it can get in Kakoune ;-)).
-    if start.line == end.line && start.character == end.character {
+
+    // Exclusive->inclusive range.end conversion will make 0-length LSP range into the reversed
+    // 2-length Kakoune range, but we want 1-length (the closest to 0 it can get in Kakoune ;-)).
+    if insert {
         end_byte = start_byte;
     } else if end.character > 0 {
         // -1 because LSP ranges are exclusive, but Kakoune's are inclusive.
         end_byte = end.character - 1;
     } else {
-        end_byte = EOL_OFFSET;
+        end_byte = EOL_OFFSET - 1;
     }
 
-    let end_line = if end.character > 0 {
+    let end_line = if bol_insert || end.character > 0 {
         end.line
     } else {
         end.line - 1
@@ -154,5 +189,82 @@ fn lsp_position_to_kakoune_utf_8_code_units(position: &Position) -> KakounePosit
     KakounePosition {
         line: position.line + 1,
         column: position.character + 1,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lsp_range_to_kakoune_utf_8_code_units_bol_insert() {
+        assert_eq!(
+            lsp_range_to_kakoune_utf_8_code_units(&Range {
+                start: Position {
+                    line: 10,
+                    character: 0
+                },
+                end: Position {
+                    line: 10,
+                    character: 0
+                }
+            }),
+            KakouneRange {
+                start: KakounePosition {
+                    line: 11,
+                    column: 1
+                },
+                end: KakounePosition {
+                    line: 11,
+                    column: 1
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn lsp_range_to_kakoune_utf_8_code_units_bof_insert() {
+        assert_eq!(
+            lsp_range_to_kakoune_utf_8_code_units(&Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 0
+                }
+            }),
+            KakouneRange {
+                start: KakounePosition { line: 1, column: 1 },
+                end: KakounePosition { line: 1, column: 1 }
+            }
+        );
+    }
+
+    #[test]
+    fn lsp_range_to_kakoune_utf_8_code_units_eol() {
+        assert_eq!(
+            lsp_range_to_kakoune_utf_8_code_units(&Range {
+                start: Position {
+                    line: 10,
+                    character: 0
+                },
+                end: Position {
+                    line: 11,
+                    character: 0
+                }
+            }),
+            KakouneRange {
+                start: KakounePosition {
+                    line: 11,
+                    column: 1
+                },
+                end: KakounePosition {
+                    line: 11,
+                    column: EOL_OFFSET
+                }
+            }
+        );
     }
 }

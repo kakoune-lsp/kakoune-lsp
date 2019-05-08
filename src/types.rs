@@ -181,12 +181,13 @@ where
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct KakounePosition {
     pub line: u64,
     pub column: u64, // in bytes, not chars!!!
 }
 
+#[derive(Debug, PartialEq)]
 pub struct KakouneRange {
     pub start: KakounePosition,
     pub end: KakounePosition,

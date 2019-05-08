@@ -155,17 +155,27 @@ pub fn apply_text_edits_to_buffer(
         )
     });
 
-    let select_edits = edits.iter().map(|edit| format!("{}", edit.range)).join(" ");
+    let select_edits = edits
+        .iter()
+        .map(|edit| format!("{}", edit.range))
+        .dedup()
+        .join(" ");
 
-    let adjoin_selections = edits
+    // Merged selections require one less selection cycle after the next restore
+    // to get to the next selection.
+    let merged_selections = edits
         .windows(2)
         .enumerate()
         .filter_map(|(i, pair)| {
             let end = &pair[0].range.end;
             let start = &pair[1].range.start;
-            if (end.line == start.line && end.column + 1 == start.column)
-                || (end.line + 1 == start.line && end.column == EOL_OFFSET && start.column == 1)
-            {
+            // Replacing adjoin selection with empty content effectively removes it.
+            let remove_adjoin = pair[0].new_text.is_empty()
+                && (end.line == start.line && end.column + 1 == start.column)
+                || (end.line + 1 == start.line && end.column == EOL_OFFSET && start.column == 1);
+            // Inserting in the same place doesn't produce extra selection.
+            let insert_the_same = end.line == start.line && end.column == start.column;
+            if remove_adjoin || insert_the_same {
                 Some(i)
             } else {
                 None
@@ -200,9 +210,7 @@ pub fn apply_text_edits_to_buffer(
                     command,
                     editor_quote(&new_text)
                 );
-                // Replacing adjoin selection with empty content effectively removes it and requires one
-                // less selection cycle after the next restore to get to the next selection.
-                if !(adjoin_selections.contains(&i) && new_text.is_empty()) {
+                if !merged_selections.contains(&i) {
                     selection_index += 1;
                 }
                 command
@@ -249,55 +257,10 @@ fn lsp_text_edit_to_kakoune(
 ) -> KakouneTextEdit {
     let TextEdit { range, new_text } = text_edit;
     let Range { start, end } = range;
-    let kakoune_range = lsp_range_to_kakoune(range, text, offset_encoding);
     let insert = start.line == end.line && start.character == end.character;
-    // Beginning of line is a very special case as we need to produce selection on the line
-    // to insert, and then insert before that selection. Selecting end of the previous line
-    // and inserting after selection doesn't work well for delete+insert cases like this:
-    /*
-        [
-          {
-            "range": {
-              "start": {
-                "line": 5,
-                "character": 0
-              },
-              "end": {
-                "line": 6,
-                "character": 0
-              }
-            },
-            "newText": ""
-          },
-          {
-            "range": {
-              "start": {
-                "line": 6,
-                "character": 0
-              },
-              "end": {
-                "line": 6,
-                "character": 0
-              }
-            },
-            "newText": "	fmt.Println(\"Hello, world!\")\n"
-          }
-        ]
-    */
     let bol_insert = insert && range.end.character == 0;
 
-    let range = if bol_insert {
-        let KakouneRange { start, end } = kakoune_range;
-        KakouneRange {
-            start,
-            end: KakounePosition {
-                line: end.line + 1,
-                column: 1,
-            },
-        }
-    } else {
-        kakoune_range
-    };
+    let range = lsp_range_to_kakoune(range, text, offset_encoding);
 
     let command = if bol_insert {
         KakouneTextEditCommand::InsertBefore
