@@ -107,7 +107,7 @@ pub fn editor_workspace_symbol(
     let command = format!(
         "lsp-show-workspace-symbol {} {}",
         editor_quote(&ctx.root_path),
-        editor_quote(&editor_quote(&content)),
+        editor_quote(&content),
     );
     ctx.exec(meta, command);
 }
