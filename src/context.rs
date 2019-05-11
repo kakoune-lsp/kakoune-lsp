@@ -1,6 +1,6 @@
 use crate::types::*;
 use crossbeam_channel::Sender;
-use jsonrpc_core::{self, Call, Id, Params, Value, Version};
+use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Params, Success, Value, Version};
 use lsp_types::notification::Notification;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -107,6 +107,22 @@ impl Context {
         };
         self.lang_srv_tx
             .send(ServerMessage::Request(Call::MethodCall(call)));
+    }
+
+    pub fn reply(&mut self, id: Id, result: Result<Value, Error>) {
+        let output = match result {
+            Ok(result) => Output::Success(Success {
+                jsonrpc: Some(Version::V2),
+                id,
+                result,
+            }),
+            Err(error) => Output::Failure(Failure {
+                jsonrpc: Some(Version::V2),
+                id,
+                error,
+            }),
+        };
+        self.lang_srv_tx.send(ServerMessage::Response(output));
     }
 
     pub fn notify<N: Notification>(&mut self, params: N::Params)

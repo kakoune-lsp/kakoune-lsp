@@ -1,4 +1,5 @@
 pub mod ccls;
+pub mod codeaction;
 pub mod completion;
 pub mod cquery;
 pub mod definition;

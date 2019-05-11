@@ -41,6 +41,25 @@ pub fn initialize(
                     }),
                     ..CompletionCapability::default()
                 }),
+                code_action: Some(CodeActionCapability {
+                    code_action_literal_support: Some(CodeActionLiteralSupport {
+                        code_action_kind: CodeActionKindLiteralSupport {
+                            value_set: [
+                                "quickfix",
+                                "refactor",
+                                "refactor.extract",
+                                "refactor.inline",
+                                "refactor.rewrite",
+                                "source",
+                                "source.organizeImports",
+                            ]
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect(),
+                        },
+                    }),
+                    ..CodeActionCapability::default()
+                }),
                 ..TextDocumentClientCapabilities::default()
             }),
             experimental: None,
@@ -109,6 +128,17 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                 features.push("lsp-rename")
             }
             _ => (),
+        }
+    }
+
+    if let Some(ref code_action_provider) = server_capabilities.code_action_provider {
+        match code_action_provider {
+            CodeActionProviderCapability::Simple(x) => {
+                if *x {
+                    features.push("lsp-code-actions");
+                }
+            }
+            CodeActionProviderCapability::Options(_) => features.push("lsp-code-actions"),
         }
     }
 
