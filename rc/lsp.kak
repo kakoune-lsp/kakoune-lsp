@@ -100,9 +100,12 @@ try %{
     # parameter to the kak-lsp server so it can use it when sending completions back.
     declare-option -hidden str lsp_completion_offset
 
+    set-option window lsp_completion_offset %val{cursor_column}
     evaluate-commands -draft %{
-        try %{ execute-keys <esc><a-h>s\$?\w+.\z<ret> }
-        set-option window lsp_completion_offset %val{cursor_column}
+        try %{
+            execute-keys <esc><a-h>s\$?\w+.\z<ret>
+            set-option window lsp_completion_offset %val{cursor_column}
+        }
     }
 
     nop %sh{ (printf '
