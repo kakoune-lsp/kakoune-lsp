@@ -12,6 +12,11 @@ filetypes = ["rust"]
 roots = ["Cargo.toml"]
 command = "rls"
 
+[language.crystal]
+filetypes = ["crystal"]
+roots = ["shard.yml"]
+command = "scry"
+
 [language.javascript]
 filetypes = ["javascript"]
 roots = ["package.json"]
