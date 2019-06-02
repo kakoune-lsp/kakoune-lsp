@@ -118,8 +118,8 @@ fn main() {
         .value_of("config")
         .and_then(|config| Some(Path::new(&config).to_owned()))
         .or_else(|| {
-            dirs::home_dir().and_then(|home| {
-                let path = Path::new(&home.join(".config/kak-lsp/kak-lsp.toml")).to_owned();
+            dirs::config_dir().and_then(|config_dir| {
+                let path = Path::new(&config_dir.join("kak-lsp/kak-lsp.toml")).to_owned();
                 if path.exists() {
                     Some(path)
                 } else {
