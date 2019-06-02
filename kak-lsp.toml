@@ -96,3 +96,8 @@ args = ["--stdio"]
 
 [language.php.initialization_options]
 storagePath = "/tmp/intelephense"
+
+[language.nim]
+filetypes = ["nim"]
+roots = ["*.nimble", ".git"]
+command = "nimlsp"
