@@ -106,3 +106,15 @@ storagePath = "/tmp/intelephense"
 filetypes = ["nim"]
 roots = ["*.nimble", ".git"]
 command = "nimlsp"
+
+[language.elm]
+filetypes = ["elm"]
+roots = ["elm.json"]
+command = "elm-language-server"
+args = ["--stdio"]
+
+[language.elm.initialization_options]
+runtime = "node"
+elmPath = "elm"
+elmFormatPath = "elm-format"
+elmTestPath = "elm-test"
