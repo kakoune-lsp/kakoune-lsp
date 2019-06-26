@@ -166,8 +166,6 @@ where
     T: Serialize,
 {
     fn to_params(self) -> Result<Params, Error> {
-        use serde_json;
-
         let json_value = serde_json::to_value(self)?;
 
         let params = match json_value {
