@@ -66,12 +66,11 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 git clone https://github.com/ul/kak-lsp
 cd kak-lsp
 
-cargo build --release
+cargo install --force --path .
 
-# replace `~/.local/bin/` with something on your `$PATH`
-ln -s $PWD/target/release/kak-lsp ~/.local/bin/
-
+# replace `~/.config` with OS-specific dir as described at https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html
 mkdir -p ~/.config/kak-lsp
+
 # or just link if you are okay with default config
 cp kak-lsp.toml ~/.config/kak-lsp/
 ----
@@ -194,7 +193,7 @@ kak-lsp itself has configuration, but it also adds configuration options to Kako
 === Configuring kak-lsp
 
 kak-lsp is configured via configuration file in https://github.com/toml-lang/toml[TOML] format. By
-default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under `$XDG_CONFIG_HOME` or `$HOME/.config`,
+default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under OS-specific config dir as described https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html[here],
 but you can override it with command-line option `--config`.
 
 Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
