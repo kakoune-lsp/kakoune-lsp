@@ -681,6 +681,13 @@ define-command -hidden lsp-show-signature-help -params 2 -docstring "Render sign
     echo %arg{2}
 }
 
+define-command -hidden lsp-show-message -params 2 -docstring %{
+    lsp-show-message <type> <message>
+    Render language server message.
+} %{
+    info %arg{2}
+}
+
 define-command -hidden lsp-insert-after-selection -params 1 -docstring %{
     Insert content after current selections while keeping cursor intact.
     It is used to apply text edits from language server.

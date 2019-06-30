@@ -277,6 +277,20 @@ fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &
         notification::Exit::METHOD => {
             debug!("Language server exited");
         }
+        notification::ShowMessage::METHOD => {
+            let params: ShowMessageParams = params
+                .unwrap()
+                .parse()
+                .expect("Failed to parse ShowMessageParams params");
+            ctx.exec(
+                ctx.meta_for_session(),
+                format!(
+                    "lsp-show-message {} {}",
+                    params.typ as u8,
+                    editor_quote(&params.message)
+                ),
+            );
+        }
         "window/logMessage" => {
             let params: LogMessageParams = params
                 .unwrap()
