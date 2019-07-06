@@ -39,34 +39,38 @@ pub fn editor_code_actions(
         Some(result) => result,
         None => return,
     };
-    match result {
-        CodeActionResponse::Commands(cmds) => {
-            if cmds.is_empty() {
-                ctx.exec(meta, format!("lsp-show-error 'No actions available'"));
-                return;
-            }
-            for cmd in &cmds {
-                debug!("Command: {:?}", cmd);
-            }
-            let menu_args = cmds
-                .iter()
-                .map(|command| {
-                    let title = editor_quote(&command.title);
-                    let cmd = editor_quote(&command.command);
-                    // Double JSON serialization is performed to prevent parsing args as a TOML
-                    // structure when they are passed back via lsp-execute-command.
-                    let args = &serde_json::to_string(&command.arguments).unwrap();
-                    let args = editor_quote(&serde_json::to_string(&args).unwrap());
-                    let select_cmd = editor_quote(&format!("lsp-execute-command {} {}", cmd, args));
-                    format!("{} {}", title, select_cmd)
-                })
-                .join(" ");
-            ctx.exec(meta, format!("menu {}", menu_args));
-        }
-        CodeActionResponse::Actions(actions) => {
-            for action in actions {
-                debug!("Action: {:?}", action);
-            }
+
+    for cmd in &result {
+        match cmd {
+            CodeActionOrCommand::Command(cmd) => debug!("Command: {:?}", cmd),
+            CodeActionOrCommand::CodeAction(action) => debug!("Action: {:?}", action),
         }
     }
+
+    if !result.iter().any(|c| match c {
+        CodeActionOrCommand::Command(_) => true,
+        CodeActionOrCommand::CodeAction(_) => false,
+    }) {
+        ctx.exec(meta, format!("lsp-show-error 'No actions available'"));
+        return;
+    }
+
+    let menu_args = result
+        .iter()
+        .filter_map(|c| match c {
+            CodeActionOrCommand::Command(cmd) => Some(cmd),
+            CodeActionOrCommand::CodeAction(_) => None,
+        })
+        .map(|command| {
+            let title = editor_quote(&command.title);
+            let cmd = editor_quote(&command.command);
+            // Double JSON serialization is performed to prevent parsing args as a TOML
+            // structure when they are passed back via lsp-execute-command.
+            let args = &serde_json::to_string(&command.arguments).unwrap();
+            let args = editor_quote(&serde_json::to_string(&args).unwrap());
+            let select_cmd = editor_quote(&format!("lsp-execute-command {} {}", cmd, args));
+            format!("{} {}", title, select_cmd)
+        })
+        .join(" ");
+    ctx.exec(meta, format!("menu {}", menu_args));
 }
