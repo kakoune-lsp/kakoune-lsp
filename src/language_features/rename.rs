@@ -10,10 +10,12 @@ use url::Url;
 pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = TextDocumentRenameParams::deserialize(params).unwrap();
     let req_params = RenameParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+        text_document_position: TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         new_name: params.new_name,
     };
     ctx.call::<Rename, _>(meta, req_params, move |ctx: &mut Context, meta, result| {

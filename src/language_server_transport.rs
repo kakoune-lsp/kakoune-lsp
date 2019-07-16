@@ -62,7 +62,7 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
         let notification = jsonrpc_core::Notification {
             jsonrpc: Some(Version::V2),
             method: notification::Exit::METHOD.to_string(),
-            params: Some(Params::None),
+            params: Params::None,
         };
         debug!("Sending exit notification back to controller");
         reader_tx.send(ServerMessage::Request(Call::Notification(notification)));

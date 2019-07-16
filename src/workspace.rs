@@ -129,8 +129,8 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
     ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
 }
 
-pub fn apply_edit(id: Id, params: Option<Params>, ctx: &mut Context) {
-    let params: ApplyWorkspaceEditParams = params.unwrap().parse().expect("Failed to parse params");
+pub fn apply_edit(id: Id, params: Params, ctx: &mut Context) {
+    let params: ApplyWorkspaceEditParams = params.parse().expect("Failed to parse params");
     let meta = ctx.meta_for_session();
     let applied = if let Some(changes) = params.edit.changes {
         for (url, edits) in changes {

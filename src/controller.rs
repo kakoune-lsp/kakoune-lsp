@@ -105,8 +105,8 @@ pub fn start(
                                     &mut ctx,
                                 );
                             }
-                            Call::Invalid(m) => {
-                                error!("Invalid call from language server: {:?}", m);
+                            Call::Invalid {id} => {
+                                error!("Invalid call from language server: {:?}", id);
                             }
                         }
                     }
@@ -137,6 +137,13 @@ pub fn start(
                                 } else {
                                     error!("Id {:?} is not in waitlist!", failure.id);
                                 }
+                            }
+                            Output::Notification(notification) => {
+                                dispatch_server_notification(
+                                    &notification.method,
+                                    notification.params,
+                                    &mut ctx,
+                                );
                             }
                         }
                     }
@@ -263,23 +270,22 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
     }
 }
 
-fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &mut Context) {
+fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Context) {
     match method {
         notification::PublishDiagnostics::METHOD => {
-            diagnostics::publish_diagnostics(params.unwrap(), &mut ctx);
+            diagnostics::publish_diagnostics(params, &mut ctx);
         }
         "$cquery/publishSemanticHighlighting" => {
-            cquery::publish_semantic_highlighting(params.unwrap(), &mut ctx);
+            cquery::publish_semantic_highlighting(params, &mut ctx);
         }
         "$ccls/publishSemanticHighlight" => {
-            ccls::publish_semantic_highlighting(params.unwrap(), &mut ctx);
+            ccls::publish_semantic_highlighting(params, &mut ctx);
         }
         notification::Exit::METHOD => {
             debug!("Language server exited");
         }
         notification::ShowMessage::METHOD => {
             let params: ShowMessageParams = params
-                .unwrap()
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
             ctx.exec(
@@ -293,7 +299,6 @@ fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &
         }
         "window/logMessage" => {
             let params: LogMessageParams = params
-                .unwrap()
                 .parse()
                 .expect("Failed to parse LogMessageParams params");
             ctx.exec(
@@ -303,7 +308,6 @@ fn dispatch_server_notification(method: &str, params: Option<Params>, mut ctx: &
         }
         "window/progress" => {
             let params: WindowProgress = params
-                .unwrap()
                 .parse()
                 .expect("Failed to parse WindowProgress params");
             ctx.exec(
