@@ -112,7 +112,7 @@ pub fn start(
                     ServerMessage::Response(output) => {
                         match output {
                             Output::Success(success) => {
-                                if let Some((meta, _, mut callback)) = ctx.response_waitlist.remove(&success.id) {
+                                if let Some((meta, _, callback)) = ctx.response_waitlist.remove(&success.id) {
                                   callback(&mut ctx, meta, success.result);
                                 } else {
                                     error!("Id {:?} is not in waitlist!", success.id);
