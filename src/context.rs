@@ -105,8 +105,13 @@ impl Context {
             method: R::METHOD.into(),
             params: params.unwrap(),
         };
-        self.lang_srv_tx
-            .send(ServerMessage::Request(Call::MethodCall(call)));
+        if self
+            .lang_srv_tx
+            .send(ServerMessage::Request(Call::MethodCall(call)))
+            .is_err()
+        {
+            error!("Failed to call language server");
+        };
     }
 
     pub fn reply(&mut self, id: Id, result: Result<Value, Error>) {
@@ -122,7 +127,13 @@ impl Context {
                 error,
             }),
         };
-        self.lang_srv_tx.send(ServerMessage::Response(output));
+        if self
+            .lang_srv_tx
+            .send(ServerMessage::Response(output))
+            .is_err()
+        {
+            error!("Failed to reply to language server");
+        };
     }
 
     pub fn notify<N: Notification>(&mut self, params: N::Params)
@@ -139,8 +150,13 @@ impl Context {
             method: N::METHOD.into(),
             params: params.unwrap(),
         };
-        self.lang_srv_tx
+        if self
+            .lang_srv_tx
             .send(ServerMessage::Request(Call::Notification(notification)))
+            .is_err()
+        {
+            error!("Failed to send notification to language server");
+        }
     }
 
     pub fn exec(&self, meta: EditorMeta, command: String) {
@@ -149,7 +165,15 @@ impl Context {
                 debug!("To editor `{}`: {}", meta.session, command);
                 fs::write(fifo, command).expect("Failed to write command to fifo")
             }
-            None => self.editor_tx.send(EditorResponse { meta, command }),
+            None => {
+                if self
+                    .editor_tx
+                    .send(EditorResponse { meta, command })
+                    .is_err()
+                {
+                    error!("Failed to send command to editor");
+                }
+            }
         }
     }
 

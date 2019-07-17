@@ -19,6 +19,7 @@ mod project_root;
 mod session;
 mod text_edit;
 mod text_sync;
+mod thread_worker;
 mod types;
 mod util;
 mod workspace;

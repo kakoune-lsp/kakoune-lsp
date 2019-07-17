@@ -1,32 +1,25 @@
+use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path;
 use std::process::{Command, Stdio};
-use std::thread;
 use toml;
 
 pub struct EditorTransport {
-    pub sender: Sender<EditorResponse>,
-    pub receiver: Receiver<EditorRequest>,
-    pub thread: thread::JoinHandle<()>,
+    pub from_editor: Worker<Void, EditorRequest>,
+    pub to_editor: Worker<EditorResponse, Void>,
 }
 
 pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorTransport, i32> {
     // NOTE 1024 is arbitrary
-    let (reader_tx, reader_rx) = bounded(1024);
+    let channel_capacity = 1024;
 
-    if let Some(initial_request) = initial_request {
-        let initial_request: EditorRequest =
-            toml::from_str(&initial_request).expect("Failed to parse initial request");
-        reader_tx.send(initial_request);
-    }
-
-    if let Some(ref session) = config.server.session {
+    let from_editor = if let Some(ref session) = config.server.session {
         let session = session.to_string();
         let mut path = temp_dir();
         path.push(&session);
@@ -44,71 +37,97 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
                 return Err(1);
             }
         }
-        thread::spawn(move || start_unix(&path, &reader_tx))
+        Worker::spawn(
+            "Messages from editor",
+            channel_capacity,
+            move |receiver, sender| {
+                if let Some(initial_request) = initial_request {
+                    let initial_request: EditorRequest =
+                        toml::from_str(&initial_request).expect("Failed to parse initial request");
+                    if sender.send(initial_request).is_err() {
+                        return;
+                    };
+                }
+                start_unix(&path, receiver, sender);
+            },
+        )
     } else {
         let port = config.server.port;
         let ip = config.server.ip.parse().expect("Failed to parse IP");
-        thread::spawn(move || start_tcp(ip, port, &reader_tx))
+        Worker::spawn("Messages from editor", 1024, move |receiver, sender| {
+            if let Some(initial_request) = initial_request {
+                let initial_request: EditorRequest =
+                    toml::from_str(&initial_request).expect("Failed to parse initial request");
+                if sender.send(initial_request).is_err() {
+                    return;
+                };
+            }
+            start_tcp(ip, port, receiver, sender);
+        })
     };
 
-    // NOTE 1024 is arbitrary
-    let (writer_tx, writer_rx): (Sender<EditorResponse>, Receiver<EditorResponse>) = bounded(1024);
-    let writer_thread = thread::spawn(move || {
-        for response in writer_rx {
-            match Command::new("kak")
-                .args(&["-p", &response.meta.session])
-                .stdin(Stdio::piped())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-            {
-                Ok(mut child) => {
-                    {
-                        let stdin = child.stdin.as_mut();
-                        if stdin.is_none() {
-                            error!("Failed to get editor stdin");
-                            return;
+    let to_editor = Worker::spawn(
+        "Messages to editor",
+        channel_capacity,
+        move |receiver: Receiver<EditorResponse>, _| {
+            for response in receiver {
+                match Command::new("kak")
+                    .args(&["-p", &response.meta.session])
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+                {
+                    Ok(mut child) => {
+                        {
+                            let stdin = child.stdin.as_mut();
+                            if stdin.is_none() {
+                                error!("Failed to get editor stdin");
+                                return;
+                            }
+                            let stdin = stdin.unwrap();
+                            let client = response.meta.client.as_ref();
+                            let command = if client.is_some() && !client.unwrap().is_empty() {
+                                format!(
+                                    "eval -client {} {}",
+                                    client.unwrap(),
+                                    editor_quote(&response.command)
+                                )
+                            } else {
+                                response.command.to_string()
+                            };
+                            debug!("To editor `{}`: {}", response.meta.session, command);
+                            if stdin.write_all(command.as_bytes()).is_err() {
+                                error!("Failed to write to editor stdin");
+                            }
                         }
-                        let stdin = stdin.unwrap();
-                        let client = response.meta.client.as_ref();
-                        let command = if client.is_some() && !client.unwrap().is_empty() {
-                            format!(
-                                "eval -client {} {}",
-                                client.unwrap(),
-                                editor_quote(&response.command)
-                            )
-                        } else {
-                            response.command.to_string()
-                        };
-                        debug!("To editor `{}`: {}", response.meta.session, command);
-                        if stdin.write_all(command.as_bytes()).is_err() {
-                            error!("Failed to write to editor stdin");
-                        }
+                        // code should fail earlier if Kakoune was not spawned
+                        // otherwise something went completely wrong, better to panic
+                        child.wait().unwrap();
                     }
-                    // code should fail earlier if Kakoune was not spawned
-                    // otherwise something went completely wrong, better to panic
-                    child.wait().unwrap();
+                    Err(e) => error!("Failed to run Kakoune: {}", e),
                 }
-                Err(e) => error!("Failed to run Kakoune: {}", e),
             }
-        }
-    });
+        },
+    );
 
     Ok(EditorTransport {
-        sender: writer_tx,
-        receiver: reader_rx,
-        // not joining reader thread because it's unclear how to stop it
-        thread: writer_thread,
+        from_editor,
+        to_editor,
     })
 }
 
-pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: &Sender<EditorRequest>) {
+pub fn start_tcp(ip: IpAddr, port: u16, receiver: Receiver<Void>, sender: Sender<EditorRequest>) {
     info!("Starting editor transport on {}:{}", ip, port);
     let addr = SocketAddr::new(ip, port);
 
     let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
 
     for stream in listener.incoming() {
+        match receiver.try_recv() {
+            Err(TryRecvError::Disconnected) => return,
+            _ => {}
+        };
         match stream {
             Ok(mut stream) => {
                 let mut request = String::new();
@@ -117,7 +136,9 @@ pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: &Sender<EditorRequest>) {
                         debug!("From editor: {}", request);
                         let request: EditorRequest =
                             toml::from_str(&request).expect("Failed to parse editor request");
-                        reader_tx.send(request);
+                        if sender.send(request).is_err() {
+                            return;
+                        };
                     }
                     Err(e) => {
                         error!("Failed to read from TCP stream: {}", e);
@@ -131,7 +152,7 @@ pub fn start_tcp(ip: IpAddr, port: u16, reader_tx: &Sender<EditorRequest>) {
     }
 }
 
-pub fn start_unix(path: &path::PathBuf, reader_tx: &Sender<EditorRequest>) {
+pub fn start_unix(path: &path::PathBuf, receiver: Receiver<Void>, sender: Sender<EditorRequest>) {
     let listener = UnixListener::bind(&path);
 
     if listener.is_err() {
@@ -142,6 +163,10 @@ pub fn start_unix(path: &path::PathBuf, reader_tx: &Sender<EditorRequest>) {
     let listener = listener.unwrap();
 
     for stream in listener.incoming() {
+        match receiver.try_recv() {
+            Err(TryRecvError::Disconnected) => return,
+            _ => {}
+        };
         match stream {
             Ok(mut stream) => {
                 let mut request = String::new();
@@ -153,7 +178,9 @@ pub fn start_unix(path: &path::PathBuf, reader_tx: &Sender<EditorRequest>) {
                         debug!("From editor: {}", request);
                         let request: EditorRequest =
                             toml::from_str(&request).expect("Failed to parse editor request");
-                        reader_tx.send(request);
+                        if sender.send(request).is_err() {
+                            return;
+                        };
                     }
                     Err(e) => {
                         error!("Failed to read from stream: {}", e);

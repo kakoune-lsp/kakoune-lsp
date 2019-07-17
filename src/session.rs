@@ -1,20 +1,18 @@
 use crate::controller;
 use crate::editor_transport;
 use crate::project_root::find_project_root;
+use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
-use crossbeam_channel::{after, bounded, select, Receiver, Sender};
+use crossbeam_channel::{after, never, select, Sender};
 use lsp_types::notification::Notification;
 use lsp_types::*;
 use std::collections::HashMap;
-use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use toml;
 
 struct ControllerHandle {
-    sender: Option<Sender<EditorRequest>>,
-    is_alive: Receiver<Void>,
-    thread: JoinHandle<()>,
+    worker: Worker<EditorRequest, Void>,
 }
 
 type Controllers = HashMap<Route, ControllerHandle>;
@@ -44,43 +42,22 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     let timeout = config.server.timeout;
 
     'event_loop: loop {
-        // have to clone & collect as we mutate controllers inside `select!`
-        let is_alive = controllers
-            .values()
-            .map(|c| c.is_alive.clone())
-            .collect::<Vec<_>>();
-
         let timeout_channel = if timeout > 0 {
-            Some(after(Duration::from_secs(timeout)))
+            after(Duration::from_secs(timeout))
         } else {
-            None
+            never()
         };
 
         select! {
-            recv(timeout_channel) => {
+            recv(timeout_channel) -> _ => {
                 break 'event_loop
             }
 
-            recv(is_alive, msg, from) => {
-                assert!(msg.is_none()); // msg type is Void, so we only can get a closed event
-                let mut route: Option<Route> = None;
-                for (k, c) in controllers.iter() {
-                    if c.is_alive == *from {
-                        route = Some(k.clone());
-                        break;
-                    }
-                }
-                let c = controllers.remove(&route.unwrap()).unwrap();
-                if c.thread.join().is_err() {
-                    error!("Failed to join controller thread");
-                };
-            }
-
-            recv(editor.receiver, request) => {
-                // editor_tx was closed, either because of the unrecoverable error or timeout
+            recv(editor.from_editor.receiver()) -> request  => {
+                // editor.receiver was closed, either because of the unrecoverable error or timeout
                 // nothing we can do except to gracefully exit by stopping session
                 // luckily, next `kak-lsp --request` invocation would spin up fresh session
-                if request.is_none() {
+                if request.is_err() {
                     break 'event_loop;
                 }
                 // should be safe to unwrap as we just checked request for being None
@@ -119,8 +96,10 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 use std::collections::hash_map::Entry;
                 match controllers.entry(route.clone()) {
                     Entry::Occupied(controller_entry) => {
-                        if let Some(sender) = controller_entry.get().sender.as_ref() {
-                            sender.send(request);
+                        if controller_entry.get().worker.sender().send(request).is_err()  {
+                            controller_entry.remove();
+                            error!("Failed to send message to controller");
+                            continue 'event_loop;
                         }
                     }
                     Entry::Vacant(controller_entry) => {
@@ -137,7 +116,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                                 config.clone(),
                                 route,
                                 request,
-                                editor.sender.clone(),
+                                editor.to_editor.sender().clone(),
                             ));
                         }
                     }
@@ -146,11 +125,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
         }
     }
     stop_session(&mut controllers);
-    // signal to editor transport to stop writer thread
-    drop(editor.sender);
-    if editor.thread.join().is_err() {
-        error!("Editor transport panicked");
-    }
+    drop(editor);
     0
 }
 
@@ -166,10 +141,9 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
             // to notify kak-lsp about editor session end we use the same `exit` notification as
             // used in LSP spec to notify language server to exit, thus we can just clone request
             // and pass it along
-            if let Some(sender) = controller.sender.as_ref() {
-                sender.send(request.clone());
+            if controller.worker.sender().send(request.clone()).is_err() {
+                error!("Failed to send stop message to language server");
             }
-            controller.sender = None;
         }
     }
 }
@@ -189,14 +163,11 @@ fn stop_session(controllers: &mut Controllers) {
         params: toml::Value::Table(toml::value::Table::default()),
     };
     info!("Shutting down language servers and exiting");
-    for (route, mut controller) in controllers.drain() {
-        if let Some(sender) = controller.sender.as_ref() {
-            sender.send(request.clone());
+    for (route, controller) in controllers.drain() {
+        if controller.worker.sender().send(request.clone()).is_err() {
+            error!("Failed to send stop message to language server");
         }
-        controller.sender = None;
-        if controller.thread.join().is_err() {
-            error!("{:?} controller panicked", route);
-        };
+        drop(controller);
         info!("Exit {} in project {}", route.language, route.root);
     }
 }
@@ -205,26 +176,14 @@ fn spawn_controller(
     config: Config,
     route: Route,
     request: EditorRequest,
-    editor_tx: Sender<EditorResponse>,
+    to_editor: Sender<EditorResponse>,
 ) -> ControllerHandle {
-    let (is_alive_tx, is_alive_rx) = bounded(0);
     // NOTE 1024 is arbitrary
-    let (controller_tx, controller_rx) = bounded(1024);
+    let channel_capacity = 1024;
 
-    let thread = thread::spawn(move || {
-        controller::start(
-            editor_tx,
-            &controller_rx,
-            is_alive_tx,
-            &route,
-            request,
-            config,
-        );
+    let worker = Worker::spawn("Controller", channel_capacity, move |receiver, _| {
+        controller::start(to_editor, receiver, &route, request, config);
     });
 
-    ControllerHandle {
-        is_alive: is_alive_rx,
-        sender: Some(controller_tx),
-        thread,
-    }
+    ControllerHandle { worker }
 }

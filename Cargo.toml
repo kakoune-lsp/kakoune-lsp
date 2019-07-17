@@ -6,7 +6,7 @@ edition = "2018"
 license = "Unlicense/MIT"
 
 [dependencies]
-crossbeam-channel = "0.2.6"
+crossbeam-channel = "0.3.8"
 clap = "2.33.0"
 daemonize = "0.4.1"
 dirs = "2.0.1"

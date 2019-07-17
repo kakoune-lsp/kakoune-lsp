@@ -19,9 +19,8 @@ use lsp_types::*;
 /// Then it takes care of dispatching editor requests to this language server and dispatching      
 /// responses back to editor.
 pub fn start(
-    editor_tx: Sender<EditorResponse>,
-    editor_rx: &Receiver<EditorRequest>,
-    is_alive: Sender<Void>,
+    to_editor: Sender<EditorResponse>,
+    from_editor: Receiver<EditorRequest>,
     route: &Route,
     initial_request: EditorRequest,
     config: Config,
@@ -42,8 +41,8 @@ pub fn start(
     let mut ctx = Context::new(
         &route.language,
         initial_request,
-        lang_srv.sender,
-        editor_tx,
+        lang_srv.to_lang_server.sender().clone(),
+        to_editor,
         config,
         route.root.clone(),
         offset_encoding,
@@ -53,8 +52,8 @@ pub fn start(
 
     'event_loop: loop {
         select! {
-            recv(editor_rx, msg) => {
-                if msg.is_none() {
+            recv(from_editor) -> msg => {
+                if msg.is_err() {
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
@@ -87,8 +86,8 @@ pub fn start(
                     ctx.pending_requests.push(msg);
                 }
             }
-            recv(lang_srv.receiver, msg) => {
-                if msg.is_none() {
+            recv(lang_srv.from_lang_server.receiver()) -> msg => {
+                if msg.is_err() {
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
@@ -151,13 +150,8 @@ pub fn start(
             }
         }
     }
-    // signal to session that it's okay to join controller thread
-    drop(is_alive);
-    // signal to language server transport to stop writer thread
-    drop(ctx.lang_srv_tx);
-    if lang_srv.thread.join().is_err() {
-        error!("Language thread panicked");
-    };
+    drop(ctx);
+    drop(lang_srv);
 }
 
 pub fn dispatch_pending_editor_requests(mut ctx: &mut Context) {
