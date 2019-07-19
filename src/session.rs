@@ -112,6 +112,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                             let command = "lsp-show-error 'Language server is not running, cancelling blocking request'";
                             std::fs::write(fifo, command).expect("Failed to write command to fifo");
                         } else {
+                            debug!("Spawning a new controller for {:?}", route);
                             controller_entry.insert(spawn_controller(
                                 config.clone(),
                                 route,
@@ -167,7 +168,6 @@ fn stop_session(controllers: &mut Controllers) {
         if controller.worker.sender().send(request.clone()).is_err() {
             error!("Failed to send stop message to language server");
         }
-        drop(controller);
         info!("Exit {} in project {}", route.language, route.root);
     }
 }

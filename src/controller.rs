@@ -150,8 +150,6 @@ pub fn start(
             }
         }
     }
-    drop(ctx);
-    drop(lang_srv);
 }
 
 pub fn dispatch_pending_editor_requests(mut ctx: &mut Context) {
