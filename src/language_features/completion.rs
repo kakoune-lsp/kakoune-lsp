@@ -31,6 +31,9 @@ pub fn editor_completion(
     result: Option<CompletionResponse>,
     ctx: &mut Context,
 ) {
+    if result.is_none() {
+        return;
+    }
     let items = match result.unwrap() {
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
