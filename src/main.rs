@@ -29,6 +29,7 @@ use crate::util::*;
 use clap::{crate_version, App, Arg};
 use daemonize::Daemonize;
 use itertools::Itertools;
+use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
@@ -111,6 +112,13 @@ fn main() {
                 .multiple(true)
                 .help("Sets the level of verbosity"),
         )
+        .arg(
+            Arg::with_name("log")
+                .long("log")
+                .value_name("PATH")
+                .help("File to write the log into instead of stderr")
+                .takes_value(true),
+        )
         .get_matches();
 
     let mut config = include_str!("../kak-lsp.toml").to_string();
@@ -151,26 +159,6 @@ fn main() {
         config.server.timeout = timeout.parse().unwrap();
     }
 
-    let mut verbosity = matches.occurrences_of("v") as u8;
-
-    if verbosity == 0 {
-        verbosity = config.verbosity
-    }
-
-    let level = match verbosity {
-        0 => Severity::Error,
-        1 => Severity::Warning,
-        2 => Severity::Info,
-        3 => Severity::Debug,
-        _ => Severity::Trace,
-    };
-
-    let mut builder = TerminalLoggerBuilder::new();
-    builder.level(level);
-    builder.destination(Destination::Stderr);
-    let logger = builder.build().unwrap();
-    let _guard = slog_scope::set_global_logger(logger);
-
     if matches.is_present("request") {
         request(&config);
     } else if matches.is_present("kakoune") {
@@ -190,19 +178,21 @@ fn main() {
         let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
         let mut pid_path = util::temp_dir();
         pid_path.push(format!("{}.pid", session));
-        if matches.is_present("daemonize")
-            && Daemonize::new()
+        if matches.is_present("daemonize") {
+            if let Err(e) = Daemonize::new()
                 .pid_file(&pid_path)
                 .working_directory(std::env::current_dir().unwrap())
                 .start()
-                .is_err()
-        {
-            error!("Failed to daemonize process");
-            goodbye(&config, 1);
-        } else {
-            let code = session::start(&config, initial_request);
-            goodbye(&config, code);
+            {
+                println!("Failed to daemonize process: {:?}", e);
+                goodbye(&config, 1);
+            }
         }
+        // Setting up the logger after potential daemonization,
+        // otherwise it refuses to work properly.
+        let _guard = setup_logger(&config, &matches);
+        let code = session::start(&config, initial_request);
+        goodbye(&config, code);
     }
 }
 
@@ -269,4 +259,33 @@ fn spin_up_server(input: &[u8]) {
         .write_all(input)
         .expect("Failed to write initial request");
     child.wait().expect("Failed to daemonize server");
+}
+
+fn setup_logger(config: &Config, matches: &clap::ArgMatches<'_>) -> slog_scope::GlobalLoggerGuard {
+    let mut verbosity = matches.occurrences_of("v") as u8;
+
+    if verbosity == 0 {
+        verbosity = config.verbosity
+    }
+
+    let level = match verbosity {
+        0 => Severity::Error,
+        1 => Severity::Warning,
+        2 => Severity::Info,
+        3 => Severity::Debug,
+        _ => Severity::Trace,
+    };
+
+    let logger = if let Some(log_path) = matches.value_of("log") {
+        let mut builder = FileLoggerBuilder::new(log_path);
+        builder.level(level);
+        builder.build().unwrap()
+    } else {
+        let mut builder = TerminalLoggerBuilder::new();
+        builder.level(level);
+        builder.destination(Destination::Stderr);
+        builder.build().unwrap()
+    };
+
+    slog_scope::set_global_logger(logger)
 }

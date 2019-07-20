@@ -122,7 +122,6 @@ eval %sh{kak-lsp --kakoune -s $kak_session}
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
     lsp-enable-window
 }
-hook -always -group lsp global KakEnd .* lsp-exit
 ----
 
 Either way you get:
@@ -294,11 +293,13 @@ require adding `offset_encoding = "utf-8"` to language server configuration in `
 If kak-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
 
 ----
-nop %sh{ (kak-lsp -s $kak_session -vvv ) > /tmp/kak-lsp.log 2>&1 < /dev/null & }
+set global lsp_cmd "kak-lsp -s %val{session} -vvv --log /tmp/kak-lsp.log"
 ----
 
-to explicitly start server and enable debug logging. If it will not give enough insights to fix the
-problem or if the problem is a bug in kak-lsp itself please don't hesitate to raise an issue.
+to enable debug logging.
+
+If it will not give enough insights to fix the problem or if the problem is a bug in kak-lsp itself
+please don't hesitate to raise an issue.
 
 NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
 E.g. `racer.kak` competes for autocompletion in Rust files.

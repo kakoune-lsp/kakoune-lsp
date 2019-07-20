@@ -950,7 +950,6 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
         lsp-did-change
         %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
     }
-    hook -always -group lsp global KakEnd .* lsp-exit
 }
 
 define-command lsp-enable-window -docstring "Default integration with kak-lsp in the window scope" %{
@@ -979,3 +978,4 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 }
 
 lsp-stop-on-exit-enable
+hook -always -group lsp global KakEnd .* lsp-exit
