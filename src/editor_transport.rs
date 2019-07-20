@@ -1,7 +1,7 @@
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
-use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener};
@@ -11,7 +11,9 @@ use std::process::{Command, Stdio};
 use toml;
 
 pub struct EditorTransport {
-    pub from_editor: Worker<Void, EditorRequest>,
+    // Not using Worker here as listener blocks forever and joining its thread
+    // would block kak-lsp from exiting.
+    pub from_editor: Receiver<EditorRequest>,
     pub to_editor: Worker<EditorResponse, Void>,
 }
 
@@ -19,7 +21,8 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
 
-    let from_editor = if let Some(ref session) = config.server.session {
+    let (sender, receiver) = bounded(channel_capacity);
+    if let Some(ref session) = config.server.session {
         let session = session.to_string();
         let mut path = temp_dir();
         path.push(&session);
@@ -37,10 +40,8 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
                 return Err(1);
             }
         }
-        Worker::spawn(
-            "Messages from editor",
-            channel_capacity,
-            move |receiver, sender| {
+        std::thread::spawn(
+            move || {
                 if let Some(initial_request) = initial_request {
                     let initial_request: EditorRequest =
                         toml::from_str(&initial_request).expect("Failed to parse initial request");
@@ -48,13 +49,13 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
                         return;
                     };
                 }
-                start_unix(&path, receiver, sender);
+                start_unix(&path, sender);
             },
-        )
+        );
     } else {
         let port = config.server.port;
         let ip = config.server.ip.parse().expect("Failed to parse IP");
-        Worker::spawn("Messages from editor", 1024, move |receiver, sender| {
+        std::thread::spawn(move || {
             if let Some(initial_request) = initial_request {
                 let initial_request: EditorRequest =
                     toml::from_str(&initial_request).expect("Failed to parse initial request");
@@ -62,9 +63,10 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
                     return;
                 };
             }
-            start_tcp(ip, port, receiver, sender);
-        })
+            start_tcp(ip, port, sender);
+        });
     };
+    let from_editor = receiver;
 
     let to_editor = Worker::spawn(
         "Messages to editor",
@@ -117,17 +119,13 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
     })
 }
 
-pub fn start_tcp(ip: IpAddr, port: u16, receiver: Receiver<Void>, sender: Sender<EditorRequest>) {
+pub fn start_tcp(ip: IpAddr, port: u16, sender: Sender<EditorRequest>) {
     info!("Starting editor transport on {}:{}", ip, port);
     let addr = SocketAddr::new(ip, port);
 
     let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
 
     for stream in listener.incoming() {
-        match receiver.try_recv() {
-            Err(TryRecvError::Disconnected) => return,
-            _ => {}
-        };
         match stream {
             Ok(mut stream) => {
                 let mut request = String::new();
@@ -152,7 +150,7 @@ pub fn start_tcp(ip: IpAddr, port: u16, receiver: Receiver<Void>, sender: Sender
     }
 }
 
-pub fn start_unix(path: &path::PathBuf, receiver: Receiver<Void>, sender: Sender<EditorRequest>) {
+pub fn start_unix(path: &path::PathBuf, sender: Sender<EditorRequest>) {
     let listener = UnixListener::bind(&path);
 
     if listener.is_err() {
@@ -163,10 +161,6 @@ pub fn start_unix(path: &path::PathBuf, receiver: Receiver<Void>, sender: Sender
     let listener = listener.unwrap();
 
     for stream in listener.incoming() {
-        match receiver.try_recv() {
-            Err(TryRecvError::Disconnected) => return,
-            _ => {}
-        };
         match stream {
             Ok(mut stream) => {
                 let mut request = String::new();

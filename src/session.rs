@@ -53,7 +53,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 break 'event_loop
             }
 
-            recv(editor.from_editor.receiver()) -> request  => {
+            recv(editor.from_editor) -> request  => {
                 // editor.receiver was closed, either because of the unrecoverable error or timeout
                 // nothing we can do except to gracefully exit by stopping session
                 // luckily, next `kak-lsp --request` invocation would spin up fresh session
@@ -126,7 +126,6 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
         }
     }
     stop_session(&mut controllers);
-    drop(editor);
     0
 }
 
