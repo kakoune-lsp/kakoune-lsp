@@ -60,7 +60,7 @@ fn main() {
                 .short("c")
                 .long("config")
                 .value_name("FILE")
-                .help("Read config from FILE (default $HOME/.config/kak-lsp/kak-lsp.toml)")
+                .help("Read config from FILE")
                 .takes_value(true),
         )
         .arg(
