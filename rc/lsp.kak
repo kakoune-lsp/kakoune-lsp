@@ -395,7 +395,7 @@ version  = %d
 method   = "workspace/didChangeConfiguration"
 [params.settings]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}";
-eval set -- $kak_opt_lsp_server_configuration
+eval "set -- $kak_quoted_opt_lsp_server_configuration"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
@@ -739,7 +739,7 @@ define-command -hidden lsp-get-server-initialization-options -params 1 -docstrin
     Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
 } %{
     nop %sh{
-(eval set -- $kak_opt_lsp_server_initialization_options
+(eval "set -- $kak_quoted_opt_lsp_server_initialization_options"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
@@ -767,7 +767,7 @@ Jump to the next or previous diagnostic error" %{
             errorCompare="Diagnostic"
         fi
         #expand quoting, stores option in $@
-        eval "set -- ${kak_opt_lsp_errors}"
+        eval "set -- ${kak_quoted_opt_lsp_errors}"
 
         first=""
         current=""
