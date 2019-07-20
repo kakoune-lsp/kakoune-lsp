@@ -40,18 +40,16 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
                 return Err(1);
             }
         }
-        std::thread::spawn(
-            move || {
-                if let Some(initial_request) = initial_request {
-                    let initial_request: EditorRequest =
-                        toml::from_str(&initial_request).expect("Failed to parse initial request");
-                    if sender.send(initial_request).is_err() {
-                        return;
-                    };
-                }
-                start_unix(&path, sender);
-            },
-        );
+        std::thread::spawn(move || {
+            if let Some(initial_request) = initial_request {
+                let initial_request: EditorRequest =
+                    toml::from_str(&initial_request).expect("Failed to parse initial request");
+                if sender.send(initial_request).is_err() {
+                    return;
+                };
+            }
+            start_unix(&path, sender);
+        });
     } else {
         let port = config.server.port;
         let ip = config.server.ip.parse().expect("Failed to parse IP");
