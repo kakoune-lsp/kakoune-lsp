@@ -82,8 +82,7 @@ with https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `ka
 
 ----
 plug "ul/kak-lsp" do %{
-    cargo build --release --locked
-    cargo install --force --path .
+    cargo install --locked --force --path .
 }
 ----
 
