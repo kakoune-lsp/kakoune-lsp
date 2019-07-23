@@ -20,9 +20,7 @@ pub struct Document {
     pub text: ropey::Rope,
 }
 
-// FnOnce doesn't work yet, so we use FnMut for now
-// https://github.com/rust-lang/rust/issues/28796
-pub type ResponseCallback = Box<FnMut(&mut Context, EditorMeta, Value) -> ()>;
+pub type ResponseCallback = Box<dyn FnOnce(&mut Context, EditorMeta, Value) -> ()>;
 
 pub struct Context {
     pub capabilities: Option<ServerCapabilities>,
@@ -86,7 +84,6 @@ impl Context {
             return;
         }
         let id = self.next_request_id();
-        let mut callback = Some(callback);
         self.response_waitlist.insert(
             id.clone(),
             (
@@ -94,8 +91,7 @@ impl Context {
                 R::METHOD,
                 Box::new(move |ctx, meta, val| {
                     let result = serde_json::from_value(val).expect("Failed to parse response");
-                    // This is a hack because Box<FnOnce> doesn't work yet
-                    callback.take().unwrap()(ctx, meta, result)
+                    callback(ctx, meta, result)
                 }),
             ),
         );
