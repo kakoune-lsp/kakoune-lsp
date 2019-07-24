@@ -36,7 +36,6 @@ use sloggers::Build;
 use std::env;
 use std::fs;
 use std::io::{stdin, Read, Write};
-use std::net::{SocketAddr, TcpStream};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -75,8 +74,9 @@ fn main() {
                 .short("s")
                 .long("session")
                 .value_name("SESSION")
-                .help("Session id to communicate via unix socket instead of tcp")
-                .takes_value(true),
+                .help("Session id to communicate via unix socket")
+                .takes_value(true)
+                .required(true),
         )
         .arg(
             Arg::with_name("timeout")
@@ -84,21 +84,6 @@ fn main() {
                 .long("timeout")
                 .value_name("TIMEOUT")
                 .help("Session timeout in seconds (default 1800)")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("port")
-                .short("p")
-                .long("port")
-                .value_name("PORT")
-                .help("Port to listen for commands from Kakoune (default 31337)")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("ip")
-                .long("ip")
-                .value_name("ADDR")
-                .help("Address to listen for commands from Kakoune (default 127.0.0.1)")
                 .takes_value(true),
         )
         .arg(
@@ -143,17 +128,7 @@ fn main() {
 
     let mut config: Config = toml::from_str(&config).expect("Failed to parse config file");
 
-    if let Some(port) = matches.value_of("port") {
-        config.server.port = port.parse().unwrap();
-    }
-
-    if let Some(ip) = matches.value_of("ip") {
-        config.server.ip = ip.to_string();
-    }
-
-    if let Some(session) = matches.value_of("session") {
-        config.server.session = Some(session.to_string());
-    }
+    config.server.session = String::from(matches.value_of("session").unwrap());
 
     if let Some(timeout) = matches.value_of("timeout") {
         config.server.timeout = timeout.parse().unwrap();
@@ -175,9 +150,8 @@ fn main() {
         } else {
             None
         };
-        let session = config.server.session.as_ref().unwrap_or(&config.server.ip);
         let mut pid_path = util::temp_dir();
-        pid_path.push(format!("{}.pid", session));
+        pid_path.push(format!("{}.pid", config.server.session));
         if matches.is_present("daemonize") {
             if let Err(e) = Daemonize::new()
                 .pid_file(&pid_path)
@@ -217,27 +191,14 @@ fn request(config: &Config) {
     stdin()
         .read_to_end(&mut input)
         .expect("Failed to read stdin");
-    if let Some(ref session) = config.server.session {
-        let mut path = util::temp_dir();
-        path.push(session);
-        if let Ok(mut stream) = UnixStream::connect(&path) {
-            stream
-                .write_all(&input)
-                .expect("Failed to send stdin to server");
-        } else {
-            spin_up_server(&input);
-        }
+    let mut path = util::temp_dir();
+    path.push(&config.server.session);
+    if let Ok(mut stream) = UnixStream::connect(&path) {
+        stream
+            .write_all(&input)
+            .expect("Failed to send stdin to server");
     } else {
-        let port = config.server.port;
-        let ip = config.server.ip.parse().expect("Failed to parse IP");
-        let addr = SocketAddr::new(ip, port);
-        if let Ok(mut stream) = TcpStream::connect(addr) {
-            stream
-                .write_all(&input)
-                .expect("Failed to send stdin to server");
-        } else {
-            spin_up_server(&input);
-        }
+        spin_up_server(&input);
     }
 }
 

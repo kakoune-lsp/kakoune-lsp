@@ -23,12 +23,8 @@ pub struct Config {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct ServerConfig {
-    #[serde(default = "default_ip")]
-    pub ip: String,
-    #[serde(default = "default_port")]
-    pub port: u16,
     #[serde(default)]
-    pub session: Option<String>,
+    pub session: String,
     #[serde(default)]
     pub timeout: u64,
 }
@@ -48,20 +44,10 @@ pub struct LanguageConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         ServerConfig {
-            ip: default_ip(),
-            port: default_port(),
-            session: None,
+            session: String::new(),
             timeout: 0,
         }
     }
-}
-
-fn default_ip() -> String {
-    String::from("127.0.0.1")
-}
-
-fn default_port() -> u16 {
-    31337
 }
 
 fn default_offset_encoding() -> OffsetEncoding {

@@ -4,7 +4,6 @@ use crate::util::*;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::fs;
 use std::io::{Read, Write};
-use std::net::{IpAddr, SocketAddr, TcpListener};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path;
 use std::process::{Command, Stdio};
@@ -22,48 +21,35 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
     let channel_capacity = 1024;
 
     let (sender, receiver) = bounded(channel_capacity);
-    if let Some(ref session) = config.server.session {
-        let session = session.to_string();
-        let mut path = temp_dir();
-        path.push(&session);
-        if path.exists() {
-            if UnixStream::connect(&path).is_err() {
-                if fs::remove_file(&path).is_err() {
-                    error!(
-                        "Failed to clean up dead session at {}",
-                        path.to_str().unwrap()
-                    );
-                    return Err(1);
-                };
-            } else {
-                error!("Server is already running for session {}", session);
+    let mut path = temp_dir();
+    path.push(&config.server.session);
+    if path.exists() {
+        if UnixStream::connect(&path).is_err() {
+            if fs::remove_file(&path).is_err() {
+                error!(
+                    "Failed to clean up dead session at {}",
+                    path.to_str().unwrap()
+                );
                 return Err(1);
-            }
+            };
+        } else {
+            error!(
+                "Server is already running for session {}",
+                config.server.session
+            );
+            return Err(1);
         }
-        std::thread::spawn(move || {
-            if let Some(initial_request) = initial_request {
-                let initial_request: EditorRequest =
-                    toml::from_str(&initial_request).expect("Failed to parse initial request");
-                if sender.send(initial_request).is_err() {
-                    return;
-                };
-            }
-            start_unix(&path, sender);
-        });
-    } else {
-        let port = config.server.port;
-        let ip = config.server.ip.parse().expect("Failed to parse IP");
-        std::thread::spawn(move || {
-            if let Some(initial_request) = initial_request {
-                let initial_request: EditorRequest =
-                    toml::from_str(&initial_request).expect("Failed to parse initial request");
-                if sender.send(initial_request).is_err() {
-                    return;
-                };
-            }
-            start_tcp(ip, port, sender);
-        });
-    };
+    }
+    std::thread::spawn(move || {
+        if let Some(initial_request) = initial_request {
+            let initial_request: EditorRequest =
+                toml::from_str(&initial_request).expect("Failed to parse initial request");
+            if sender.send(initial_request).is_err() {
+                return;
+            };
+        }
+        start_unix(&path, sender);
+    });
     let from_editor = receiver;
 
     let to_editor = Worker::spawn(
@@ -115,37 +101,6 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
         from_editor,
         to_editor,
     })
-}
-
-pub fn start_tcp(ip: IpAddr, port: u16, sender: Sender<EditorRequest>) {
-    info!("Starting editor transport on {}:{}", ip, port);
-    let addr = SocketAddr::new(ip, port);
-
-    let listener = TcpListener::bind(&addr).expect("Failed to start TCP server");
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                let mut request = String::new();
-                match stream.read_to_string(&mut request) {
-                    Ok(_) => {
-                        debug!("From editor: {}", request);
-                        let request: EditorRequest =
-                            toml::from_str(&request).expect("Failed to parse editor request");
-                        if sender.send(request).is_err() {
-                            return;
-                        };
-                    }
-                    Err(e) => {
-                        error!("Failed to read from TCP stream: {}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                error!("Failed to accept connection: {}", e);
-            }
-        }
-    }
 }
 
 pub fn start_unix(path: &path::PathBuf, sender: Sender<EditorRequest>) {
