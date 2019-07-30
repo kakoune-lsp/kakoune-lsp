@@ -67,8 +67,25 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
             }
             // NOTE prevent zombie
             debug!("Waiting for language server process end");
-            if child.wait().is_err() {
-                error!("Language server wasn't running was it?!");
+            drop(child.stdin.take().unwrap());
+            drop(child.stdout.take().unwrap());
+            drop(child.stderr.take().unwrap());
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            match child.try_wait() {
+                Ok(None) => {
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    match child.try_wait() {
+                        Ok(None) => {
+                            // Okay, we asked politely enough and waited long enough.
+                            child.kill().unwrap();
+                        }
+                        _ => {}
+                    }
+                }
+                Err(_) => {
+                    error!("Language server wasn't running was it?!");
+                }
+                _ => {}
             }
 
             let notification = jsonrpc_core::Notification {
