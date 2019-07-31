@@ -6,29 +6,29 @@ edition = "2018"
 license = "Unlicense/MIT"
 
 [dependencies]
-crossbeam-channel = "0.3.8"
+crossbeam-channel = "0.3.9"
 clap = "2.33.0"
 daemonize = "0.4.1"
-dirs = "2.0.1"
+dirs = "2.0.2"
 enum_primitive = "0.1.1"
 glob = "0.3.0"
 itertools = "0.8.0"
-jsonrpc-core = "12.1.0"
+jsonrpc-core = "13.0.0"
 libc = "0.2.60"
 lsp-types = "0.59.0"
 rand = "0.7.0"
-regex = "1.1.9"
+regex = "1.2.0"
 ropey = "1.0.1"
-serde = "1.0.95"
-serde_derive = "1.0.95"
+serde = "1.0.98"
+serde_derive = "1.0.98"
 serde_json = "1.0.40"
-slog = { version = "2.5.0", features = ["release_max_level_debug"] }
-slog-scope = "4.1.1"
+slog = { version = "2.5.2", features = ["release_max_level_debug"] }
+slog-scope = "4.1.2"
 sloggers = "0.3.2"
 toml = "0.5.1"
 url = "1.7.2"
 url_serde = "0.2.0"
-whoami = "0.5.2"
+whoami = "0.5.3"
 
 [profile.release]
 lto = true

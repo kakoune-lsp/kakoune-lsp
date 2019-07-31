@@ -66,7 +66,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 git clone https://github.com/ul/kak-lsp
 cd kak-lsp
 
-cargo install --force --path .
+cargo install --locked --force --path .
 
 # replace `~/.config` with OS-specific dir as described at https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html
 mkdir -p ~/.config/kak-lsp

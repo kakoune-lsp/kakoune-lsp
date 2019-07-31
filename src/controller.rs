@@ -137,13 +137,6 @@ pub fn start(
                                     error!("Id {:?} is not in waitlist!", failure.id);
                                 }
                             }
-                            Output::Notification(notification) => {
-                                dispatch_server_notification(
-                                    &notification.method,
-                                    notification.params,
-                                    &mut ctx,
-                                );
-                            }
                         }
                     }
                 }
