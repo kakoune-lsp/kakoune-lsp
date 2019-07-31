@@ -960,6 +960,9 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp in the window sco
     unmap global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
     unmap global goto r '<esc>: lsp-references<ret>' -docstring 'references'
     remove-hooks global lsp
+    remove-hooks global lsp-auto-hover
+    remove-hooks global lsp-auto-hover-insert-mode
+    remove-hooks global lsp-auto-signature-help
     lsp-exit
 }
 
@@ -996,6 +999,9 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     unmap window goto d '<esc>: lsp-definition<ret>'
     unmap window goto r '<esc>: lsp-references<ret>'
     remove-hooks window lsp
+    remove-hooks global lsp-auto-hover
+    remove-hooks global lsp-auto-hover-insert-mode
+    remove-hooks global lsp-auto-signature-help
     lsp-exit
 }
 
