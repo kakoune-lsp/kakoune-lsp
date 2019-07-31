@@ -1,17 +1,19 @@
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use jsonrpc_core::{self, Call, Output, Params, Version};
-use lsp_types::notification::Notification;
-use lsp_types::*;
+use jsonrpc_core::{self, Call, Output};
 use serde_json;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 
 pub struct LanguageServerTransport {
-    pub from_lang_server: Worker<Void, ServerMessage>,
+    // The field order is important as it defines the order of drop.
+    // We want to exit a writer loop first (after sending exit notification),
+    // then close all pipes and wait until child process is finished.
+    // That helps to ensure that reader loop is not stuck trying to read from the language server.
     pub to_lang_server: Worker<ServerMessage, Void>,
+    pub from_lang_server: Worker<Void, ServerMessage>,
     pub errors: Worker<Void, Void>,
 }
 
@@ -65,11 +67,21 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
             if let Err(msg) = reader_loop(reader, receiver, &sender) {
                 error!("{}", msg);
             }
+        },
+    );
+
+    let to_lang_server = Worker::spawn(
+        "Messages to language server",
+        channel_capacity,
+        move |receiver, _| {
+            if writer_loop(writer, &receiver).is_err() {
+                error!("Failed to write message to language server");
+            }
             // NOTE prevent zombie
             debug!("Waiting for language server process end");
-            drop(child.stdin.take().unwrap());
-            drop(child.stdout.take().unwrap());
-            drop(child.stderr.take().unwrap());
+            drop(child.stdin.take());
+            drop(child.stdout.take());
+            drop(child.stderr.take());
             std::thread::sleep(std::time::Duration::from_secs(1));
             match child.try_wait() {
                 Ok(None) => {
@@ -87,31 +99,6 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
                 }
                 _ => {}
             }
-
-            let notification = jsonrpc_core::Notification {
-                jsonrpc: Some(Version::V2),
-                method: notification::Exit::METHOD.to_string(),
-                params: Params::None,
-            };
-            debug!("Sending exit notification back to controller");
-            if sender
-                .send(ServerMessage::Request(Call::Notification(notification)))
-                .is_err()
-            {
-                return;
-            };
-        },
-    );
-
-    let to_lang_server = Worker::spawn(
-        "Messages to language server",
-        channel_capacity,
-        move |receiver, _| {
-            if writer_loop(writer, &receiver).is_err() {
-                error!("Failed to write message to language server");
-            }
-            // NOTE we rely on assumption that if write failed then read is failed as well
-            // or will fail shortly and do all exiting stuff
         },
     );
 

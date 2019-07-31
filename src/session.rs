@@ -50,6 +50,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
 
         select! {
             recv(timeout_channel) -> _ => {
+                info!("Exiting session after {} seconds of inactivity", timeout);
                 break 'event_loop
             }
 
@@ -135,7 +136,7 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
         "Editor session `{}` closed, shutting down associated language servers",
         request.meta.session
     );
-    for (route, controller) in controllers.iter_mut() {
+    controllers.retain(|route, controller| {
         if route.session == request.meta.session {
             info!("Exit {} in project {}", route.language, route.root);
             // to notify kak-lsp about editor session end we use the same `exit` notification as
@@ -144,8 +145,11 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
             if controller.worker.sender().send(request.clone()).is_err() {
                 error!("Failed to send stop message to language server");
             }
+            false
+        } else {
+            true
         }
-    }
+    });
 }
 
 /// Shut down all language servers and exit.
