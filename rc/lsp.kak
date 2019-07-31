@@ -952,6 +952,17 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     }
 }
 
+define-command -hidden lsp-disable -docstring "Disable kak-lsp in the window scope" %{
+    remove-highlighter global/cquery_semhl
+    remove-highlighter global/lsp_references
+    lsp-inline-diagnostics-disable global
+    lsp-diagnostic-lines-disable global
+    unmap global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
+    unmap global goto r '<esc>: lsp-references<ret>' -docstring 'references'
+    remove-hooks global lsp
+    lsp-exit
+}
+
 define-command lsp-enable-window -docstring "Default integration with kak-lsp in the window scope" %{
     set-option window completers option=lsp_completions %opt{completers}
 
@@ -961,8 +972,8 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
 
-    map window goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
-    map window goto r '<esc>: lsp-references<ret>' -docstring 'references'
+    map window goto d '<esc>: lsp-definition<ret>'
+    map window goto r '<esc>: lsp-references<ret>'
 
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window BufWritePost .* lsp-did-save
@@ -975,6 +986,17 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 
     lsp-did-open
     lsp-did-change-config
+}
+
+define-command lsp-disable-window -docstring "Disable kak-lsp in the window scope" %{
+    remove-highlighter window/cquery_semhl
+    remove-highlighter window/lsp_references
+    lsp-inline-diagnostics-disable window
+    lsp-diagnostic-lines-disable window
+    unmap window goto d '<esc>: lsp-definition<ret>'
+    unmap window goto r '<esc>: lsp-references<ret>'
+    remove-hooks window lsp
+    lsp-exit
 }
 
 lsp-stop-on-exit-enable
