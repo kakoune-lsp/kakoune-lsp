@@ -112,7 +112,11 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                             debug!("Blocking request but LSP server is not running");
                             let command = "lsp-show-error 'Language server is not running, cancelling blocking request'";
                             std::fs::write(fifo, command).expect("Failed to write command to fifo");
-                        } else {
+                            // As Kakoune triggers BufClose after KakEnd we don't want to spawn a
+                            // new controller in that case. In normal situation it's unlikely to
+                            // get didClose message without running controller, unless it crashed
+                            // before. In that case didClose can be safely ignored as well.
+                        } else if request.method != notification::DidCloseTextDocument::METHOD {
                             debug!("Spawning a new controller for {:?}", route);
                             controller_entry.insert(spawn_controller(
                                 config.clone(),
