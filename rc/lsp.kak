@@ -975,8 +975,8 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
 
-    map window goto d '<esc>: lsp-definition<ret>'
-    map window goto r '<esc>: lsp-references<ret>'
+    map window goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
+    map window goto r '<esc>: lsp-references<ret>' -docstring 'references'
 
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window BufWritePost .* lsp-did-save
