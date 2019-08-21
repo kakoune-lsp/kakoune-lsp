@@ -302,7 +302,7 @@ define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
     buffile filetype timestamp query
     Open buffer with a list of project-wide symbols matching the query
     on behalf of the buffile at timestamp
- } %{ try %{
+} %{ try %{
     evaluate-commands %sh{
         if [ -z "${4}" ];
         then echo "fail";
