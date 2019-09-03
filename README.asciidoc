@@ -4,6 +4,12 @@ kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Serv
 
 == Installation
 
+NOTE: `kak-lsp.toml` destination in all described installation methods is just an example.
+Also, kak-lsp doesn't read the configuration file from the current working directory or binary's dir by default.
+Please consult <<Configuring kak-lsp>> to figure out where does kak-lsp expect `kak-lsp.toml`
+to be in your environment and how to specify a custom path to it.
+However, if you don't need to change configuration then feel free to skip copying it anywhere as the default configuration is embedded into kak-lsp binary.
+
 === Pre-built binaries
 
 ==== MacOS
