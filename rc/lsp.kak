@@ -688,19 +688,6 @@ define-command -hidden lsp-show-message -params 2 -docstring %{
     info %arg{2}
 }
 
-define-command -hidden lsp-insert-after-selection -params 1 -docstring %{
-    Insert content after current selections while keeping cursor intact.
-    It is used to apply text edits from language server.
-} %{
-    declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    declare-option -hidden str lsp_text_edit_content %arg{1}
-    execute-keys %sh{
-        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
-        printf "<a-!>cat %s<ret>" $kak_opt_lsp_text_edit_tmp
-    }
-    nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
-}
-
 define-command -hidden lsp-insert-before-selection -params 1 -docstring %{
     Insert content before current selections while keeping cursor intact.
     It is used to apply text edits from language server.

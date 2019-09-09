@@ -196,7 +196,6 @@ pub fn apply_text_edits_to_buffer(
             )| {
                 let command = match command {
                     KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
-                    KakouneTextEditCommand::InsertAfter => "lsp-insert-after-selection",
                     KakouneTextEditCommand::Replace => "lsp-replace-selection",
                 };
                 let command = format!(
@@ -240,7 +239,6 @@ pub fn apply_text_edits_to_buffer(
 
 enum KakouneTextEditCommand {
     InsertBefore,
-    InsertAfter,
     Replace,
 }
 
@@ -258,14 +256,11 @@ fn lsp_text_edit_to_kakoune(
     let TextEdit { range, new_text } = text_edit;
     let Range { start, end } = range;
     let insert = start.line == end.line && start.character == end.character;
-    let bol_insert = insert && range.end.character == 0;
 
     let range = lsp_range_to_kakoune(range, text, offset_encoding);
 
-    let command = if bol_insert {
+    let command = if insert {
         KakouneTextEditCommand::InsertBefore
-    } else if insert {
-        KakouneTextEditCommand::InsertAfter
     } else {
         KakouneTextEditCommand::Replace
     };
