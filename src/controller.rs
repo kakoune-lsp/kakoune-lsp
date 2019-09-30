@@ -219,6 +219,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "textDocument/referencesHighlight" => {
             references::text_document_references_highlight(meta, params, &mut ctx);
         }
+        "apply-workspace-edit" => {
+            workspace::apply_edit_from_editor(meta, params, ctx);
+        }
 
         // CCLS
         ccls::NavigateRequest::METHOD => {
@@ -247,7 +250,7 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
     let method: &str = &request.method;
     match method {
         request::ApplyWorkspaceEdit::METHOD => {
-            workspace::apply_edit(request.id, request.params, ctx);
+            workspace::apply_edit_from_server(request.id, request.params, ctx);
         }
         _ => {
             warn!("Unsupported method: {}", method);

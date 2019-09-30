@@ -421,6 +421,20 @@ method   = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-apply-workspace-edit -params 1 -hidden %{
+    lsp-did-change
+    nop %sh{ (printf '
+session  = "%s"
+client   = "%s"
+buffile  = "%s"
+filetype = "%s"
+version  = %d
+method   = "apply-workspace-edit"
+[params]
+edit     = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-stop -docstring "Stop kak-lsp session" %{
     remove-hooks global lsp
     nop %sh{ (printf '

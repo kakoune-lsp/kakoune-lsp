@@ -7,6 +7,7 @@ use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
+use std::fs;
 use toml;
 
 fn insert_value<'a, 'b, P>(
@@ -129,20 +130,124 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
     ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
 }
 
-pub fn apply_edit(id: Id, params: Params, ctx: &mut Context) {
+
+// TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
+pub fn apply_edit(meta: EditorMeta, edit: WorkspaceEdit, ctx: &mut Context) -> ApplyWorkspaceEditResponse {
+    let mut applied = true;
+    if let Some(document_changes) = edit.document_changes {
+        match document_changes {
+            DocumentChanges::Edits(edits) => {
+                for edit in edits {
+                    apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
+                }
+            }
+            DocumentChanges::Operations(ops) => {
+                for op in ops {
+                    match op {
+                        DocumentChangeOperation::Edit(edit) => {
+                            apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
+                        }
+                        DocumentChangeOperation::Op(op) => match op {
+                            ResourceOp::Create(op) => {
+                                let path = op.uri.to_file_path().unwrap();
+                                let ignore_if_exists = if let Some(options) = op.options {
+                                    !options.overwrite.unwrap_or(false)
+                                        && options.ignore_if_exists.unwrap_or(false)
+                                } else {
+                                    false
+                                };
+                                if !(ignore_if_exists && path.exists())
+                                    && fs::write(&path, []).is_err()
+                                {
+                                    error!(
+                                        "Failed to create file: {}",
+                                        path.to_str().unwrap_or("")
+                                    );
+                                    applied = true;
+                                }
+                            }
+                            ResourceOp::Delete(op) => {
+                                let path = op.uri.to_file_path().unwrap();
+                                if path.is_dir() {
+                                    let recursive = if let Some(options) = op.options {
+                                        options.recursive.unwrap_or(false)
+                                    } else {
+                                        false
+                                    };
+                                    if recursive {
+                                        if fs::remove_dir_all(&path).is_err() {
+                                            error!(
+                                                "Failed to delete directory: {}",
+                                                path.to_str().unwrap_or("")
+                                            );
+                                    applied = true;
+                                        }
+                                    } else if fs::remove_dir(&path).is_err() {
+                                        error!(
+                                            "Failed to delete directory: {}",
+                                            path.to_str().unwrap_or("")
+                                        );
+                                    applied = true;
+                                    }
+                                } else if path.is_file() && fs::remove_file(&path).is_err() {
+                                    error!(
+                                        "Failed to delete file: {}",
+                                        path.to_str().unwrap_or("")
+                                    );
+                                    applied = true;
+                                }
+                            }
+                            ResourceOp::Rename(op) => {
+                                let from = op.old_uri.to_file_path().unwrap();
+                                let to = op.new_uri.to_file_path().unwrap();
+                                let ignore_if_exists = if let Some(options) = op.options {
+                                    !options.overwrite.unwrap_or(false)
+                                        && options.ignore_if_exists.unwrap_or(false)
+                                } else {
+                                    false
+                                };
+                                if !(ignore_if_exists && to.exists())
+                                    && fs::rename(&from, &to).is_err()
+                                {
+                                    error!(
+                                        "Failed to rename file: {} -> {}",
+                                        from.to_str().unwrap_or(""),
+                                        to.to_str().unwrap_or("")
+                                    );
+                                    applied = true;
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    } else if let Some(changes) = edit.changes {
+        for (uri, change) in &changes {
+            apply_text_edits(&meta, uri, change, ctx);
+        }
+    }
+    return ApplyWorkspaceEditResponse { applied };
+}
+
+#[derive(Deserialize)]
+struct EditorApplyEdit {
+    edit: String,
+}
+
+pub fn apply_edit_from_editor(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = EditorApplyEdit::deserialize(params).expect("Failed to parse params");
+    let edit = WorkspaceEdit::deserialize(serde_json::from_str::<Value>(&params.edit).unwrap()).expect("Failed to parse edit");
+
+    apply_edit(meta, edit, ctx);
+}
+
+pub fn apply_edit_from_server(id: Id, params: Params, ctx: &mut Context) {
     let params: ApplyWorkspaceEditParams = params.parse().expect("Failed to parse params");
     let meta = ctx.meta_for_session();
-    let applied = if let Some(changes) = params.edit.changes {
-        for (url, edits) in changes {
-            apply_text_edits(&meta, &url, &edits, &ctx);
-        }
-        true
-    } else {
-        warn!("kak-lsp doesn't yet support DocumentChanges");
-        false
-    };
+    let response = apply_edit(meta, params.edit, ctx);
     ctx.reply(
         id,
-        Ok(serde_json::to_value(ApplyWorkspaceEditResponse { applied }).unwrap()),
+        Ok(serde_json::to_value(response).unwrap()),
     );
 }
