@@ -211,6 +211,10 @@ for a language server. It's done like this:
 formatTool = "gofmt"
 ----
 
+*Important*: The configuration file does *not* extend the default configuration, but rather
+overwrites it. This means that if you want to customize any of the configuration, you must copy the
+*entire* default configuration and then edit it.
+
 If you are setting any options to server via cli do not forget to append them to
 `%sh{kak-lsp --kakoune ...}` in your `kakrc`. It's not needed if you change options in
 `~/.config/kak-lsp/kak-lsp.toml` file.
