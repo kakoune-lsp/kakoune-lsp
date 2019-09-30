@@ -130,9 +130,12 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
     ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
 }
 
-
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
-pub fn apply_edit(meta: EditorMeta, edit: WorkspaceEdit, ctx: &mut Context) -> ApplyWorkspaceEditResponse {
+pub fn apply_edit(
+    meta: EditorMeta,
+    edit: WorkspaceEdit,
+    ctx: &mut Context,
+) -> ApplyWorkspaceEditResponse {
     let mut applied = true;
     if let Some(document_changes) = edit.document_changes {
         match document_changes {
@@ -180,14 +183,14 @@ pub fn apply_edit(meta: EditorMeta, edit: WorkspaceEdit, ctx: &mut Context) -> A
                                                 "Failed to delete directory: {}",
                                                 path.to_str().unwrap_or("")
                                             );
-                                    applied = true;
+                                            applied = true;
                                         }
                                     } else if fs::remove_dir(&path).is_err() {
                                         error!(
                                             "Failed to delete directory: {}",
                                             path.to_str().unwrap_or("")
                                         );
-                                    applied = true;
+                                        applied = true;
                                     }
                                 } else if path.is_file() && fs::remove_file(&path).is_err() {
                                     error!(
@@ -237,7 +240,8 @@ struct EditorApplyEdit {
 
 pub fn apply_edit_from_editor(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = EditorApplyEdit::deserialize(params).expect("Failed to parse params");
-    let edit = WorkspaceEdit::deserialize(serde_json::from_str::<Value>(&params.edit).unwrap()).expect("Failed to parse edit");
+    let edit = WorkspaceEdit::deserialize(serde_json::from_str::<Value>(&params.edit).unwrap())
+        .expect("Failed to parse edit");
 
     apply_edit(meta, edit, ctx);
 }
@@ -246,8 +250,5 @@ pub fn apply_edit_from_server(id: Id, params: Params, ctx: &mut Context) {
     let params: ApplyWorkspaceEditParams = params.parse().expect("Failed to parse params");
     let meta = ctx.meta_for_session();
     let response = apply_edit(meta, params.edit, ctx);
-    ctx.reply(
-        id,
-        Ok(serde_json::to_value(response).unwrap()),
-    );
+    ctx.reply(id, Ok(serde_json::to_value(response).unwrap()));
 }
