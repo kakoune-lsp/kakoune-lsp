@@ -26,15 +26,6 @@ main() {
     cp MIT $stage/
     cp UNLICENSE $stage/
 
-    case $TRAVIS_OS_NAME in
-        linux)
-            cp kak-lsp.service $stage/
-            ;;
-        osx)
-            cp com.github.ul.kak-lsp.plist $stage/
-            ;;
-    esac
-
     cd $stage
     tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz *
     cd $src
