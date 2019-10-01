@@ -964,7 +964,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     }
 }
 
-define-command -hidden lsp-disable -docstring "Disable kak-lsp in the window scope" %{
+define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
     lsp-inline-diagnostics-disable global
