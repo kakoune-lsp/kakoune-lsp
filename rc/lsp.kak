@@ -347,11 +347,6 @@ method   = "capabilities"
 }
 
 define-command -hidden lsp-did-open %{
-    evaluate-commands %sh{
-        if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
-            echo "fail"
-        fi
-    }
     # see lsp-did-change
     set-option buffer lsp_timestamp %val{timestamp}
     evaluate-commands -save-regs '|' %{
