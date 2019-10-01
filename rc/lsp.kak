@@ -768,7 +768,7 @@ Jump to the next or previous diagnostic error" %{
             errorCompare="Diagnostic"
         fi
         #expand quoting, stores option in $@
-        eval "set -- ${kak_quoted_opt_lsp_errors}"
+        eval set -- "${kak_quoted_opt_lsp_errors}"
 
         first=""
         current=""
