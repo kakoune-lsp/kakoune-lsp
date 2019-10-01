@@ -69,12 +69,21 @@ define-command -hidden lsp-did-change -docstring "Notify language server about b
     evaluate-commands %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
-        else
-            echo "evaluate-commands -draft -no-hooks %{set-option buffer lsp_timestamp %val{timestamp}; execute-keys '%'; set-option buffer lsp_draft %val{selection}}"
         fi
     }
-    nop %sh{ (
-lsp_draft=$(printf '%s.' "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
+    set-option buffer lsp_timestamp %val{timestamp}
+    evaluate-commands -save-regs '|' %{
+        set-register '|' %{
+# dump stdin synchronously
+# append a . to the end, otherwise the subshell strips trailing newlines
+lsp_draft=$(cat; printf '.')
+# and process it asynchronously
+(
+# replace \ with \\
+#         " with \"
+#     <tab> with \t
+lsp_draft=$(printf '%s' "$lsp_draft" | sed 's/\\/\\\\/g ; s/"/\\"/g ; s/'"$(printf '\t')"'/\\t/g')
+# remove the trailing . we added earlier
 lsp_draft=${lsp_draft%.}
 printf '
 session  = "%s"
@@ -86,7 +95,9 @@ method   = "textDocument/didChange"
 [params]
 draft    = """
 %s"""
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+        execute-keys -draft '%<a-|><ret>'
+    }
 }}
 
 define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
@@ -339,12 +350,15 @@ define-command -hidden lsp-did-open %{
     evaluate-commands %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
-        else
-            echo "evaluate-commands -draft -no-hooks %{set-option buffer lsp_timestamp %val{timestamp}; execute-keys '%'; set-option buffer lsp_draft %val{selection}}"
         fi
     }
-    nop %sh{ (
-lsp_draft=$(printf '%s.' "${kak_opt_lsp_draft}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed "s/$(printf '\t')/\\\\t/g")
+    # see lsp-did-change
+    set-option buffer lsp_timestamp %val{timestamp}
+    evaluate-commands -save-regs '|' %{
+        set-register '|' %{
+lsp_draft=$(cat; printf '.')
+(
+lsp_draft=$(printf '%s' "$lsp_draft" | sed 's/\\/\\\\/g ; s/"/\\"/g ; s/'"$(printf '\t')"'/\\t/g')
 lsp_draft=${lsp_draft%.}
 printf '
 session  = "%s"
@@ -357,6 +371,8 @@ method   = "textDocument/didOpen"
 draft    = """
 %s"""
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+        execute-keys -draft '%<a-|><ret>'
+    }
 }
 
 define-command -hidden lsp-did-close %{
