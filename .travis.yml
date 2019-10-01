@@ -19,9 +19,6 @@ matrix:
     - env: TARGET=x86_64-apple-darwin
       os: osx
 
-    # *BSD
-    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
-
 before_install:
   - set -e
   - rustup self update

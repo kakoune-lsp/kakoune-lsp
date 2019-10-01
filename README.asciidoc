@@ -53,19 +53,6 @@ mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
-==== FreeBSD
-
-----
-wget https://github.com/ul/kak-lsp/releases/download/v6.2.1/kak-lsp-v6.2.1-x86_64-unknown-freebsd.tar.gz
-tar xzvf kak-lsp-v6.2.1-x86_64-unknown-freebsd.tar.gz
-
-# replace `~/.local/bin/` with something on your `$PATH`
-mv kak-lsp ~/.local/bin/
-
-mkdir -p ~/.config/kak-lsp
-mv kak-lsp.toml ~/.config/kak-lsp/
-----
-
 === From the source
 
 ----
