@@ -57,7 +57,6 @@ declare-option -hidden completions lsp_completions
 declare-option -hidden range-specs lsp_errors
 declare-option -hidden line-specs lsp_error_lines
 declare-option -hidden range-specs cquery_semhl
-declare-option -hidden str lsp_draft
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
 
