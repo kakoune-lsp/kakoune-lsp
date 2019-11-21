@@ -102,7 +102,7 @@ To enable LSP support for configured languages (see the next section) just add t
 commands to your `kakrc`:
 
 ----
-eval %sh{kak-lsp --kakoune -s $kak_session}
+eval %sh{${kak_opt_lsp_cmd} --kakoune -s $kak_session}
 lsp-enable
 ----
 
@@ -110,7 +110,7 @@ A bit more involved but recommended way is to enable kak-lsp only for specific f
 via `lsp-enable-window`, e.g.:
 
 ----
-eval %sh{kak-lsp --kakoune -s $kak_session}
+eval %sh{${kak_opt_lsp_cmd} --kakoune -s $kak_session}
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
     lsp-enable-window
 }
@@ -286,13 +286,14 @@ require adding `offset_encoding = "utf-8"` to language server configuration in `
 
 == Troubleshooting
 
-If kak-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
+If kak-lsp fails try to put this line in your `kakrc` before the
+standard `eval %sh{${kak_opt_lsp_cmd} --kakoune -s $kak_session}`:
 
 ----
 set global lsp_cmd "kak-lsp -s %val{session} -vvv --log /tmp/kak-lsp.log"
 ----
 
-to enable debug logging.
+to enable debug logging. Look into `/tmp/kak-lsp.log` for problems.
 
 If it will not give enough insights to fix the problem or if the problem is a bug in kak-lsp itself
 please don't hesitate to raise an issue.
