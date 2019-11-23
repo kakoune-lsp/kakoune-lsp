@@ -12,6 +12,20 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
         PositionParams::deserialize(params).expect("Params should follow PositionParams structure");
     let position = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
 
+    let buff_diags = ctx.diagnostics.get(&meta.buffile);
+
+    let diagnostics: Vec<Diagnostic> = if buff_diags.is_some() {
+        buff_diags
+            .unwrap()
+            .iter()
+            .filter(|d| d.range.start.line <= position.line && position.line <= d.range.end.line )
+            .cloned()
+            .collect()
+    }
+    else {
+        Vec::new()
+    };
+
     let req_params = CodeActionParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -21,7 +35,7 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
             end: position,
         },
         context: CodeActionContext {
-            diagnostics: vec![], // TODO
+            diagnostics: diagnostics,
             only: None,
         },
     };
