@@ -19,6 +19,8 @@ pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mu
             position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
         context: None,
+        work_done_progress_params: Default::default(),
+        partial_result_params: Default::default(),
     };
     ctx.call::<Completion, _>(meta, req_params, |ctx: &mut Context, meta, result| {
         editor_completion(meta, params, result, ctx)

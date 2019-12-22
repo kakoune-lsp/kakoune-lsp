@@ -38,6 +38,8 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
             diagnostics: diagnostics,
             only: None,
         },
+        work_done_progress_params: Default::default(),
+        partial_result_params: Default::default(),
     };
     ctx.call::<CodeActionRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_code_actions(meta, result, ctx)

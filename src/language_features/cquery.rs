@@ -7,7 +7,6 @@ use jsonrpc_core::Params;
 use lsp_types::{NumberOrString, Range};
 use serde;
 use url::Url;
-use url_serde;
 
 enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -151,7 +150,6 @@ impl SemanticSymbol {
 #[serde(rename_all = "camelCase")]
 pub struct PublishSemanticHighlightingParams {
     /// The URI for which diagnostic information is reported.
-    #[serde(with = "url_serde")]
     pub uri: Url,
 
     /// The symbols to highlight

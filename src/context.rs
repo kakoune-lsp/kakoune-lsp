@@ -14,7 +14,7 @@ pub struct Document {
     // Corresponds to Kakoune's timestamp.
     // It's passed to a language server as a version and is used to tag selections, highlighters and
     // other timestamp sensitive parameters in commands sent to kakoune.
-    pub version: u64,
+    pub version: i64,
     // Buffer content.
     // It's used to translate between LSP and Kakoune coordinates.
     pub text: ropey::Rope,

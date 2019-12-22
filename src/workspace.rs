@@ -126,6 +126,7 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
         command: params.command,
         // arguments is quoted to avoid parsing issues
         arguments: serde_json::from_str(&params.arguments).unwrap(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
 }

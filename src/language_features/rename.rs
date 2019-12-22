@@ -18,6 +18,7 @@ pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Co
             position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
         new_name: params.new_name,
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<Rename, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_rename(meta, result, ctx)

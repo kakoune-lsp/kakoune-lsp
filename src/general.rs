@@ -18,6 +18,7 @@ pub fn initialize(
 ) {
     let initialization_options =
         request_initialization_options_from_kakoune(&meta, ctx).or(initialization_options);
+    #[allow(deprecated)] // for root_path
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
@@ -60,6 +61,9 @@ pub fn initialize(
                     }),
                     ..CodeActionCapability::default()
                 }),
+                semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability{
+                  semantic_highlighting: true,
+                }),
                 ..TextDocumentClientCapabilities::default()
             }),
             experimental: None,
@@ -71,6 +75,7 @@ pub fn initialize(
         root_path: None,
         trace: Some(TraceOption::Off),
         workspace_folders: None,
+        client_info: None,
     };
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
