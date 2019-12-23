@@ -44,7 +44,8 @@ pub fn editor_completion(
 
     let items = items
         .into_iter()
-        .map(|x| {
+        .enumerate()
+        .map(|(i, x)| {
             let mut doc: String = match &x.documentation {
                 None => "".to_string(),
                 Some(doc) => match doc {
@@ -70,12 +71,21 @@ pub fn editor_completion(
                     .collect::<String>();
                 entry += &format!(" {{MenuInfo}}{:?}", k);
             }
-            editor_quote(&format!(
-                "{}|{}|{}",
-                escape_bar(&x.insert_text.unwrap_or(x.label)),
-                escape_bar(&doc),
-                escape_bar(&entry),
-            ))
+            let insert_text = &x.insert_text.unwrap_or(x.label);
+            let do_snippet = ctx.config.snippet_support;
+            let do_snippet = do_snippet && x.insert_text_format.map(|f| f == InsertTextFormat::Snippet).unwrap_or(false);
+            if do_snippet {
+                let command = format!("{}\nlsp-snippets-insert-completion {} {}", doc, i, editor_quote(insert_text));
+                let command = format!("eval {}", editor_quote(&command));
+                editor_quote(&format!("{}|{}|{}", i, escape_bar(&command), escape_bar(&entry),))
+            } else {
+                editor_quote(&format!(
+                    "{}|{}|{}",
+                    escape_bar(insert_text),
+                    escape_bar(&doc),
+                    escape_bar(&entry),
+                ))
+            }
         })
         .join(" ");
     let p = params.position;
