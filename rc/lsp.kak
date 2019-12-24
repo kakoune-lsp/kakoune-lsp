@@ -1034,6 +1034,7 @@ lsp-stop-on-exit-enable
 hook -always -group lsp global KakEnd .* lsp-exit
 
 # SNIPPETS
+# This is a slightly modified version of occivink/kakoune-snippets
 
 decl -hidden range-specs lsp_snippets_placeholders
 decl -hidden int-list lsp_snippets_placeholder_groups
@@ -1041,27 +1042,29 @@ decl -hidden int-list lsp_snippets_placeholder_groups
 face global SnippetsNextPlaceholders black,green+F
 face global SnippetsOtherPlaceholders black,yellow+F
 
-def -hidden lsp-snippets-insert-completion -params 2 %{
-  exec -draft "<a-;><a-/>%arg{1}<ret>d"
-  eval -draft -verbatim lsp-snippets-insert %arg{2}
-  remove-hooks window lsp-post-completion
-  hook -once -group lsp-post-completion window InsertCompletionHide .* %{
-    try %{
-      lsp-snippets-select-next-placeholders
-      # On the next key, start replacing the placeholder contents
-      on-key %{ exec "<a-;>c%val{key}" }
+# First param is the text that was inserted in the completion, which will be deleted
+# Second param is the actual snippet
+def -hidden lsp-snippets-insert-completion -params 2 %{ eval -save-regs "a" %{
+    reg 'c' "%arg{1}"
+    exec -draft "<a-;><a-/>%val[main_reg_c]<ret>d"
+    eval -draft -verbatim lsp-snippets-insert %arg{2}
+    remove-hooks window lsp-post-completion
+    hook -once -group lsp-post-completion window InsertCompletionHide .* %{
+        try %{
+            lsp-snippets-select-next-placeholders
+            # On the next key, start replacing the placeholder contents
+            on-key %{ exec "<a-;>c%val{key}" }
+        }
     }
-  }
-}
+}}
 
-def lsp-snippets-insert -hidden -params 1 %<
-    eval %sh<
-        #<<
-        if ! command -v perl >/dev/null 2>&1; then
+def lsp-snippets-insert -hidden -params 1 %[
+    eval %sh{
+        if ! command -v perl > /dev/null 2>&1; then
             printf "fail '''perl'' must be installed to use the ''snippets-insert'' command'"
         fi
-    >
-    eval -draft -save-regs '^"' %<
+    }
+    eval -draft -save-regs '^"' %[
         reg '"' %arg{1}
         exec <a-P>
         # replace leading tabs with the appropriate indent
@@ -1082,10 +1085,10 @@ def lsp-snippets-insert -hidden -params 1 %<
                 exec -draft '<a-s>)<a-space>P'
             }
         }
-        try %<
+        try %[
             # select things that look like placeholders
             # this regex is not as bad as it looks
-            eval -draft %<
+            eval -draft %[
                 exec s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])+)?)\}))<ret>
                 # tests
                 # $1                - ok
@@ -1102,17 +1105,17 @@ def lsp-snippets-insert -hidden -params 1 %<
                 # ${7:ab\}\}cd}def  - ok
                 # ${8:a\}b\}c\}}def - ok
                 lsp-snippets-insert-perl-impl
-            >
-        >
+            ]
+        ]
         try %{
             # unescape $
             exec 's\\\$<ret>;d'
         }
-    >
->
+    ]
+]
 
-def -hidden lsp-snippets-insert-perl-impl %<
-    eval %sh< # $kak_quoted_selections
+def -hidden lsp-snippets-insert-perl-impl %[
+    eval %sh[ # $kak_quoted_selections
         perl -e '
 use strict;
 use warnings;
@@ -1155,12 +1158,12 @@ foreach my $i (0 .. $#sel_content) {
 }
 print("\n");
 '
-    >
+    ]
     exec R
     set window lsp_snippets_placeholders %val{timestamp}
     # no need to set the NextPlaceholders face yet, select-next-placeholders will take care of that
     eval -itersel %{ set -add window lsp_snippets_placeholders "%val{selections_desc}|SnippetsOtherPlaceholders" }
->
+]
 
 def lsp-snippets-select-next-placeholders %{
     update-option window lsp_snippets_placeholders
