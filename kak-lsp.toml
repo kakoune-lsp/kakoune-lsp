@@ -118,3 +118,8 @@ runtime = "node"
 elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
+
+[language.latex]
+filetypes = ["latex"]
+roots = [".git"]
+command = "texlab"
