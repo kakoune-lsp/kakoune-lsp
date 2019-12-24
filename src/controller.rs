@@ -16,7 +16,7 @@ use lsp_types::*;
 /// Start controller.
 ///
 /// Controller spawns language server for the given language and project root (passed as `route`).
-/// Then it takes care of dispatching editor requests to this language server and dispatching      
+/// Then it takes care of dispatching editor requests to this language server and dispatching
 /// responses back to editor.
 pub fn start(
     to_editor: Sender<EditorResponse>,
@@ -238,6 +238,11 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
         ccls::MemberRequest::METHOD => {
             ccls::member(meta, params, ctx);
+        }
+
+        // eclipse.jdt.ls
+        "eclipse.jdt.ls/organizeImports" => {
+            eclipse_jdt_ls::organize_imports(meta, ctx);
         }
 
         _ => {

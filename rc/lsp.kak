@@ -601,6 +601,21 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $kind ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+# eclipse.jdt.ls Extension
+#
+define-command ejdtls-organize-imports -docstring "ejdtls-organize-imports: Organize imports." %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "eclipse.jdt.ls/organizeImports"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 ### Response handling ###
 
 # Feel free to override these commands in your config if you need to customise response handling.
