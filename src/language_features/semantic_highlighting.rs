@@ -29,33 +29,30 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
         .scopes
         .as_ref()
         .expect("Server sent semantic highlight notification without setting capability");
-    let offset_encoding = ctx.offset_encoding.to_owned();
     let ranges = params
         .lines
         .iter()
-        .map(|info| {
+        .flat_map(|info| {
             let line: u64 = info.line as u64;
-            info.tokens
-                .iter()
-                .map(|t| {
-                    let scope = scopes
-                        .get(t.scope as usize)
-                        .expect("Semantic highlighting token sent for out-of-range scope");
-                    let face = get_face_for_scope(scope);
-                    let range = Range {
-                        start: Position::new(line, t.character.into()),
-                        end: Position::new(line, (t.character + u32::from(t.length)).into()),
-                    };
-                    format!(
-                        "{}|{}",
-                        lsp_range_to_kakoune(&range, &document.text, &offset_encoding),
-                        face
-                    )
-                })
-                .join(" ")
+            let offset_encoding = &ctx.offset_encoding;
+            info.tokens.iter().map(move |t| {
+                let scope = scopes
+                    .get(t.scope as usize)
+                    .expect("Semantic highlighting token sent for out-of-range scope");
+                let face = get_face_for_scope(scope);
+                let range = Range {
+                    start: Position::new(line, t.character.into()),
+                    end: Position::new(line, (t.character + u32::from(t.length)).into()),
+                };
+                format!(
+                    "{}|{}",
+                    lsp_range_to_kakoune(&range, &document.text, offset_encoding),
+                    face
+                )
+            })
         })
         .join(" ");
-    let command = format!("set buffer lsp_semantic_highlighting {} {}", meta.version, editor_quote(&ranges));
+    let command = format!("set buffer lsp_semantic_highlighting {} {}", meta.version, &ranges);
     let command = format!(
         "eval -buffer {} {}",
         editor_quote(&buffile), editor_quote(&command)
