@@ -1,6 +1,7 @@
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
+use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
@@ -54,9 +55,10 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
                 .join(" ")
         })
         .join(" ");
+    let command = format!("set buffer lsp_semantic_highlighting {} {}", meta.version, editor_quote(&ranges));
     let command = format!(
-        "eval -buffer %§{}§ %§set buffer lsp_semantic_highlighting {} {}§",
-        buffile, meta.version, ranges
+        "eval -buffer {} {}",
+        editor_quote(&buffile), editor_quote(&command)
     );
     ctx.exec(meta, command.to_string());
 }
