@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
 use toml;
-use lsp_types::*;
 
 pub enum Void {}
 
