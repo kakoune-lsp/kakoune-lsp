@@ -36,6 +36,7 @@ pub struct Context {
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
     pub offset_encoding: OffsetEncoding,
+    pub semantic_highlighting_faces: Vec<String>,
 }
 
 impl Context {
@@ -63,6 +64,7 @@ impl Context {
             session,
             documents: HashMap::default(),
             offset_encoding,
+            semantic_highlighting_faces: Vec::new(),
         }
     }
 

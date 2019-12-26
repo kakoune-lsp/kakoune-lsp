@@ -225,6 +225,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "semantic-scopes" => {
             semantic_highlighting::debug_scopes(meta, &mut ctx);
         }
+
         // CCLS
         ccls::NavigateRequest::METHOD => {
             ccls::navigate(meta, params, ctx);

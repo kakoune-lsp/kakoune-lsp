@@ -1,5 +1,6 @@
 use crate::context::*;
 use crate::controller;
+use crate::language_features::semantic_highlighting;
 use crate::types::*;
 use crate::util::*;
 use lsp_types::notification::*;
@@ -80,6 +81,7 @@ pub fn initialize(
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
         ctx.capabilities = Some(result.capabilities);
+        ctx.semantic_highlighting_faces = semantic_highlighting::make_scope_map(ctx);
         ctx.notify::<Initialized>(InitializedParams {});
         controller::dispatch_pending_editor_requests(ctx)
     });

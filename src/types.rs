@@ -19,6 +19,8 @@ pub struct Config {
     pub verbosity: u8,
     #[serde(default)]
     pub snippet_support: bool,
+    #[serde(default)]
+    pub semantic_scopes: HashMap<String, String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
