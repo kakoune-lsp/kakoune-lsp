@@ -10,6 +10,7 @@ pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
     let req_params = ExecuteCommandParams {
         command: "java.edit.organizeImports".to_string(),
         arguments: vec![ serde_json::json!(file_uri.into_string()) ],
+        ..ExecuteCommandParams::default()
     };
     ctx.call::<ExecuteCommand, _>(
         meta,

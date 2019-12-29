@@ -70,7 +70,12 @@ pub fn debug_scopes(meta: EditorMeta, ctx: &mut Context) {
 }
 
 pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
-    let faces: HashMap<String, &String> = ctx.config.semantic_scopes.iter().map(|(k,v)| (k.replace("_", "."), v)).collect();
+    let faces: HashMap<String, &String> = ctx
+        .config
+        .semantic_scopes
+        .iter()
+        .map(|(k, v)| (k.replace("_", "."), v))
+        .collect();
 
     let scopes = ctx
         .capabilities
@@ -79,22 +84,87 @@ pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
         .and_then(|x| x.scopes.as_ref());
 
     if scopes == None {
-      return Vec::new();
+        return Vec::new();
     }
     let scopes = scopes.unwrap();
 
-    let faces: Vec<String> = scopes.iter().map(|scopes| {
-      for scope in scopes {
-        let elements: Vec<&str> = scope.chars().enumerate().filter(|(_,x)| x == &'.').map(|(i,_)| &scope[0..i]).collect();
-        for element in elements.iter().rev() {
-          match faces.get(*element) {
-            Some(face) => return String::from(face.as_str()),
-            None => ()
-          }
-        }
-      }
-      return String::new();
-    }).collect();
+    map_scopes_to_faces(scopes, faces)
+}
 
-    faces
+fn map_scopes_to_faces(
+    scopes: &Vec<Vec<String>>,
+    faces: HashMap<String, &String>,
+) -> std::vec::Vec<std::string::String> {
+    let find_face = |scope: &String| {
+        scope
+            .chars()
+            .enumerate()
+            .filter_map(|(i, x)| if x == '.' { Some(&scope[0..i]) } else { None })
+            .enumerate()
+            .filter_map(|(n, element)| faces.get(element).map(|face| (n, face)))
+            .last()
+            .map(|(n, face)| (n, face.to_string()))
+    };
+    scopes
+        .iter()
+        .map(|scopes| {
+            scopes
+                .iter()
+                .filter_map(find_face)
+                .max_by_key(|(n, _)| *n)
+                .map(|(_, x)| x)
+                .unwrap_or_else(|| String::new())
+        })
+        .collect()
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_scopes_to_faces_should_map_unknown_scope_to_empty_face() {
+        let scopes = vec![
+            vec![String::from("just.noise")],
+            vec![String::from("some.scope")],
+        ];
+        let mut faces: HashMap<String, &String> = Default::default();
+        let some_face = String::from("some.face");
+        faces.insert(String::from("some.another.scope"), &some_face);
+        let faces = map_scopes_to_faces(&scopes, faces);
+        assert_eq!(Some(&String::from("")), faces.get(1));
+    }
+
+    #[test]
+    fn map_scopes_to_faces_should_map_scope_by_prefix() {
+        let scopes = vec![
+            vec![String::from("just.noise")],
+            vec![
+                String::from("some.non-matching.scope"),
+                String::from("some.nested.scope"),
+            ],
+        ];
+        let mut faces: HashMap<String, &String> = Default::default();
+        let some_face = String::from("some.face");
+        faces.insert(String::from("some.nested"), &some_face);
+        let faces = map_scopes_to_faces(&scopes, faces);
+        assert_eq!(Some(&String::from("some.face")), faces.get(1));
+    }
+
+    #[test]
+    fn map_scopes_to_faces_should_map_scope_by_longest_prefix() {
+        let scopes = vec![
+            vec![String::from("just.noise")],
+            vec![
+                String::from("some.scope.matching.short.prefix"),
+                String::from("some.nested.scope"),
+            ],
+        ];
+        let mut faces: HashMap<String, &String> = Default::default();
+        let some = String::from("some");
+        let some_face = String::from("some.face");
+        faces.insert(String::from("some"), &some);
+        faces.insert(String::from("some.nested"), &some_face);
+        let faces = map_scopes_to_faces(&scopes, faces);
+        assert_eq!(Some(&String::from("some.face")), faces.get(1));
+    }
 }
