@@ -1045,15 +1045,15 @@ face global SnippetsOtherPlaceholders black,yellow+F
 # First param is the text that was inserted in the completion, which will be deleted
 # Second param is the actual snippet
 def -hidden lsp-snippets-insert-completion -params 2 %{ eval -save-regs "a" %{
-    reg 'c' "%arg{1}"
-    exec -draft "<a-;><a-/>%val[main_reg_c]<ret>d"
+    reg 'a' "%arg{1}"
+    exec -draft "<a-;><a-/>%val[main_reg_a]<ret>d"
     eval -draft -verbatim lsp-snippets-insert %arg{2}
     remove-hooks window lsp-post-completion
     hook -once -group lsp-post-completion window InsertCompletionHide .* %{
         try %{
             lsp-snippets-select-next-placeholders
             # On the next key, start replacing the placeholder contents
-            on-key %{ exec "<a-;>c%val{key}" }
+            on-key %{ exec "<esc>c%val{key}" }
         }
     }
 }}
