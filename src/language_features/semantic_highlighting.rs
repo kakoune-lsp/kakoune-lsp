@@ -83,7 +83,7 @@ pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
         .and_then(|x| x.semantic_highlighting.as_ref())
         .and_then(|x| x.scopes.as_ref());
 
-    if scopes == None {
+    if scopes.is_none() {
         return Vec::new();
     }
     let scopes = scopes.unwrap();
