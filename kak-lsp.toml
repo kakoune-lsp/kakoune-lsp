@@ -56,7 +56,7 @@ args = ["--stdio"]
 
 [language.ocaml]
 filetypes = ["ocaml"]
-roots = ["Makefile", "opam", "*.opam"]
+roots = ["Makefile", "opam", "*.opam", "dune"]
 command = "ocaml-language-server"
 args = ["--stdio"]
 
