@@ -28,7 +28,12 @@ pub fn editor_definition(
         let path = location.uri.to_file_path().unwrap();
         let filename = path.to_str().unwrap();
         let p = get_kakoune_position(filename, &location.range.start, ctx).unwrap();
-        let command = format!("evaluate-commands -try-client %opt{{jumpclient}} %{{edit {} {} {}}}", editor_quote(filename), p.line, p.column);
+        let command = format!(
+            "evaluate-commands -try-client %opt{{jumpclient}} %{{edit {} {} {}}}",
+            editor_quote(filename),
+            p.line,
+            p.column
+        );
         ctx.exec(meta, command);
     };
 }

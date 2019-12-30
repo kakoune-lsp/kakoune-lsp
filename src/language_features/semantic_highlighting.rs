@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
@@ -6,6 +5,7 @@ use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
+use std::collections::HashMap;
 
 pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
     let params = params.parse::<SemanticHighlightingParams>();
@@ -28,7 +28,8 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
             let line: u64 = info.line as u64;
             let offset_encoding = &ctx.offset_encoding;
             info.tokens.iter().map(move |t| {
-                let face = faces.get(t.scope as usize)
+                let face = faces
+                    .get(t.scope as usize)
                     .expect("Semantic highlighting token sent for out-of-range scope");
                 let range = Range {
                     start: Position::new(line, t.character.into()),

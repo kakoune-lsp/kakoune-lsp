@@ -62,8 +62,8 @@ pub fn initialize(
                     }),
                     ..CodeActionCapability::default()
                 }),
-                semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability{
-                  semantic_highlighting: true,
+                semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability {
+                    semantic_highlighting: true,
                 }),
                 ..TextDocumentClientCapabilities::default()
             }),

@@ -18,11 +18,10 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
         buff_diags
             .unwrap()
             .iter()
-            .filter(|d| d.range.start.line <= position.line && position.line <= d.range.end.line )
+            .filter(|d| d.range.start.line <= position.line && position.line <= d.range.end.line)
             .cloned()
             .collect()
-    }
-    else {
+    } else {
         Vec::new()
     };
 

@@ -1,7 +1,7 @@
-use lsp_types::request::ExecuteCommand;
 use crate::context::*;
 use crate::types::*;
 use crate::util::*;
+use lsp_types::request::ExecuteCommand;
 use lsp_types::*;
 
 pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
@@ -9,20 +9,26 @@ pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
 
     let req_params = ExecuteCommandParams {
         command: "java.edit.organizeImports".to_string(),
-        arguments: vec![ serde_json::json!(file_uri.into_string()) ],
+        arguments: vec![serde_json::json!(file_uri.into_string())],
         ..ExecuteCommandParams::default()
     };
     ctx.call::<ExecuteCommand, _>(
         meta,
         req_params,
         move |ctx: &mut Context, meta, response| match response {
-            Some(response) => organize_imports_response(meta, serde_json::from_value(response).unwrap(), ctx),
-            None => return
-        }
+            Some(response) => {
+                organize_imports_response(meta, serde_json::from_value(response).unwrap(), ctx)
+            }
+            None => return,
+        },
     );
 }
 
-pub fn organize_imports_response(meta: EditorMeta, result: Option<WorkspaceEdit>, ctx: &mut Context) {
+pub fn organize_imports_response(
+    meta: EditorMeta,
+    result: Option<WorkspaceEdit>,
+    ctx: &mut Context,
+) {
     let result = match result {
         Some(result) => result,
         None => return,
