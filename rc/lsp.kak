@@ -445,6 +445,20 @@ edit     = %s
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-apply-text-edits -params 1 -hidden %{
+    lsp-did-change
+    nop %sh{ (printf '
+session  = "%s"
+client   = "%s"
+buffile  = "%s"
+filetype = "%s"
+version  = %d
+method   = "apply-text-edits"
+[params]
+edit     = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-stop -docstring "Stop kak-lsp session" %{
     remove-hooks global lsp
     nop %sh{ (printf '
@@ -1033,3 +1047,202 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
 
 lsp-stop-on-exit-enable
 hook -always -group lsp global KakEnd .* lsp-exit
+
+# SNIPPETS
+# This is a slightly modified version of occivink/kakoune-snippets
+
+decl -hidden range-specs lsp_snippets_placeholders
+decl -hidden int-list lsp_snippets_placeholder_groups
+
+face global SnippetsNextPlaceholders black,green+F
+face global SnippetsOtherPlaceholders black,yellow+F
+
+# First param is the text that was inserted in the completion, which will be deleted
+# Second param is the actual snippet
+def -hidden lsp-snippets-insert-completion -params 2 %{ eval -save-regs "a" %{
+    reg 'a' "%arg{1}"
+    exec -draft "<a-;><a-/>%val[main_reg_a]<ret>d"
+    eval -draft -verbatim lsp-snippets-insert %arg{2}
+    remove-hooks window lsp-post-completion
+    hook -once -group lsp-post-completion window InsertCompletionHide .* %{
+        try %{
+            lsp-snippets-select-next-placeholders
+            # On the next key, start replacing the placeholder contents
+            on-key %{ exec "<esc>c%val{key}" }
+        }
+    }
+}}
+
+def lsp-snippets-insert -hidden -params 1 %[
+    eval %sh{
+        if ! command -v perl > /dev/null 2>&1; then
+            printf "fail '''perl'' must be installed to use the ''snippets-insert'' command'"
+        fi
+    }
+    eval -draft -save-regs '^"' %[
+        reg '"' %arg{1}
+        exec <a-P>
+        # replace leading tabs with the appropriate indent
+        try %{
+            reg '"' %sh{
+                if [ $kak_opt_indentwidth -eq 0 ]; then
+                    printf '\t'
+                else
+                    printf "%${kak_opt_indentwidth}s"
+                fi
+            }
+            exec -draft '<a-s>s\A\t+<ret>s.<ret>R'
+        }
+        # align everything with the current line
+        eval -draft -itersel -save-regs '"' %{
+            try %{
+                exec -draft -save-regs '/' '<a-s>)<space><a-x>s^\s+<ret>y'
+                exec -draft '<a-s>)<a-space>P'
+            }
+        }
+        try %[
+            # select things that look like placeholders
+            # this regex is not as bad as it looks
+            eval -draft %[
+                exec s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])+)?)\}))<ret>
+                # tests
+                # $1                - ok
+                # ${2}              - ok
+                # $1$2$3            - ok x3
+                # $1${2}$3${4}      - ok x4
+                # $1\${2}\$3${4}    - ok, not ok, not ok, ok
+                # \\${3:abc}        - ok
+                # \${3:abc}         - not ok
+                # \\\${3:abc}def    - not ok
+                # ${4:a\}b}def      - ok
+                # ${5:ab\}}def      - ok
+                # ${6:ab\}cd}def    - ok
+                # ${7:ab\}\}cd}def  - ok
+                # ${8:a\}b\}c\}}def - ok
+                lsp-snippets-insert-perl-impl
+            ]
+        ]
+        try %{
+            # unescape $
+            exec 's\\\$<ret>;d'
+        }
+    ]
+]
+
+def -hidden lsp-snippets-insert-perl-impl %[
+    eval %sh[ # $kak_quoted_selections
+        perl -e '
+use strict;
+use warnings;
+use Text::ParseWords();
+
+my @sel_content = Text::ParseWords::shellwords($ENV{"kak_quoted_selections"});
+
+my %placeholder_id_to_default;
+my @placeholder_ids;
+
+print("set window lsp_snippets_placeholder_groups");
+for my $i (0 .. $#sel_content) {
+    my $sel = $sel_content[$i];
+    $sel =~ s/\A\$\{?|\}\Z//g;
+    my ($placeholder_id, $placeholder_default) = ($sel =~ /^(\d+)(?::(.*))?$/);
+    if ($placeholder_id eq "0") {
+        $placeholder_id = "9999";
+    }
+    $placeholder_ids[$i] = $placeholder_id;
+    print(" $placeholder_id");
+    if (defined($placeholder_default)) {
+        $placeholder_id_to_default{$placeholder_id} = $placeholder_default;
+    }
+}
+print("\n");
+
+print("reg dquote");
+foreach my $i (0 .. $#sel_content) {
+    my $placeholder_id = $placeholder_ids[$i];
+    if (exists $placeholder_id_to_default{$placeholder_id}) {
+        my $def = $placeholder_id_to_default{$placeholder_id};
+        # de-double up closing braces
+        $def =~ s/\}\}/}/g;
+        # double up single-quotes
+        $def =~ s/'\''/'\'''\''/g;
+        print(" '\''$def'\''");
+    } else {
+        print(" '\'''\''");
+    }
+}
+print("\n");
+'
+    ]
+    exec R
+    set window lsp_snippets_placeholders %val{timestamp}
+    # no need to set the NextPlaceholders face yet, select-next-placeholders will take care of that
+    eval -itersel %{ set -add window lsp_snippets_placeholders "%val{selections_desc}|SnippetsOtherPlaceholders" }
+]
+
+def lsp-snippets-select-next-placeholders %{
+    update-option window lsp_snippets_placeholders
+    eval %sh{
+        eval set -- "$kak_quoted_opt_lsp_snippets_placeholder_groups"
+        if [ $# -eq 0 ]; then printf "fail 'There are no next placeholders'"; exit; fi
+        next_id=9999
+        second_next_id=9999
+        for placeholder_id do
+            if [ "$placeholder_id" -lt "$next_id" ]; then
+                second_next_id="$next_id"
+                next_id="$placeholder_id"
+            elif [ "$placeholder_id" -lt "$second_next_id" ] && [ "$placeholder_id" -ne "$next_id" ]; then
+                second_next_id="$placeholder_id"
+            fi
+        done
+        next_descs_id=''
+        second_next_descs_id='' # for highlighting purposes
+        desc_id=0
+        printf 'set window lsp_snippets_placeholder_groups'
+        for placeholder_id do
+            if [ "$placeholder_id" -eq "$next_id" ]; then
+                next_descs_id="${next_descs_id} $desc_id"
+            else
+                printf ' %s' "$placeholder_id"
+            fi
+            if [ "$placeholder_id" -eq "$second_next_id" ]; then
+                second_next_descs_id="${second_next_descs_id} $desc_id"
+            fi
+            desc_id=$((desc_id+1))
+        done
+        printf '\n'
+
+        eval set -- "$kak_quoted_opt_lsp_snippets_placeholders"
+        printf 'set window lsp_snippets_placeholders'
+        printf ' %s' "$1"
+        shift
+        selections=''
+        desc_id=0
+        for desc do
+            found=0
+            for candidate_desc_id in $next_descs_id; do
+                if [ "$candidate_desc_id" -eq "$desc_id" ]; then
+                    found=1
+                    selections="${selections} ${desc%%\|*}"
+                    break
+                fi
+            done
+            if [ $found -eq 0 ]; then
+                for candidate_desc_id in $second_next_descs_id; do
+                    if [ "$candidate_desc_id" -eq "$desc_id" ]; then
+                        found=1
+                        printf ' %s' "${desc%%\|*}|SnippetsNextPlaceholders"
+                        break
+                    fi
+                done
+                if [ $found -eq 0 ]; then
+                    printf ' %s' "$desc"
+                fi
+            fi
+            desc_id=$((desc_id+1))
+        done
+        printf '\n'
+
+        printf "select %s\n" "$selections"
+    }
+}

@@ -41,6 +41,7 @@ pub fn editor_completion(
     let unescape_markdown_re = Regex::new(r"\\(?P<c>.)").unwrap();
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
     let escape_bar = |s: &str| s.replace("|", r"\|");
+    let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
 
     let items = items
         .into_iter()
@@ -70,12 +71,23 @@ pub fn editor_completion(
                     .collect::<String>();
                 entry += &format!(" {{MenuInfo}}{:?}", k);
             }
-            editor_quote(&format!(
-                "{}|{}|{}",
-                escape_bar(&x.insert_text.unwrap_or(x.label)),
-                escape_bar(&doc),
-                escape_bar(&entry),
-            ))
+            let insert_text = &x.insert_text.unwrap_or(x.label);
+            let do_snippet = ctx.config.snippet_support;
+            let do_snippet = do_snippet && x.insert_text_format.map(|f| f == InsertTextFormat::Snippet).unwrap_or(false);
+            if do_snippet {
+                let snippet = insert_text;
+                let insert_text = snippet_prefix_re.find(snippet).map(|x| x.as_str()).unwrap_or(&snippet);
+                let command = format!("{}\nlsp-snippets-insert-completion {} {}", doc, editor_quote(&regex::escape(insert_text)), editor_quote(snippet));
+                let command = format!("eval {}", editor_quote(&command));
+                editor_quote(&format!("{}|{}|{}", escape_bar(insert_text), escape_bar(&command), escape_bar(&entry),))
+            } else {
+                editor_quote(&format!(
+                    "{}|{}|{}",
+                    escape_bar(insert_text),
+                    escape_bar(&doc),
+                    escape_bar(&entry),
+                ))
+            }
         })
         .join(" ");
     let p = params.position;
