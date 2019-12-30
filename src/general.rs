@@ -1,5 +1,6 @@
 use crate::context::*;
 use crate::controller;
+use crate::language_features::semantic_highlighting;
 use crate::types::*;
 use crate::util::*;
 use lsp_types::notification::*;
@@ -18,6 +19,7 @@ pub fn initialize(
 ) {
     let initialization_options =
         request_initialization_options_from_kakoune(&meta, ctx).or(initialization_options);
+    #[allow(deprecated)] // for root_path
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
@@ -60,6 +62,9 @@ pub fn initialize(
                     }),
                     ..CodeActionCapability::default()
                 }),
+                semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability{
+                  semantic_highlighting: true,
+                }),
                 ..TextDocumentClientCapabilities::default()
             }),
             experimental: None,
@@ -71,10 +76,12 @@ pub fn initialize(
         root_path: None,
         trace: Some(TraceOption::Off),
         workspace_folders: None,
+        client_info: None,
     };
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
         ctx.capabilities = Some(result.capabilities);
+        ctx.semantic_highlighting_faces = semantic_highlighting::make_scope_map(ctx);
         ctx.notify::<Initialized>(InitializedParams {});
         controller::dispatch_pending_editor_requests(ctx)
     });

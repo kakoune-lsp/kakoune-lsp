@@ -14,7 +14,7 @@ pub struct Document {
     // Corresponds to Kakoune's timestamp.
     // It's passed to a language server as a version and is used to tag selections, highlighters and
     // other timestamp sensitive parameters in commands sent to kakoune.
-    pub version: u64,
+    pub version: i64,
     // Buffer content.
     // It's used to translate between LSP and Kakoune coordinates.
     pub text: ropey::Rope,
@@ -36,6 +36,7 @@ pub struct Context {
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
     pub offset_encoding: OffsetEncoding,
+    pub semantic_highlighting_faces: Vec<String>,
 }
 
 impl Context {
@@ -63,6 +64,7 @@ impl Context {
             session,
             documents: HashMap::default(),
             offset_encoding,
+            semantic_highlighting_faces: Vec::new(),
         }
     }
 

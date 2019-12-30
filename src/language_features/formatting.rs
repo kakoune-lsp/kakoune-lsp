@@ -14,6 +14,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
         options: params,
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<Formatting, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_formatting(meta, result, ctx)

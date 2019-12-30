@@ -1,5 +1,5 @@
 use jsonrpc_core::{Call, Output, Params};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -19,6 +19,8 @@ pub struct Config {
     pub verbosity: u8,
     #[serde(default)]
     pub snippet_support: bool,
+    #[serde(default)]
+    pub semantic_scopes: HashMap<String, String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -62,7 +64,7 @@ pub struct EditorMeta {
     pub client: Option<String>,
     pub buffile: String,
     pub filetype: String,
-    pub version: u64,
+    pub version: i64,
     pub fifo: Option<String>,
 }
 

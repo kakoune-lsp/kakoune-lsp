@@ -1,5 +1,18 @@
-snippet_support = false
+snippet_support = true
 verbosity = 2
+
+[semantic_scopes]
+# Map textmate scopes to kakoune faces for semantic highlighting
+# the underscores are translated to dots, and indicate nesting.
+# That is, if variable_other_field is omitted, it will try the face for
+# variable_other and then variable
+#
+# To see a list of available scopes in the debug buffer, run lsp-semantic-available-scopes
+variable="variable"
+entity_name_function="function"
+entity_name_type="type"
+variable_other_enummember="variable"
+entity_name_namespace="module"
 
 [server]
 # exit session if no requests were received during given period in seconds

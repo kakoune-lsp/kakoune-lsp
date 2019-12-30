@@ -59,6 +59,7 @@ declare-option -hidden line-specs lsp_error_lines
 declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
+declare-option -hidden range-specs lsp_semantic_highlighting
 
 ### Requests ###
 
@@ -341,6 +342,18 @@ buffile  = "%s"
 filetype = "%s"
 version  = %d
 method   = "capabilities"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command lsp-semantic-available-scopes -docstring "List available scopes for current filetype" %{
+    nop %sh{ (printf '
+session  = "%s"
+client   = "%s"
+buffile  = "%s"
+filetype = "%s"
+version  = %d
+method   = "semantic-scopes"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
@@ -972,6 +985,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     set-option global completers option=lsp_completions %opt{completers}
     add-highlighter global/cquery_semhl ranges cquery_semhl
     add-highlighter global/lsp_references ranges lsp_references
+    add-highlighter global/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
 
@@ -995,6 +1009,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
 define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
+    remove-highlighter global/lsp_semantic_highlighting
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
     unmap global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
@@ -1011,6 +1026,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 
     add-highlighter window/cquery_semhl ranges cquery_semhl
     add-highlighter window/lsp_references ranges lsp_references
+    add-highlighter window/lsp_semantic_highlighting ranges lsp_semantic_highlighting
 
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
@@ -1034,6 +1050,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 define-command lsp-disable-window -docstring "Disable kak-lsp in the window scope" %{
     remove-highlighter window/cquery_semhl
     remove-highlighter window/lsp_references
+    remove-highlighter window/lsp_semantic_highlighting
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
     unmap window goto d '<esc>: lsp-definition<ret>'

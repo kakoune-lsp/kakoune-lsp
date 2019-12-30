@@ -10,7 +10,6 @@ use lsp_types::*;
 use serde;
 use serde::Deserialize;
 use url::Url;
-use url_serde;
 
 // Navigate
 
@@ -359,7 +358,6 @@ impl SemanticSymbol {
 #[serde(rename_all = "camelCase")]
 pub struct PublishSemanticHighlightingParams {
     /// The URI for which diagnostic information is reported.
-    #[serde(with = "url_serde")]
     pub uri: Url,
 
     /// The symbols to highlight

@@ -23,6 +23,7 @@ pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mu
         context: ReferenceContext {
             include_declaration: true,
         },
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<References, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_references(meta, result, ctx)
@@ -100,6 +101,7 @@ pub fn text_document_references_highlight(
         context: ReferenceContext {
             include_declaration: true,
         },
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<References, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_references_highlight(meta, result, ctx)
