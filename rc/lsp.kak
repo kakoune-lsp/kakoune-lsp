@@ -865,7 +865,7 @@ Jump to the next or previous diagnostic error" %{
                 selection="$first"
             fi
         fi
-        printf "edit %b %b" "$kak_buffile" "$selection"
+        printf 'edit "%b" %b' "$kak_buffile" "$selection"
     }
 }
 
