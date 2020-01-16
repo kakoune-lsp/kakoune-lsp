@@ -111,6 +111,10 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         features.push("lsp-definition (mapped to `gd` by default)");
     }
 
+    if server_capabilities.implementation_provider.is_some() {
+        features.push("lsp-implementation");
+    }
+
     if server_capabilities.references_provider.unwrap_or(false) {
         features.push("lsp-references");
     }

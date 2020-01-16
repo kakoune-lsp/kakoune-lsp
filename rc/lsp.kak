@@ -164,6 +164,21 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-implementation -docstring "Go to implementation" %{
+    lsp-did-change
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/implementation"
+[params.position]
+line      = %d
+column    = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-code-actions -docstring "Request code actions for the main cursor position" %{
     lsp-did-change
     nop %sh{ (printf '
@@ -690,6 +705,18 @@ define-command -hidden lsp-show-references -params 2 -docstring "Render referenc
     }
 }
 
+define-command -hidden lsp-show-implementations -params 2 -docstring "Render implementations" %{
+    evaluate-commands -try-client %opt[toolsclient] %{
+        edit! -scratch *implementations*
+        cd %arg{1}
+        try %{ set-option buffer working_folder %sh{pwd} }
+        set-option buffer filetype grep
+        set-option buffer grep_current_line 0
+        set-register '"' %arg{2}
+        execute-keys Pgg
+    }
+}
+
 define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
     evaluate-commands -try-client %opt[toolsclient] %{
         edit! -scratch *symbols*
@@ -956,7 +983,8 @@ define-command lsp -params 1.. -shell-script-candidates %{
     inline-diagnostics-enable inline-diagnostics-disable\
     diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
     auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
-    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable find-error;
+    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable\
+    find-error implementation;
         do echo $cmd;
     done
 } %{ evaluate-commands "lsp-%arg{1}" }
@@ -971,6 +999,7 @@ map global lsp d '<esc>: lsp-definition<ret>'             -docstring 'go to defi
 map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list project errors and warnings'
 map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buffer'
 map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
+map global lsp i '<esc>: lsp-implementation<ret>'         -docstring 'go to implementation'
 map global lsp r '<esc>: lsp-references<ret>'             -docstring 'list symbol references'
 map global lsp s '<esc>: lsp-signature-help<ret>'         -docstring 'show function signature help'
 map global lsp S '<esc>: lsp-document-symbol<ret>'        -docstring 'list document symbols'

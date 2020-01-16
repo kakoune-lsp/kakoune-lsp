@@ -167,16 +167,38 @@ pub fn goto_definition_response_to_location(
             if locations.is_empty() {
                 None
             } else {
-                let LocationLink {
-                    target_uri,
-                    target_range,
-                    ..
-                } = locations.remove(0);
+                Some(location_link_to_location(locations.remove(0)))
+            }
+        }
+        None => None,
+    }
+}
 
-                Some(Location {
-                    uri: target_uri,
-                    range: target_range,
-                })
+/// Convert `GotoDefinitionResponse` into `Option<Vec<Locations>>`.
+///
+/// Transforms LocationLink into Location by dropping source information.
+pub fn goto_definition_response_to_locations(
+    result: Option<GotoDefinitionResponse>,
+) -> Option<Vec<Location>> {
+    match result {
+        Some(GotoDefinitionResponse::Scalar(location)) => Some(vec![location]),
+        Some(GotoDefinitionResponse::Array(locations)) => {
+            if locations.is_empty() {
+                None
+            } else {
+                Some(locations)
+            }
+        }
+        Some(GotoDefinitionResponse::Link(mut locations)) => {
+            if locations.is_empty() {
+                None
+            } else {
+                Some(
+                    locations
+                        .drain(..)
+                        .map(|link| location_link_to_location(link))
+                        .collect(),
+                )
             }
         }
         None => None,
@@ -237,5 +259,18 @@ pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &
         if let Err(e) = apply_text_edits_to_file(uri, edits, &ctx.offset_encoding) {
             error!("Failed to apply edits to file {} ({})", uri, e);
         };
+    }
+}
+
+fn location_link_to_location(location_link: LocationLink) -> Location {
+    let LocationLink {
+        target_uri,
+        target_range,
+        ..
+    } = location_link;
+
+    Location {
+        uri: target_uri,
+        range: target_range,
     }
 }

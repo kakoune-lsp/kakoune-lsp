@@ -189,6 +189,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::GotoDefinition::METHOD => {
             definition::text_document_definition(meta, params, &mut ctx);
         }
+        request::GotoImplementation::METHOD => {
+            implementation::text_document_implementation(meta, params, &mut ctx);
+        }
         request::References::METHOD => {
             references::text_document_references(meta, params, &mut ctx);
         }

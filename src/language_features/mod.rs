@@ -7,6 +7,7 @@ pub mod document_symbol;
 pub mod eclipse_jdt_ls;
 pub mod formatting;
 pub mod hover;
+pub mod implementation;
 pub mod references;
 pub mod rename;
 pub mod semantic_highlighting;

@@ -128,6 +128,8 @@ Either way you get:
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
   `\*references*` buffer has `grep` filetype so you can use all commands provided by `grep.kak`, including `grep-jump`.
 * `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
+* `lsp-implementation` command to find implementations for a symbol under the main cursor
+  `\*implementations*` buffer has `grep` filetype so you can use all commands provided by `grep.kak`, including `grep-jump`.
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
@@ -164,6 +166,7 @@ attempt to spin up server if it is down.
 | e | lsp-diagnostics
 | f | lsp-formatting
 | h | lsp-hover
+| i | lsp-implementation
 | r | lsp-references
 | s | lsp-signature-help
 | S | lsp-document-symbol
