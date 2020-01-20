@@ -32,7 +32,7 @@ command = "scry"
 
 [language.javascript]
 filetypes = ["javascript"]
-roots = ["package.json"]
+roots = [".flowconfig"]
 command = "flow"
 args = ["lsp"]
 
