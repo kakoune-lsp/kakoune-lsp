@@ -97,21 +97,18 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 use std::collections::hash_map::Entry;
                 match controllers.entry(route.clone()) {
                     Entry::Occupied(controller_entry) => {
-                        if controller_entry.get().worker.sender().send(request).is_err()  {
+                        if controller_entry.get().worker.sender().send(request.clone()).is_err()  {
+                            if let Some(fifo) = request.meta.fifo {
+                                cancel_blocking_request(fifo);
+                            }
                             controller_entry.remove();
                             error!("Failed to send message to controller");
                             continue 'event_loop;
                         }
                     }
                     Entry::Vacant(controller_entry) => {
-                        // When server is not running it's better to cancel blocking request.
-                        // Because server can take a long time to initialize or can fail to start.
-                        // We assume that it's less annoying for user to just repeat command later
-                        // than to wait, cancel, and repeat.
                         if let Some(fifo) = request.meta.fifo {
-                            debug!("Blocking request but LSP server is not running");
-                            let command = "lsp-show-error 'Language server is not running, cancelling blocking request'";
-                            std::fs::write(fifo, command).expect("Failed to write command to fifo");
+                            cancel_blocking_request(fifo);
                             // As Kakoune triggers BufClose after KakEnd we don't want to spawn a
                             // new controller in that case. In normal situation it's unlikely to
                             // get didClose message without running controller, unless it crashed
@@ -132,6 +129,16 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     }
     stop_session(&mut controllers);
     0
+}
+
+/// When server is not running it's better to cancel blocking request.
+/// Because server can take a long time to initialize or can fail to start.
+/// We assume that it's less annoying for user to just repeat command later
+/// than to wait, cancel, and repeat.
+fn cancel_blocking_request(fifo: String) {
+    debug!("Blocking request but LSP server is not running");
+    let command = "lsp-show-error 'Language server is not running, cancelling blocking request'";
+    std::fs::write(fifo, command).expect("Failed to write command to fifo");
 }
 
 /// Reap controllers associated with editor session.
