@@ -55,7 +55,7 @@ declare-option -docstring "Number of warnings" int lsp_diagnostic_warning_count 
 
 declare-option -hidden completions lsp_completions
 declare-option -hidden range-specs lsp_errors
-declare-option -hidden line-specs lsp_error_lines
+declare-option -hidden line-specs lsp_error_lines 0 '0| '
 declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references

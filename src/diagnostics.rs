@@ -61,7 +61,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         "set buffer lsp_diagnostic_error_count {}
          set buffer lsp_diagnostic_warning_count {}
          set buffer lsp_errors {} {}
-         eval \"set buffer lsp_error_lines {} {} '1| ' \"",
+         eval \"set buffer lsp_error_lines {} {} '0| '\"",
         error_count, warning_count, version, ranges, version, line_flags
     );
     let command = format!(
