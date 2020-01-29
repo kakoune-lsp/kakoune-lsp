@@ -44,6 +44,11 @@ declare-option -docstring "Character to signal a warning in the gutter" str lsp_
 # Another good default:
 # set-option global lsp_diagnostic_line_error_sign '▓'
 # set-option global lsp_diagnostic_line_warning_sign '▒'
+# This is used to render lsp-hover response.
+# By default it shows both hover info and diagnostics.
+declare-option -docstring "Format hover info" str lsp_show_hover_format 'printf ''%s\n\n%s'' "${lsp_info}" "${lsp_diagnostics}"'
+# If you want to see only hover info, try 
+# set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
 
 # Options for information exposed by kak-lsp.
 
@@ -743,8 +748,17 @@ method    = "eclipse.jdt.ls/organizeImports"
 
 # Feel free to override these commands in your config if you need to customise response handling.
 
-define-command -hidden lsp-show-hover -params 2 -docstring "Render hover info" %{ evaluate-commands %sh{
-    content=$2
+define-command -hidden lsp-show-hover -params 3 -docstring %{
+    lsp-show-hover <anchor> <info> <diagnostics>
+    Render hover info.
+} %{ evaluate-commands %sh{
+    lsp_info=$2
+    lsp_diagnostics=$3
+    content=$(eval "${kak_opt_lsp_show_hover_format}")
+    # remove leading whitespace characters
+    content="${content#"${content%%[![:space:]]*}"}"
+    # remove trailing whitespace characters
+    content="${content%"${content##*[![:space:]]}"}"
 
     if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
         content=$(printf %s "$2" | head -n $kak_opt_lsp_hover_max_lines)

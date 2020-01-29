@@ -73,22 +73,12 @@ pub fn editor_hover(
         return;
     }
 
-    let command = if diagnostics.is_empty() {
-        format!(
-            "lsp-show-hover {} {}",
-            params.position,
-            editor_quote(&contents)
-        )
-    } else if contents.is_empty() {
-        format!(
-            "lsp-show-hover {} {}",
-            params.position,
-            editor_quote(&diagnostics)
-        )
-    } else {
-        let info = format!("{}\n\n{}", contents, diagnostics);
-        format!("lsp-show-hover {} {}", params.position, editor_quote(&info))
-    };
+    let command = format!(
+        "lsp-show-hover {} {} {}",
+        params.position,
+        editor_quote(&contents),
+        editor_quote(&diagnostics)
+    );
 
     ctx.exec(meta, command);
 }

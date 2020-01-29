@@ -121,9 +121,10 @@ Either way you get:
 
 * completions
 * `lsp-definition` command to go to definition, mapped to `gd` by default
-* `lsp-hover` command to show hover info;
-  to automatically show hover when you move around use `lsp-auto-hover-enable`;
-  to show hover anchored to hovered position do `set global lsp_hover_anchor true`
+* `lsp-hover` command to show hover info (including relevant diagnostics when available)
+** to automatically show hover when you move around use `lsp-auto-hover-enable`
+** to show hover anchored to hovered position do `set global lsp_hover_anchor true`
+** to exclude diagnostics do `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'` 
 * `lsp-find-error` command to jump to the next or previous error in the file
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
   `\*references*` buffer has `grep` filetype so you can use all commands provided by `grep.kak`, including `grep-jump`.
