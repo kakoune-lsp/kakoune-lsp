@@ -1101,6 +1101,7 @@ map global lsp S '<esc>: lsp-document-symbol<ret>'        -docstring 'list docum
 map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'  -docstring 'search project symbols'
 map global lsp n '<esc>: lsp-find-error<ret>'             -docstring 'find next error'
 map global lsp p '<esc>: lsp-find-error --previous<ret>'  -docstring 'find previous error'
+map global lsp q '<esc>: lsp-exit<ret>'                   -docstring 'exit session'
 map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highlight-references'
 
 ### Default integration ###
