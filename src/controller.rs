@@ -13,6 +13,11 @@ use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
 
+// This is an error code defined by the language server protocol, signifying that a request was
+// cancelled because the content changed before it could be fulfilled. In this case, the user
+// should not be notified.
+const CONTENT_MODIFIED: i64 = -32801;
+
 /// Start controller.
 ///
 /// Controller spawns language server for the given language and project root (passed as `route`).
@@ -122,17 +127,22 @@ pub fn start(
                                 error!("Error response from server: {:?}", failure);
                                 if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
                                     let (meta, method, _) = request;
-                                    let msg = match failure.error.code {
-                                        ErrorCode::MethodNotFound => format!(
-                                            "{} language server doesn't support method {}",
-                                            ctx.language_id, method
-                                        ),
-                                        _ => format!(
-                                            "{} language server error: {}",
-                                            ctx.language_id, editor_quote(&failure.error.message)
-                                        ),
-                                    };
-                                    ctx.exec(meta, format!("lsp-show-error {}", editor_quote(&msg)));
+                                    match failure.error.code {
+                                        ErrorCode::ServerError(CONTENT_MODIFIED) => {},
+                                        code => {
+                                            let msg = match code {
+                                                ErrorCode::MethodNotFound => format!(
+                                                    "{} language server doesn't support method {}",
+                                                    ctx.language_id, method
+                                                ),
+                                                _ => format!(
+                                                    "{} language server error: {}",
+                                                    ctx.language_id, editor_quote(&failure.error.message)
+                                                ),
+                                            };
+                                            ctx.exec(meta, format!("lsp-show-error {}", editor_quote(&msg)));
+                                        }
+                                    }
                                 } else {
                                     error!("Id {:?} is not in waitlist!", failure.id);
                                 }
