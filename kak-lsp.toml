@@ -103,9 +103,11 @@ command = "bash-language-server"
 args = ["start"]
 
 [language.dart]
+# start shell to find path to dart analysis server source
 filetypes = ["dart"]
 roots = ["pubspec.yaml", ".git"]
-command = "dart_language_server"
+command = "sh"
+args = ["-c", "dart $(dirname $(which dart))/snapshots/analysis_server.dart.snapshot --lsp"]
 
 [language.d]
 filetypes = ["d", "di"]
