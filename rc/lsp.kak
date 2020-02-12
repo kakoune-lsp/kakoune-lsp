@@ -607,6 +607,19 @@ cat ${pipe}
 rm -rf ${tmp}
 }}
 
+define-command lsp-update-semantic-highlighting -hidden %{
+    nop %sh{ (printf '
+session      = "%s"
+client       = "%s"
+buffile      = "%s"
+filetype     = "%s"
+version      = %d
+method       = "update-semantic-highlighting"
+[params]
+current = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_lsp_semantic_highlighting}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
+}
+
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{

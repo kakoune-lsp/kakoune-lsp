@@ -238,6 +238,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "semantic-scopes" => {
             semantic_highlighting::debug_scopes(meta, &mut ctx);
         }
+        "update-semantic-highlighting" => {
+            semantic_highlighting::editor_update(meta, params, &mut ctx);
+        }
 
         // CCLS
         ccls::NavigateRequest::METHOD => {

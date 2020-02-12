@@ -5,6 +5,7 @@ use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
+use serde::Deserialize;
 use std::collections::HashMap;
 
 pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
@@ -12,17 +13,47 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
     let params = params.unwrap();
     let path = params.text_document.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
-    let document = match ctx.documents.get(buffile) {
-        Some(document) => document,
-        None => return,
-    };
     let meta = match ctx.meta_for_buffer(buffile.to_string()) {
         Some(meta) => meta,
         None => return,
     };
+    ctx.semantic_highlighting_lines.insert(buffile.to_string(), params.lines);
+    let command = "lsp-update-semantic-highlighting";
+    let command = format!(
+        "eval -buffer {} {}",
+        editor_quote(&buffile),
+        editor_quote(&command)
+    );
+    ctx.exec(meta, command.to_string());
+}
+
+#[derive(Deserialize)]
+struct EditorUpdateParams {
+    current: String,
+}
+
+pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = EditorUpdateParams::deserialize(params).expect("Failed to parse params");
+    let buffile = &meta.buffile;
+    let document = match ctx.documents.get(buffile) {
+        Some(document) => document,
+        None => return,
+    };
     let faces = &ctx.semantic_highlighting_faces;
-    let ranges = params
-        .lines
+    let cur_lines = params.current.split(" ");
+    let updated_lines = match ctx.semantic_highlighting_lines.get(buffile) {
+      Some(lines) => lines,
+      None => return,
+    };
+    let old_ranges = cur_lines.filter(|&x| {
+        let x = x.trim();
+        x.find(".")
+            .and_then(|p| x[0..p].parse::<i32>().ok())
+            // +1 because LSP ranges are 0-based, but kakoune's are 1-based.
+            .map(|line| !updated_lines.iter().any(|info| info.line + 1 == line))
+            .unwrap_or(false)
+    }).join(" ");
+    let ranges = updated_lines
         .iter()
         .flat_map(|info| {
             let line: u64 = info.line as u64;
@@ -43,6 +74,7 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
             })
         })
         .join(" ");
+    let ranges = old_ranges + " " + &ranges;
     let command = format!(
         "set buffer lsp_semantic_highlighting {} {}",
         meta.version, &ranges
