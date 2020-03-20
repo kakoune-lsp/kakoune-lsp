@@ -26,7 +26,8 @@
 //!   And just works when `offset_encoding: utf-8` is provided in the config.
 use crate::types::*;
 use lsp_types::*;
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
+use std::cmp::min;
 
 pub const EOL_OFFSET: u64 = 1_000_000;
 
@@ -67,12 +68,31 @@ pub fn kakoune_position_to_lsp(
     }
 }
 
+/// Get a line from a Rope
+///
+/// If the line number is out-of-bounds, this will return the
+/// last line. This is useful because the language server might
+/// use a large value to convey "end of file".
+fn get_line(line_number: usize, text: &Rope) -> RopeSlice {
+    text.line(min(line_number, text.len_lines() - 1))
+}
+
+/// Get the byte index of a character in a Rope slice
+///
+/// If the char number is out-of-bounds, this will return one past
+/// the last character. This is useful because the language
+/// server might use a large value to convey "end of file".
+fn get_byte_index(char_index: usize, text: RopeSlice) -> usize {
+    text.char_to_byte(min(char_index, text.len_chars()))
+}
+
 fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> KakouneRange {
     let Range { start, end } = range;
-    let start_line = text.line(start.line as _);
-    let start_byte = start_line.char_to_byte(start.character as _) as u64;
-    let end_line = text.line(end.line as _);
-    let end_byte = end_line.char_to_byte(end.character as _) as u64;
+
+    let start_line = get_line(start.line as _, text);
+    let start_byte = get_byte_index(start.character as _, start_line) as u64;
+    let end_line = get_line(end.line as _, text);
+    let end_byte = get_byte_index(end.character as _, end_line) as u64;
 
     lsp_range_to_kakoune_utf_8_code_units(&Range {
         start: Position {
