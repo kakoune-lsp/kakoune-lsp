@@ -8,11 +8,11 @@ verbosity = 2
 # variable_other and then variable
 #
 # To see a list of available scopes in the debug buffer, run lsp-semantic-available-scopes
-variable="variable"
-entity_name_function="function"
-entity_name_type="type"
-variable_other_enummember="variable"
-entity_name_namespace="module"
+variable = "variable"
+entity_name_function = "function"
+entity_name_type = "type"
+variable_other_enummember = "variable"
+entity_name_namespace = "module"
 
 [server]
 # exit session if no requests were received during given period in seconds
