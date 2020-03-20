@@ -305,6 +305,27 @@ please don't hesitate to raise an issue.
 NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
 E.g. `racer.kak` competes for autocompletion in Rust files.
 
+=== Crashes
+
+For troubleshooting crashes, you might like to run kak-lsp outside of
+Kakoune.
+
+To do this:
+
+. Modify your `kakrc` to run `eval %sh{kak-lsp --kakoune -s $kak_session}`
+*but not* `lsp-enable`.
+
+. Launch Kakoune, and find your session ID at the bottom right of
+the terminal.
+
+. In a second terminal, run kak-lsp with:
+
+  kak-lsp -s $YOUR_KAKOUNE_SESSION_ID
+
+. Inside Kakoune, run:
+
+  lsp-enable
+
 == Versioning
 
 kak-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we
