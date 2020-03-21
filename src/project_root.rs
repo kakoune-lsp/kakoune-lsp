@@ -14,7 +14,7 @@ pub fn find_project_root(language: &str, markers: &[String], path: &str) -> Stri
 
 pub fn roots_by_marker(roots: &[String], path: &str) -> String {
     let mut pwd = PathBuf::from(path);
-    if pwd.is_file() {
+    while !pwd.is_dir() {
         pwd.pop();
     }
     let src = pwd.to_str().unwrap().to_string();
