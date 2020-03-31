@@ -312,19 +312,13 @@ Kakoune.
 
 To do this:
 
-. Modify your `kakrc` to run `eval %sh{kak-lsp --kakoune -s $kak_session}`
-*but not* `lsp-enable`.
+. *Before launching Kakoune*, run kak-lsp with an arbitrary session ID (here `foobar`):
 
-. Launch Kakoune, and find your session ID at the bottom right of
-the terminal.
+  kak-lsp -s foobar
+  
+. In a second terminal, run Kakoune with the same session ID:
 
-. In a second terminal, run kak-lsp with:
-
-  kak-lsp -s $YOUR_KAKOUNE_SESSION_ID
-
-. Inside Kakoune, run:
-
-  lsp-enable
+  kak -s foobar
 
 == Versioning
 
