@@ -167,7 +167,7 @@ where
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct KakounePosition {
     pub line: u64,
     pub column: u64, // in bytes, not chars!!!
@@ -187,7 +187,11 @@ impl Display for KakounePosition {
 
 impl Display for KakouneRange {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{},{}", self.start, self.end)
+        if self.start == self.end {
+            write!(f, "{}+0", self.start)
+        } else {
+            write!(f, "{},{}", self.start, self.end)
+        }
     }
 }
 
