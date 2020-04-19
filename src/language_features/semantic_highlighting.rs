@@ -58,7 +58,7 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
         .flat_map(|info| {
             let line: u64 = info.line as u64;
             let offset_encoding = &ctx.offset_encoding;
-            info.tokens.iter().map(move |t| {
+            info.tokens.iter().flat_map(|v| v.iter()).map(move |t| {
                 let face = faces
                     .get(t.scope as usize)
                     .expect("Semantic highlighting token sent for out-of-range scope");
