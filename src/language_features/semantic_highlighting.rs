@@ -17,7 +17,8 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
         Some(meta) => meta,
         None => return,
     };
-    ctx.semantic_highlighting_lines.insert(buffile.to_string(), params.lines);
+    ctx.semantic_highlighting_lines
+        .insert(buffile.to_string(), params.lines);
     let command = "lsp-update-semantic-highlighting";
     let command = format!(
         "eval -buffer {} {}",
@@ -42,17 +43,19 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
     let faces = &ctx.semantic_highlighting_faces;
     let cur_lines = params.current.split(" ");
     let updated_lines = match ctx.semantic_highlighting_lines.get(buffile) {
-      Some(lines) => lines,
-      None => return,
+        Some(lines) => lines,
+        None => return,
     };
-    let old_ranges = cur_lines.filter(|&x| {
-        let x = x.trim();
-        x.find(".")
-            .and_then(|p| x[0..p].parse::<i32>().ok())
-            // +1 because LSP ranges are 0-based, but kakoune's are 1-based.
-            .map(|line| !updated_lines.iter().any(|info| info.line + 1 == line))
-            .unwrap_or(false)
-    }).join(" ");
+    let old_ranges = cur_lines
+        .filter(|&x| {
+            let x = x.trim();
+            x.find(".")
+                .and_then(|p| x[0..p].parse::<i32>().ok())
+                // +1 because LSP ranges are 0-based, but kakoune's are 1-based.
+                .map(|line| !updated_lines.iter().any(|info| info.line + 1 == line))
+                .unwrap_or(false)
+        })
+        .join(" ");
     let ranges = updated_lines
         .iter()
         .flat_map(|info| {
