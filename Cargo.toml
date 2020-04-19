@@ -1,6 +1,6 @@
 [package]
 name = "kak-lsp"
-version = "7.0.0-snapshot"
+version = "8.0.0"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>"]
 edition = "2018"
 license = "Unlicense/MIT"
