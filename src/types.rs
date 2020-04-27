@@ -21,6 +21,10 @@ pub struct Config {
     pub snippet_support: bool,
     #[serde(default)]
     pub semantic_scopes: HashMap<String, String>,
+    #[serde(default)]
+    pub semantic_tokens: HashMap<String, String>,
+    #[serde(default)]
+    pub semantic_token_modifiers: HashMap<String, String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]

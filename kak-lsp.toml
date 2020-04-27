@@ -14,6 +14,24 @@ entity_name_type = "type"
 variable_other_enummember = "variable"
 entity_name_namespace = "module"
 
+# Semantic tokens support
+# See https://github.com/microsoft/vscode-languageserver-node/blob/8c8981eb4fb6adec27bf1bb5390a0f8f7df2899e/client/src/semanticTokens.proposed.ts#L288
+# for token/modifier types.
+
+[semantic_tokens]
+type = "type"
+variable = "variable"
+namespace = "module"
+function = "function"
+string = "string"
+keyword = "keyword"
+operator = "operator"
+comment = "comment"
+
+[semantic_modifiers]
+documentation = "documentation"
+readonly = "default+d"
+
 [server]
 # exit session if no requests were received during given period in seconds
 # works only in unix sockets mode (-s/--session)
