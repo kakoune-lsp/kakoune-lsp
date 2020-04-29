@@ -262,7 +262,7 @@ That is, the keys of the `lsp_server_configuration` option are a `.`-delimited p
 Inlay hints are a feature supported by https://github.com/rust-analyzer/rust-analyzer[rust-analyzer], which show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it in kak-lsp, add the following to your `kakrc`:
 
 ----
-hook global BufCreate .*\.rs %{
+hook global WinSetOption filetype=rust %{
   hook window -group rust-inlay-hints BufReload .* rust-analyzer-inlay-hints
   hook window -group rust-inlay-hints InsertIdle .* rust-analyzer-inlay-hints
   hook -once -always window WinSetOption filetype=.* %{
