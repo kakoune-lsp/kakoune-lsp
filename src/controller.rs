@@ -264,6 +264,11 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             eclipse_jdt_ls::organize_imports(meta, ctx);
         }
 
+        // rust-analyzer
+        rust_analyzer::InlayHints::METHOD => {
+            rust_analyzer::inlay_hints(meta, params, ctx);
+        }
+
         _ => {
             warn!("Unsupported method: {}", method);
         }
