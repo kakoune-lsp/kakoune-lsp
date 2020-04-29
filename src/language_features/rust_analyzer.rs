@@ -66,14 +66,14 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
                         start: pos.clone(),
                         end: pos,
                     };
-                    editor_quote(&format!("{}|{{default+di}}{{\\}}: {}", range, label))
+                    editor_quote(&format!("{}|{{InlayHint}}{{\\}}: {}", range, label))
                 }
                 InlayKind::ParameterHint => {
                     let range = KakouneRange {
                         start: range.start.clone(),
                         end: range.start,
                     };
-                    editor_quote(&format!("{}|{{default+di}}{{\\}}{}: ", range, label))
+                    editor_quote(&format!("{}|{{InlayHint}}{{\\}}{}: ", range, label))
                 }
                 InlayKind::ChainingHint => {
                     let pos = KakounePosition {
@@ -84,7 +84,7 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
                         start: pos.clone(),
                         end: pos,
                     };
-                    editor_quote(&format!("{}|{{default+di}}{{\\}} {}", range, label))
+                    editor_quote(&format!("{}|{{InlayHint}}{{\\}} {}", range, label))
                 }
             }
         })
