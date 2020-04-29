@@ -273,6 +273,22 @@ hook global WinSetOption filetype=rust %{
 
 You can change the face of the hints with `set-face global InlayHint <face>`.
 
+== Semantic Tokens
+
+kak-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:
+
+----
+hook global WinSetOption filetype=<language> %{
+  hook window -group semantic-tokens BufReload .* lsp-semantic-tokens
+  hook window -group semantic-tokens InsertIdle .* lsp-semantic-tokens
+  hook -once -always window WinSetOption filetype=.* %{
+    remove-hooks window semantic-tokens
+  }
+}
+----
+
+The faces used for semantic tokens and modifiers can be modified in `kak-lsp.toml`, under the `semantic_tokens` and `semantic_modifiers` sections. The modifiers are used first if available, and then the main token type is used if no modifier face is specified.
+
 == Limitations
 
 === Encoding
