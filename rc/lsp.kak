@@ -67,6 +67,7 @@ declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
 declare-option -hidden range-specs lsp_semantic_highlighting
+declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs rust_analyzer_inlay_hints
 
 ### Requests ###
@@ -778,6 +779,24 @@ method    = "rust-analyzer/inlayHints"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+# semantic tokens
+
+define-command lsp-semantic-tokens -docstring "semantic-tokens-update: Request semantic tokens" %{
+  lsp-did-change-and-then lsp-semantic-tokens-request
+}
+
+define-command -hidden lsp-semantic-tokens-request %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/semanticTokens"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 ### Response handling ###
 
 # Feel free to override these commands in your config if you need to customise response handling.
@@ -1145,6 +1164,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     add-highlighter global/cquery_semhl ranges cquery_semhl
     add-highlighter global/lsp_references ranges lsp_references
     add-highlighter global/lsp_semantic_highlighting ranges lsp_semantic_highlighting
+    add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter global/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
@@ -1170,6 +1190,7 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
     remove-highlighter global/lsp_semantic_highlighting
+    remove-highlighter global/lsp_semantic_tokens
     remove-highlighter global/rust_analyzer_inlay_hints
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
@@ -1188,6 +1209,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     add-highlighter window/cquery_semhl ranges cquery_semhl
     add-highlighter window/lsp_references ranges lsp_references
     add-highlighter window/lsp_semantic_highlighting ranges lsp_semantic_highlighting
+    add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter window/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
 
     lsp-inline-diagnostics-enable window
@@ -1213,6 +1235,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     remove-highlighter window/cquery_semhl
     remove-highlighter window/lsp_references
     remove-highlighter window/lsp_semantic_highlighting
+    remove-highlighter window/lsp_semantic_tokens
     remove-highlighter window/rust_analyzer_inlay_hints
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
