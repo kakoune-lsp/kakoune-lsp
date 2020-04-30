@@ -264,6 +264,7 @@ Inlay hints are a feature supported by https://github.com/rust-analyzer/rust-ana
 ----
 hook global WinSetOption filetype=rust %{
   hook window -group rust-inlay-hints BufReload .* rust-analyzer-inlay-hints
+  hook window -group rust-inlay-hints NormalIdle .* rust-analyzer-inlay-hints
   hook window -group rust-inlay-hints InsertIdle .* rust-analyzer-inlay-hints
   hook -once -always window WinSetOption filetype=.* %{
     remove-hooks window rust-inlay-hints
@@ -280,6 +281,7 @@ kak-lsp supports the semanticTokens feature for semantic highlighting. If the la
 ----
 hook global WinSetOption filetype=<language> %{
   hook window -group semantic-tokens BufReload .* lsp-semantic-tokens
+  hook window -group semantic-tokens NormalIdle .* lsp-semantic-tokens
   hook window -group semantic-tokens InsertIdle .* lsp-semantic-tokens
   hook -once -always window WinSetOption filetype=.* %{
     remove-hooks window semantic-tokens
