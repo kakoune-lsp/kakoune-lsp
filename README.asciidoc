@@ -291,6 +291,14 @@ hook global WinSetOption filetype=<language> %{
 
 The faces used for semantic tokens and modifiers can be modified in `kak-lsp.toml`, under the `semantic_tokens` and `semantic_modifiers` sections. The modifiers are used first if available, and then the main token type is used if no modifier face is specified.
 
+== Inlay Diagnostics
+
+kak-lsp supports showing diagnostics inline after their respective line, but this behaviour can be somewhat buggy and must be enabled explicitly:
+
+---
+lsp-inlay-diagnostics-enable global
+---
+
 == Limitations
 
 === Encoding
