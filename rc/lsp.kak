@@ -1209,7 +1209,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     add-highlighter window/cquery_semhl ranges cquery_semhl
     add-highlighter window/lsp_references ranges lsp_references
     add-highlighter window/lsp_semantic_highlighting ranges lsp_semantic_highlighting
-    add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
+    add-highlighter window/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter window/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
 
     lsp-inline-diagnostics-enable window
