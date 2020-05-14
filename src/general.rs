@@ -62,8 +62,19 @@ pub fn initialize(
                     }),
                     ..CodeActionCapability::default()
                 }),
+                hover: Some(HoverCapability {
+                    content_format: Some(vec![MarkupKind::PlainText]),
+                    ..HoverCapability::default()
+                }),
                 semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability {
                     semantic_highlighting: true,
+                }),
+                signature_help: Some(SignatureHelpCapability {
+                    signature_information: Some(SignatureInformationSettings {
+                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        parameter_information: None,
+                    }),
+                    ..SignatureHelpCapability::default()
                 }),
                 ..TextDocumentClientCapabilities::default()
             }),
