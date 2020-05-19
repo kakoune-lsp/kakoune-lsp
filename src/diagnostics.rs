@@ -85,7 +85,10 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             } else {
                 ", "
             };
-            editor_quote(&format!("{}|{{{}}}{{\\}}{}{}", range, face, sep, x.message))
+            editor_quote(&format!(
+                "{}+0|{{{}}}{{\\}}{}{}",
+                range.start, face, sep, x.message
+            ))
         })
         .join(" ");
     // Always show a space on line one if no other highlighter is there,
