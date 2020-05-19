@@ -69,6 +69,7 @@ declare-option -hidden range-specs lsp_references
 declare-option -hidden range-specs lsp_semantic_highlighting
 declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs rust_analyzer_inlay_hints
+declare-option -hidden range-specs lsp_diagnostics
 
 ### Requests ###
 
@@ -1083,6 +1084,14 @@ define-command lsp-diagnostic-lines-enable -params 1 -docstring "lsp-diagnostic-
 
 define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic-lines-disable <scope>: Hide flags on lines with diagnostics in <scope>"  %{
     remove-highlighter "%arg{1}/lsp_error_lines"
+}
+
+define-command lsp-inlay-diagnostics-enable -params 1 -docstring "lsp-inlay-diagnostics-enable <scope>: Enable inlay diagnostics highlighting for <scope>" %{
+    add-highlighter "%arg{1}/lsp_diagnostics" replace-ranges lsp_diagnostics
+}
+
+define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-diagnostics-disable <scope>: Disable inlay diagnostics highlighting for <scope>"  %{
+    remove-highlighter "%arg{1}/lsp_diagnostics"
 }
 
 define-command lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{

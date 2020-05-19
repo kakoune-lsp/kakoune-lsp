@@ -57,6 +57,35 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             )
         })
         .join(" ");
+    let diagnostic_ranges = diagnostics
+        .iter()
+        .enumerate()
+        .map(|(i, x)| {
+            let face = match x.severity {
+                Some(DiagnosticSeverity::Error) => "DiagnosticError",
+                _ => "DiagnosticWarning",
+            };
+            // Pretend the language server sent us the diagnostic past the end of line
+            let range = Range {
+                start: Position {
+                    line: x.range.end.line,
+                    character: u64::MAX,
+                },
+                end: Position {
+                    line: x.range.end.line,
+                    character: u64::MAX,
+                },
+            };
+            let range = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding);
+            editor_quote(&format!(
+                "{}|{{{}}}{{\\}}{}{}",
+                range,
+                face,
+                if i == 0 { "" } else { ", " }, // separate all but the first diagnostic on the same line
+                x.message
+            ))
+        })
+        .join(" ");
     // Always show a space on line one if no other highlighter is there,
     // to make sure the column always has the right width
     // Also wrap it in another eval and quotes, to make sure the %opt[] tags are expanded
@@ -64,8 +93,16 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         "set buffer lsp_diagnostic_error_count {}
          set buffer lsp_diagnostic_warning_count {}
          set buffer lsp_errors {} {}
-         eval \"set buffer lsp_error_lines {} {} '0| '\"",
-        error_count, warning_count, version, ranges, version, line_flags
+         eval \"set buffer lsp_error_lines {} {} '0| '\"
+         eval \"set buffer lsp_diagnostics {} {}\"",
+        error_count,
+        warning_count,
+        version,
+        ranges,
+        version,
+        line_flags,
+        version,
+        diagnostic_ranges,
     );
     let command = format!(
         "
