@@ -127,7 +127,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     }
 
     if server_capabilities.references_provider.unwrap_or(false) {
-        features.push("lsp-references");
+        features.push("lsp-references (mapped to `gr` by default)");
     }
 
     if server_capabilities
