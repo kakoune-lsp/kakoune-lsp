@@ -80,7 +80,7 @@ pub fn start(
                             notification::DidSaveTextDocument::METHOD => (),
                             // TODO if auto-hover or auto-hl-references is not enabled we might want warning about parking as well
                             request::HoverRequest::METHOD => (),
-                            "textDocument/referencesHighlight" => (),
+                            request::DocumentHighlightRequest::METHOD => (),
                             _ => ctx.exec(
                                 msg.meta.clone(),
                                 "lsp-show-error 'Language server is not initialized, parking request'"
@@ -211,6 +211,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::SignatureHelpRequest::METHOD => {
             signature_help::text_document_signature_help(meta, params, &mut ctx);
         }
+        request::DocumentHighlightRequest::METHOD => {
+            references::text_document_highlights(meta, params, &mut ctx);
+        }
         request::DocumentSymbolRequest::METHOD => {
             document_symbol::text_document_document_symbol(meta, &mut ctx);
         }
@@ -228,9 +231,6 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
         "capabilities" => {
             general::capabilities(meta, &mut ctx);
-        }
-        "textDocument/referencesHighlight" => {
-            references::text_document_references_highlight(meta, params, &mut ctx);
         }
         "apply-workspace-edit" => {
             workspace::apply_edit_from_editor(meta, params, ctx);

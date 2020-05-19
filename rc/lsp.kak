@@ -284,7 +284,7 @@ client    = "%s"
 buffile   = "%s"
 filetype  = "%s"
 version   = %d
-method    = "textDocument/referencesHighlight"
+method    = "textDocument/documentHighlight"
 [params.position]
 line      = %d
 column    = %d

@@ -85,32 +85,24 @@ pub fn editor_references(meta: EditorMeta, result: Option<Vec<Location>>, ctx: &
     ctx.exec(meta, command);
 }
 
-pub fn text_document_references_highlight(
-    meta: EditorMeta,
-    params: EditorParams,
-    ctx: &mut Context,
-) {
+pub fn text_document_highlights(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = ReferenceParams {
-        text_document_position: TextDocumentPositionParams {
-            text_document: TextDocumentIdentifier {
-                uri: Url::from_file_path(&meta.buffile).unwrap(),
-            },
-            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+    let req_params = TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        context: ReferenceContext {
-            include_declaration: true,
-        },
-        work_done_progress_params: Default::default(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
     };
-    ctx.call::<References, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_references_highlight(meta, result, ctx)
-    });
+    ctx.call::<DocumentHighlightRequest, _>(
+        meta,
+        req_params,
+        move |ctx: &mut Context, meta, result| editor_document_highlights(meta, result, ctx),
+    );
 }
 
-pub fn editor_references_highlight(
+pub fn editor_document_highlights(
     meta: EditorMeta,
-    result: Option<Vec<Location>>,
+    result: Option<Vec<DocumentHighlight>>,
     ctx: &mut Context,
 ) {
     let document = ctx.documents.get(&meta.buffile);
@@ -118,21 +110,16 @@ pub fn editor_references_highlight(
         return;
     }
     let document = document.unwrap();
-    if let Some(mut locations) = result {
+    if let Some(mut highlights) = result {
         // Sort locations by (filename, line)
-        locations.sort_unstable_by_key(|location| {
-            (location.uri.to_file_path(), location.range.start.line)
-        });
+        highlights.sort_unstable_by_key(|highlight| highlight.range.start.line);
 
-        let ranges = locations
+        let ranges = highlights
             .iter()
-            .filter(|location| {
-                location.uri.to_file_path().unwrap().to_str().unwrap() == meta.buffile
-            })
-            .map(|location| {
+            .map(|highlight| {
                 format!(
                     "{}|Reference",
-                    lsp_range_to_kakoune(&location.range, &document.text, &ctx.offset_encoding)
+                    lsp_range_to_kakoune(&highlight.range, &document.text, &ctx.offset_encoding)
                 )
             })
             .join(" ");
