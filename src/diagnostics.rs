@@ -5,6 +5,7 @@ use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
+use std::collections::HashSet;
 use std::path::Path;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
@@ -57,33 +58,34 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             )
         })
         .join(" ");
+    let mut lines_with_errors = HashSet::new();
     let diagnostic_ranges = diagnostics
         .iter()
-        .enumerate()
-        .map(|(i, x)| {
+        .map(|x| {
             let face = match x.severity {
                 Some(DiagnosticSeverity::Error) => "DiagnosticError",
                 _ => "DiagnosticWarning",
             };
             // Pretend the language server sent us the diagnostic past the end of line
+            let line = x.range.end.line;
             let range = Range {
                 start: Position {
-                    line: x.range.end.line,
+                    line,
                     character: u64::MAX,
                 },
                 end: Position {
-                    line: x.range.end.line,
+                    line,
                     character: u64::MAX,
                 },
             };
             let range = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding);
-            editor_quote(&format!(
-                "{}|{{{}}}{{\\}}{}{}",
-                range,
-                face,
-                if i == 0 { "" } else { ", " }, // separate all but the first diagnostic on the same line
-                x.message
-            ))
+            // separate all but the first diagnostic on the same line
+            let sep = if lines_with_errors.insert(line) {
+                ""
+            } else {
+                ", "
+            };
+            editor_quote(&format!("{}|{{{}}}{{\\}}{}{}", range, face, sep, x.message))
         })
         .join(" ");
     // Always show a space on line one if no other highlighter is there,
