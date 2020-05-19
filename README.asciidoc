@@ -127,14 +127,18 @@ Either way you get:
 ** to exclude diagnostics do `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'` 
 * `lsp-find-error` command to jump to the next or previous error in the file
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
-  `\*references*` buffer has `grep` filetype so you can use all commands provided by `grep.kak`, including `grep-jump`.
+** `\*references*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
+** `lsp-references-previous-match` and `lsp-references-next-match` to navigate between references
 * `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
 * `lsp-implementation` command to find implementations for a symbol under the main cursor
-  `\*implementations*` buffer has `grep` filetype so you can use all commands provided by `grep.kak`, including `grep-jump`.
+** `\*implementations*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
+** `\*symbols*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
+** `lsp-symbols-previous-match` and `lsp-symbols-next-match` to navigate between symbols
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
+** `\*diagnostics*` buffer has `make` filetype so you can press `<ret>` on a line or use the `make-jump` command
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or warnings; could be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
@@ -295,9 +299,9 @@ The faces used for semantic tokens and modifiers can be modified in `kak-lsp.tom
 
 kak-lsp supports showing diagnostics inline after their respective line, but this behaviour can be somewhat buggy and must be enabled explicitly:
 
----
+----
 lsp-inlay-diagnostics-enable global
----
+----
 
 == Limitations
 
