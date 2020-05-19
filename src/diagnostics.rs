@@ -59,7 +59,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         .join(" ");
     let diagnostic_ranges = diagnostics
         .iter()
-        .map(|x| {
+        .enumerate()
+        .map(|(i, x)| {
             let face = match x.severity {
                 Some(DiagnosticSeverity::Error) => "DiagnosticError",
                 _ => "DiagnosticWarning",
@@ -76,7 +77,13 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 },
             };
             let range = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding);
-            editor_quote(&format!("{}|{{{}}}{{\\}}{}", range, face, x.message))
+            editor_quote(&format!(
+                "{}|{{{}}}{{\\}}{}{}",
+                range,
+                face,
+                if i == 0 { "" } else { ", " }, // separate all but the first diagnostic on the same line
+                x.message
+            ))
         })
         .join(" ");
     // Always show a space on line one if no other highlighter is there,
