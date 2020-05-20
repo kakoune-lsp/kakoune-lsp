@@ -23,6 +23,7 @@ pub fn initialize(
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
+                apply_edit: Some(false),
                 workspace_edit: Some(WorkspaceEditCapability {
                     document_changes: Some(true),
                     resource_operations: Some(vec![
@@ -30,20 +31,151 @@ pub fn initialize(
                         ResourceOperationKind::Delete,
                         ResourceOperationKind::Rename,
                     ]),
-                    ..WorkspaceEditCapability::default()
+                    failure_handling: None,
                 }),
-                ..WorkspaceClientCapabilities::default()
+                did_change_configuration: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                did_change_watched_files: None,
+                symbol: Some(SymbolCapability {
+                    dynamic_registration: Some(false),
+                    symbol_kind: Some(SymbolKindCapability {
+                        value_set: Some(vec![
+                            SymbolKind::File,
+                            SymbolKind::Module,
+                            SymbolKind::Namespace,
+                            SymbolKind::Package,
+                            SymbolKind::Class,
+                            SymbolKind::Method,
+                            SymbolKind::Property,
+                            SymbolKind::Field,
+                            SymbolKind::Constructor,
+                            SymbolKind::Enum,
+                            SymbolKind::Interface,
+                            SymbolKind::Function,
+                            SymbolKind::Variable,
+                            SymbolKind::Constant,
+                            SymbolKind::String,
+                            SymbolKind::Number,
+                            SymbolKind::Boolean,
+                            SymbolKind::Array,
+                            SymbolKind::Object,
+                            SymbolKind::Key,
+                            SymbolKind::Null,
+                            SymbolKind::EnumMember,
+                            SymbolKind::Struct,
+                            SymbolKind::Event,
+                            SymbolKind::Operator,
+                            SymbolKind::TypeParameter,
+                        ]),
+                    }),
+                }),
+                execute_command: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                workspace_folders: Some(false),
+                configuration: Some(false),
             }),
             text_document: Some(TextDocumentClientCapabilities {
+                synchronization: Some(SynchronizationCapability {
+                    dynamic_registration: Some(false),
+                    will_save: Some(false),
+                    will_save_wait_until: Some(false),
+                    did_save: Some(true),
+                }),
                 completion: Some(CompletionCapability {
+                    dynamic_registration: Some(false),
                     completion_item: Some(CompletionItemCapability {
-                        documentation_format: Some(vec![MarkupKind::PlainText]),
                         snippet_support: Some(ctx.config.snippet_support),
-                        ..CompletionItemCapability::default()
+                        commit_characters_support: Some(false),
+                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        deprecated_support: Some(false),
+                        preselect_support: Some(false),
+                        tag_support: None,
                     }),
-                    ..CompletionCapability::default()
+                    completion_item_kind: Some(CompletionItemKindCapability {
+                        value_set: Some(vec![
+                            CompletionItemKind::Text,
+                            CompletionItemKind::Method,
+                            CompletionItemKind::Function,
+                            CompletionItemKind::Constructor,
+                            CompletionItemKind::Field,
+                            CompletionItemKind::Variable,
+                            CompletionItemKind::Class,
+                            CompletionItemKind::Interface,
+                            CompletionItemKind::Module,
+                            CompletionItemKind::Property,
+                            CompletionItemKind::Unit,
+                            CompletionItemKind::Value,
+                            CompletionItemKind::Enum,
+                            CompletionItemKind::Keyword,
+                            CompletionItemKind::Snippet,
+                            CompletionItemKind::Color,
+                            CompletionItemKind::File,
+                            CompletionItemKind::Reference,
+                            CompletionItemKind::Folder,
+                            CompletionItemKind::EnumMember,
+                            CompletionItemKind::Constant,
+                            CompletionItemKind::Struct,
+                            CompletionItemKind::Event,
+                            CompletionItemKind::Operator,
+                            CompletionItemKind::TypeParameter,
+                        ]),
+                    }),
+                    context_support: Some(false),
+                }),
+                hover: Some(HoverCapability {
+                    dynamic_registration: Some(false),
+                    content_format: Some(vec![MarkupKind::PlainText]),
+                }),
+                signature_help: Some(SignatureHelpCapability {
+                    dynamic_registration: Some(false),
+                    signature_information: Some(SignatureInformationSettings {
+                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        parameter_information: Some(ParameterInformationSettings {
+                            label_offset_support: Some(false),
+                        }),
+                    }),
+                    context_support: Some(false),
+                }),
+                references: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                document_highlight: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                document_symbol: Some(DocumentSymbolCapability {
+                    dynamic_registration: Some(false),
+                    symbol_kind: None,
+                    hierarchical_document_symbol_support: None,
+                }),
+                formatting: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                range_formatting: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                on_type_formatting: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                declaration: Some(GotoCapability {
+                    dynamic_registration: Some(false),
+                    link_support: Some(false),
+                }),
+                definition: Some(GotoCapability {
+                    dynamic_registration: Some(false),
+                    link_support: Some(false),
+                }),
+                type_definition: Some(GotoCapability {
+                    dynamic_registration: Some(false),
+                    link_support: Some(false),
+                }),
+                implementation: Some(GotoCapability {
+                    dynamic_registration: Some(false),
+                    link_support: Some(false),
                 }),
                 code_action: Some(CodeActionCapability {
+                    dynamic_registration: Some(false),
                     code_action_literal_support: Some(CodeActionLiteralSupport {
                         code_action_kind: CodeActionKindLiteralSupport {
                             value_set: [
@@ -60,26 +192,52 @@ pub fn initialize(
                             .collect(),
                         },
                     }),
-                    ..CodeActionCapability::default()
+                    is_preferred_support: Some(false),
                 }),
-                hover: Some(HoverCapability {
-                    content_format: Some(vec![MarkupKind::PlainText]),
-                    ..HoverCapability::default()
+                code_lens: Some(GenericCapability {
+                    dynamic_registration: Some(false),
                 }),
+                document_link: Some(DocumentLinkCapabilities {
+                    dynamic_registration: Some(false),
+                    tooltip_support: Some(false),
+                }),
+                color_provider: Some(GenericCapability {
+                    dynamic_registration: Some(false),
+                }),
+                rename: Some(RenameCapability {
+                    dynamic_registration: Some(false),
+                    prepare_support: Some(false),
+                }),
+                publish_diagnostics: Some(PublishDiagnosticsCapability {
+                    related_information: Some(false),
+                    tag_support: None,
+                }),
+                folding_range: None,
                 semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability {
                     semantic_highlighting: true,
                 }),
-                signature_help: Some(SignatureHelpCapability {
-                    signature_information: Some(SignatureInformationSettings {
-                        documentation_format: Some(vec![MarkupKind::PlainText]),
-                        parameter_information: None,
-                    }),
-                    ..SignatureHelpCapability::default()
+                semantic_tokens: Some(SemanticTokensClientCapabilities {
+                    dynamic_registration: Some(false),
+                    token_types: ctx
+                        .config
+                        .semantic_tokens
+                        .keys()
+                        .cloned()
+                        .map(|x| x.into())
+                        .collect(),
+                    token_modifiers: ctx
+                        .config
+                        .semantic_token_modifiers
+                        .keys()
+                        .cloned()
+                        .map(|x| x.into())
+                        .collect(),
                 }),
-                ..TextDocumentClientCapabilities::default()
+            }),
+            window: Some(WindowClientCapabilities {
+                work_done_progress: Some(false),
             }),
             experimental: None,
-            ..ClientCapabilities::default()
         },
         initialization_options,
         process_id: Some(process::id().into()),
@@ -87,7 +245,10 @@ pub fn initialize(
         root_path: None,
         trace: Some(TraceOption::Off),
         workspace_folders: None,
-        client_info: None,
+        client_info: Some(ClientInfo {
+            name: env!("CARGO_PKG_NAME").to_owned(),
+            version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+        }),
     };
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
