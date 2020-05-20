@@ -37,7 +37,10 @@ pub fn initialize(
             text_document: Some(TextDocumentClientCapabilities {
                 completion: Some(CompletionCapability {
                     completion_item: Some(CompletionItemCapability {
-                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        documentation_format: Some(vec![
+                            MarkupKind::Markdown,
+                            MarkupKind::PlainText,
+                        ]),
                         snippet_support: Some(ctx.config.snippet_support),
                         ..CompletionItemCapability::default()
                     }),
@@ -63,7 +66,7 @@ pub fn initialize(
                     ..CodeActionCapability::default()
                 }),
                 hover: Some(HoverCapability {
-                    content_format: Some(vec![MarkupKind::PlainText]),
+                    content_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
                     ..HoverCapability::default()
                 }),
                 semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability {
@@ -71,7 +74,10 @@ pub fn initialize(
                 }),
                 signature_help: Some(SignatureHelpCapability {
                     signature_information: Some(SignatureInformationSettings {
-                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        documentation_format: Some(vec![
+                            MarkupKind::Markdown,
+                            MarkupKind::PlainText,
+                        ]),
                         parameter_information: None,
                     }),
                     ..SignatureHelpCapability::default()

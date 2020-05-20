@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::markdown::markdown_to_kak;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -65,7 +66,10 @@ pub fn editor_hover(
                 .filter(|x| !x.is_empty())
                 .map(|x| format!("• {}", x))
                 .join("\n"),
-            HoverContents::Markup(contents) => contents.value,
+            HoverContents::Markup(contents) => match contents.kind {
+                MarkupKind::PlainText => contents.value,
+                MarkupKind::Markdown => markdown_to_kak(&contents.value),
+            },
         },
     };
 

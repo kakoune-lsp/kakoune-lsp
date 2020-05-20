@@ -13,6 +13,7 @@ mod editor_transport;
 mod general;
 mod language_features;
 mod language_server_transport;
+mod markdown;
 mod position;
 mod project_root;
 mod session;
