@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::language_features::rust_analyzer;
 use crate::types::*;
 use crate::util::*;
 use jsonrpc_core::{Id, Params};
@@ -128,7 +129,79 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
         arguments: serde_json::from_str(&params.arguments).unwrap(),
         work_done_progress_params: Default::default(),
     };
-    ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
+    match &*req_params.command {
+        "rust-analyzer.applySourceChange" => {
+            rust_analyzer::apply_source_change(meta, req_params, ctx);
+        }
+        _ => {
+            ctx.call::<ExecuteCommand, _>(meta, req_params, move |_: &mut Context, _, _| ());
+        }
+    }
+}
+
+// TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
+pub fn apply_document_resource_op(_meta: &EditorMeta, op: ResourceOp, _ctx: &mut Context) -> bool {
+    let mut applied: bool = true;
+    match op {
+        ResourceOp::Create(op) => {
+            let path = op.uri.to_file_path().unwrap();
+            let ignore_if_exists = if let Some(options) = op.options {
+                !options.overwrite.unwrap_or(false) && options.ignore_if_exists.unwrap_or(false)
+            } else {
+                false
+            };
+            if !(ignore_if_exists && path.exists()) && fs::write(&path, []).is_err() {
+                error!("Failed to create file: {}", path.to_str().unwrap_or(""));
+                applied = true;
+            }
+        }
+        ResourceOp::Delete(op) => {
+            let path = op.uri.to_file_path().unwrap();
+            if path.is_dir() {
+                let recursive = if let Some(options) = op.options {
+                    options.recursive.unwrap_or(false)
+                } else {
+                    false
+                };
+                if recursive {
+                    if fs::remove_dir_all(&path).is_err() {
+                        error!(
+                            "Failed to delete directory: {}",
+                            path.to_str().unwrap_or("")
+                        );
+                        applied = true;
+                    }
+                } else if fs::remove_dir(&path).is_err() {
+                    error!(
+                        "Failed to delete directory: {}",
+                        path.to_str().unwrap_or("")
+                    );
+                    applied = true;
+                }
+            } else if path.is_file() && fs::remove_file(&path).is_err() {
+                error!("Failed to delete file: {}", path.to_str().unwrap_or(""));
+                applied = true;
+            }
+        }
+        ResourceOp::Rename(op) => {
+            let from = op.old_uri.to_file_path().unwrap();
+            let to = op.new_uri.to_file_path().unwrap();
+            let ignore_if_exists = if let Some(options) = op.options {
+                !options.overwrite.unwrap_or(false) && options.ignore_if_exists.unwrap_or(false)
+            } else {
+                false
+            };
+            if !(ignore_if_exists && to.exists()) && fs::rename(&from, &to).is_err() {
+                error!(
+                    "Failed to rename file: {} -> {}",
+                    from.to_str().unwrap_or(""),
+                    to.to_str().unwrap_or("")
+                );
+                applied = true;
+            }
+        }
+    }
+    applied
 }
 
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
@@ -151,77 +224,11 @@ pub fn apply_edit(
                         DocumentChangeOperation::Edit(edit) => {
                             apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
                         }
-                        DocumentChangeOperation::Op(op) => match op {
-                            ResourceOp::Create(op) => {
-                                let path = op.uri.to_file_path().unwrap();
-                                let ignore_if_exists = if let Some(options) = op.options {
-                                    !options.overwrite.unwrap_or(false)
-                                        && options.ignore_if_exists.unwrap_or(false)
-                                } else {
-                                    false
-                                };
-                                if !(ignore_if_exists && path.exists())
-                                    && fs::write(&path, []).is_err()
-                                {
-                                    error!(
-                                        "Failed to create file: {}",
-                                        path.to_str().unwrap_or("")
-                                    );
-                                    applied = true;
-                                }
+                        DocumentChangeOperation::Op(op) => {
+                            if apply_document_resource_op(&meta, op, ctx) {
+                                applied = true;
                             }
-                            ResourceOp::Delete(op) => {
-                                let path = op.uri.to_file_path().unwrap();
-                                if path.is_dir() {
-                                    let recursive = if let Some(options) = op.options {
-                                        options.recursive.unwrap_or(false)
-                                    } else {
-                                        false
-                                    };
-                                    if recursive {
-                                        if fs::remove_dir_all(&path).is_err() {
-                                            error!(
-                                                "Failed to delete directory: {}",
-                                                path.to_str().unwrap_or("")
-                                            );
-                                            applied = true;
-                                        }
-                                    } else if fs::remove_dir(&path).is_err() {
-                                        error!(
-                                            "Failed to delete directory: {}",
-                                            path.to_str().unwrap_or("")
-                                        );
-                                        applied = true;
-                                    }
-                                } else if path.is_file() && fs::remove_file(&path).is_err() {
-                                    error!(
-                                        "Failed to delete file: {}",
-                                        path.to_str().unwrap_or("")
-                                    );
-                                    applied = true;
-                                }
-                            }
-                            ResourceOp::Rename(op) => {
-                                let from = op.old_uri.to_file_path().unwrap();
-                                let to = op.new_uri.to_file_path().unwrap();
-                                let ignore_if_exists = if let Some(options) = op.options {
-                                    !options.overwrite.unwrap_or(false)
-                                        && options.ignore_if_exists.unwrap_or(false)
-                                } else {
-                                    false
-                                };
-                                if !(ignore_if_exists && to.exists())
-                                    && fs::rename(&from, &to).is_err()
-                                {
-                                    error!(
-                                        "Failed to rename file: {} -> {}",
-                                        from.to_str().unwrap_or(""),
-                                        to.to_str().unwrap_or("")
-                                    );
-                                    applied = true;
-                                }
-                            }
-                        },
+                        }
                     }
                 }
             }
