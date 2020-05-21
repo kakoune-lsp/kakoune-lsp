@@ -78,7 +78,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                     character: u64::MAX,
                 },
             };
-            let range = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding);
+            let mut pos = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding).start;
+            pos.column = (pos.column - 1).max(1);
             // separate all but the first diagnostic on the same line
             let sep = if lines_with_errors.insert(line) {
                 ""
@@ -86,8 +87,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 ", "
             };
             editor_quote(&format!(
-                "{}+0|{{{}}}{{\\}}{}{}",
-                range.start, face, sep, x.message
+                "{}+0|{{{}}}{{\\}}{} {}",
+                pos, face, sep, x.message
             ))
         })
         .join(" ");
