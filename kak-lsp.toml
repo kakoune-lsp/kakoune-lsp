@@ -105,7 +105,9 @@ args = ["--init={\"cacheDirectory\":\"/tmp/cquery\",\"highlight\":{\"enabled\":t
 [language.haskell]
 filetypes = ["haskell"]
 roots = ["Setup.hs", "stack.yaml", "*.cabal"]
-command = "hie"
+# You might also be interested in the newer, but early stage, haskell-language-server
+# https://github.com/haskell/haskell-language-server
+command = "hie-wrapper"
 args = ["--lsp"]
 
 [language.go]
