@@ -125,13 +125,15 @@ Either way you get:
 ** to automatically show hover when you move around use `lsp-auto-hover-enable`
 ** to show hover anchored to hovered position do `set global lsp_hover_anchor true`
 ** to exclude diagnostics do `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'` 
-* `lsp-find-error` command to jump to the next or previous error in the file
+* `lsp-declaration` command to jump to the declaration of the symbol under the main cursor
+* `lsp-definition` command to jump to the definition of the symbol under the main cursor
+* `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor
+* `lsp-implementation` command to find implementations for a symbol under the main cursor
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
-** `\*references*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
+** for the previous five commands, `\*goto*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
+* `lsp-find-error` command to jump to the next or previous error in the file
 ** `lsp-references-previous-match` and `lsp-references-next-match` to navigate between references
 * `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
-* `lsp-implementation` command to find implementations for a symbol under the main cursor
-** `\*implementations*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
@@ -178,6 +180,7 @@ attempt to spin up server if it is down.
 | o | lsp-workspace-symbol-incr
 | n | lsp-find-error
 | p | lsp-find-error --previous
+| y | lsp-type-definition
 | & | lsp-highlight-references
 |===
 
