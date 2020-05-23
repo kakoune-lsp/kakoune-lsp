@@ -200,7 +200,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
                 },
             };
             let command = format!(
-                "buffer {}; exec {}g{}l",
+                "evaluate-commands -try-client %opt{{jumpclient}} %{{edit {} {} {}}}",
                 editor_quote(buffile),
                 position.line,
                 position.column - 1
