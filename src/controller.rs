@@ -244,6 +244,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::SemanticTokensRequest::METHOD => {
             semantic_tokens::tokens_request(meta, params, ctx);
         }
+        request::SelectionRangeRequest::METHOD => {
+            selection_range::expand_selection(meta, params, ctx);
+        }
 
         // CCLS
         ccls::NavigateRequest::METHOD => {

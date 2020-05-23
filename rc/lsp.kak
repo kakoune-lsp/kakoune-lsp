@@ -782,7 +782,7 @@ method    = "rust-analyzer/inlayHints"
 
 # semantic tokens
 
-define-command lsp-semantic-tokens -docstring "semantic-tokens-update: Request semantic tokens" %{
+define-command lsp-semantic-tokens -docstring "lsp-semantic-tokens: Request semantic tokens" %{
   lsp-did-change-and-then lsp-semantic-tokens-request
 }
 
@@ -796,6 +796,26 @@ version   = %d
 method    = "textDocument/semanticTokens"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+# expand-selection
+
+define-command lsp-expand-selection -docstring "lsp-expand-selection: Expand selection" %{
+  lsp-did-change-and-then lsp-expand-selection-request
+}
+
+define-command -hidden lsp-expand-selection-request %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/selectionRange"
+[params.position]
+line      = %d
+column    = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 ### Response handling ###

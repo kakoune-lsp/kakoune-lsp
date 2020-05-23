@@ -11,6 +11,7 @@ pub mod implementation;
 pub mod references;
 pub mod rename;
 pub mod rust_analyzer;
+pub mod selection_range;
 pub mod semantic_highlighting;
 pub mod semantic_tokens;
 pub mod signature_help;
