@@ -4,7 +4,6 @@ use crate::text_edit::*;
 use crate::types::*;
 use itertools::Itertools;
 use libc;
-use lsp_types::request::GotoDefinitionResponse;
 use lsp_types::*;
 use ropey::Rope;
 use std::collections::HashMap;
@@ -147,64 +146,6 @@ pub fn filetype_to_language_id_map(config: &Config) -> HashMap<String, String> {
     filetypes
 }
 
-/// Convert `GotoDefinitionResponse` into `Option<Location>`.
-///
-/// If multiple locations are present, returns the first one. Transforms LocationLink into Location
-/// by dropping source information.
-pub fn goto_definition_response_to_location(
-    result: Option<GotoDefinitionResponse>,
-) -> Option<Location> {
-    match result {
-        Some(GotoDefinitionResponse::Scalar(location)) => Some(location),
-        Some(GotoDefinitionResponse::Array(mut locations)) => {
-            if locations.is_empty() {
-                None
-            } else {
-                Some(locations.remove(0))
-            }
-        }
-        Some(GotoDefinitionResponse::Link(mut locations)) => {
-            if locations.is_empty() {
-                None
-            } else {
-                Some(location_link_to_location(locations.remove(0)))
-            }
-        }
-        None => None,
-    }
-}
-
-/// Convert `GotoDefinitionResponse` into `Option<Vec<Locations>>`.
-///
-/// Transforms LocationLink into Location by dropping source information.
-pub fn goto_definition_response_to_locations(
-    result: Option<GotoDefinitionResponse>,
-) -> Option<Vec<Location>> {
-    match result {
-        Some(GotoDefinitionResponse::Scalar(location)) => Some(vec![location]),
-        Some(GotoDefinitionResponse::Array(locations)) => {
-            if locations.is_empty() {
-                None
-            } else {
-                Some(locations)
-            }
-        }
-        Some(GotoDefinitionResponse::Link(mut locations)) => {
-            if locations.is_empty() {
-                None
-            } else {
-                Some(
-                    locations
-                        .drain(..)
-                        .map(|link| location_link_to_location(link))
-                        .collect(),
-                )
-            }
-        }
-        None => None,
-    }
-}
-
 /// Wrapper for kakoune_position_to_lsp which uses context to get buffer content and offset encoding.
 pub fn get_lsp_position(
     filename: &str,
@@ -227,21 +168,13 @@ pub fn get_kakoune_position(
     position: &Position,
     ctx: &Context,
 ) -> Option<KakounePosition> {
-    ctx.documents
-        .get(filename)
-        .and_then(|doc| Some(doc.text.clone()))
-        .or_else(|| {
-            File::open(filename)
-                .ok()
-                .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
-        })
-        .and_then(|text| {
-            Some(lsp_position_to_kakoune(
-                &position,
-                &text,
-                &ctx.offset_encoding,
-            ))
-        })
+    get_file_contents(filename, ctx).and_then(|text| {
+        Some(lsp_position_to_kakoune(
+            &position,
+            &text,
+            &ctx.offset_encoding,
+        ))
+    })
 }
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
@@ -262,15 +195,15 @@ pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &
     }
 }
 
-fn location_link_to_location(location_link: LocationLink) -> Location {
-    let LocationLink {
-        target_uri,
-        target_range,
-        ..
-    } = location_link;
-
-    Location {
-        uri: target_uri,
-        range: target_range,
-    }
+/// Get the contents of a file.
+/// Searches ctx.documents first and falls back to reading the file directly.
+pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
+    ctx.documents
+        .get(filename)
+        .and_then(|doc| Some(doc.text.clone()))
+        .or_else(|| {
+            File::open(filename)
+                .ok()
+                .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
+        })
 }

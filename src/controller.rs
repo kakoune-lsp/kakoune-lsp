@@ -197,13 +197,16 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             hover::text_document_hover(meta, params, &mut ctx);
         }
         request::GotoDefinition::METHOD => {
-            definition::text_document_definition(meta, params, &mut ctx);
+            goto::text_document_definition(meta, params, &mut ctx);
         }
         request::GotoImplementation::METHOD => {
-            implementation::text_document_implementation(meta, params, &mut ctx);
+            goto::text_document_implementation(meta, params, &mut ctx);
+        }
+        request::GotoTypeDefinition::METHOD => {
+            goto::text_document_type_definition(meta, params, &mut ctx);
         }
         request::References::METHOD => {
-            references::text_document_references(meta, params, &mut ctx);
+            goto::text_document_references(meta, params, &mut ctx);
         }
         notification::Exit::METHOD => {
             general::exit(&mut ctx);
@@ -212,7 +215,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             signature_help::text_document_signature_help(meta, params, &mut ctx);
         }
         request::DocumentHighlightRequest::METHOD => {
-            references::text_document_highlights(meta, params, &mut ctx);
+            highlights::text_document_highlights(meta, params, &mut ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
             document_symbol::text_document_document_symbol(meta, &mut ctx);

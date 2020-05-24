@@ -212,6 +212,24 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-type-definition -docstring "Go to type-definition" %{
+    lsp-did-change-and-then lsp-type-definition-request
+}
+
+define-command -hidden lsp-type-definition-request -docstring "Go to type definition" %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/typeDefinition"
+[params.position]
+line      = %d
+column    = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-code-actions -docstring "Request code actions for the main cursor position" %{
     lsp-did-change-and-then lsp-code-actions-request
 }
@@ -266,12 +284,12 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-references-next-match -docstring 'Jump to the next references match' %{
-    lsp-next-match '*references*'
+define-command lsp-goto-next-match -docstring 'Jump to the next goto match' %{
+    lsp-next-match '*goto*'
 }
 
-define-command lsp-references-previous-match -docstring 'Jump to the previous references match' %{
-    lsp-previous-match '*references*'
+define-command lsp-goto-previous-match -docstring 'Jump to the previous goto match' %{
+    lsp-previous-match '*goto*'
 }
 
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
@@ -842,21 +860,9 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
     }
 }
 
-define-command -hidden lsp-show-references -params 2 -docstring "Render references" %{
+define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
     evaluate-commands -try-client %opt[toolsclient] %{
-        edit! -scratch *references*
-        cd %arg{1}
-        try %{ set-option buffer working_folder %sh{pwd} }
-        set-option buffer filetype grep
-        set-option buffer grep_current_line 0
-        set-register '"' %arg{2}
-        execute-keys Pgg
-    }
-}
-
-define-command -hidden lsp-show-implementations -params 2 -docstring "Render implementations" %{
-    evaluate-commands -try-client %opt[toolsclient] %{
-        edit! -scratch *implementations*
+        edit! -scratch *goto*
         cd %arg{1}
         try %{ set-option buffer working_folder %sh{pwd} }
         set-option buffer filetype grep
@@ -1164,6 +1170,7 @@ map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'  -docstring 'search pro
 map global lsp n '<esc>: lsp-find-error<ret>'             -docstring 'find next error'
 map global lsp p '<esc>: lsp-find-error --previous<ret>'  -docstring 'find previous error'
 map global lsp q '<esc>: lsp-exit<ret>'                   -docstring 'exit session'
+map global lsp y '<esc>: lsp-type-definition<ret>'        -docstring 'go to type definition'
 map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highlight-references'
 
 ### Default integration ###
@@ -1180,6 +1187,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
 
     map global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
     map global goto r '<esc>: lsp-references<ret>' -docstring 'references'
+    map global goto y '<esc>: lsp-type-definition<ret>' -docstring 'type definition'
 
     hook -group lsp global BufCreate .* %{
         lsp-did-open
@@ -1203,8 +1211,9 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/rust_analyzer_inlay_hints
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
-    unmap global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
-    unmap global goto r '<esc>: lsp-references<ret>' -docstring 'references'
+    unmap global goto d '<esc>: lsp-definition<ret>'
+    unmap global goto r '<esc>: lsp-references<ret>'
+    unmap global goto y '<esc>: lsp-type-definition<ret>'
     remove-hooks global lsp
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
@@ -1226,6 +1235,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 
     map window goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
     map window goto r '<esc>: lsp-references<ret>' -docstring 'references'
+    map window goto y '<esc>: lsp-type-definition<ret>' -docstring 'type definition'
 
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window BufWritePost .* lsp-did-save
@@ -1250,6 +1260,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     lsp-diagnostic-lines-disable window
     unmap window goto d '<esc>: lsp-definition<ret>'
     unmap window goto r '<esc>: lsp-references<ret>'
+    unmap window goto y '<esc>: lsp-type-definition<ret>'
     remove-hooks window lsp
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode

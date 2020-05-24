@@ -1,5 +1,5 @@
 use crate::context::*;
-use crate::language_features::references;
+use crate::language_features::goto;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
@@ -47,22 +47,10 @@ pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     ctx.call::<NavigateRequest, _>(
         meta,
         req_params,
-        move |ctx: &mut Context, meta, response| navigate_response(meta, response, ctx),
+        move |ctx: &mut Context, meta, response| {
+            goto::goto(meta, response, ctx);
+        },
     );
-}
-
-pub fn navigate_response(
-    meta: EditorMeta,
-    result: Option<GotoDefinitionResponse>,
-    ctx: &mut Context,
-) {
-    if let Some(location) = goto_definition_response_to_location(result) {
-        let path = location.uri.to_file_path().unwrap();
-        let filename = path.to_str().unwrap();
-        let p = get_kakoune_position(filename, &location.range.start, ctx).unwrap();
-        let command = format!("edit %§{}§ {} {}", filename, p.line, p.column);
-        ctx.exec(meta, command);
-    };
 }
 
 // The following are more granular, c/c++ specific find-defintion style methods.
@@ -94,7 +82,7 @@ pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
     };
     ctx.call::<VarsRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        references::editor_references(meta, result, ctx)
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
     });
 }
 
@@ -135,7 +123,7 @@ pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         derived: params.derived,
     };
     ctx.call::<InheritanceRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        references::editor_references(meta, result, ctx)
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
     });
 }
 
@@ -173,7 +161,7 @@ pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         callee: params.callee,
     };
     ctx.call::<CallRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        references::editor_references(meta, result, ctx)
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
     });
 }
 
@@ -211,7 +199,7 @@ pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         kind: params.kind,
     };
     ctx.call::<MemberRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        references::editor_references(meta, result, ctx)
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx)
     });
 }
 
