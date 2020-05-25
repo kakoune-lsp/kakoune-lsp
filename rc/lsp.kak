@@ -13,6 +13,7 @@ set-face global DiagnosticWarning yellow
 set-face global LineFlagErrors red
 # Face for highlighting references.
 set-face global Reference MatchingChar
+set-face global ReferenceBind +u@Reference
 # Face for inlay hints.
 set-face global InlayHint cyan+d
 
