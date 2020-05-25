@@ -833,7 +833,7 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
     content="${content%"${content##*[![:space:]]}"}"
 
     if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
-        content=$(printf %s "$2" | head -n $kak_opt_lsp_hover_max_lines)
+        content=$(printf %s "$content" | head -n $kak_opt_lsp_hover_max_lines)
     fi
 
     content=$(printf %s "$content" | sed s/\'/\'\'/g)
