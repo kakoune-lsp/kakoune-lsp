@@ -67,7 +67,7 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                 let range = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding);
                 let token = &legend.token_types[token_type as usize];
                 (0..32)
-                    .filter(|bit| ((token_modifiers_bitset >> bit) & 1) == 1)
+                    .filter(|bit| ((token_modifiers_bitset >> bit) & 1u32) == 1u32)
                     .map(|bit| &legend.token_modifiers[bit as usize])
                     .filter_map(|token| ctx.config.semantic_token_modifiers.get(token.as_str()))
                     .chain(ctx.config.semantic_tokens.get(token.as_str()))

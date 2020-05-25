@@ -7,6 +7,7 @@ use jsonrpc_core::Params;
 use lsp_types::*;
 use std::collections::HashSet;
 use std::path::Path;
+use std::u64;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
