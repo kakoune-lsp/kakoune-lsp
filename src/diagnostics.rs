@@ -68,18 +68,10 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             };
             // Pretend the language server sent us the diagnostic past the end of line
             let line = x.range.end.line;
-            let range = Range {
-                start: Position {
-                    line,
-                    character: u64::MAX,
-                },
-                end: Position {
-                    line,
-                    character: u64::MAX,
-                },
-            };
-            let mut pos = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding).start;
-            pos.column = (pos.column - 1).max(1);
+            let line_text = get_line(line as usize, &document.text);
+            let mut pos =
+                lsp_position_to_kakoune(&x.range.end, &document.text, &ctx.offset_encoding);
+            pos.column = line_text.len_bytes() as u64;
             // separate all but the first diagnostic on the same line
             let sep = if lines_with_errors.insert(line) {
                 ""

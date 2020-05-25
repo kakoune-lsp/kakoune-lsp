@@ -73,7 +73,7 @@ pub fn kakoune_position_to_lsp(
 /// If the line number is out-of-bounds, this will return the
 /// last line. This is useful because the language server might
 /// use a large value to convey "end of file".
-fn get_line(line_number: usize, text: &Rope) -> RopeSlice {
+pub fn get_line(line_number: usize, text: &Rope) -> RopeSlice {
     text.line(min(line_number, text.len_lines() - 1))
 }
 
