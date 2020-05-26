@@ -81,7 +81,7 @@ pub struct EditorRequest {
     pub meta: EditorMeta,
     pub method: String,
     pub params: EditorParams,
-    pub range: Option<Range>,
+    pub ranges: Option<Vec<Range>>,
 }
 
 #[derive(Deserialize)]

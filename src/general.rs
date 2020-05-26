@@ -309,7 +309,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         .document_range_formatting_provider
         .unwrap_or(false)
     {
-        features.push("lsp-format-selection");
+        features.push("lsp-range-formatting");
     }
 
     if let Some(ref rename_provider) = server_capabilities.rename_provider {
