@@ -1285,7 +1285,7 @@ face global SnippetsOtherPlaceholders black,yellow+F
 # Second param is the actual snippet
 def -hidden lsp-snippets-insert-completion -params 2 %{ eval -save-regs "a" %{
     reg 'a' "%arg{1}"
-    exec -draft "<a-;><a-/>%val[main_reg_a]<ret>d"
+    exec -draft "<a-;><a-/>%reg{a}<ret>d"
     eval -draft -verbatim lsp-snippets-insert %arg{2}
     remove-hooks window lsp-post-completion
     hook -once -group lsp-post-completion window InsertCompletionHide .* %{
