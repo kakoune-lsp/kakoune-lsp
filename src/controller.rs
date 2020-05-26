@@ -117,8 +117,14 @@ pub fn start(
                     ServerMessage::Response(output) => {
                         match output {
                             Output::Success(success) => {
-                                if let Some((meta, _, callback)) = ctx.response_waitlist.remove(&success.id) {
-                                  callback(&mut ctx, meta, success.result);
+                                if let Some((meta, _, batch_id)) = ctx.response_waitlist.remove(&success.id) {
+                                    if let Some((batch_amt, callback)) = ctx.batches.remove(&batch_id) {
+                                        if batch_amt == 1 {
+                                            callback(&mut ctx, meta, success.result);
+                                        } else {
+                                            ctx.batches.insert(batch_id, (batch_amt - 1, callback));
+                                        }
+                                    }
                                 } else {
                                     error!("Id {:?} is not in waitlist!", success.id);
                                 }

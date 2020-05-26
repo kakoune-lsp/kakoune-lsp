@@ -21,8 +21,12 @@ pub struct Document {
 }
 
 pub type ResponseCallback = Box<dyn FnOnce(&mut Context, EditorMeta, Value) -> ()>;
+type BatchNumber = u32;
+type BatchCount = BatchNumber;
 
 pub struct Context {
+    batch_counter: BatchNumber,
+    pub batches: HashMap<BatchNumber, (BatchCount, ResponseCallback)>,
     pub capabilities: Option<ServerCapabilities>,
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<Diagnostic>>,
@@ -31,7 +35,7 @@ pub struct Context {
     pub language_id: String,
     pub pending_requests: Vec<EditorRequest>,
     pub request_counter: u64,
-    pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, ResponseCallback)>,
+    pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber)>,
     pub root_path: String,
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
@@ -52,6 +56,8 @@ impl Context {
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
+            batch_counter: 0,
+            batches: HashMap::default(),
             capabilities: None,
             config,
             diagnostics: HashMap::default(),
@@ -82,22 +88,28 @@ impl Context {
         R::Params: ToParams,
         R::Result: for<'a> Deserialize<'a>,
     {
+        debug!("call!");
         let params = params.to_params();
         if params.is_err() {
             error!("Failed to convert params");
             return;
         }
         let id = self.next_request_id();
+        let batch_id = self.next_batch_id();
         self.response_waitlist.insert(
             id.clone(),
             (
                 meta,
                 R::METHOD,
-                Box::new(move |ctx, meta, val| {
-                    let result = serde_json::from_value(val).expect("Failed to parse response");
-                    callback(ctx, meta, result)
-                }),
+                batch_id,
             ),
+        );
+        self.batches.insert(
+            batch_id,
+            (1, Box::new(move |ctx, meta, val| {
+                let result = serde_json::from_value(val).expect("Failed to parse response");
+                callback(ctx, meta, result)
+            }))
         );
         let call = jsonrpc_core::MethodCall {
             jsonrpc: Some(Version::V2),
@@ -175,6 +187,12 @@ impl Context {
                 }
             }
         }
+    }
+
+    fn next_batch_id(&mut self) -> BatchNumber {
+        let id = self.batch_counter;
+        self.batch_counter += 1;
+        id
     }
 
     fn next_request_id(&mut self) -> Id {
