@@ -305,6 +305,13 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         features.push("lsp-formatting");
     }
 
+    if server_capabilities
+        .document_range_formatting_provider
+        .unwrap_or(false)
+    {
+        features.push("lsp-format-selection");
+    }
+
     if let Some(ref rename_provider) = server_capabilities.rename_provider {
         match rename_provider {
             RenameProviderCapability::Simple(true) | RenameProviderCapability::Options(_) => {

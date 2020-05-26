@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
 use toml;
+use lsp_types::Range;
 
 pub enum Void {}
 
@@ -80,6 +81,7 @@ pub struct EditorRequest {
     pub meta: EditorMeta,
     pub method: String,
     pub params: EditorParams,
+    pub range: Option<Range>,
 }
 
 #[derive(Deserialize)]

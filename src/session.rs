@@ -176,6 +176,7 @@ fn stop_session(controllers: &mut Controllers) {
         },
         method: notification::Exit::METHOD.to_string(),
         params: toml::Value::Table(toml::value::Table::default()),
+        range: None,
     };
     info!("Shutting down language servers and exiting");
     for (route, controller) in controllers.drain() {
