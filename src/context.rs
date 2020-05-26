@@ -20,13 +20,13 @@ pub struct Document {
     pub text: ropey::Rope,
 }
 
-pub type ResponseCallback = Box<dyn FnOnce(&mut Context, EditorMeta, Value) -> ()>;
-type BatchNumber = u32;
+pub type ResponsesCallback = Box<dyn FnOnce(&mut Context, EditorMeta, Vec<Value>) -> ()>;
+type BatchNumber = usize;
 type BatchCount = BatchNumber;
 
 pub struct Context {
     batch_counter: BatchNumber,
-    pub batches: HashMap<BatchNumber, (BatchCount, ResponseCallback)>,
+    pub batches: HashMap<BatchNumber, (BatchCount, Vec<serde_json::value::Value>, ResponsesCallback)>,
     pub capabilities: Option<ServerCapabilities>,
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<Diagnostic>>,
@@ -88,42 +88,68 @@ impl Context {
         R::Params: ToParams,
         R::Result: for<'a> Deserialize<'a>,
     {
-        debug!("call!");
-        let params = params.to_params();
-        if params.is_err() {
-            error!("Failed to convert params");
-            return;
-        }
-        let id = self.next_request_id();
+        let ops: Vec<R::Params> = vec!(params);
+        self.batch_call::<R,_>(meta, ops, Box::new(move |ctx: &mut Context, meta: EditorMeta, mut results: Vec<R::Result>| {
+            if let Some(result) = results.pop() {
+                callback(ctx, meta, result);
+            }
+        }));
+    }
+
+    pub fn batch_call<
+        R: Request,
+        F: for<'a> FnOnce(&'a mut Context, EditorMeta, Vec<R::Result>) -> () + 'static,
+    >(
+        &mut self,
+        meta: EditorMeta,
+        ops: Vec<R::Params>,
+        callback: F,
+    ) where
+        R::Params: ToParams,
+        R::Result: for<'a> Deserialize<'a>,
+    {
+
         let batch_id = self.next_batch_id();
-        self.response_waitlist.insert(
-            id.clone(),
-            (
-                meta,
-                R::METHOD,
-                batch_id,
-            ),
-        );
         self.batches.insert(
             batch_id,
-            (1, Box::new(move |ctx, meta, val| {
-                let result = serde_json::from_value(val).expect("Failed to parse response");
-                callback(ctx, meta, result)
+            (ops.len(), Vec::with_capacity(ops.len()), Box::new(move |ctx, meta, vals| {
+                let results: Vec<R::Result> = vals
+                    .into_iter()
+                    .map(|val| serde_json::from_value(val).expect("Failed to parse response"))
+                    .collect();
+                callback(ctx, meta, results)
             }))
         );
-        let call = jsonrpc_core::MethodCall {
-            jsonrpc: Some(Version::V2),
-            id,
-            method: R::METHOD.into(),
-            params: params.unwrap(),
-        };
-        if self
-            .lang_srv_tx
-            .send(ServerMessage::Request(Call::MethodCall(call)))
-            .is_err()
-        {
-            error!("Failed to call language server");
-        };
+        for params in ops {
+            let params = params.to_params();
+            if params.is_err() {
+                error!("Failed to convert params");
+                return;
+            }
+            let id = self.next_request_id();
+            self.response_waitlist.insert(
+                id.clone(),
+                (
+                    meta.clone(),
+                    R::METHOD,
+                    batch_id,
+                ),
+            );
+
+            let call = jsonrpc_core::MethodCall {
+                jsonrpc: Some(Version::V2),
+                id,
+                method: R::METHOD.into(),
+                params: params.unwrap(),
+            };
+            if self
+                .lang_srv_tx
+                .send(ServerMessage::Request(Call::MethodCall(call)))
+                .is_err()
+            {
+                error!("Failed to call language server");
+            };
+        }
     }
 
     pub fn reply(&mut self, id: Id, result: Result<Value, Error>) {

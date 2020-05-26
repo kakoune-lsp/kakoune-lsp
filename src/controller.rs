@@ -118,11 +118,12 @@ pub fn start(
                         match output {
                             Output::Success(success) => {
                                 if let Some((meta, _, batch_id)) = ctx.response_waitlist.remove(&success.id) {
-                                    if let Some((batch_amt, callback)) = ctx.batches.remove(&batch_id) {
+                                    if let Some((batch_amt, mut vals, callback)) = ctx.batches.remove(&batch_id) {
+                                        vals.push(success.result);
                                         if batch_amt == 1 {
-                                            callback(&mut ctx, meta, success.result);
+                                            callback(&mut ctx, meta, vals);
                                         } else {
-                                            ctx.batches.insert(batch_id, (batch_amt - 1, callback));
+                                            ctx.batches.insert(batch_id, (batch_amt - 1, vals, callback));
                                         }
                                     }
                                 } else {
