@@ -36,6 +36,7 @@ use std::env;
 use std::fs;
 use std::io::{stdin, Read, Write};
 use std::os::unix::net::UnixStream;
+use std::panic;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -246,6 +247,10 @@ fn setup_logger(config: &Config, matches: &clap::ArgMatches<'_>) -> slog_scope::
         builder.destination(Destination::Stderr);
         builder.build().unwrap()
     };
+
+    panic::set_hook(Box::new(|panic_info| {
+        error!("panic: {}", panic_info);
+    }));
 
     slog_scope::set_global_logger(logger)
 }

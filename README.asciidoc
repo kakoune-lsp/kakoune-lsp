@@ -281,6 +281,8 @@ hook global WinSetOption filetype=rust %{
 
 You can change the face of the hints with `set-face global InlayHint <face>`.
 
+Note that this requires you to build Kakoune from source as the feature that allows this is not yet in a release.
+
 == Semantic Tokens
 
 kak-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:
@@ -305,6 +307,8 @@ kak-lsp supports showing diagnostics inline after their respective line, but thi
 ----
 lsp-inlay-diagnostics-enable global
 ----
+
+Note that this requires you to build Kakoune from source as the feature that allows this is not yet in a release.
 
 == Limitations
 
