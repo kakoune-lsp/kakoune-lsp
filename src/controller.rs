@@ -175,6 +175,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     let meta = request.meta;
     let params = request.params;
     let method: &str = &request.method;
+    let ranges: Option<Vec<Range>> = request.ranges;
     match method {
         notification::DidOpenTextDocument::METHOD => {
             text_document_did_open(meta, params, &mut ctx);
@@ -229,6 +230,10 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
         request::Formatting::METHOD => {
             formatting::text_document_formatting(meta, params, &mut ctx);
+        }
+        request::RangeFormatting::METHOD => match ranges {
+            Some(range) => range_formatting::text_document_range_formatting(meta, params, range, &mut ctx),
+            None => warn!("No range provided to {}", method),
         }
         request::WorkspaceSymbol::METHOD => {
             workspace::workspace_symbol(meta, params, &mut ctx);

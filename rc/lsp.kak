@@ -604,6 +604,41 @@ insertSpaces = %s
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
 }
 
+define-command lsp-range-formatting -docstring "Format selections" %{
+    lsp-did-change-and-then lsp-range-formatting-request
+}
+
+define-command -hidden lsp-range-formatting-request -docstring "Format selections" %{
+    nop %sh{
+ranges_str="$(for range in ${kak_selections_char_desc}; do
+    IFS=, read start end <<< $range
+    IFS=. read startline startcolumn <<< $start
+    IFS=. read endline endcolumn <<< $end
+    printf '
+[[ranges]]
+  [ranges.start]
+  line = %d
+  character = %d
+  [ranges.end]
+  line = %d
+  character = %d
+' $((startline - 1)) $((startcolumn - 1)) $((endline - 1)) $((endcolumn - 1))
+done)"
+
+(printf '
+session      = "%s"
+client       = "%s"
+buffile      = "%s"
+filetype     = "%s"
+version      = %d
+method       = "textDocument/rangeFormatting"
+[params]
+tabSize      = %d
+insertSpaces = %s
+%s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
+}}
+
 define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
     lsp-did-change-and-then lsp-formatting-sync-request
 }
@@ -628,6 +663,49 @@ insertSpaces = %s
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
 
 cat ${pipe}
+rm -rf ${tmp}
+}}
+
+define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
+    lsp-did-change-and-then lsp-range-formatting-sync-request
+}
+
+define-command -hidden lsp-range-formatting-sync-request -docstring "Format selections, blocking Kakoune session until done" %{
+    evaluate-commands -no-hooks %sh{
+range=${kak_selection_desc}
+tmp=$(mktemp -q -d -t 'lsp-formatting.XXXXXX' 2>/dev/null || mktemp -q -d)
+pipe=${tmp}/fifo
+mkfifo ${pipe}
+ranges_str="$(for range in ${kak_selections_char_desc}; do
+    IFS=, read start end <<< $range
+    IFS=. read startline startcolumn <<< $start
+    IFS=. read endline endcolumn <<< $end
+    printf '
+[[ranges]]
+  [ranges.start]
+  line = %d
+  character = %d
+  [ranges.end]
+  line = %d
+  character = %d
+' $((startline - 1)) $((startcolumn - 1)) $((endline - 1)) $((endcolumn - 1))
+done)"
+
+(printf '
+session      = "%s"
+client       = "%s"
+buffile      = "%s"
+filetype     = "%s"
+version      = %d
+fifo         = "%s"
+method       = "textDocument/rangeFormatting"
+[params]
+tabSize      = %d
+insertSpaces = %s
+%s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
+
+cat ${pipe} | tee /tmp/pipe
 rm -rf ${tmp}
 }}
 
@@ -1173,6 +1251,7 @@ map global lsp p '<esc>: lsp-find-error --previous<ret>'  -docstring 'find previ
 map global lsp q '<esc>: lsp-exit<ret>'                   -docstring 'exit session'
 map global lsp y '<esc>: lsp-type-definition<ret>'        -docstring 'go to type definition'
 map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highlight-references'
+map global lsp = '<esc>: lsp-range-formatting<ret>'       -docstring 'format selections'
 
 ### Default integration ###
 
