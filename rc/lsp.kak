@@ -1223,7 +1223,7 @@ define-command lsp -params 1.. -shell-script-candidates %{
     workspace-symbol workspace-symbol-incr rename rename-prompt\
     capabilities stop formatting formatting-sync highlight-references\
     inline-diagnostics-enable inline-diagnostics-disable\
-    diagnostic-lines-enable diagnostics-lines-disable auto-hover-enable auto-hover-disable\
+    diagnostic-lines-enable diagnostic-lines-disable auto-hover-enable auto-hover-disable\
     auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
     auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable\
     find-error implementation;
