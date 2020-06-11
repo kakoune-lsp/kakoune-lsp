@@ -31,7 +31,7 @@ pub fn initialize(
                         ResourceOperationKind::Delete,
                         ResourceOperationKind::Rename,
                     ]),
-                    failure_handling: None,
+                    failure_handling: Some(FailureHandlingKind::Abort),
                 }),
                 did_change_configuration: Some(GenericCapability {
                     dynamic_registration: Some(false),

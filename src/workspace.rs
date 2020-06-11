@@ -9,6 +9,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use serde_json::{self, Value};
 use std::fs;
+use std::io;
 use toml;
 
 fn insert_value<'a, 'b, P>(
@@ -139,9 +140,11 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
     }
 }
 
-// TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
-pub fn apply_document_resource_op(_meta: &EditorMeta, op: ResourceOp, _ctx: &mut Context) -> bool {
-    let mut applied: bool = true;
+pub fn apply_document_resource_op(
+    _meta: &EditorMeta,
+    op: ResourceOp,
+    _ctx: &mut Context,
+) -> io::Result<()> {
     match op {
         ResourceOp::Create(op) => {
             let path = op.uri.to_file_path().unwrap();
@@ -150,9 +153,10 @@ pub fn apply_document_resource_op(_meta: &EditorMeta, op: ResourceOp, _ctx: &mut
             } else {
                 false
             };
-            if !(ignore_if_exists && path.exists()) && fs::write(&path, []).is_err() {
-                error!("Failed to create file: {}", path.to_str().unwrap_or(""));
-                applied = true;
+            if ignore_if_exists && path.exists() {
+                Ok(())
+            } else {
+                fs::write(&path, [])
             }
         }
         ResourceOp::Delete(op) => {
@@ -164,23 +168,14 @@ pub fn apply_document_resource_op(_meta: &EditorMeta, op: ResourceOp, _ctx: &mut
                     false
                 };
                 if recursive {
-                    if fs::remove_dir_all(&path).is_err() {
-                        error!(
-                            "Failed to delete directory: {}",
-                            path.to_str().unwrap_or("")
-                        );
-                        applied = true;
-                    }
-                } else if fs::remove_dir(&path).is_err() {
-                    error!(
-                        "Failed to delete directory: {}",
-                        path.to_str().unwrap_or("")
-                    );
-                    applied = true;
+                    fs::remove_dir_all(&path)
+                } else {
+                    fs::remove_dir(&path)
                 }
-            } else if path.is_file() && fs::remove_file(&path).is_err() {
-                error!("Failed to delete file: {}", path.to_str().unwrap_or(""));
-                applied = true;
+            } else if path.is_file() {
+                fs::remove_file(&path)
+            } else {
+                Ok(())
             }
         }
         ResourceOp::Rename(op) => {
@@ -191,17 +186,13 @@ pub fn apply_document_resource_op(_meta: &EditorMeta, op: ResourceOp, _ctx: &mut
             } else {
                 false
             };
-            if !(ignore_if_exists && to.exists()) && fs::rename(&from, &to).is_err() {
-                error!(
-                    "Failed to rename file: {} -> {}",
-                    from.to_str().unwrap_or(""),
-                    to.to_str().unwrap_or("")
-                );
-                applied = true;
+            if ignore_if_exists && to.exists() {
+                Ok(())
+            } else {
+                fs::rename(&from, &to)
             }
         }
     }
-    applied
 }
 
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
@@ -210,7 +201,6 @@ pub fn apply_edit(
     edit: WorkspaceEdit,
     ctx: &mut Context,
 ) -> ApplyWorkspaceEditResponse {
-    let mut applied = true;
     if let Some(document_changes) = edit.document_changes {
         match document_changes {
             DocumentChanges::Edits(edits) => {
@@ -225,8 +215,9 @@ pub fn apply_edit(
                             apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
                         }
                         DocumentChangeOperation::Op(op) => {
-                            if apply_document_resource_op(&meta, op, ctx) {
-                                applied = true;
+                            if let Err(e) = apply_document_resource_op(&meta, op, ctx) {
+                                error!("failed to apply document change operation: {}", e);
+                                return ApplyWorkspaceEditResponse { applied: false };
                             }
                         }
                     }
@@ -238,7 +229,7 @@ pub fn apply_edit(
             apply_text_edits(&meta, uri, change, ctx);
         }
     }
-    return ApplyWorkspaceEditResponse { applied };
+    ApplyWorkspaceEditResponse { applied: true }
 }
 
 #[derive(Deserialize)]
