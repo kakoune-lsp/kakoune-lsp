@@ -135,7 +135,11 @@ pub fn start(
                                 if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
                                     let (meta, method, _) = request;
                                     match failure.error.code {
-                                        ErrorCode::ServerError(CONTENT_MODIFIED) => {},
+                                        ErrorCode::ServerError(CONTENT_MODIFIED) => {
+                                            // Nothing to do, but sending command back to the editor is required to handle case when
+                                            // editor is blocked waiting for response via fifo.
+                                            ctx.exec(meta, "nop".to_string());
+                                        },
                                         code => {
                                             let msg = match code {
                                                 ErrorCode::MethodNotFound => format!(
