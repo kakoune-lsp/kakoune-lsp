@@ -517,6 +517,7 @@ eval "set -- $kak_quoted_opt_lsp_server_configuration"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
+    value="$(printf %s "$value"|sed -e 's/\\=/=/g')"
     quotedkey='"'$(printf %s "$key"|sed -e 's/\\/\\\\/' -e 's/"/\\"/')'"'
 
     printf '%s = %s\n' "$quotedkey" "$value"
