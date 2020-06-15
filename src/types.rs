@@ -1,11 +1,11 @@
 use jsonrpc_core::{Call, Output, Params};
+use lsp_types::Range;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
 use toml;
-use lsp_types::Range;
 
 pub enum Void {}
 

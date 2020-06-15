@@ -232,9 +232,11 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             formatting::text_document_formatting(meta, params, &mut ctx);
         }
         request::RangeFormatting::METHOD => match ranges {
-            Some(range) => range_formatting::text_document_range_formatting(meta, params, range, &mut ctx),
+            Some(range) => {
+                range_formatting::text_document_range_formatting(meta, params, range, &mut ctx)
+            }
             None => warn!("No range provided to {}", method),
-        }
+        },
         request::WorkspaceSymbol::METHOD => {
             workspace::workspace_symbol(meta, params, &mut ctx);
         }

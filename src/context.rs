@@ -26,7 +26,8 @@ type BatchCount = BatchNumber;
 
 pub struct Context {
     batch_counter: BatchNumber,
-    pub batches: HashMap<BatchNumber, (BatchCount, Vec<serde_json::value::Value>, ResponsesCallback)>,
+    pub batches:
+        HashMap<BatchNumber, (BatchCount, Vec<serde_json::value::Value>, ResponsesCallback)>,
     pub capabilities: Option<ServerCapabilities>,
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<Diagnostic>>,
@@ -88,12 +89,18 @@ impl Context {
         R::Params: ToParams,
         R::Result: for<'a> Deserialize<'a>,
     {
-        let ops: Vec<R::Params> = vec!(params);
-        self.batch_call::<R,_>(meta, ops, Box::new(move |ctx: &mut Context, meta: EditorMeta, mut results: Vec<R::Result>| {
-            if let Some(result) = results.pop() {
-                callback(ctx, meta, result);
-            }
-        }));
+        let ops: Vec<R::Params> = vec![params];
+        self.batch_call::<R, _>(
+            meta,
+            ops,
+            Box::new(
+                move |ctx: &mut Context, meta: EditorMeta, mut results: Vec<R::Result>| {
+                    if let Some(result) = results.pop() {
+                        callback(ctx, meta, result);
+                    }
+                },
+            ),
+        );
     }
 
     pub fn batch_call<
@@ -108,17 +115,20 @@ impl Context {
         R::Params: ToParams,
         R::Result: for<'a> Deserialize<'a>,
     {
-
         let batch_id = self.next_batch_id();
         self.batches.insert(
             batch_id,
-            (ops.len(), Vec::with_capacity(ops.len()), Box::new(move |ctx, meta, vals| {
-                let results: Vec<R::Result> = vals
-                    .into_iter()
-                    .map(|val| serde_json::from_value(val).expect("Failed to parse response"))
-                    .collect();
-                callback(ctx, meta, results)
-            }))
+            (
+                ops.len(),
+                Vec::with_capacity(ops.len()),
+                Box::new(move |ctx, meta, vals| {
+                    let results: Vec<R::Result> = vals
+                        .into_iter()
+                        .map(|val| serde_json::from_value(val).expect("Failed to parse response"))
+                        .collect();
+                    callback(ctx, meta, results)
+                }),
+            ),
         );
         for params in ops {
             let params = params.to_params();
@@ -127,14 +137,8 @@ impl Context {
                 return;
             }
             let id = self.next_request_id();
-            self.response_waitlist.insert(
-                id.clone(),
-                (
-                    meta.clone(),
-                    R::METHOD,
-                    batch_id,
-                ),
-            );
+            self.response_waitlist
+                .insert(id.clone(), (meta.clone(), R::METHOD, batch_id));
 
             let call = jsonrpc_core::MethodCall {
                 jsonrpc: Some(Version::V2),

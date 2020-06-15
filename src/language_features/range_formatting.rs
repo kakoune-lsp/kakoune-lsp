@@ -6,22 +6,33 @@ use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_range_formatting(meta: EditorMeta, params: EditorParams, ranges: Vec<Range>, ctx: &mut Context) {
+pub fn text_document_range_formatting(
+    meta: EditorMeta,
+    params: EditorParams,
+    ranges: Vec<Range>,
+    ctx: &mut Context,
+) {
     let params = FormattingOptions::deserialize(params)
         .expect("Params should follow FormattingOptions structure");
-    let req_params = ranges.into_iter().map(|range|
-      DocumentRangeFormattingParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let req_params = ranges
+        .into_iter()
+        .map(|range| DocumentRangeFormattingParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            range: range,
+            options: params.clone(),
+            work_done_progress_params: Default::default(),
+        })
+        .collect();
+    ctx.batch_call::<RangeFormatting, _>(
+        meta,
+        req_params,
+        move |ctx: &mut Context, meta, results| {
+            let result = results.into_iter().flatten().flatten().collect();
+            editor_range_formatting(meta, result, ctx)
         },
-        range: range,
-        options: params.clone(),
-        work_done_progress_params: Default::default(),
-    }).collect();
-    ctx.batch_call::<RangeFormatting, _>(meta, req_params, move |ctx: &mut Context, meta, results| {
-        let result = results.into_iter().flatten().flatten().collect();
-        editor_range_formatting(meta, result, ctx)
-    });
+    );
 }
 
 pub fn editor_range_formatting(meta: EditorMeta, text_edits: Vec<TextEdit>, ctx: &mut Context) {
