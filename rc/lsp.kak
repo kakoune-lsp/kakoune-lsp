@@ -24,6 +24,10 @@ declare-option -docstring "Display hover info anchored to the hovered position" 
 # Completions request is sent only when this expression doesn't fail.
 # By default, it ensures that preceding character is not a whitespace.
 declare-option -docstring "Completions request is sent only when this expression does not fail" str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
+# Kakoune requires completions to point fragment start rather than cursor position.
+# This variable provides a way to customise how fragment start is detected.
+# By default, it tracks back to the first punctuation or whitespace.
+declare-option -docstring "Select from cursor to the start of the term being completed" str lsp_completion_fragment_start %{execute-keys <esc><a-h>s\$?\w+.\z<ret>}
 # If hover in insert mode is enabled then request is made only when this expression doesn't fail and
 # for position at which it moves cursor; by default, it ensures that cursor is after opening parens
 # and then moves cursor to opening parens to request hover info for current function; note that it
@@ -139,7 +143,7 @@ try %{
     set-option window lsp_completion_offset %val{cursor_column}
     evaluate-commands -draft %{
         try %{
-            execute-keys <esc><a-h>s\$?\w+.\z<ret>
+            evaluate-commands %opt{lsp_completion_fragment_start}
             set-option window lsp_completion_offset %val{cursor_column}
         }
     }
