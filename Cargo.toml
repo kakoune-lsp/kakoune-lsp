@@ -7,27 +7,27 @@ license = "Unlicense/MIT"
 
 [dependencies]
 crossbeam-channel = "0.4.2"
-clap = "2.33.0"
+clap = "2.33.1"
 daemonize = "0.4.1"
 dirs = "2.0.2"
 enum_primitive = "0.1.1"
 glob = "0.3.0"
 itertools = "0.9.0"
-jsonrpc-core = "14.1.0"
-libc = "0.2.69"
 lsp-types = { version = "0.73.0", features = ["proposed"] }
+jsonrpc-core = "14.2.0"
+libc = "0.2.71"
 rand = "0.7.3"
-regex = "1.3.7"
-ropey = "1.1.0"
-serde = "1.0.106"
-serde_derive = "1.0.106"
-serde_json = "1.0.51"
+regex = "1.3.9"
+ropey = "1.2.0"
+serde = "1.0.112"
+serde_derive = "1.0.112"
+serde_json = "1.0.55"
 slog = { version = "2.5.2", features = ["release_max_level_debug"] }
 slog-scope = "4.3.0"
-sloggers = "0.3.5"
+sloggers = "1.0.1"
 toml = "0.5.6"
 url = { version = "2.1.1", features = ["serde"] }
-whoami = "0.8.1"
+whoami = "0.8.2"
 
 [profile.release]
 lto = true
