@@ -64,8 +64,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         .iter()
         .map(|x| {
             let face = match x.severity {
-                Some(DiagnosticSeverity::Error) => "DiagnosticError",
-                _ => "DiagnosticWarning",
+                Some(DiagnosticSeverity::Error) => "InlayDiagnosticError",
+                _ => "InlayDiagnosticWarning",
             };
             // Pretend the language server sent us the diagnostic past the end of line
             let line = x.range.end.line;

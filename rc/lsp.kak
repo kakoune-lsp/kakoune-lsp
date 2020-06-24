@@ -9,6 +9,9 @@ declare-option -docstring "Command with which lsp is run" str lsp_cmd "kak-lsp -
 # Faces used by inline diagnostics.
 set-face global DiagnosticError red
 set-face global DiagnosticWarning yellow
+# Faces used by inlay diagnostics.
+set-face global InlayDiagnosticError DiagnosticError
+set-face global InlayDiagnosticWarning DiagnosticWarning
 # Line flags for errors and warnings both use this face.
 set-face global LineFlagErrors red
 # Face for highlighting references.
