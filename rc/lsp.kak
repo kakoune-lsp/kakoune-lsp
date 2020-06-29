@@ -619,9 +619,15 @@ define-command lsp-range-formatting -docstring "Format selections" %{
 define-command -hidden lsp-range-formatting-request -docstring "Format selections" %{
     nop %sh{
 ranges_str="$(for range in ${kak_selections_char_desc}; do
-    IFS=, read start end <<< $range
-    IFS=. read startline startcolumn <<< $start
-    IFS=. read endline endcolumn <<< $end
+    IFS=, read start end <<END
+    $range
+END
+    IFS=. read startline startcolumn <<END
+    $start
+END
+    IFS=. read endline endcolumn <<END
+    $end
+END
     printf '
 [[ranges]]
   [ranges.start]
