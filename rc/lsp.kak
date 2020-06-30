@@ -257,7 +257,9 @@ column    = %d
 }
 
 define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
-    lsp-did-change-and-then "lsp-execute-command-request '%arg{1}' '%arg{2}'"
+    declare-option -hidden str lsp_execute_command_command %arg{1}
+    declare-option -hidden str lsp_execute_command_arguments %arg{2}
+    lsp-did-change-and-then %{lsp-execute-command-request %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
 }
 
 define-command -hidden lsp-execute-command-request -params 2 -docstring "Execute a command" %{
