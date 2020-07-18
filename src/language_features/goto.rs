@@ -3,13 +3,8 @@ use crate::position::lsp_range_to_kakoune;
 use crate::types::{EditorMeta, EditorParams, PositionParams};
 use crate::util::{editor_quote, get_file_contents, get_lsp_position};
 use itertools::Itertools;
-use lsp_types::request::{
-    GotoDefinition, GotoDefinitionResponse, GotoImplementation, GotoTypeDefinition, References,
-};
-use lsp_types::{
-    Location, LocationLink, ReferenceContext, ReferenceParams, TextDocumentIdentifier,
-    TextDocumentPositionParams,
-};
+use lsp_types::request::{GotoDefinition, GotoImplementation, GotoTypeDefinition, References};
+use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
@@ -94,11 +89,15 @@ pub fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Contex
 
 pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = TextDocumentPositionParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let req_params = GotoDefinitionParams {
+        text_document_position_params: TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<GotoDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         goto(meta, result, ctx);
@@ -107,11 +106,15 @@ pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mu
 
 pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = TextDocumentPositionParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let req_params = GotoDefinitionParams {
+        text_document_position_params: TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<GotoImplementation, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         goto(meta, result, ctx);
@@ -120,11 +123,15 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
 
 pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = TextDocumentPositionParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let req_params = GotoDefinitionParams {
+        text_document_position_params: TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<GotoTypeDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         goto(meta, result, ctx);
@@ -143,6 +150,7 @@ pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mu
         context: ReferenceContext {
             include_declaration: true,
         },
+        partial_result_params: Default::default(),
         work_done_progress_params: Default::default(),
     };
     ctx.call::<References, _>(meta, req_params, move |ctx: &mut Context, meta, result| {

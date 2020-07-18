@@ -8,11 +8,15 @@ use url::Url;
 
 pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = TextDocumentPositionParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let req_params = SignatureHelpParams {
+        context: None,
+        text_document_position_params: TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<SignatureHelpRequest, _>(
         meta,

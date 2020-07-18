@@ -92,6 +92,7 @@ pub fn initialize(
                         deprecated_support: Some(false),
                         preselect_support: Some(false),
                         tag_support: None,
+                        insert_replace_support: None,
                     }),
                     completion_item_kind: Some(CompletionItemKindCapability {
                         value_set: Some(vec![
@@ -271,8 +272,12 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
 
     let mut features = vec![];
 
-    if server_capabilities.hover_provider.unwrap_or(false) {
-        features.push("lsp-hover");
+    match server_capabilities
+        .hover_provider.as_ref()
+        .unwrap_or(&HoverProviderCapability::Simple(false))
+    {
+        HoverProviderCapability::Simple(false) => (),
+        _ => features.push("lsp-hover"),
     }
 
     if server_capabilities.completion_provider.is_some() {

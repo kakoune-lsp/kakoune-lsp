@@ -5,18 +5,22 @@ use crate::util::get_lsp_position;
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind::Write,
-    TextDocumentIdentifier, TextDocumentPositionParams,
+    DocumentHighlightParams, TextDocumentIdentifier, TextDocumentPositionParams,
 };
 use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_highlights(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = TextDocumentPositionParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let req_params = DocumentHighlightParams {
+        text_document_position_params: TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier {
+                uri: Url::from_file_path(&meta.buffile).unwrap(),
+            },
+            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<DocumentHighlightRequest, _>(
         meta,

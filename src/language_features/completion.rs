@@ -77,14 +77,22 @@ pub fn editor_completion(
             // However, we can support simple text edits that only replace the token left of the
             // cursor. Kakoune will do this very edit if we simply pass it the replacement string
             // as completion.
-            let is_simple_text_edit = x.text_edit.as_ref().map_or(false, |text_edit| {
-                text_edit.range.start.line + 1 == params.position.line
-                    && text_edit.range.start.character + 1 == params.completion.offset
-                    && text_edit.range.end.line + 1 == params.position.line
-                    && text_edit.range.end.character + 1 == params.position.column
+            let is_simple_text_edit = x.text_edit.as_ref().map_or(false, |cte| {
+                if let CompletionTextEdit::Edit(text_edit) = cte {
+                    text_edit.range.start.line + 1 == params.position.line
+                        && text_edit.range.start.character + 1 == params.completion.offset
+                        && text_edit.range.end.line + 1 == params.position.line
+                        && text_edit.range.end.character + 1 == params.position.column
+                } else {
+                    false
+                }
             });
             let insert_text = &if is_simple_text_edit {
-                x.text_edit.unwrap().new_text
+                if let CompletionTextEdit::Edit(te) = x.text_edit.unwrap() {
+                    te.new_text
+                } else {
+                    x.insert_text.unwrap_or(x.label)
+                }
             } else {
                 x.insert_text.unwrap_or(x.label)
             };
