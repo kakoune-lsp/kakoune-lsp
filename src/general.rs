@@ -3,6 +3,7 @@ use crate::controller;
 use crate::language_features::semantic_highlighting;
 use crate::types::*;
 use crate::util::*;
+use itertools::Itertools;
 use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -270,57 +271,58 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
 
     let server_capabilities = ctx.capabilities.as_ref().unwrap();
 
-    let mut features = vec![];
+    let mut features: Vec<String> = vec![];
 
     match server_capabilities
-        .hover_provider.as_ref()
+        .hover_provider
+        .as_ref()
         .unwrap_or(&HoverProviderCapability::Simple(false))
     {
         HoverProviderCapability::Simple(false) => (),
-        _ => features.push("lsp-hover"),
+        _ => features.push("lsp-hover".to_string()),
     }
 
     if server_capabilities.completion_provider.is_some() {
-        features.push("lsp-completion (hooked on InsertIdle)");
+        features.push("lsp-completion (hooked on InsertIdle)".to_string());
     }
 
     if server_capabilities.definition_provider.unwrap_or(false) {
-        features.push("lsp-definition (mapped to `gd` by default)");
+        features.push("lsp-definition (mapped to `gd` by default)".to_string());
     }
 
     if server_capabilities.implementation_provider.is_some() {
-        features.push("lsp-implementation");
+        features.push("lsp-implementation".to_string());
     }
 
     if server_capabilities.references_provider.unwrap_or(false) {
-        features.push("lsp-references (mapped to `gr` by default)");
+        features.push("lsp-references (mapped to `gr` by default)".to_string());
     }
 
     if server_capabilities
         .workspace_symbol_provider
         .unwrap_or(false)
     {
-        features.push("lsp-workspace-symbol");
+        features.push("lsp-workspace-symbol".to_string());
     }
 
     if server_capabilities
         .document_formatting_provider
         .unwrap_or(false)
     {
-        features.push("lsp-formatting");
+        features.push("lsp-formatting".to_string());
     }
 
     if server_capabilities
         .document_range_formatting_provider
         .unwrap_or(false)
     {
-        features.push("lsp-range-formatting");
+        features.push("lsp-range-formatting".to_string());
     }
 
     if let Some(ref rename_provider) = server_capabilities.rename_provider {
         match rename_provider {
             RenameProviderCapability::Simple(true) | RenameProviderCapability::Options(_) => {
-                features.push("lsp-rename")
+                features.push("lsp-rename".to_string())
             }
             _ => (),
         }
@@ -330,14 +332,48 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         match code_action_provider {
             CodeActionProviderCapability::Simple(x) => {
                 if *x {
-                    features.push("lsp-code-actions");
+                    features.push("lsp-code-actions".to_string());
                 }
             }
-            CodeActionProviderCapability::Options(_) => features.push("lsp-code-actions"),
+            CodeActionProviderCapability::Options(_) => {
+                features.push("lsp-code-actions".to_string())
+            }
         }
     }
 
-    features.push("lsp-diagnostics");
+    features.push("lsp-diagnostics".to_string());
+
+    if let Some(ref provider) = server_capabilities.semantic_tokens_provider {
+        let legend = match provider {
+            SemanticTokensServerCapabilities::SemanticTokensOptions(options) => &options.legend,
+            SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(regopts) => {
+                &regopts.semantic_tokens_options.legend
+            }
+        };
+
+        features.push(format!(
+            "lsp-semantic-tokens:     types: [{}]",
+            legend
+                .token_types
+                .iter()
+                .map(SemanticTokenType::as_str)
+                .join(", ")
+        ));
+        features.push(format!(
+            "lsp-semantic-tokens: modifiers: [{}]",
+            legend
+                .token_modifiers
+                .iter()
+                .map(SemanticTokenModifier::as_str)
+                .join(", ")
+        ));
+    }
+
+    if let Some(ref cap) = server_capabilities.semantic_highlighting {
+        if let Some(ref scopes) = cap.scopes {
+            features.push(format!("lsp-semantic-highlighting: scopes: [{}]", scopes.iter().map(|xs| xs.join(".")).join(", ")));
+        }
+    }
 
     let command = format!(
         "info 'kak-lsp commands supported by {} language server:\n\n{}'",
