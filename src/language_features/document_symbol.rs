@@ -10,6 +10,8 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
     };
     ctx.call::<DocumentSymbolRequest, _>(
         meta,
