@@ -41,7 +41,14 @@ timeout = 1800 # seconds = 30 minutes
 [language.rust]
 filetypes = ["rust"]
 roots = ["Cargo.toml"]
-command = "rls"
+command = "sh"
+args = ["-c", "$(rustup which rls)"]
+
+# [language.rust]
+# filetypes = ["rust"]
+# roots = ["Cargo.toml"]
+# command = "sh"
+# args = ["-c", "$(rustup which rust-analyzer)"]
 
 [language.crystal]
 filetypes = ["crystal"]
