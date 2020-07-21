@@ -56,6 +56,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 === From the source
 
+Generally, you need the latest stable version of Rust to build kak-lsp.
+
 ----
 git clone https://github.com/ul/kak-lsp
 cd kak-lsp
