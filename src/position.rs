@@ -35,7 +35,7 @@ pub const EOL_OFFSET: u64 = 1_000_000;
 pub fn lsp_range_to_kakoune(
     range: &Range,
     text: &Rope,
-    offset_encoding: &OffsetEncoding,
+    offset_encoding: OffsetEncoding,
 ) -> KakouneRange {
     match offset_encoding {
         OffsetEncoding::Utf8 => lsp_range_to_kakoune_utf_8_code_units(range),
@@ -47,7 +47,7 @@ pub fn lsp_range_to_kakoune(
 pub fn lsp_position_to_kakoune(
     position: &Position,
     text: &Rope,
-    offset_encoding: &OffsetEncoding,
+    offset_encoding: OffsetEncoding,
 ) -> KakounePosition {
     match offset_encoding {
         OffsetEncoding::Utf8 => lsp_position_to_kakoune_utf_8_code_units(position),
@@ -59,7 +59,7 @@ pub fn lsp_position_to_kakoune(
 pub fn kakoune_position_to_lsp(
     position: &KakounePosition,
     text: &Rope,
-    offset_encoding: &OffsetEncoding,
+    offset_encoding: OffsetEncoding,
 ) -> Position {
     match offset_encoding {
         OffsetEncoding::Utf8 => kakoune_position_to_lsp_utf_8_code_units(position),

@@ -198,7 +198,7 @@ impl Display for KakouneRange {
 }
 
 /// Represents how language server interprets LSP's `Position.character`
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum OffsetEncoding {
     /// UTF-8 code units aka bytes
     #[serde(rename = "utf-8")]

@@ -11,7 +11,7 @@ use std::io::{BufReader, BufWriter, Write};
 pub fn apply_text_edits_to_file(
     uri: &Url,
     text_edits: &[TextEdit],
-    offset_encoding: &OffsetEncoding,
+    offset_encoding: OffsetEncoding,
 ) -> std::io::Result<()> {
     let mut temp_path = temp_dir();
     temp_path.push(format!("{:x}", rand::random::<u64>()));
@@ -41,7 +41,7 @@ pub fn apply_text_edits_to_file(
         text: Rope,
         temp_file: File,
         text_edits: &[TextEdit],
-        offset_encoding: &OffsetEncoding,
+        offset_encoding: OffsetEncoding,
     ) -> Result<(), std::io::Error> {
         let mut output = BufWriter::new(temp_file);
 
@@ -128,7 +128,7 @@ pub fn apply_text_edits_to_buffer(
     uri: Option<&Url>,
     text_edits: &[TextEdit],
     text: &Rope,
-    offset_encoding: &OffsetEncoding,
+    offset_encoding: OffsetEncoding,
 ) -> String {
     // Empty text edits processed as a special case because Kakoune's `select` command
     // doesn't support empty arguments list.
@@ -251,7 +251,7 @@ struct KakouneTextEdit {
 fn lsp_text_edit_to_kakoune(
     text_edit: &TextEdit,
     text: &Rope,
-    offset_encoding: &OffsetEncoding,
+    offset_encoding: OffsetEncoding,
 ) -> KakouneTextEdit {
     let TextEdit { range, new_text } = text_edit;
     let Range { start, end } = range;

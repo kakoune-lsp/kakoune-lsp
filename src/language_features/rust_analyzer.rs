@@ -60,7 +60,7 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
     let ranges = inlay_hints
         .into_iter()
         .map(|InlayHint { range, kind, label }| {
-            let range = lsp_range_to_kakoune(&range, &document.text, &ctx.offset_encoding);
+            let range = lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
             let label = label.replace("|", "\\|");
             match kind {
                 InlayKind::TypeHint => {
@@ -194,7 +194,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
             let buffile = buffile.to_str().unwrap();
             let position = match ctx.documents.get(buffile) {
                 Some(document) => {
-                    lsp_position_to_kakoune(position, &document.text, &ctx.offset_encoding)
+                    lsp_position_to_kakoune(position, &document.text, ctx.offset_encoding)
                 }
                 _ => KakounePosition {
                     line: position.line + 1,

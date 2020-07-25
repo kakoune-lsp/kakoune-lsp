@@ -46,6 +46,6 @@ pub fn editor_range_formatting(meta: EditorMeta, text_edits: Vec<TextEdit>, ctx:
     let document = document.unwrap();
     ctx.exec(
         meta,
-        apply_text_edits_to_buffer(None, &text_edits, &document.text, &ctx.offset_encoding),
+        apply_text_edits_to_buffer(None, &text_edits, &document.text, ctx.offset_encoding),
     );
 }

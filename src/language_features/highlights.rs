@@ -45,7 +45,7 @@ pub fn editor_document_highlights(
             .map(|highlight| {
                 format!(
                     "{}|{}",
-                    lsp_range_to_kakoune(&highlight.range, &document.text, &ctx.offset_encoding),
+                    lsp_range_to_kakoune(&highlight.range, &document.text, ctx.offset_encoding),
                     if highlight.kind == Some(Write) {
                         "ReferenceBind"
                     } else {
