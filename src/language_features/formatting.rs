@@ -40,7 +40,7 @@ pub fn editor_formatting(meta: EditorMeta, result: Option<Vec<TextEdit>>, ctx: &
         Some(text_edits) => {
             ctx.exec(
                 meta,
-                apply_text_edits_to_buffer(None, &text_edits, &document.text, &ctx.offset_encoding),
+                apply_text_edits_to_buffer(None, &text_edits, &document.text, ctx.offset_encoding),
             );
         }
     }

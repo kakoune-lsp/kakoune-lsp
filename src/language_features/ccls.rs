@@ -378,7 +378,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
                 } else {
                     Option::Some(format!(
                         "{}|{}",
-                        lsp_range_to_kakoune(r, &document.text, &offset_encoding),
+                        lsp_range_to_kakoune(r, &document.text, offset_encoding),
                         face
                     ))
                 }

@@ -29,7 +29,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         .map(|x| {
             format!(
                 "{}|{}",
-                lsp_range_to_kakoune(&x.range, &document.text, &ctx.offset_encoding),
+                lsp_range_to_kakoune(&x.range, &document.text, ctx.offset_encoding),
                 match x.severity {
                     Some(DiagnosticSeverity::Error) => "DiagnosticError",
                     _ => "DiagnosticWarning",
@@ -71,7 +71,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             let line = x.range.end.line;
             let line_text = get_line(line as usize, &document.text);
             let mut pos =
-                lsp_position_to_kakoune(&x.range.end, &document.text, &ctx.offset_encoding);
+                lsp_position_to_kakoune(&x.range.end, &document.text, ctx.offset_encoding);
             pos.column = line_text.len_bytes() as u64;
             // separate all but the first diagnostic on the same line
             let sep = if lines_with_errors.insert(line) {

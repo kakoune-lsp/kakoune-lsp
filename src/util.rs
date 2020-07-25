@@ -156,7 +156,7 @@ pub fn get_lsp_position(
         Some(kakoune_position_to_lsp(
             position,
             &document.text,
-            &ctx.offset_encoding,
+            ctx.offset_encoding,
         ))
     })
 }
@@ -172,7 +172,7 @@ pub fn get_kakoune_position(
         Some(lsp_position_to_kakoune(
             &position,
             &text,
-            &ctx.offset_encoding,
+            ctx.offset_encoding,
         ))
     })
 }
@@ -186,10 +186,10 @@ pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &
     {
         ctx.exec(
             meta.clone(),
-            apply_text_edits_to_buffer(Some(uri), edits, &document.text, &ctx.offset_encoding),
+            apply_text_edits_to_buffer(Some(uri), edits, &document.text, ctx.offset_encoding),
         );
     } else {
-        if let Err(e) = apply_text_edits_to_file(uri, edits, &ctx.offset_encoding) {
+        if let Err(e) = apply_text_edits_to_file(uri, edits, ctx.offset_encoding) {
             error!("Failed to apply edits to file {} ({})", uri, e);
         };
     }
