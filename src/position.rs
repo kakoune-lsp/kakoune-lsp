@@ -178,11 +178,19 @@ fn lsp_range_to_kakoune_utf_8_code_units(range: &Range) -> KakouneRange {
 
 fn kakoune_position_to_lsp_utf_8_code_points(position: &KakounePosition, text: &Rope) -> Position {
     // -1 because LSP & Rope ranges are 0-based, but Kakoune's are 1-based.
-    let line = position.line - 1;
-    let character = text
-        .line(line as _)
-        .byte_to_char((position.column - 1) as _) as _;
-    Position { line, character }
+    let line_idx = position.line - 1;
+    let col_idx = position.column - 1;
+    if line_idx as usize >= text.len_lines() {
+        return Position { line: line_idx, character: col_idx };
+    }
+
+    let line = text.line(line_idx as _);
+    if col_idx as usize >= line.len_bytes() {
+        return Position { line: line_idx, character: col_idx };
+    }
+
+    let character = line.byte_to_char(col_idx as _) as _;
+    Position { line: line_idx, character }
 }
 
 fn kakoune_position_to_lsp_utf_8_code_units(position: &KakounePosition) -> Position {
@@ -194,13 +202,20 @@ fn kakoune_position_to_lsp_utf_8_code_units(position: &KakounePosition) -> Posit
 }
 
 fn lsp_position_to_kakoune_utf_8_code_points(position: &Position, text: &Rope) -> KakounePosition {
-    let byte: u64 = text
-        .line(position.line as _)
-        .char_to_byte(position.character as _) as _;
+    if position.line as usize >= text.len_lines() {
+        return KakounePosition { line: position.line + 1, column: 999999999 };
+    }
+
+    let line = text.line(position.line as _);
+    if position.character as usize >= line.len_chars() {
+        return KakounePosition { line: position.line + 1, column: 999999999 };
+    }
+
+    let byte = line.char_to_byte(position.character as _);
     // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     KakounePosition {
         line: position.line + 1,
-        column: byte + 1,
+        column: byte as u64 + 1,
     }
 }
 
