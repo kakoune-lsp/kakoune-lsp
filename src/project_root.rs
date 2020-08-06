@@ -14,6 +14,10 @@ pub fn find_project_root(language: &str, markers: &[String], path: &str) -> Stri
 
 pub fn roots_by_marker(roots: &[String], path: &str) -> String {
     let mut src = PathBuf::from(path);
+    // For scratch buffers we get a bare filename.
+    if !src.is_absolute() {
+        src = env::current_dir().expect("cannot access current directory");
+    }
     while !src.is_dir() {
         src.pop();
     }
