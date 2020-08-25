@@ -988,7 +988,12 @@ define-command -hidden lsp-next-match -params 1 -docstring %{
         execute-keys "ge %opt{grep_current_line}g<a-l> /^[^:]+:\d+:<ret>"
         grep-jump
     }
-    try %{ evaluate-commands -client %opt{toolsclient} %{ execute-keys gg %opt{grep_current_line}g } }
+    try %{
+        evaluate-commands -client %opt{toolsclient} %{
+            buffer %arg{1}
+            execute-keys gg %opt{grep_current_line}g
+        }
+    }
 }
 
 define-command -hidden lsp-previous-match -params 1 -docstring %{
@@ -1000,7 +1005,12 @@ define-command -hidden lsp-previous-match -params 1 -docstring %{
         execute-keys "ge %opt{grep_current_line}g<a-h> <a-/>^[^:]+:\d+:<ret>"
         grep-jump
     }
-    try %{ evaluate-commands -client %opt{toolsclient} %{ execute-keys gg %opt{grep_current_line}g } }
+    try %{
+        evaluate-commands -client %opt{toolsclient} %{
+            buffer %arg{1}
+            execute-keys gg %opt{grep_current_line}g
+        }
+    }
 }
 
 define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
