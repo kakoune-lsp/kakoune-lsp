@@ -945,7 +945,7 @@ define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
 }
 
 define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
-    evaluate-commands -try-client %opt[toolsclient] %{
+    evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch *diagnostics*
         cd %arg{1}
         try %{ set-option buffer working_folder %sh{pwd} }
@@ -956,7 +956,7 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
 }
 
 define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
-    evaluate-commands -try-client %opt[toolsclient] %{
+    evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch *goto*
         cd %arg{1}
         try %{ set-option buffer working_folder %sh{pwd} }
@@ -968,7 +968,7 @@ define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto c
 }
 
 define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
-    evaluate-commands -try-client %opt[toolsclient] %{
+    evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch *symbols*
         cd %arg{1}
         try %{ set-option buffer working_folder %sh{pwd} }
@@ -1004,11 +1004,13 @@ define-command -hidden lsp-previous-match -params 1 -docstring %{
 }
 
 define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
-    cd %arg{1}
-    try %{ set-option buffer working_folder %sh{pwd} }
-    execute-keys '<a-;>%<a-;>d'
-    set-register '"' %arg{2}
-    execute-keys '<a-;>P<a-;>gg'
+    evaluate-commands -save-regs '"' %{
+        cd %arg{1}
+        try %{ set-option buffer working_folder %sh{pwd} }
+        execute-keys '<a-;>%<a-;>d'
+        set-register '"' %arg{2}
+        execute-keys '<a-;>P<a-;>gg'
+    }
 }
 
 define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace symbols" %{
