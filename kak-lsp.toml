@@ -126,6 +126,11 @@ filetypes = ["nim"]
 roots = ["*.nimble", ".git"]
 command = "nimlsp"
 
+[language.nix]
+filetypes = ["nix"]
+roots = ["flake.nix", "shell.nix", ".git"]
+command = "rnix-lsp"
+
 [language.ocaml]
 filetypes = ["ocaml"]
 roots = ["Makefile", "opam", "*.opam", "dune"]
