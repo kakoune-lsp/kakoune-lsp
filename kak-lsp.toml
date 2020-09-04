@@ -38,34 +38,21 @@ readonly = "default+d"
 # set to 0 to disable
 timeout = 1800 # seconds = 30 minutes
 
-[language.rust]
-filetypes = ["rust"]
-roots = ["Cargo.toml"]
-command = "sh"
-args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rls); else rls; fi"]
+[language.bash]
+filetypes = ["sh"]
+roots = [".git", ".hg"]
+command = "bash-language-server"
+args = ["start"]
 
-# [language.rust]
-# filetypes = ["rust"]
-# roots = ["Cargo.toml"]
-# command = "sh"
-# args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rust-analyzer); else rust-analyzer; fi"]
+[language.c_cpp]
+filetypes = ["c", "cpp"]
+roots = ["compile_commands.json", ".clangd"]
+command = "clangd"
 
 [language.crystal]
 filetypes = ["crystal"]
 roots = ["shard.yml"]
 command = "scry"
-
-[language.javascript]
-filetypes = ["javascript"]
-roots = [".flowconfig"]
-command = "flow"
-args = ["lsp"]
-
-[language.json]
-filetypes = ["json"]
-roots = ["package.json"]
-command = "json-languageserver"
-args = ["--stdio"]
 
 [language.css]
 filetypes = ["css"]
@@ -73,60 +60,10 @@ roots = ["package.json"]
 command = "css-languageserver"
 args = ["--stdio"]
 
-[language.html]
-filetypes = ["html"]
-roots = ["package.json"]
-command = "html-languageserver"
-args = ["--stdio"]
-
-[language.ocaml]
-filetypes = ["ocaml"]
-roots = ["Makefile", "opam", "*.opam", "dune"]
-command = "ocaml-language-server"
-args = ["--stdio"]
-
-[language.reason]
-filetypes = ["reason"]
-roots = ["package.json", "Makefile", ".git", ".hg"]
-command = "ocaml-language-server"
-args = ["--stdio"]
-
-[language.ruby]
-filetypes = ["ruby"]
-roots = ["Gemfile"]
-command = "solargraph"
-args = ["stdio"]
-
-[language.python]
-filetypes = ["python"]
-roots = ["requirements.txt", "setup.py", ".git", ".hg"]
-command = "pyls"
-offset_encoding = "utf-8"
-
-[language.c_cpp]
-filetypes = ["c", "cpp"]
-roots = ["compile_commands.json", ".clangd"]
-command = "clangd"
-
-[language.haskell]
-filetypes = ["haskell"]
-roots = ["Setup.hs", "stack.yaml", "*.cabal"]
-# You might also be interested in the newer, but early stage, haskell-language-server
-# https://github.com/haskell/haskell-language-server
-command = "hie-wrapper"
-args = ["--lsp"]
-
-[language.go]
-filetypes = ["go"]
-roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
-command = "gopls"
-offset_encoding = "utf-8"
-
-[language.bash]
-filetypes = ["sh"]
-roots = [".git", ".hg"]
-command = "bash-language-server"
-args = ["start"]
+[language.d]
+filetypes = ["d", "di"]
+roots = [".git", "dub.sdl", "dub.json"]
+command = "dls"
 
 [language.dart]
 # start shell to find path to dart analysis server source
@@ -134,25 +71,6 @@ filetypes = ["dart"]
 roots = ["pubspec.yaml", ".git"]
 command = "sh"
 args = ["-c", "dart $(dirname $(which dart))/snapshots/analysis_server.dart.snapshot --lsp"]
-
-[language.d]
-filetypes = ["d", "di"]
-roots = [".git", "dub.sdl", "dub.json"]
-command = "dls"
-
-[language.php]
-filetypes = ["php"]
-roots = [".htaccess", "composer.json"]
-command = "intelephense"
-args = ["--stdio"]
-
-[language.php.initialization_options]
-storagePath = "/tmp/intelephense"
-
-[language.nim]
-filetypes = ["nim"]
-roots = ["*.nimble", ".git"]
-command = "nimlsp"
 
 [language.elm]
 filetypes = ["elm"]
@@ -166,7 +84,89 @@ elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
 
+[language.go]
+filetypes = ["go"]
+roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
+command = "gopls"
+offset_encoding = "utf-8"
+
+[language.haskell]
+filetypes = ["haskell"]
+roots = ["Setup.hs", "stack.yaml", "*.cabal"]
+# You might also be interested in the newer, but early stage, haskell-language-server
+# https://github.com/haskell/haskell-language-server
+command = "hie-wrapper"
+args = ["--lsp"]
+
+[language.html]
+filetypes = ["html"]
+roots = ["package.json"]
+command = "html-languageserver"
+args = ["--stdio"]
+
+[language.javascript]
+filetypes = ["javascript"]
+roots = [".flowconfig"]
+command = "flow"
+args = ["lsp"]
+
+[language.json]
+filetypes = ["json"]
+roots = ["package.json"]
+command = "json-languageserver"
+args = ["--stdio"]
+
 [language.latex]
 filetypes = ["latex"]
 roots = [".git"]
 command = "texlab"
+
+[language.nim]
+filetypes = ["nim"]
+roots = ["*.nimble", ".git"]
+command = "nimlsp"
+
+[language.ocaml]
+filetypes = ["ocaml"]
+roots = ["Makefile", "opam", "*.opam", "dune"]
+command = "ocaml-language-server"
+args = ["--stdio"]
+
+[language.php]
+filetypes = ["php"]
+roots = [".htaccess", "composer.json"]
+command = "intelephense"
+args = ["--stdio"]
+
+[language.php.initialization_options]
+storagePath = "/tmp/intelephense"
+
+[language.python]
+filetypes = ["python"]
+roots = ["requirements.txt", "setup.py", ".git", ".hg"]
+command = "pyls"
+offset_encoding = "utf-8"
+
+[language.reason]
+filetypes = ["reason"]
+roots = ["package.json", "Makefile", ".git", ".hg"]
+command = "ocaml-language-server"
+args = ["--stdio"]
+
+[language.ruby]
+filetypes = ["ruby"]
+roots = ["Gemfile"]
+command = "solargraph"
+args = ["stdio"]
+
+[language.rust]
+filetypes = ["rust"]
+roots = ["Cargo.toml"]
+command = "sh"
+args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rls); else rls; fi"]
+
+# [language.rust]
+# filetypes = ["rust"]
+# roots = ["Cargo.toml"]
+# command = "sh"
+# args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rust-analyzer); else rust-analyzer; fi"]
