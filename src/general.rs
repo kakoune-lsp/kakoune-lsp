@@ -38,7 +38,7 @@ pub fn initialize(
                     dynamic_registration: Some(false),
                 }),
                 did_change_watched_files: None,
-                symbol: Some(SymbolCapability {
+                symbol: Some(WorkspaceSymbolClientCapabilities{
                     dynamic_registration: Some(false),
                     symbol_kind: Some(SymbolKindCapability {
                         value_set: Some(vec![
@@ -70,6 +70,7 @@ pub fn initialize(
                             SymbolKind::TypeParameter,
                         ]),
                     }),
+                    tag_support: None,
                 }),
                 execute_command: Some(GenericCapability {
                     dynamic_registration: Some(false),
@@ -146,10 +147,11 @@ pub fn initialize(
                 document_highlight: Some(GenericCapability {
                     dynamic_registration: Some(false),
                 }),
-                document_symbol: Some(DocumentSymbolCapability {
+                document_symbol: Some(DocumentSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: None,
                     hierarchical_document_symbol_support: None,
+                    tag_support: None,
                 }),
                 formatting: Some(GenericCapability {
                     dynamic_registration: Some(false),
@@ -220,6 +222,10 @@ pub fn initialize(
                 }),
                 semantic_tokens: Some(SemanticTokensClientCapabilities {
                     dynamic_registration: Some(false),
+                    requests: SemanticTokensClientCapabilitiesRequests {
+                      range: Some(false),
+                      full: Some(SemanticTokensFullOptions::Bool(true)),
+                    },
                     token_types: ctx
                         .config
                         .semantic_tokens
@@ -234,6 +240,7 @@ pub fn initialize(
                         .cloned()
                         .map(|x| x.into())
                         .collect(),
+                    formats: vec![TokenFormat::RELATIVE],
                 }),
             }),
             window: Some(WindowClientCapabilities {
