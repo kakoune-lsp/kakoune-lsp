@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::position::lsp_range_to_kakoune;
 use crate::types::{EditorMeta, EditorParams};
 use crate::util::editor_quote;
-use lsp_types::request::SemanticTokensRequest;
+use lsp_types::request::SemanticTokensFullRequest;
 use lsp_types::{
     Position, Range, SemanticToken, SemanticTokensOptions, SemanticTokensParams,
     SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities::*,
@@ -18,7 +18,7 @@ pub fn tokens_request(meta: EditorMeta, _params: EditorParams, ctx: &mut Context
         },
         work_done_progress_params: Default::default(),
     };
-    ctx.call::<SemanticTokensRequest, _>(meta, req_params, move |ctx, meta, response| {
+    ctx.call::<SemanticTokensFullRequest, _>(meta, req_params, move |ctx, meta, response| {
         if let Some(response) = response {
             tokens_response(meta, response, ctx);
         }

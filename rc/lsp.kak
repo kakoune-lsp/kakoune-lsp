@@ -906,7 +906,7 @@ client    = "%s"
 buffile   = "%s"
 filetype  = "%s"
 version   = %d
-method    = "textDocument/semanticTokens"
+method    = "textDocument/semanticTokens/full"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
@@ -1165,20 +1165,22 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
     declare-option -hidden str lsp_ws_filetype %opt{filetype}
     declare-option -hidden int lsp_ws_timestamp %val{timestamp}
     declare-option -hidden str lsp_ws_query
-    edit! -scratch *symbols*
-    set-option buffer filetype grep
-    set-option buffer grep_current_line 0
-    prompt -on-change %{ try %{
-        # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
-        # the following check prevents it
-        evaluate-commands %sh{
-            if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
-            then echo 'fail';
-            else echo 'set current lsp_ws_query %val{text}';
-            fi
-        }
-        lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_filetype} %opt{lsp_ws_timestamp} %val{text}
-    }} -on-abort %{execute-keys ga} 'Query: ' nop
+    evaluate-commands -try-client %opt[toolsclient] %{
+        edit! -scratch *symbols*
+        set-option buffer filetype grep
+        set-option buffer grep_current_line 0
+        prompt -on-change %{ try %{
+            # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
+            # the following check prevents it
+            evaluate-commands %sh{
+                if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
+                then echo 'fail';
+                else echo 'set current lsp_ws_query %val{text}';
+                fi
+            }
+            lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_filetype} %opt{lsp_ws_timestamp} %val{text}
+        }} -on-abort %{execute-keys ga} 'Query: ' nop
+    }
 }
 
 ### Hooks and highlighters ###

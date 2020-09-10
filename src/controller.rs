@@ -262,7 +262,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "update-semantic-highlighting" => {
             semantic_highlighting::editor_update(meta, params, &mut ctx);
         }
-        request::SemanticTokensRequest::METHOD => {
+        request::SemanticTokensFullRequest::METHOD => {
             semantic_tokens::tokens_request(meta, params, ctx);
         }
 
