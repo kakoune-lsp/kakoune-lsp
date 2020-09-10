@@ -857,6 +857,24 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $kind ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+# clangd Extensions
+
+define-command clangd-switch-source-header -docstring "clangd-switch-source-header: Switch source/header." %{
+    lsp-did-change-and-then clangd-switch-source-header-request
+}
+
+define-command -hidden clangd-switch-source-header-request -docstring "clangd-switch-source-header: Switch source/header." %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/switchSourceHeader"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 # eclipse.jdt.ls Extension
 #
 define-command ejdtls-organize-imports -docstring "ejdtls-organize-imports: Organize imports." %{

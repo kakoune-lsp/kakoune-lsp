@@ -283,6 +283,11 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             ccls::member(meta, params, ctx);
         }
 
+        // clangd
+        clangd::SwitchSourceHeaderRequest::METHOD => {
+            clangd::switch_source_header(meta, ctx);
+        }
+
         // eclipse.jdt.ls
         "eclipse.jdt.ls/organizeImports" => {
             eclipse_jdt_ls::organize_imports(meta, ctx);
