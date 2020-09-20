@@ -17,13 +17,13 @@ However, if you don't need to change configuration then feel free to skip copyin
 ===== Homebrew
 
 ----
-brew install ul/kak-lsp/kak-lsp
+brew install kak-lsp/kak-lsp/kak-lsp
 ----
 
 ===== Manual
 
 ----
-curl -O -L https://github.com/ul/kak-lsp/releases/download/v8.0.0/kak-lsp-v8.0.0-x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/kak-lsp/kak-lsp/releases/download/v8.0.0/kak-lsp-v8.0.0-x86_64-apple-darwin.tar.gz
 tar xzvf kak-lsp-v8.0.0-x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -44,7 +44,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ===== Others
 
 ----
-wget https://github.com/ul/kak-lsp/releases/download/v8.0.0/kak-lsp-v8.0.0-x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/kak-lsp/kak-lsp/releases/download/v8.0.0/kak-lsp-v8.0.0-x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp-v8.0.0-x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -59,7 +59,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 Generally, you need the latest stable version of Rust to build kak-lsp.
 
 ----
-git clone https://github.com/ul/kak-lsp
+git clone https://github.com/kak-lsp/kak-lsp
 cd kak-lsp
 
 cargo install --locked --force --path .
@@ -77,7 +77,7 @@ If you don't mind using plugin manager, you can install kak-lsp
 with https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
 
 ----
-plug "ul/kak-lsp" do %{
+plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
 }
 ----
@@ -85,13 +85,13 @@ plug "ul/kak-lsp" do %{
 You can replace `cargo install` with `ln -sf target/release/kak-lsp ~/.local/bin/`
 where `~/.local/bin/` can be replaced to something in your `$PATH`.
 
-Examples of configuration with plug.kak can be found at https://github.com/ul/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
+Examples of configuration with plug.kak can be found at https://github.com/kak-lsp/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
 
 == Language servers
 
 kak-lsp doesn't manage installation of language servers, please install them
 by yourself for the languages you plan to use kak-lsp with. Please consult the
-https://github.com/ul/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
+https://github.com/kak-lsp/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
 quick installation of language servers supported by kak-lsp out of the box.
 
 == Usage
