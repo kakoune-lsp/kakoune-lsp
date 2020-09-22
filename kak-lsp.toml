@@ -175,3 +175,9 @@ args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rls); else r
 # roots = ["Cargo.toml"]
 # command = "sh"
 # args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rust-analyzer); else rust-analyzer; fi"]
+
+[language.terraform]
+filetypes = ["terraform"]
+roots = ["*.tf"]
+command = "terraform-ls"
+args = ["serve"]
