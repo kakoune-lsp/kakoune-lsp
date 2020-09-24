@@ -1455,10 +1455,11 @@ def lsp-snippets-insert -hidden -params 1 %[
             # select things that look like placeholders
             # this regex is not as bad as it looks
             eval -draft %[
-                exec s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])+)?)\}))<ret>
+                exec s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])*)?)\}))<ret>
                 # tests
                 # $1                - ok
                 # ${2}              - ok
+                # ${3:}             - ok
                 # $1$2$3            - ok x3
                 # $1${2}$3${4}      - ok x4
                 # $1\${2}\$3${4}    - ok, not ok, not ok, ok
