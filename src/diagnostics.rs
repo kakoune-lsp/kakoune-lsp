@@ -87,13 +87,13 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         .join(" ");
     // Always show a space on line one if no other highlighter is there,
     // to make sure the column always has the right width
-    // Also wrap it in another eval and quotes, to make sure the %opt[] tags are expanded
+    // Also wrap line_flags in another eval and quotes, to make sure the %opt[] tags are expanded
     let command = format!(
         "set buffer lsp_diagnostic_error_count {}
          set buffer lsp_diagnostic_warning_count {}
          set buffer lsp_errors {} {}
          eval \"set buffer lsp_error_lines {} {} '0| '\"
-         eval \"set buffer lsp_diagnostics {} {}\"",
+         set buffer lsp_diagnostics {} {}",
         error_count,
         warning_count,
         version,
