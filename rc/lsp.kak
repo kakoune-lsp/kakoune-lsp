@@ -1304,8 +1304,11 @@ map global lsp = '<esc>: lsp-range-formatting<ret>'       -docstring 'format sel
 ### Default integration ###
 
 define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
-    set-option global completers option=lsp_completions %opt{completers}
-    add-highlighter global/cquery_semhl ranges cquery_semhl
+    try %{
+        add-highlighter global/cquery_semhl ranges cquery_semhl
+    } catch %{
+        fail 'lsp-enable: already enabled'
+    }
     add-highlighter global/lsp_references ranges lsp_references
     add-highlighter global/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
@@ -1313,6 +1316,8 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     add-highlighter global/lsp_snippets_placeholders ranges lsp_snippets_placeholders
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
+
+    set-option global completers option=lsp_completions %opt{completers}
 
     map global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
     map global goto r '<esc>: lsp-references<ret>' -docstring 'references'
@@ -1352,14 +1357,18 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
 }
 
 define-command lsp-enable-window -docstring "Default integration with kak-lsp in the window scope" %{
-    set-option window completers option=lsp_completions %opt{completers}
-
-    add-highlighter window/cquery_semhl ranges cquery_semhl
+    try %{
+        add-highlighter window/cquery_semhl ranges cquery_semhl
+    } catch %{
+        fail 'lsp-enable-window: already enabled'
+    }
     add-highlighter window/lsp_references ranges lsp_references
     add-highlighter window/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     add-highlighter window/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter window/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
     add-highlighter window/lsp_snippets_placeholders ranges lsp_snippets_placeholders
+
+    set-option window completers option=lsp_completions %opt{completers}
 
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
