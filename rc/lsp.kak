@@ -1310,6 +1310,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     add-highlighter global/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter global/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
+    add-highlighter global/lsp_snippets_placeholders ranges lsp_snippets_placeholders
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
 
@@ -1337,6 +1338,7 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/lsp_semantic_highlighting
     remove-highlighter global/lsp_semantic_tokens
     remove-highlighter global/rust_analyzer_inlay_hints
+    remove-highlighter global/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
     unmap global goto d '<esc>: lsp-definition<ret>'
@@ -1357,6 +1359,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     add-highlighter window/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     add-highlighter window/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter window/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
+    add-highlighter window/lsp_snippets_placeholders ranges lsp_snippets_placeholders
 
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
@@ -1384,6 +1387,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     remove-highlighter window/lsp_semantic_highlighting
     remove-highlighter window/lsp_semantic_tokens
     remove-highlighter window/rust_analyzer_inlay_hints
+    remove-highlighter window/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
     unmap window goto d '<esc>: lsp-definition<ret>'
@@ -1418,8 +1422,7 @@ def -hidden lsp-snippets-insert-completion -params 2 %{ eval -save-regs "a" %{
     hook -once -group lsp-post-completion window InsertCompletionHide .* %{
         try %{
             lsp-snippets-select-next-placeholders
-            # On the next key, start replacing the placeholder contents
-            on-key %{ exec "<esc>c%val{key}" }
+            exec '<a-;>d'
         }
     }
 }}

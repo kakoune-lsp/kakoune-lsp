@@ -312,6 +312,29 @@ lsp-inlay-diagnostics-enable global
 
 Note that this requires you to build Kakoune from source as the feature that allows this is not yet in a release.
 
+== Snippets
+
+kak-lsp has experimental support for snippets. It is enabled by setting `snippet_support = true` at the top level of the config.
+
+It uses the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`, you may want to customize those.
+
+To properly use snippets, you'll probably want something like this:
+
+----
+def -hidden insert-c-n %{
+ try %{
+   lsp-snippets-select-next-placeholders
+   exec '<a-;>d'
+ } catch %{
+   exec -with-hooks '<c-n>'
+ }
+}
+map global insert <c-n> "<a-;>: insert-c-n<ret>"
+----
+
+This maps `<c-n>` to select the next placeholder if there is one, and otherwise executes `<c-n>` as normal
+
+
 == Limitations
 
 === Encoding
