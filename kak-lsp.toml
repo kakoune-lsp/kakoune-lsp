@@ -181,3 +181,9 @@ filetypes = ["terraform"]
 roots = ["*.tf"]
 command = "terraform-ls"
 args = ["serve"]
+
+[language.yaml]
+filetypes = ["yaml"]
+roots = [".git"]
+command = "yaml-language-server"
+args = ["--stdio"]
