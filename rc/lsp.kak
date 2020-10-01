@@ -550,7 +550,9 @@ method   = "exit"
 }
 
 define-command lsp-apply-workspace-edit -params 1 -hidden %{
-    lsp-did-change-and-then "lsp-apply-workspace-edit-request '%arg{1}'"
+    lsp-did-change-and-then %sh{
+        printf "lsp-apply-workspace-edit-request '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
+    }
 }
 
 define-command lsp-apply-workspace-edit-request -params 1 -hidden %{
