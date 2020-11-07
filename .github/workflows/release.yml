@@ -9,24 +9,23 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  create_release:
-    name: Create release
+  draft_release:
+    name: Draft release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      upload_url: ${{ steps.create_release_draft.outputs.upload_url }}
     steps:
-      - name: Create release
-        id: create_release
+      - name: Create release draft
+        id: create_release_draft
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
+          draft: true
 
   build_release:
     name: Build release
-    needs: create_release
+    needs: draft_release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -41,14 +40,14 @@ jobs:
       with:
         fetch-depth: 0 # for git describe --tags
     - name: Build
-      run: ci/build-release.sh
+      run: ci/build-release.sh ${{ matrix.target }}
     - name: Compute the tag
       id: tag
       run: echo "::set-output name=TAG::${GITHUB_REF#refs/tags/}"
     - name: Upload build
       uses: actions/upload-release-asset@v1
       with:
-        upload_url: ${{ needs.create_release.outputs.upload_url }}
+        upload_url: ${{ needs.draft_release.outputs.upload_url }}
         asset_path: kak-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
         asset_name: kak-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
         asset_content_type: application/gzip
