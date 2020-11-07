@@ -1,0 +1,54 @@
+name: Release kak-lsp
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  draft_release:
+    name: Draft release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release_draft.outputs.upload_url }}
+    steps:
+      - name: Create release draft
+        id: create_release_draft
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: true
+
+  build_release:
+    name: Build release
+    needs: draft_release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 # for git describe --tags
+    - name: Build
+      run: ci/build-release.sh
+    - name: Compute the tag
+      id: tag
+      run: echo "::set-output name=TAG::${GITHUB_REF#refs/tags/}"
+    - name: Upload build
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.draft_release.outputs.upload_url }}
+        asset_path: kak-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
+        asset_name: kak-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
+        asset_content_type: application/gzip
