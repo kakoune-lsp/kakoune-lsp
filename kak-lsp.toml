@@ -28,7 +28,7 @@ keyword = "keyword"
 operator = "operator"
 comment = "comment"
 
-[semantic_modifiers]
+[semantic_token_modifiers]
 documentation = "documentation"
 readonly = "default+d"
 
