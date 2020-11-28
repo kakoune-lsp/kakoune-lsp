@@ -82,9 +82,9 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
         meta.version, &ranges
     );
     let command = format!(
-        "eval -buffer {} {}",
+        "eval -buffer {} -verbatim -- {}",
         editor_quote(&meta.buffile),
-        editor_quote(&command)
+        command
     );
-    ctx.exec(meta, command.to_string())
+    ctx.exec(meta, command)
 }

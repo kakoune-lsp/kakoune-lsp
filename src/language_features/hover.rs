@@ -77,10 +77,10 @@ pub fn editor_hover(
     }
 
     let command = format!(
-        "lsp-show-hover {} {} {}",
+        "lsp-show-hover {} %§{}§ %§{}§",
         params.position,
-        editor_quote(&contents),
-        editor_quote(&diagnostics)
+        contents.replace("§", "\\§"),
+        diagnostics.replace("§", "\\§")
     );
 
     ctx.exec(meta, command);

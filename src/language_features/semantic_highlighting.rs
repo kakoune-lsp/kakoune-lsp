@@ -21,11 +21,11 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
         .insert(buffile.to_string(), params.lines);
     let command = "lsp-update-semantic-highlighting";
     let command = format!(
-        "eval -buffer {} {}",
+        "eval -buffer {} -verbatim -- {}",
         editor_quote(&buffile),
-        editor_quote(&command)
+        command
     );
-    ctx.exec(meta, command.to_string());
+    ctx.exec(meta, command);
 }
 
 #[derive(Deserialize)]
@@ -83,11 +83,11 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
         meta.version, &ranges
     );
     let command = format!(
-        "eval -buffer {} {}",
+        "eval -buffer {} -verbatim -- {}",
         editor_quote(&buffile),
-        editor_quote(&command)
+        command
     );
-    ctx.exec(meta, command.to_string());
+    ctx.exec(meta, command);
 }
 
 pub fn debug_scopes(meta: EditorMeta, ctx: &mut Context) {

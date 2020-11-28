@@ -86,14 +86,14 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
         .join(" ");
     let command = format!(
         "set buffer rust_analyzer_inlay_hints {} {}",
-        meta.version, &ranges
+        meta.version, ranges
     );
     let command = format!(
-        "eval -buffer {} {}",
+        "eval -buffer {} -verbatim -- {}",
         editor_quote(&meta.buffile),
-        editor_quote(&command)
+        command
     );
-    ctx.exec(meta, command.to_string())
+    ctx.exec(meta, command)
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -202,17 +202,17 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
                 },
             };
             let command = format!(
-                "evaluate-commands -try-client %opt{{jumpclient}} %{{edit {} {} {}}}",
+                "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
                 editor_quote(buffile),
                 position.line,
                 position.column - 1
             );
             let command = format!(
-                "eval -client {} {}",
+                "eval -client {} -verbatim -- {}",
                 editor_quote(client),
-                editor_quote(&command)
+                command
             );
-            ctx.exec(meta, command.to_string());
+            ctx.exec(meta, command);
         }
         _ => {}
     }
