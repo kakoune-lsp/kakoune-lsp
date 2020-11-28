@@ -91,18 +91,16 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
 }
 
 pub fn debug_scopes(meta: EditorMeta, ctx: &mut Context) {
-    let semhl = ctx
+    let scopes = ctx
         .capabilities
         .as_ref()
-        .unwrap()
-        .semantic_highlighting
-        .as_ref();
-    semhl.map(|sh| {
-        if sh.scopes.is_some() {
-            let command = format!("echo -debug %§{:?}§", sh.scopes.as_ref().unwrap());
-            ctx.exec(meta, command.to_string());
-        }
-    });
+        .and_then(|x| x.semantic_highlighting.as_ref())
+        .and_then(|x| x.scopes.as_ref());
+
+    if let Some(scopes) = scopes {
+        let command = format!("echo -debug %§{:?}§", scopes);
+        ctx.exec(meta, command);
+    }
 }
 
 pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
@@ -113,18 +111,11 @@ pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
         .map(|(k, v)| (k.replace("_", "."), v))
         .collect();
 
-    let scopes = ctx
-        .capabilities
+    ctx.capabilities
         .as_ref()
         .and_then(|x| x.semantic_highlighting.as_ref())
-        .and_then(|x| x.scopes.as_ref());
-
-    if scopes.is_none() {
-        return Vec::new();
-    }
-    let scopes = scopes.unwrap();
-
-    map_scopes_to_faces(scopes, faces)
+        .and_then(|x| x.scopes.as_ref())
+        .map_or(Vec::new(), |v| map_scopes_to_faces(v, faces))
 }
 
 fn map_scopes_to_faces(

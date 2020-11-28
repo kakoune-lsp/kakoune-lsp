@@ -102,14 +102,13 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
 }
 
 pub fn start_unix(path: &path::PathBuf, sender: Sender<EditorRequest>) {
-    let listener = UnixListener::bind(&path);
-
-    if listener.is_err() {
-        error!("Failed to bind {}", path.to_str().unwrap());
-        return;
-    }
-
-    let listener = listener.unwrap();
+    let listener = match UnixListener::bind(&path) {
+        Ok(listener) => listener,
+        Err(e) => {
+            error!("Failed to bind: {}", e);
+            return;
+        }
+    };
 
     for stream in listener.incoming() {
         match stream {

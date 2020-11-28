@@ -144,18 +144,17 @@ fn lsp_range_to_kakoune_utf_8_code_units(range: &Range) -> KakouneRange {
     */
     let bol_insert = insert && end.character == 0;
     let start_byte = start.character;
-    let end_byte;
 
     // Exclusive->inclusive range.end conversion will make 0-length LSP range into the reversed
     // 2-length Kakoune range, but we want 1-length (the closest to 0 it can get in Kakoune ;-)).
-    if insert {
-        end_byte = start_byte;
+    let end_byte = if insert {
+        start_byte
     } else if end.character > 0 {
         // -1 because LSP ranges are exclusive, but Kakoune's are inclusive.
-        end_byte = end.character - 1;
+        end.character - 1
     } else {
-        end_byte = EOL_OFFSET - 1;
-    }
+        EOL_OFFSET - 1
+    };
 
     let end_line = if bol_insert || end.character > 0 {
         end.line
