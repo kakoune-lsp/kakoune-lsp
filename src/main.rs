@@ -25,7 +25,7 @@ mod workspace;
 
 use crate::types::*;
 use crate::util::*;
-use clap::{crate_version, App, Arg};
+use clap::{crate_version, App, Arg, ArgMatches};
 use daemonize::Daemonize;
 use itertools::Itertools;
 use sloggers::file::FileLoggerBuilder;
@@ -130,9 +130,17 @@ fn main() {
         config = fs::read_to_string(config_path).expect("Failed to read config");
     }
 
-    let mut config: Config = toml::from_str(&config).expect("Failed to parse config file");
+    let session = String::from(matches.value_of("session").unwrap());
 
-    config.server.session = String::from(matches.value_of("session").unwrap());
+    let mut config: Config = match toml::from_str(&config) {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            report_config_error(&matches, &session, &err);
+            panic!("{}", err)
+        }
+    };
+
+    config.server.session = session;
 
     if let Some(timeout) = matches.value_of("timeout") {
         config.server.timeout = timeout.parse().unwrap();
@@ -255,4 +263,39 @@ fn setup_logger(config: &Config, matches: &clap::ArgMatches<'_>) -> slog_scope::
     }));
 
     slog_scope::set_global_logger(logger)
+}
+
+fn report_config_error(matches: &ArgMatches, session: &str, error: &toml::de::Error) {
+    if !matches.is_present("initial-request") && !matches.is_present("request") {
+        return; // Don't know how to reach the editor.
+    }
+
+    let mut input = Vec::new();
+    stdin()
+        .read_to_end(&mut input)
+        .expect("Failed to read stdin");
+
+    let data = String::from_utf8_lossy(&input).to_string();
+    let request: EditorRequest = toml::from_str(&data).expect("Failed to parse request");
+    assert!(request.meta.session == session);
+
+    let editor = match editor_transport::start(&session, None) {
+        Ok(ed) => ed,
+        Err(_code) => return,
+    };
+    let command = format!(
+        "lsp-show-error {}",
+        editor_quote(&format!("Failed to parse config file: {}", error)),
+    );
+    if editor
+        .to_editor
+        .sender()
+        .send(EditorResponse {
+            meta: request.meta,
+            command,
+        })
+        .is_err()
+    {
+        error!("Failed to send command to editor");
+    }
 }
