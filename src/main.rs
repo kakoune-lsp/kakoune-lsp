@@ -95,7 +95,7 @@ fn main() {
             Arg::with_name("v")
                 .short("v")
                 .multiple(true)
-                .help("Sets the level of verbosity"),
+                .help("Sets the level of verbosity (use up to 4 times)"),
         )
         .arg(
             Arg::with_name("log")
