@@ -41,6 +41,9 @@ pub fn start(
         lang_srv = match language_server_transport::start(&lang.command, &lang.args) {
             Ok(ls) => ls,
             Err(err) => {
+                if !lang.command.contains('/') {
+                    panic!("{}", err);
+                }
                 let command = format!(
                     "lsp-show-error {}",
                     editor_quote(&format!("Failed to start language server: {}", err)),
