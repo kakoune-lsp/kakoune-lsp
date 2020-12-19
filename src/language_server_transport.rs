@@ -17,15 +17,23 @@ pub struct LanguageServerTransport {
     pub errors: Worker<Void, Void>,
 }
 
-pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
+pub fn start(cmd: &str, args: &[String]) -> Result<LanguageServerTransport, String> {
     info!("Starting Language server `{} {}`", cmd, args.join(" "));
-    let mut child = Command::new(cmd)
+    let mut child = match Command::new(cmd)
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("Failed to start language server");
+    {
+        Ok(c) => c,
+        Err(err) => {
+            return Err(match err.kind() {
+                ErrorKind::NotFound | ErrorKind::PermissionDenied => format!("{}: {}", err, cmd),
+                _ => format!("{}", err),
+            })
+        }
+    };
 
     let writer = BufWriter::new(child.stdin.take().expect("Failed to open stdin"));
     let reader = BufReader::new(child.stdout.take().expect("Failed to open stdout"));
@@ -102,11 +110,11 @@ pub fn start(cmd: &str, args: &[String]) -> LanguageServerTransport {
         },
     );
 
-    LanguageServerTransport {
+    Ok(LanguageServerTransport {
         from_lang_server,
         to_lang_server,
         errors,
-    }
+    })
 }
 
 fn reader_loop(

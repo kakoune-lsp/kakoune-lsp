@@ -38,7 +38,19 @@ pub fn start(
         let lang = &config.language[&route.language];
         options = lang.initialization_options.clone();
         offset_encoding = lang.offset_encoding.clone();
-        lang_srv = language_server_transport::start(&lang.command, &lang.args);
+        lang_srv = match language_server_transport::start(&lang.command, &lang.args) {
+            Ok(ls) => ls,
+            Err(err) => {
+                let command = format!(
+                    "lsp-show-error {}",
+                    editor_quote(&format!("Failed to start language server: {}", err)),
+                );
+                if to_editor.send(EditorResponse { meta: initial_request.meta, command }).is_err() {
+                    error!("Failed to send command to editor");
+                }
+                panic!(err)
+            }
+        }
     }
 
     let initial_request_meta = initial_request.meta.clone();
