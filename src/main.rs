@@ -106,6 +106,10 @@ fn main() {
         )
         .get_matches();
 
+    if matches.is_present("kakoune") {
+        return kakoune();
+    }
+
     let mut config = include_str!("../kak-lsp.toml").to_string();
 
     let config_path = matches
@@ -136,8 +140,6 @@ fn main() {
 
     if matches.is_present("request") {
         request(&config);
-    } else if matches.is_present("kakoune") {
-        kakoune(&config);
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
@@ -170,7 +172,7 @@ fn main() {
     }
 }
 
-fn kakoune(_config: &Config) {
+fn kakoune() {
     let script: &str = include_str!("../rc/lsp.kak");
     let args = env::args()
         .skip(1)
