@@ -16,13 +16,13 @@ pub struct EditorTransport {
     pub to_editor: Worker<EditorResponse, Void>,
 }
 
-pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorTransport, i32> {
+pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTransport, i32> {
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
 
     let (sender, receiver) = bounded(channel_capacity);
     let mut path = temp_dir();
-    path.push(&config.server.session);
+    path.push(&session);
     if path.exists() {
         if UnixStream::connect(&path).is_err() {
             if fs::remove_file(&path).is_err() {
@@ -35,7 +35,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> Result<EditorT
         } else {
             error!(
                 "Server is already running for session {}",
-                config.server.session
+                session
             );
             return Err(1);
         }

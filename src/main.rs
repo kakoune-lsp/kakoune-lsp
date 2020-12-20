@@ -161,14 +161,14 @@ fn main() {
                 .start()
             {
                 println!("Failed to daemonize process: {:?}", e);
-                goodbye(&config, 1);
+                goodbye(&config.server.session, 1);
             }
         }
         // Setting up the logger after potential daemonization,
         // otherwise it refuses to work properly.
         let _guard = setup_logger(&config, &matches);
         let code = session::start(&config, initial_request);
-        goodbye(&config, code);
+        goodbye(&config.server.session, code);
     }
 }
 

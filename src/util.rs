@@ -116,11 +116,11 @@ pub fn editor_quote(s: &str) -> String {
 }
 
 // Cleanup and gracefully exit
-pub fn goodbye(config: &Config, code: i32) {
+pub fn goodbye(session: &str, code: i32) {
     if code == 0 {
         let path = temp_dir();
-        let sock_path = path.join(&config.server.session);
-        let pid_path = path.join(format!("{}.pid", config.server.session));
+        let sock_path = path.join(session);
+        let pid_path = path.join(format!("{}.pid", session));
         if fs::remove_file(sock_path).is_err() {
             warn!("Failed to remove socket file");
         };

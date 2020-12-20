@@ -28,7 +28,7 @@ type Controllers = HashMap<Route, ControllerHandle>;
 pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     info!("Starting main event loop");
 
-    let editor = editor_transport::start(config, initial_request);
+    let editor = editor_transport::start(&config.server.session, initial_request);
     if let Err(code) = editor {
         return code;
     }
