@@ -45,10 +45,16 @@ pub fn start(
                     "lsp-show-error {}",
                     editor_quote(&format!("Failed to start language server: {}", err)),
                 );
-                if to_editor.send(EditorResponse { meta: initial_request.meta, command }).is_err() {
+                if to_editor
+                    .send(EditorResponse {
+                        meta: initial_request.meta,
+                        command,
+                    })
+                    .is_err()
+                {
                     error!("Failed to send command to editor");
                 }
-                panic!(err)
+                panic!("{}", err)
             }
         }
     }
