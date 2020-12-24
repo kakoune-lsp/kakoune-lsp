@@ -81,7 +81,10 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             };
             editor_quote(&format!(
                 "{}+0|{{{}}}{{\\}}{} {}",
-                pos, face, sep, x.message
+                pos,
+                face,
+                sep,
+                x.message.replace("|", "\\|")
             ))
         })
         .join(" ");
@@ -89,10 +92,10 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     // to make sure the column always has the right width
     // Also wrap line_flags in another eval and quotes, to make sure the %opt[] tags are expanded
     let command = format!(
-        "set buffer lsp_diagnostic_error_count {}
-         set buffer lsp_diagnostic_warning_count {}
-         set buffer lsp_errors {} {}
-         eval \"set buffer lsp_error_lines {} {} '0| '\"
+        "set buffer lsp_diagnostic_error_count {}; \
+         set buffer lsp_diagnostic_warning_count {}; \
+         set buffer lsp_errors {} {}; \
+         eval \"set buffer lsp_error_lines {} {} '0| '\"; \
          set buffer lsp_diagnostics {} {}",
         error_count,
         warning_count,
@@ -103,12 +106,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         version,
         diagnostic_ranges,
     );
-    let command = format!(
-        "
-        eval -buffer {} {}",
-        editor_quote(buffile),
-        editor_quote(&command)
-    );
+    let command = format!("eval -buffer {} %§{}§", editor_quote(buffile), command.replace("§", "\\§"));
     let meta = EditorMeta {
         session,
         client,
@@ -117,7 +115,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         version,
         fifo: None,
     };
-    ctx.exec(meta, command.to_string());
+    ctx.exec(meta, command);
 }
 
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {

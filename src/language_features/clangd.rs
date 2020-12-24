@@ -22,7 +22,7 @@ pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
         move |ctx: &mut Context, meta, response| match response {
             Some(response) => {
               let command = format!(
-                "evaluate-commands -try-client %opt{{jumpclient}} %{{edit {}}}",
+                "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {}",
                  editor_quote(response.to_file_path().unwrap().to_str().unwrap()),
               );
               ctx.exec(meta, command);

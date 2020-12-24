@@ -55,16 +55,16 @@ pub fn editor_code_actions(
         None => return,
     };
 
+    if result.is_empty() {
+        ctx.exec(meta, format!("lsp-show-error 'No actions available'"));
+        return;
+    }
+
     for cmd in &result {
         match cmd {
             CodeActionOrCommand::Command(cmd) => info!("Command: {:?}", cmd),
             CodeActionOrCommand::CodeAction(action) => info!("Action: {:?}", action),
         }
-    }
-
-    if result.is_empty() {
-        ctx.exec(meta, format!("lsp-show-error 'No actions available'"));
-        return;
     }
 
     let menu_args = result

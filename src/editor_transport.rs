@@ -65,27 +65,25 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
                     .spawn()
                 {
                     Ok(mut child) => {
-                        {
-                            let stdin = child.stdin.as_mut();
-                            if stdin.is_none() {
+                        let stdin = match child.stdin.as_mut() {
+                            Some(stdin) => stdin,
+                            None => {
                                 error!("Failed to get editor stdin");
                                 return;
                             }
-                            let stdin = stdin.unwrap();
-                            let client = response.meta.client.as_ref();
-                            let command = if client.is_some() && !client.unwrap().is_empty() {
-                                format!(
-                                    "eval -client {} {}",
-                                    client.unwrap(),
-                                    editor_quote(&response.command)
-                                )
-                            } else {
-                                response.command.to_string()
-                            };
-                            debug!("To editor `{}`: {}", response.meta.session, command);
-                            if stdin.write_all(command.as_bytes()).is_err() {
-                                error!("Failed to write to editor stdin");
+                        };
+
+                        let client = response.meta.client.as_ref();
+                        let command = match client.filter(|&s| !s.is_empty()) {
+                            Some(client) => {
+                                format!("eval -client {} -verbatim -- {}", client, response.command)
                             }
+                            None => response.command.to_string(),
+                        };
+
+                        debug!("To editor `{}`: {}", response.meta.session, command);
+                        if stdin.write_all(command.as_bytes()).is_err() {
+                            error!("Failed to write to editor stdin");
                         }
                         // code should fail earlier if Kakoune was not spawned
                         // otherwise something went completely wrong, better to panic
@@ -104,14 +102,13 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
 }
 
 pub fn start_unix(path: &path::PathBuf, sender: Sender<EditorRequest>) {
-    let listener = UnixListener::bind(&path);
-
-    if listener.is_err() {
-        error!("Failed to bind {}", path.to_str().unwrap());
-        return;
-    }
-
-    let listener = listener.unwrap();
+    let listener = match UnixListener::bind(&path) {
+        Ok(listener) => listener,
+        Err(e) => {
+            error!("Failed to bind: {}", e);
+            return;
+        }
+    };
 
     for stream in listener.incoming() {
         match stream {

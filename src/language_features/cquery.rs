@@ -191,9 +191,9 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         .join(" ");
     let command = format!("set buffer cquery_semhl {} {}", version, ranges);
     let command = format!(
-        "eval -buffer {} {}",
+        "eval -buffer {} -verbatim -- {}",
         editor_quote(buffile),
-        editor_quote(&command)
+        command
     );
     let meta = EditorMeta {
         session,
@@ -203,5 +203,5 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         version,
         fifo: None,
     };
-    ctx.exec(meta, command.to_string());
+    ctx.exec(meta, command);
 }
