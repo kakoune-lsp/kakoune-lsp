@@ -186,3 +186,8 @@ filetypes = ["terraform"]
 roots = ["*.tf"]
 command = "terraform-ls"
 args = ["serve"]
+
+[language.zig]
+filetypes = ["zig"]
+roots = ["build.zig"]
+command = "zls"
