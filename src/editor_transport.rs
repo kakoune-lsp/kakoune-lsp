@@ -33,10 +33,7 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
                 return Err(1);
             };
         } else {
-            error!(
-                "Server is already running for session {}",
-                session
-            );
+            error!("Server is already running for session {}", session);
             return Err(1);
         }
     }

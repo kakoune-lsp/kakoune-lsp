@@ -44,8 +44,17 @@ pub fn editor_range_formatting(meta: EditorMeta, text_edits: Vec<TextEdit>, ctx:
         return;
     }
     let document = document.unwrap();
+    let wrapped_edits = text_edits
+        .into_iter()
+        .map(|e| OneOf::Left(e))
+        .collect::<Vec<_>>();
     ctx.exec(
         meta,
-        apply_text_edits_to_buffer(None, &text_edits, &document.text, ctx.offset_encoding),
+        apply_text_edits_to_buffer(
+            None,
+            &wrapped_edits[..],
+            &document.text,
+            ctx.offset_encoding,
+        ),
     );
 }

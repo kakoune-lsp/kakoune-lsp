@@ -179,7 +179,22 @@ pub fn get_kakoune_position(
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
 /// buffer or by editing file directly when it's not open in editor.
-pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: &[TextEdit], ctx: &Context) {
+pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx: &Context) {
+    let wrapped_edits = edits
+        .into_iter()
+        .map(|e| OneOf::Left(e))
+        .collect::<Vec<OneOf<TextEdit, AnnotatedTextEdit>>>();
+    apply_annotated_text_edits(meta, uri, &wrapped_edits[..], ctx)
+}
+
+/// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
+/// buffer or by editing file directly when it's not open in editor.
+pub fn apply_annotated_text_edits(
+    meta: &EditorMeta,
+    uri: &Url,
+    edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+    ctx: &Context,
+) {
     if let Some(document) = ctx
         .documents
         .get(uri.to_file_path().unwrap().to_str().unwrap())

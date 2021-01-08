@@ -25,7 +25,7 @@ pub fn initialize(
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
                 apply_edit: Some(false),
-                workspace_edit: Some(WorkspaceEditCapability {
+                workspace_edit: Some(WorkspaceEditClientCapabilities {
                     document_changes: Some(true),
                     resource_operations: Some(vec![
                         ResourceOperationKind::Create,
@@ -33,12 +33,18 @@ pub fn initialize(
                         ResourceOperationKind::Rename,
                     ]),
                     failure_handling: Some(FailureHandlingKind::Abort),
+                    normalizes_line_endings: Some(false),
+                    change_annotation_support: Some(
+                        ChangeAnnotationWorkspaceEditClientCapabilities {
+                            groups_on_labels: None,
+                        },
+                    ),
                 }),
-                did_change_configuration: Some(GenericCapability {
+                did_change_configuration: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
                 did_change_watched_files: None,
-                symbol: Some(WorkspaceSymbolClientCapabilities{
+                symbol: Some(WorkspaceSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: Some(SymbolKindCapability {
                         value_set: Some(vec![
@@ -72,20 +78,23 @@ pub fn initialize(
                     }),
                     tag_support: None,
                 }),
-                execute_command: Some(GenericCapability {
+                execute_command: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
                 workspace_folders: Some(false),
                 configuration: Some(false),
+                semantic_tokens: None,
+                code_lens: None,
+                file_operations: None,
             }),
             text_document: Some(TextDocumentClientCapabilities {
-                synchronization: Some(SynchronizationCapability {
+                synchronization: Some(TextDocumentSyncClientCapabilities {
                     dynamic_registration: Some(false),
                     will_save: Some(false),
                     will_save_wait_until: Some(false),
                     did_save: Some(true),
                 }),
-                completion: Some(CompletionCapability {
+                completion: Some(CompletionClientCapabilities {
                     dynamic_registration: Some(false),
                     completion_item: Some(CompletionItemCapability {
                         snippet_support: Some(ctx.config.snippet_support),
@@ -95,6 +104,8 @@ pub fn initialize(
                         preselect_support: Some(false),
                         tag_support: None,
                         insert_replace_support: None,
+                        resolve_support: None,
+                        insert_text_mode_support: None,
                     }),
                     completion_item_kind: Some(CompletionItemKindCapability {
                         value_set: Some(vec![
@@ -127,24 +138,25 @@ pub fn initialize(
                     }),
                     context_support: Some(false),
                 }),
-                hover: Some(HoverCapability {
+                hover: Some(HoverClientCapabilities {
                     dynamic_registration: Some(false),
                     content_format: Some(vec![MarkupKind::PlainText]),
                 }),
-                signature_help: Some(SignatureHelpCapability {
+                signature_help: Some(SignatureHelpClientCapabilities {
                     dynamic_registration: Some(false),
                     signature_information: Some(SignatureInformationSettings {
                         documentation_format: Some(vec![MarkupKind::PlainText]),
                         parameter_information: Some(ParameterInformationSettings {
                             label_offset_support: Some(false),
                         }),
+                        active_parameter_support: None,
                     }),
                     context_support: Some(false),
                 }),
-                references: Some(GenericCapability {
+                references: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                document_highlight: Some(GenericCapability {
+                document_highlight: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
                 document_symbol: Some(DocumentSymbolClientCapabilities {
@@ -153,13 +165,13 @@ pub fn initialize(
                     hierarchical_document_symbol_support: None,
                     tag_support: None,
                 }),
-                formatting: Some(GenericCapability {
+                formatting: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                range_formatting: Some(GenericCapability {
+                range_formatting: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                on_type_formatting: Some(GenericCapability {
+                on_type_formatting: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
                 declaration: Some(GotoCapability {
@@ -178,7 +190,7 @@ pub fn initialize(
                     dynamic_registration: Some(false),
                     link_support: Some(false),
                 }),
-                code_action: Some(CodeActionCapability {
+                code_action: Some(CodeActionClientCapabilities {
                     dynamic_registration: Some(false),
                     code_action_literal_support: Some(CodeActionLiteralSupport {
                         code_action_kind: CodeActionKindLiteralSupport {
@@ -197,34 +209,44 @@ pub fn initialize(
                         },
                     }),
                     is_preferred_support: Some(false),
+                    disabled_support: None,
+                    data_support: None,
+                    resolve_support: None,
+                    honors_change_annotations: None,
                 }),
-                code_lens: Some(GenericCapability {
+                code_lens: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                document_link: Some(DocumentLinkCapabilities {
+                document_link: Some(DocumentLinkClientCapabilities {
                     dynamic_registration: Some(false),
                     tooltip_support: Some(false),
                 }),
-                color_provider: Some(GenericCapability {
+                color_provider: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                rename: Some(RenameCapability {
+                rename: Some(RenameClientCapabilities {
                     dynamic_registration: Some(false),
                     prepare_support: Some(false),
+                    prepare_support_default_behavior: None,
+                    honors_change_annotations: None,
                 }),
-                publish_diagnostics: Some(PublishDiagnosticsCapability {
+                publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
                     related_information: Some(false),
                     tag_support: None,
+                    version_support: None,
+                    code_description_support: None,
+                    data_support: None,
                 }),
                 folding_range: None,
+                selection_range: None,
                 semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability {
                     semantic_highlighting: true,
                 }),
                 semantic_tokens: Some(SemanticTokensClientCapabilities {
                     dynamic_registration: Some(false),
                     requests: SemanticTokensClientCapabilitiesRequests {
-                      range: Some(false),
-                      full: Some(SemanticTokensFullOptions::Bool(true)),
+                        range: Some(false),
+                        full: Some(SemanticTokensFullOptions::Bool(true)),
                     },
                     token_types: ctx
                         .config
@@ -241,11 +263,19 @@ pub fn initialize(
                         .map(|x| x.into())
                         .collect(),
                     formats: vec![TokenFormat::RELATIVE],
+                    overlapping_token_support: None,
+                    multiline_token_support: None,
                 }),
+                linked_editing_range: None,
+                call_hierarchy: None,
+                moniker: None,
             }),
             window: Some(WindowClientCapabilities {
                 work_done_progress: Some(false),
+                show_message: None,
+                show_document: None,
             }),
+            general: None,
             experimental: None,
         },
         initialization_options,
@@ -258,6 +288,7 @@ pub fn initialize(
             name: env!("CARGO_PKG_NAME").to_owned(),
             version: Some(env!("CARGO_PKG_VERSION").to_owned()),
         }),
+        locale: None,
     };
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
@@ -293,44 +324,48 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         features.push("lsp-completion (hooked on InsertIdle)".to_string());
     }
 
-    if server_capabilities.definition_provider.unwrap_or(false) {
-        features.push("lsp-definition (mapped to `gd` by default)".to_string());
-    }
+    match server_capabilities.definition_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-definition (mapped to `gd` by default)".to_string());
+        }
+        _ => (),
+    };
 
     if server_capabilities.implementation_provider.is_some() {
         features.push("lsp-implementation".to_string());
     }
 
-    if server_capabilities.references_provider.unwrap_or(false) {
-        features.push("lsp-references (mapped to `gr` by default)".to_string());
-    }
+    match server_capabilities.references_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-references (mapped to `gr` by default)".to_string());
+        }
+        _ => (),
+    };
 
-    if server_capabilities
-        .workspace_symbol_provider
-        .unwrap_or(false)
-    {
-        features.push("lsp-workspace-symbol".to_string());
-    }
+    match server_capabilities.workspace_symbol_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-workspace-symbol".to_string());
+        }
+        _ => (),
+    };
 
-    if server_capabilities
-        .document_formatting_provider
-        .unwrap_or(false)
-    {
-        features.push("lsp-formatting".to_string());
-    }
+    match server_capabilities.document_formatting_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-formatting".to_string());
+        }
+        _ => (),
+    };
 
-    if server_capabilities
-        .document_range_formatting_provider
-        .unwrap_or(false)
-    {
-        features.push("lsp-range-formatting".to_string());
-    }
+    match server_capabilities.document_range_formatting_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-range-formatting".to_string());
+        }
+        _ => (),
+    };
 
     if let Some(ref rename_provider) = server_capabilities.rename_provider {
         match rename_provider {
-            RenameProviderCapability::Simple(true) | RenameProviderCapability::Options(_) => {
-                features.push("lsp-rename".to_string())
-            }
+            OneOf::Left(true) | OneOf::Right(_) => features.push("lsp-rename".to_string()),
             _ => (),
         }
     }
@@ -378,7 +413,10 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
 
     if let Some(ref cap) = server_capabilities.semantic_highlighting {
         if let Some(ref scopes) = cap.scopes {
-            features.push(format!("lsp-semantic-highlighting: scopes: [{}]", scopes.iter().map(|xs| xs.join(".")).join(", ")));
+            features.push(format!(
+                "lsp-semantic-highlighting: scopes: [{}]",
+                scopes.iter().map(|xs| xs.join(".")).join(", ")
+            ));
         }
     }
 

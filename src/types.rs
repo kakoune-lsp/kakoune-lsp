@@ -69,7 +69,7 @@ pub struct EditorMeta {
     pub client: Option<String>,
     pub buffile: String,
     pub filetype: String,
-    pub version: i64,
+    pub version: i32,
     pub fifo: Option<String>,
 }
 
@@ -103,7 +103,7 @@ pub struct Route {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EditorCompletion {
-    pub offset: u64,
+    pub offset: u32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -175,8 +175,8 @@ where
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct KakounePosition {
-    pub line: u64,
-    pub column: u64, // in bytes, not chars!!!
+    pub line: u32,
+    pub column: u32, // in bytes, not chars!!!
 }
 
 #[derive(Debug, PartialEq)]

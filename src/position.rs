@@ -29,7 +29,7 @@ use lsp_types::*;
 use ropey::{Rope, RopeSlice};
 use std::cmp::min;
 
-pub const EOL_OFFSET: u64 = 1_000_000;
+pub const EOL_OFFSET: u32 = 1_000_000;
 
 /// Convert LSP Range to Kakoune's range-spec.
 pub fn lsp_range_to_kakoune(
@@ -90,9 +90,9 @@ fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> Kakoune
     let Range { start, end } = range;
 
     let start_line = get_line(start.line as _, text);
-    let start_byte = get_byte_index(start.character as _, start_line) as u64;
+    let start_byte = get_byte_index(start.character as _, start_line) as u32;
     let end_line = get_line(end.line as _, text);
-    let end_byte = get_byte_index(end.character as _, end_line) as u64;
+    let end_byte = get_byte_index(end.character as _, end_line) as u32;
 
     lsp_range_to_kakoune_utf_8_code_units(&Range {
         start: Position {
@@ -180,16 +180,25 @@ fn kakoune_position_to_lsp_utf_8_code_points(position: &KakounePosition, text: &
     let line_idx = position.line - 1;
     let col_idx = position.column - 1;
     if line_idx as usize >= text.len_lines() {
-        return Position { line: line_idx, character: col_idx };
+        return Position {
+            line: line_idx,
+            character: col_idx,
+        };
     }
 
     let line = text.line(line_idx as _);
     if col_idx as usize >= line.len_bytes() {
-        return Position { line: line_idx, character: col_idx };
+        return Position {
+            line: line_idx,
+            character: col_idx,
+        };
     }
 
     let character = line.byte_to_char(col_idx as _) as _;
-    Position { line: line_idx, character }
+    Position {
+        line: line_idx,
+        character,
+    }
 }
 
 fn kakoune_position_to_lsp_utf_8_code_units(position: &KakounePosition) -> Position {
@@ -202,19 +211,25 @@ fn kakoune_position_to_lsp_utf_8_code_units(position: &KakounePosition) -> Posit
 
 fn lsp_position_to_kakoune_utf_8_code_points(position: &Position, text: &Rope) -> KakounePosition {
     if position.line as usize >= text.len_lines() {
-        return KakounePosition { line: position.line + 1, column: 999999999 };
+        return KakounePosition {
+            line: position.line + 1,
+            column: 999999999,
+        };
     }
 
     let line = text.line(position.line as _);
     if position.character as usize >= line.len_chars() {
-        return KakounePosition { line: position.line + 1, column: 999999999 };
+        return KakounePosition {
+            line: position.line + 1,
+            column: 999999999,
+        };
     }
 
-    let byte = line.char_to_byte(position.character as _);
+    let byte = line.char_to_byte(position.character as _) as u32;
     // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     KakounePosition {
         line: position.line + 1,
-        column: byte as u64 + 1,
+        column: byte + 1,
     }
 }
 

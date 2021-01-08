@@ -5,7 +5,7 @@ use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
-use lsp_types::request::{Request};
+use lsp_types::request::Request;
 use lsp_types::*;
 use serde;
 use serde::Deserialize;
@@ -387,7 +387,9 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         .join(" ");
     let command = format!(
         "eval -buffer {} -verbatim -- set buffer cquery_semhl {} {}",
-        editor_quote(buffile), meta.version, ranges
+        editor_quote(buffile),
+        meta.version,
+        ranges
     );
     ctx.exec(meta, command);
 }

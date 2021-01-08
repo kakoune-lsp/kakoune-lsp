@@ -1,4 +1,5 @@
 pub mod ccls;
+pub mod clangd;
 pub mod codeaction;
 pub mod completion;
 pub mod cquery;
@@ -14,4 +15,3 @@ pub mod rust_analyzer;
 pub mod semantic_highlighting;
 pub mod semantic_tokens;
 pub mod signature_help;
-pub mod clangd;

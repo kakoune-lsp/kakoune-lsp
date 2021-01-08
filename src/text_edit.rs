@@ -10,7 +10,7 @@ use std::io::{BufReader, BufWriter, Write};
 
 pub fn apply_text_edits_to_file(
     uri: &Url,
-    text_edits: &[TextEdit],
+    text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
     offset_encoding: OffsetEncoding,
 ) -> std::io::Result<()> {
     let mut temp_path = temp_dir();
@@ -40,7 +40,7 @@ pub fn apply_text_edits_to_file(
     fn apply_text_edits_to_file_impl(
         text: Rope,
         temp_file: File,
-        text_edits: &[TextEdit],
+        text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
         offset_encoding: OffsetEncoding,
     ) -> Result<(), std::io::Error> {
         let mut output = BufWriter::new(temp_file);
@@ -54,12 +54,15 @@ pub fn apply_text_edits_to_file(
         let text_len_lines = text.len_lines() as u64;
         let mut cursor = 0;
 
-        for TextEdit {
-            range: Range { start, end },
-            new_text,
-        } in text_edits
-        {
-            if start.line >= text_len_lines || end.line >= text_len_lines {
+        for te in text_edits {
+            let TextEdit {
+                range: Range { start, end },
+                new_text,
+            } = match te {
+                OneOf::Left(edit) => edit,
+                OneOf::Right(annotated_edit) => &annotated_edit.text_edit,
+            };
+            if start.line as u64 >= text_len_lines || end.line as u64 >= text_len_lines {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     "Text edit range extends past end of file.",
@@ -126,7 +129,7 @@ fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Op
 
 pub fn apply_text_edits_to_buffer(
     uri: Option<&Url>,
-    text_edits: &[TextEdit],
+    text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> String {
@@ -249,15 +252,18 @@ struct KakouneTextEdit {
 }
 
 fn lsp_text_edit_to_kakoune(
-    text_edit: &TextEdit,
+    text_edit: &OneOf<TextEdit, AnnotatedTextEdit>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> KakouneTextEdit {
-    let TextEdit { range, new_text } = text_edit;
+    let TextEdit { range, new_text } = match text_edit {
+        OneOf::Left(edit) => edit,
+        OneOf::Right(annotated_edit) => &annotated_edit.text_edit,
+    };
     let Range { start, end } = range;
     let insert = start.line == end.line && start.character == end.character;
 
-    let range = lsp_range_to_kakoune(range, text, offset_encoding);
+    let range = lsp_range_to_kakoune(&range, text, offset_encoding);
 
     let command = if insert {
         KakouneTextEditCommand::InsertBefore

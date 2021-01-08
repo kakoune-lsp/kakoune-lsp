@@ -173,13 +173,13 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
                              }| TextEdit { range, new_text },
                         )
                         .collect();
-                    apply_text_edits(&meta, &uri, &edits, ctx);
+                    apply_text_edits(&meta, &uri, edits, ctx);
                 }
             }
         }
     } else if let Some(changes) = changes {
-        for (uri, change) in &changes {
-            apply_text_edits(&meta, uri, change, ctx);
+        for (uri, change) in changes {
+            apply_text_edits(&meta, &uri, change, ctx);
         }
     }
     match (&meta.client, &cursor_position) {

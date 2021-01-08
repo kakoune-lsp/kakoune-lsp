@@ -205,19 +205,28 @@ pub fn apply_edit(
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
+                    apply_annotated_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
                         DocumentChangeOperation::Edit(edit) => {
-                            apply_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
+                            apply_annotated_text_edits(
+                                &meta,
+                                &edit.text_document.uri,
+                                &edit.edits,
+                                ctx,
+                            );
                         }
                         DocumentChangeOperation::Op(op) => {
                             if let Err(e) = apply_document_resource_op(&meta, op, ctx) {
                                 error!("failed to apply document change operation: {}", e);
-                                return ApplyWorkspaceEditResponse { applied: false };
+                                return ApplyWorkspaceEditResponse {
+                                    applied: false,
+                                    failure_reason: None,
+                                    failed_change: None,
+                                };
                             }
                         }
                     }
@@ -225,11 +234,15 @@ pub fn apply_edit(
             }
         }
     } else if let Some(changes) = edit.changes {
-        for (uri, change) in &changes {
-            apply_text_edits(&meta, uri, change, ctx);
+        for (uri, change) in changes {
+            apply_text_edits(&meta, &uri, change, ctx);
         }
     }
-    ApplyWorkspaceEditResponse { applied: true }
+    ApplyWorkspaceEditResponse {
+        applied: true,
+        failure_reason: None,
+        failed_change: None,
+    }
 }
 
 #[derive(Deserialize)]

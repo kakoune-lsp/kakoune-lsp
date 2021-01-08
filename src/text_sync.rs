@@ -48,7 +48,7 @@ pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mu
     let params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
             uri,
-            version: Some(meta.version),
+            version: meta.version,
         },
         content_changes: vec![TextDocumentContentChangeEvent {
             range: None,
@@ -72,6 +72,7 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidSaveTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
+        text: None,
     };
     ctx.notify::<DidSaveTextDocument>(params);
 }

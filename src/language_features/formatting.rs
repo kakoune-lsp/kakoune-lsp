@@ -38,9 +38,18 @@ pub fn editor_formatting(meta: EditorMeta, result: Option<Vec<TextEdit>>, ctx: &
             return;
         }
         Some(text_edits) => {
+            let wrapped_edits = text_edits
+                .into_iter()
+                .map(|e| OneOf::Left(e))
+                .collect::<Vec<_>>();
             ctx.exec(
                 meta,
-                apply_text_edits_to_buffer(None, &text_edits, &document.text, ctx.offset_encoding),
+                apply_text_edits_to_buffer(
+                    None,
+                    &wrapped_edits[..],
+                    &document.text,
+                    ctx.offset_encoding,
+                ),
             );
         }
     }

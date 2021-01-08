@@ -7,7 +7,6 @@ use jsonrpc_core::Params;
 use lsp_types::*;
 use std::collections::HashSet;
 use std::path::Path;
-use std::u64;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
@@ -72,7 +71,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             let line_text = get_line(line as usize, &document.text);
             let mut pos =
                 lsp_position_to_kakoune(&x.range.end, &document.text, ctx.offset_encoding);
-            pos.column = line_text.len_bytes() as u64;
+            pos.column = line_text.len_bytes() as u32;
             // separate all but the first diagnostic on the same line
             let sep = if lines_with_errors.insert(line) {
                 ""
@@ -106,7 +105,11 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         version,
         diagnostic_ranges,
     );
-    let command = format!("eval -buffer {} %§{}§", editor_quote(buffile), command.replace("§", "\\§"));
+    let command = format!(
+        "eval -buffer {} %§{}§",
+        editor_quote(buffile),
+        command.replace("§", "\\§")
+    );
     let meta = EditorMeta {
         session,
         client,
