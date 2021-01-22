@@ -164,7 +164,7 @@ even if Kakoune session is still up and running. Change `server.timeout` in `kak
 duration, or set it to 0 to disable this behaviour. In any scenario making new request would lead to
 attempt to spin up server if it is down.
 
-* `lsp` user mode (see https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[Kakoune docs] for more details about user modes):
+* The `lsp` user mode is declared, but has no keybinding yet (see https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[Kakoune docs] for more details about user modes):
 
 |===
 | Binding | Command
