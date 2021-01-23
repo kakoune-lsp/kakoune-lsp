@@ -1293,6 +1293,7 @@ map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buf
 map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
 map global lsp i '<esc>: lsp-implementation<ret>'         -docstring 'go to implementation'
 map global lsp r '<esc>: lsp-references<ret>'             -docstring 'list symbol references'
+map global lsp R '<esc>: lsp-rename-prompt<ret>'          -docstring 'rename symbol'
 map global lsp s '<esc>: lsp-signature-help<ret>'         -docstring 'show function signature help'
 map global lsp S '<esc>: lsp-document-symbol<ret>'        -docstring 'list document symbols'
 map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'  -docstring 'search project symbols'

@@ -126,7 +126,7 @@ Either way you get:
 * `lsp-hover` command to show hover info (including relevant diagnostics when available)
 ** to automatically show hover when you move around use `lsp-auto-hover-enable`
 ** to show hover anchored to hovered position do `set global lsp_hover_anchor true`
-** to exclude diagnostics do `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'` 
+** to exclude diagnostics do `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'`
 * `lsp-declaration` command to jump to the declaration of the symbol under the main cursor
 * `lsp-definition` command to jump to the definition of the symbol under the main cursor
 * `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor
@@ -183,6 +183,7 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 | h | lsp-hover
 | i | lsp-implementation
 | r | lsp-references
+| R | lsp-rename-prompt
 | s | lsp-signature-help
 | S | lsp-document-symbol
 | o | lsp-workspace-symbol-incr
@@ -395,7 +396,7 @@ To do this:
 . *Before launching Kakoune*, run kak-lsp with an arbitrary session ID (here `foobar`):
 
   kak-lsp -s foobar
-  
+
 . In a second terminal, run Kakoune with the same session ID:
 
   kak -s foobar
