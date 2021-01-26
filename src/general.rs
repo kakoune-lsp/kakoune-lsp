@@ -12,6 +12,26 @@ use std::process;
 use toml;
 use url::Url;
 
+pub fn workspace_folders_from_env() -> Option<Vec<WorkspaceFolder>> {
+    let folders_string: String = std::env::var("KAK_LSP_WORKSPACE_FOLDERS").ok()?;
+    let workspace_folders = folders_string
+        .split(":")
+        .map(|entry| format!("file://{}", entry)) // to uri format
+        .filter_map(|url_candidate| match Url::parse(&url_candidate) {
+            Ok(uri) => Some(WorkspaceFolder {
+                uri,
+                name: url_candidate.to_string(),
+            }),
+            Err(_) => None,
+        })
+        .collect::<Vec<WorkspaceFolder>>();
+    if workspace_folders.is_empty() {
+        return None;
+    }
+
+    Some(workspace_folders)
+}
+
 pub fn initialize(
     root_path: &str,
     initialization_options: Option<Value>,
@@ -38,7 +58,7 @@ pub fn initialize(
                     dynamic_registration: Some(false),
                 }),
                 did_change_watched_files: None,
-                symbol: Some(WorkspaceSymbolClientCapabilities{
+                symbol: Some(WorkspaceSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: Some(SymbolKindCapability {
                         value_set: Some(vec![
@@ -75,7 +95,7 @@ pub fn initialize(
                 execute_command: Some(GenericCapability {
                     dynamic_registration: Some(false),
                 }),
-                workspace_folders: Some(false),
+                workspace_folders: Some(workspace_folders_from_env().is_some()),
                 configuration: Some(false),
             }),
             text_document: Some(TextDocumentClientCapabilities {
@@ -223,8 +243,8 @@ pub fn initialize(
                 semantic_tokens: Some(SemanticTokensClientCapabilities {
                     dynamic_registration: Some(false),
                     requests: SemanticTokensClientCapabilitiesRequests {
-                      range: Some(false),
-                      full: Some(SemanticTokensFullOptions::Bool(true)),
+                        range: Some(false),
+                        full: Some(SemanticTokensFullOptions::Bool(true)),
                     },
                     token_types: ctx
                         .config
@@ -253,7 +273,7 @@ pub fn initialize(
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: None,
         trace: Some(TraceOption::Off),
-        workspace_folders: None,
+        workspace_folders: workspace_folders_from_env(),
         client_info: Some(ClientInfo {
             name: env!("CARGO_PKG_NAME").to_owned(),
             version: Some(env!("CARGO_PKG_VERSION").to_owned()),
@@ -378,7 +398,10 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
 
     if let Some(ref cap) = server_capabilities.semantic_highlighting {
         if let Some(ref scopes) = cap.scopes {
-            features.push(format!("lsp-semantic-highlighting: scopes: [{}]", scopes.iter().map(|xs| xs.join(".")).join(", ")));
+            features.push(format!(
+                "lsp-semantic-highlighting: scopes: [{}]",
+                scopes.iter().map(|xs| xs.join(".")).join(", ")
+            ));
         }
     }
 
