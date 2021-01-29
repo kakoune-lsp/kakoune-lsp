@@ -12,10 +12,11 @@ use std::process;
 use toml;
 use url::Url;
 
-pub fn workspace_folders_from_env() -> Option<Vec<WorkspaceFolder>> {
-    let folders_string: String = std::env::var("KAK_LSP_WORKSPACE_FOLDERS").ok()?;
+pub fn workspace_folders_from_string(folders_string: String) -> Option<Vec<WorkspaceFolder>> {
     let workspace_folders = folders_string
         .split(":")
+        .map(|entry| entry.chars().skip_while(|c| c == &'/').collect::<String>())
+        .filter(|entry| !entry.is_empty())
         .map(|entry| format!("file://{}", entry)) // to uri format
         .filter_map(|url_candidate| match Url::parse(&url_candidate) {
             Ok(uri) => Some(WorkspaceFolder {
@@ -25,11 +26,17 @@ pub fn workspace_folders_from_env() -> Option<Vec<WorkspaceFolder>> {
             Err(_) => None,
         })
         .collect::<Vec<WorkspaceFolder>>();
+
+    eprintln!("workspace_folders = {:#?}", workspace_folders);
     if workspace_folders.is_empty() {
         return None;
     }
-
     Some(workspace_folders)
+}
+
+pub fn workspace_folders_from_env() -> Option<Vec<WorkspaceFolder>> {
+    let folders_string: String = std::env::var("KAK_LSP_WORKSPACE_FOLDERS").ok()?;
+    workspace_folders_from_string(folders_string)
 }
 
 pub fn initialize(
@@ -452,5 +459,23 @@ fn request_initialization_options_from_kakoune(
                 None
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test_initialization {
+    use super::*;
+
+    #[test]
+    fn test_single_entry() {
+        assert!(
+            dbg!(workspace_folders_from_string(
+                "/home/user/programming/my-awesome-project".to_string()
+            )
+            .unwrap())
+            .len()
+                == 1
+        );
+        assert!(workspace_folders_from_string("".to_string()).is_none());
     }
 }
