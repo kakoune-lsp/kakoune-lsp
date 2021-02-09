@@ -13,7 +13,7 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
     let params = params.unwrap();
     let path = params.text_document.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
-    let meta = match ctx.meta_for_buffer(buffile.to_string()) {
+    let meta = match ctx.meta_for_buffer(buffile) {
         Some(meta) => meta,
         None => return,
     };

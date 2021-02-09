@@ -361,7 +361,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         Some(document) => document,
         None => return,
     };
-    let meta = match ctx.meta_for_buffer(buffile.to_string()) {
+    let meta = match ctx.meta_for_buffer(buffile) {
         Some(meta) => meta,
         None => return,
     };

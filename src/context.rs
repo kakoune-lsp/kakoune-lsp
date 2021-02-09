@@ -247,12 +247,12 @@ impl Context {
         }
     }
 
-    pub fn meta_for_buffer(&self, buffile: String) -> Option<EditorMeta> {
-        let document = self.documents.get(&buffile)?;
+    pub fn meta_for_buffer(&self, buffile: &str) -> Option<EditorMeta> {
+        let document = self.documents.get(buffile)?;
         Some(EditorMeta {
             session: self.session.clone(),
             client: None,
-            buffile: buffile,
+            buffile: buffile.to_string(),
             filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
             version: document.version,
             fifo: None,
