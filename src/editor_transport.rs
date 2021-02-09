@@ -2,6 +2,7 @@ use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
 use crossbeam_channel::{bounded, Receiver, Sender};
+use std::borrow::Cow;
 use std::fs;
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -73,12 +74,19 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
                         let client = response.meta.client.as_ref();
                         let command = match client.filter(|&s| !s.is_empty()) {
                             Some(client) => {
-                                format!("eval -client {} -verbatim -- {}", client, response.command)
+                                let command = format!(
+                                    "eval -client {} -verbatim -- {}",
+                                    client, response.command
+                                );
+                                debug!("To editor `{}`: {}", response.meta.session, command);
+                                Cow::from(command)
                             }
-                            None => response.command.to_string(),
+                            None => {
+                                debug!("To editor `{}`: {}", response.meta.session, response.command);
+                                response.command
+                            }
                         };
 
-                        debug!("To editor `{}`: {}", response.meta.session, command);
                         if stdin.write_all(command.as_bytes()).is_err() {
                             error!("Failed to write to editor stdin");
                         }

@@ -40,7 +40,7 @@ pub fn editor_range_formatting(meta: EditorMeta, text_edits: Vec<TextEdit>, ctx:
     if text_edits.len() == 0 {
         // Nothing to do, but sending command back to the editor is required to handle case when
         // editor is blocked waiting for response via fifo.
-        ctx.exec(meta, "nop".to_string());
+        ctx.exec(meta, "nop");
         return;
     }
     let document = document.unwrap();

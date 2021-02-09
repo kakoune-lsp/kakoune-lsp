@@ -2,6 +2,7 @@ use jsonrpc_core::{Call, Output, Params};
 use lsp_types::Range;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
@@ -87,7 +88,7 @@ pub struct EditorRequest {
 #[derive(Deserialize)]
 pub struct EditorResponse {
     pub meta: EditorMeta,
-    pub command: String,
+    pub command: Cow<'static, str>,
 }
 
 pub type SessionId = String;

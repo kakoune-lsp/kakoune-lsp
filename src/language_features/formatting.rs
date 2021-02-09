@@ -26,7 +26,7 @@ pub fn editor_formatting(meta: EditorMeta, result: Option<Vec<TextEdit>>, ctx: &
     if document.is_none() {
         // Nothing to do, but sending command back to the editor is required to handle case when
         // editor is blocked waiting for response via fifo.
-        ctx.exec(meta, "nop".to_string());
+        ctx.exec(meta, "nop");
         return;
     }
     let document = document.unwrap();
@@ -34,7 +34,7 @@ pub fn editor_formatting(meta: EditorMeta, result: Option<Vec<TextEdit>>, ctx: &
         None => {
             // Nothing to do, but sending command back to the editor is required to handle case when
             // editor is blocked waiting for response via fifo.
-            ctx.exec(meta, "nop".to_string());
+            ctx.exec(meta, "nop");
             return;
         }
         Some(text_edits) => {

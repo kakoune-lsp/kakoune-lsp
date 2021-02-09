@@ -6,6 +6,7 @@ use lsp_types::request::*;
 use lsp_types::*;
 use ropey;
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs;
 
@@ -201,11 +202,15 @@ impl Context {
         }
     }
 
-    pub fn exec(&self, meta: EditorMeta, command: String) {
+    pub fn exec<S>(&self, meta: EditorMeta, command: S)
+    where
+        S: Into<Cow<'static, str>>,
+    {
+        let command = command.into();
         match meta.fifo.as_ref() {
             Some(fifo) => {
                 debug!("To editor `{}`: {}", meta.session, command);
-                fs::write(fifo, command).expect("Failed to write command to fifo")
+                fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo")
             }
             None => {
                 if self
