@@ -115,7 +115,7 @@ pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
         .as_ref()
         .and_then(|x| x.semantic_highlighting.as_ref())
         .and_then(|x| x.scopes.as_ref())
-        .map_or(Vec::new(), |v| map_scopes_to_faces(v, faces))
+        .map_or_else(Vec::new, |v| map_scopes_to_faces(v, faces))
 }
 
 fn map_scopes_to_faces(
