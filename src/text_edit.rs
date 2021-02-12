@@ -132,13 +132,11 @@ pub fn apply_text_edits_to_buffer(
     text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
     text: &Rope,
     offset_encoding: OffsetEncoding,
-) -> String {
+) -> Option<String> {
     // Empty text edits processed as a special case because Kakoune's `select` command
     // doesn't support empty arguments list.
     if text_edits.is_empty() {
-        // Nothing to do, but sending command back to the editor is required to handle case when
-        // editor is blocked waiting for response via fifo.
-        return "nop".to_string();
+        return None;
     }
     let mut edits = text_edits
         .iter()
@@ -227,17 +225,17 @@ pub fn apply_text_edits_to_buffer(
         select_edits, apply_edits
     );
     let command = format!("eval -draft -save-regs '^' {}", editor_quote(&command));
-    match uri {
-        Some(uri) => {
-            let buffile = uri.to_file_path().unwrap();
-            format!(
-                "evaluate-commands -buffer {} {}",
-                editor_quote(buffile.to_str().unwrap()),
-                editor_quote(&command)
-            )
-        }
-        None => command,
-    }
+    uri.and_then(|uri| uri.to_file_path().ok())
+        .and_then(|path| {
+            path.to_str().and_then(|buffile| {
+                Some(format!(
+                    "eval -buffer {} {}",
+                    editor_quote(buffile),
+                    editor_quote(&command)
+                ))
+            })
+        })
+        .or_else(|| Some(command))
 }
 
 enum KakouneTextEditCommand {

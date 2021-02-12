@@ -28,33 +28,30 @@ pub fn text_document_range_formatting(
     ctx.batch_call::<RangeFormatting, _>(
         meta,
         req_params,
-        move |ctx: &mut Context, meta, results| {
-            let result = results.into_iter().flatten().flatten().collect();
-            editor_range_formatting(meta, result, ctx)
+        move |ctx: &mut Context, meta: EditorMeta, results: Vec<Option<Vec<TextEdit>>>| {
+            let text_edits = results
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| OneOf::Left(e))
+                .collect::<Vec<_>>();
+            editor_range_formatting(meta, &text_edits, ctx)
         },
     );
 }
 
-pub fn editor_range_formatting(meta: EditorMeta, text_edits: Vec<TextEdit>, ctx: &mut Context) {
-    let document = ctx.documents.get(&meta.buffile);
-    if text_edits.len() == 0 {
+pub fn editor_range_formatting(
+    meta: EditorMeta,
+    text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+    ctx: &mut Context,
+) {
+    let cmd = ctx.documents.get(&meta.buffile).and_then(|document| {
+        apply_text_edits_to_buffer(None, text_edits, &document.text, ctx.offset_encoding)
+    });
+    match cmd {
+        Some(cmd) => ctx.exec(meta, cmd),
         // Nothing to do, but sending command back to the editor is required to handle case when
         // editor is blocked waiting for response via fifo.
-        ctx.exec(meta, "nop");
-        return;
+        None => ctx.exec(meta, "nop"),
     }
-    let document = document.unwrap();
-    let wrapped_edits = text_edits
-        .into_iter()
-        .map(|e| OneOf::Left(e))
-        .collect::<Vec<_>>();
-    ctx.exec(
-        meta,
-        apply_text_edits_to_buffer(
-            None,
-            &wrapped_edits[..],
-            &document.text,
-            ctx.offset_encoding,
-        ),
-    );
 }

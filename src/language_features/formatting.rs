@@ -1,5 +1,4 @@
 use crate::context::*;
-use crate::text_edit::apply_text_edits_to_buffer;
 use crate::types::*;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -16,41 +15,16 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
         options: params,
         work_done_progress_params: Default::default(),
     };
-    ctx.call::<Formatting, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_formatting(meta, result, ctx)
-    });
-}
-
-pub fn editor_formatting(meta: EditorMeta, result: Option<Vec<TextEdit>>, ctx: &mut Context) {
-    let document = ctx.documents.get(&meta.buffile);
-    if document.is_none() {
-        // Nothing to do, but sending command back to the editor is required to handle case when
-        // editor is blocked waiting for response via fifo.
-        ctx.exec(meta, "nop");
-        return;
-    }
-    let document = document.unwrap();
-    match result {
-        None => {
-            // Nothing to do, but sending command back to the editor is required to handle case when
-            // editor is blocked waiting for response via fifo.
-            ctx.exec(meta, "nop");
-            return;
-        }
-        Some(text_edits) => {
-            let wrapped_edits = text_edits
+    ctx.call::<Formatting, _>(
+        meta,
+        req_params,
+        move |ctx: &mut Context, meta: EditorMeta, result: Option<Vec<TextEdit>>| {
+            let text_edits = result
+                .unwrap_or_else(Vec::new)
                 .into_iter()
                 .map(|e| OneOf::Left(e))
                 .collect::<Vec<_>>();
-            ctx.exec(
-                meta,
-                apply_text_edits_to_buffer(
-                    None,
-                    &wrapped_edits[..],
-                    &document.text,
-                    ctx.offset_encoding,
-                ),
-            );
-        }
-    }
+            super::range_formatting::editor_range_formatting(meta, &text_edits, ctx)
+        },
+    );
 }
