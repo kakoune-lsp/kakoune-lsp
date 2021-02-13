@@ -227,12 +227,12 @@ pub fn apply_text_edits_to_buffer(
     let command = format!("eval -draft -save-regs '^' {}", editor_quote(&command));
     uri.and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| {
-            path.to_str().and_then(|buffile| {
-                Some(format!(
+            path.to_str().map(|buffile| {
+                format!(
                     "eval -buffer {} {}",
                     editor_quote(buffile),
                     editor_quote(&command)
-                ))
+                )
             })
         })
         .or_else(|| Some(command))
