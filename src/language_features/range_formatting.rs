@@ -20,7 +20,7 @@ pub fn text_document_range_formatting(
             text_document: TextDocumentIdentifier {
                 uri: Url::from_file_path(&meta.buffile).unwrap(),
             },
-            range: range,
+            range,
             options: params.clone(),
             work_done_progress_params: Default::default(),
         })
@@ -33,7 +33,7 @@ pub fn text_document_range_formatting(
                 .into_iter()
                 .flatten()
                 .flatten()
-                .map(|e| OneOf::Left(e))
+                .map(OneOf::Left)
                 .collect::<Vec<_>>();
             editor_range_formatting(meta, &text_edits, ctx)
         },

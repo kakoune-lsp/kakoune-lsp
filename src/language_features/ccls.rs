@@ -7,7 +7,6 @@ use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::request::Request;
 use lsp_types::*;
-use serde;
 use serde::Deserialize;
 use url::Url;
 

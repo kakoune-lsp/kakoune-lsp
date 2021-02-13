@@ -140,7 +140,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
     let arg = params
         .arguments
         .into_iter()
-        .nth(0)
+        .next()
         .expect("Missing source change");
     let SourceChange {
         workspace_edit:
@@ -182,38 +182,36 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
             apply_text_edits(&meta, &uri, change, ctx);
         }
     }
-    match (&meta.client, &cursor_position) {
-        (
-            Some(client),
-            Some(TextDocumentPositionParams {
-                text_document: TextDocumentIdentifier { uri },
-                position,
-            }),
-        ) => {
-            let buffile = uri.to_file_path().unwrap();
-            let buffile = buffile.to_str().unwrap();
-            let position = match ctx.documents.get(buffile) {
-                Some(document) => {
-                    lsp_position_to_kakoune(position, &document.text, ctx.offset_encoding)
-                }
-                _ => KakounePosition {
-                    line: position.line + 1,
-                    column: position.character + 1,
-                },
-            };
-            let command = format!(
-                "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
-                editor_quote(buffile),
-                position.line,
-                position.column - 1
-            );
-            let command = format!(
-                "eval -client {} -verbatim -- {}",
-                editor_quote(client),
-                command
-            );
-            ctx.exec(meta, command);
-        }
-        _ => {}
+    if let (
+        Some(client),
+        Some(TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri },
+            position,
+        }),
+    ) = (&meta.client, &cursor_position)
+    {
+        let buffile = uri.to_file_path().unwrap();
+        let buffile = buffile.to_str().unwrap();
+        let position = match ctx.documents.get(buffile) {
+            Some(document) => {
+                lsp_position_to_kakoune(position, &document.text, ctx.offset_encoding)
+            }
+            _ => KakounePosition {
+                line: position.line + 1,
+                column: position.character + 1,
+            },
+        };
+        let command = format!(
+            "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
+            editor_quote(buffile),
+            position.line,
+            position.column - 1
+        );
+        let command = format!(
+            "eval -client {} -verbatim -- {}",
+            editor_quote(client),
+            command
+        );
+        ctx.exec(meta, command);
     }
 }

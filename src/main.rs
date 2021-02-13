@@ -1,3 +1,5 @@
+#![allow(clippy::unused_unit)]
+
 #[macro_use]
 extern crate enum_primitive;
 #[macro_use]
@@ -115,7 +117,7 @@ fn main() {
 
     let config_path = matches
         .value_of("config")
-        .and_then(|config| Some(Path::new(&config).to_owned()))
+        .map(|config| Path::new(&config).to_owned())
         .or_else(|| {
             dirs::config_dir().and_then(|config_dir| {
                 let path = Path::new(&config_dir.join("kak-lsp/kak-lsp.toml")).to_owned();

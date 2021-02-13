@@ -10,7 +10,6 @@ use serde::Deserialize;
 use serde_json::{self, Value};
 use std::fs;
 use std::io;
-use toml;
 
 fn insert_value<'a, 'b, P>(
     target: &'b mut serde_json::map::Map<String, Value>,
@@ -52,7 +51,7 @@ pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
         .as_table()
         .and_then(|t| t.get("settings"))
         .and_then(|val| val.as_table())
-        .unwrap_or_else(|| &default_settings);
+        .unwrap_or(&default_settings);
 
     let mut settings = serde_json::Map::new();
 

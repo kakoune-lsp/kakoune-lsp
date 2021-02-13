@@ -41,7 +41,7 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
         None => return,
     };
     let faces = &ctx.semantic_highlighting_faces;
-    let cur_lines = params.current.split(" ");
+    let cur_lines = params.current.split(' ');
     let updated_lines = match ctx.semantic_highlighting_lines.get(buffile) {
         Some(lines) => lines,
         None => return,
@@ -49,7 +49,7 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
     let old_ranges = cur_lines
         .filter(|&x| {
             let x = x.trim();
-            x.find(".")
+            x.find('.')
                 .and_then(|p| x[0..p].parse::<i32>().ok())
                 // +1 because LSP ranges are 0-based, but kakoune's are 1-based.
                 .map(|line| !updated_lines.iter().any(|info| info.line + 1 == line))
@@ -66,8 +66,8 @@ pub fn editor_update(meta: EditorMeta, params: EditorParams, ctx: &mut Context) 
                     .get(t.scope as usize)
                     .expect("Semantic highlighting token sent for out-of-range scope");
                 let range = Range {
-                    start: Position::new(line, t.character.into()),
-                    end: Position::new(line, (t.character + u32::from(t.length)).into()),
+                    start: Position::new(line, t.character),
+                    end: Position::new(line, t.character + u32::from(t.length)),
                 };
                 format!(
                     "{}|{}",
@@ -119,7 +119,7 @@ pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
 }
 
 fn map_scopes_to_faces(
-    scopes: &Vec<Vec<String>>,
+    scopes: &[Vec<String>],
     faces: HashMap<String, &String>,
 ) -> std::vec::Vec<std::string::String> {
     let find_face = |scope: &String| {
@@ -140,7 +140,7 @@ fn map_scopes_to_faces(
                 .filter_map(find_face)
                 .max_by_key(|(n, _)| *n)
                 .map(|(_, x)| x)
-                .unwrap_or_else(|| String::new())
+                .unwrap_or_else(String::new)
         })
         .collect()
 }

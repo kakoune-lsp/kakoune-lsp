@@ -22,7 +22,7 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
         version: meta.version,
         text: Rope::from_str(&params.text_document.text),
     };
-    ctx.documents.insert(meta.buffile.clone(), document);
+    ctx.documents.insert(meta.buffile, document);
     ctx.notify::<DidOpenTextDocument>(params);
 }
 
@@ -34,7 +34,7 @@ pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mu
     let old_version = ctx
         .documents
         .get(&meta.buffile)
-        .and_then(|doc| Some(doc.version))
+        .map(|doc| doc.version)
         .unwrap_or(0);
     if old_version >= version {
         return;

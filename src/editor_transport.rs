@@ -8,7 +8,6 @@ use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path;
 use std::process::{Command, Stdio};
-use toml;
 
 pub struct EditorTransport {
     // Not using Worker here as listener blocks forever and joining its thread
@@ -82,7 +81,10 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
                                 Cow::from(command)
                             }
                             None => {
-                                debug!("To editor `{}`: {}", response.meta.session, response.command);
+                                debug!(
+                                    "To editor `{}`: {}",
+                                    response.meta.session, response.command
+                                );
                                 response.command
                             }
                         };

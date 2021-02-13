@@ -7,7 +7,6 @@ use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
 use serde::Deserialize;
-use std;
 use url::Url;
 
 pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -51,9 +50,9 @@ pub fn editor_completion(
         .map(|x| {
             let mut doc = x.documentation.map(|doc| {
                 match doc {
-                    Documentation::String(st) => st.clone(),
+                    Documentation::String(st) => st,
                     Documentation::MarkupContent(mup) => match mup.kind {
-                        MarkupKind::PlainText => mup.value.clone(),
+                        MarkupKind::PlainText => mup.value,
                         // NOTE just in case server ignored our documentationFormat capability
                         // we want to unescape markdown to make text a bit more readable
                         MarkupKind::Markdown => unescape_markdown_re

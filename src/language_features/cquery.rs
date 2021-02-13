@@ -5,7 +5,6 @@ use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::{NumberOrString, Range};
-use serde;
 use url::Url;
 
 enum_from_primitive! {

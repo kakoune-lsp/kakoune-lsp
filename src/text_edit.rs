@@ -100,14 +100,12 @@ pub fn apply_text_edits_to_file(
 
     apply_text_edits_to_file_impl(text, temp_file, text_edits, offset_encoding)
         .and_then(|_| std::fs::rename(&temp_path, filename))
-        .and_then(|_| {
-            Ok(unsafe {
-                libc::chmod(path.as_ptr(), stat.st_mode);
-            })
+        .map(|_| unsafe {
+            libc::chmod(path.as_ptr(), stat.st_mode);
         })
-        .or_else(|e| {
+        .map_err(|e| {
             let _ = std::fs::remove_file(&temp_path);
-            Err(e)
+            e
         })
 }
 
@@ -235,7 +233,7 @@ pub fn apply_text_edits_to_buffer(
                 )
             })
         })
-        .or_else(|| Some(command))
+        .or(Some(command))
 }
 
 enum KakouneTextEditCommand {

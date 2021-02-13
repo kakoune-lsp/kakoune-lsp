@@ -61,8 +61,8 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                     start += delta_start;
                 }
                 let range = Range {
-                    start: Position::new(line.into(), start.into()),
-                    end: Position::new(line.into(), (start + length).into()),
+                    start: Position::new(line, start),
+                    end: Position::new(line, start + length),
                 };
                 let range = lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
                 let token = &legend.token_types[token_type as usize];

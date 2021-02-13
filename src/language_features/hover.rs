@@ -33,29 +33,27 @@ pub fn editor_hover(
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
     let pos = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
     let diagnostics = diagnostics
-        .and_then(|x| {
-            Some(
-                x.iter()
-                    .filter(|x| {
-                        let start = x.range.start;
-                        let end = x.range.end;
-                        (start.line < pos.line && pos.line < end.line)
-                            || (start.line == pos.line
-                                && pos.line == end.line
-                                && start.character <= pos.character
-                                && pos.character <= end.character)
-                            || (start.line == pos.line
-                                && pos.line <= end.line
-                                && start.character <= pos.character)
-                            || (start.line <= pos.line
-                                && end.line == pos.line
-                                && pos.character <= end.character)
-                    })
-                    .map(|x| str::trim(&x.message))
-                    .filter(|x| !x.is_empty())
-                    .map(|x| format!("• {}", x))
-                    .join("\n"),
-            )
+        .map(|x| {
+            x.iter()
+                .filter(|x| {
+                    let start = x.range.start;
+                    let end = x.range.end;
+                    (start.line < pos.line && pos.line < end.line)
+                        || (start.line == pos.line
+                            && pos.line == end.line
+                            && start.character <= pos.character
+                            && pos.character <= end.character)
+                        || (start.line == pos.line
+                            && pos.line <= end.line
+                            && start.character <= pos.character)
+                        || (start.line <= pos.line
+                            && end.line == pos.line
+                            && pos.character <= end.character)
+                })
+                .map(|x| str::trim(&x.message))
+                .filter(|x| !x.is_empty())
+                .map(|x| format!("• {}", x))
+                .join("\n")
         })
         .unwrap_or_else(String::new);
     let contents = match result {

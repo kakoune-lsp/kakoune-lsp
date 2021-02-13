@@ -19,15 +19,14 @@ pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
     ctx.call::<SwitchSourceHeaderRequest, _>(
         meta,
         req_params,
-        move |ctx: &mut Context, meta, response| match response {
-            Some(response) => {
+        move |ctx: &mut Context, meta, response| {
+            if let Some(response) = response {
                 let command = format!(
                     "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {}",
                     editor_quote(response.to_file_path().unwrap().to_str().unwrap()),
                 );
                 ctx.exec(meta, command);
             }
-            None => return,
         },
     );
 }

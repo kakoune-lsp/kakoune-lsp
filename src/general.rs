@@ -9,7 +9,6 @@ use lsp_types::request::*;
 use lsp_types::*;
 use serde_json::Value;
 use std::process;
-use toml;
 use url::Url;
 
 pub fn initialize(
@@ -279,7 +278,7 @@ pub fn initialize(
             experimental: None,
         },
         initialization_options,
-        process_id: Some(process::id().into()),
+        process_id: Some(process::id()),
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: None,
         trace: Some(TraceOption::Off),

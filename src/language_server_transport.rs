@@ -2,7 +2,6 @@ use crate::thread_worker::Worker;
 use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use jsonrpc_core::{self, Call, Output};
-use serde_json;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
@@ -47,10 +46,9 @@ pub fn start(cmd: &str, args: &[String]) -> Result<LanguageServerTransport, Stri
         "Language server errors",
         channel_capacity,
         move |receiver, _| loop {
-            match receiver.try_recv() {
-                Err(TryRecvError::Disconnected) => return,
-                _ => {}
-            };
+            if let Err(TryRecvError::Disconnected) = receiver.try_recv() {
+                return;
+            }
             let mut buf = String::new();
             match stderr.read_to_string(&mut buf) {
                 Ok(_) => {
@@ -94,12 +92,9 @@ pub fn start(cmd: &str, args: &[String]) -> Result<LanguageServerTransport, Stri
             match child.try_wait() {
                 Ok(None) => {
                     std::thread::sleep(std::time::Duration::from_secs(1));
-                    match child.try_wait() {
-                        Ok(None) => {
-                            // Okay, we asked politely enough and waited long enough.
-                            child.kill().unwrap();
-                        }
-                        _ => {}
+                    if let Ok(None) = child.try_wait() {
+                        // Okay, we asked politely enough and waited long enough.
+                        child.kill().unwrap();
                     }
                 }
                 Err(_) => {
@@ -124,10 +119,9 @@ fn reader_loop(
 ) -> io::Result<()> {
     let mut headers: HashMap<String, String> = HashMap::default();
     loop {
-        match receiver.try_recv() {
-            Err(TryRecvError::Disconnected) => return Ok(()),
-            _ => {}
-        };
+        if let Err(TryRecvError::Disconnected) = receiver.try_recv() {
+            return Ok(());
+        }
         headers.clear();
         loop {
             let mut header = String::new();

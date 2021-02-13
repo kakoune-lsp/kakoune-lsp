@@ -39,7 +39,7 @@ pub fn start(
         // should be fine to unwrap because request was already routed which means language is configured
         let lang = &config.language[&route.language];
         options = lang.initialization_options.clone();
-        offset_encoding = lang.offset_encoding.clone();
+        offset_encoding = lang.offset_encoding;
         lang_srv = match language_server_transport::start(&lang.command, &lang.args) {
             Ok(ls) => ls,
             Err(err) => {

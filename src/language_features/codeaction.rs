@@ -14,9 +14,8 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
 
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
 
-    let diagnostics: Vec<Diagnostic> = if buff_diags.is_some() {
+    let diagnostics: Vec<Diagnostic> = if let Some(buff_diags) = buff_diags {
         buff_diags
-            .unwrap()
             .iter()
             .filter(|d| d.range.start.line <= position.line && position.line <= d.range.end.line)
             .cloned()
@@ -34,7 +33,7 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
             end: position,
         },
         context: CodeActionContext {
-            diagnostics: diagnostics,
+            diagnostics,
             only: None,
         },
         work_done_progress_params: Default::default(),

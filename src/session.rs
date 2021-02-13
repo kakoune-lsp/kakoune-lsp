@@ -9,7 +9,6 @@ use lsp_types::notification::Notification;
 use lsp_types::*;
 use std::collections::HashMap;
 use std::time::Duration;
-use toml;
 
 struct ControllerHandle {
     worker: Worker<EditorRequest, Void>,

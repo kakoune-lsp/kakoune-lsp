@@ -22,7 +22,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
             let text_edits = result
                 .unwrap_or_else(Vec::new)
                 .into_iter()
-                .map(|e| OneOf::Left(e))
+                .map(OneOf::Left)
                 .collect::<Vec<_>>();
             super::range_formatting::editor_range_formatting(meta, &text_edits, ctx)
         },

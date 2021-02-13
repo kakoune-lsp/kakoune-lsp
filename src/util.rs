@@ -3,7 +3,6 @@ use crate::position::*;
 use crate::text_edit::*;
 use crate::types::*;
 use itertools::Itertools;
-use libc;
 use lsp_types::*;
 use ropey::Rope;
 use std::fs::File;
@@ -12,7 +11,6 @@ use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{collections::HashMap, path::Path};
 use std::{env, fs, path, process, thread};
-use whoami;
 
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
@@ -146,13 +144,9 @@ pub fn get_lsp_position(
     position: &KakounePosition,
     ctx: &Context,
 ) -> Option<Position> {
-    ctx.documents.get(filename).and_then(|document| {
-        Some(kakoune_position_to_lsp(
-            position,
-            &document.text,
-            ctx.offset_encoding,
-        ))
-    })
+    ctx.documents
+        .get(filename)
+        .map(|document| kakoune_position_to_lsp(position, &document.text, ctx.offset_encoding))
 }
 
 /// Wrapper for lsp_position_to_kakoune which uses context to get buffer content and offset encoding.
@@ -162,13 +156,8 @@ pub fn get_kakoune_position(
     position: &Position,
     ctx: &Context,
 ) -> Option<KakounePosition> {
-    get_file_contents(filename, ctx).and_then(|text| {
-        Some(lsp_position_to_kakoune(
-            &position,
-            &text,
-            ctx.offset_encoding,
-        ))
-    })
+    get_file_contents(filename, ctx)
+        .map(|text| lsp_position_to_kakoune(&position, &text, ctx.offset_encoding))
 }
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
@@ -176,7 +165,7 @@ pub fn get_kakoune_position(
 pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx: &Context) {
     let edits = edits
         .into_iter()
-        .map(|e| OneOf::Left(e))
+        .map(OneOf::Left)
         .collect::<Vec<_>>();
     apply_annotated_text_edits(meta, uri, &edits, ctx)
 }
@@ -211,7 +200,7 @@ pub fn apply_annotated_text_edits(
 pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
     ctx.documents
         .get(filename)
-        .and_then(|doc| Some(doc.text.clone()))
+        .map(|doc| doc.text.clone())
         .or_else(|| {
             File::open(filename)
                 .ok()

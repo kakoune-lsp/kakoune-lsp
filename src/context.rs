@@ -4,7 +4,6 @@ use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Versi
 use lsp_types::notification::Notification;
 use lsp_types::request::*;
 use lsp_types::*;
-use ropey;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
