@@ -6,7 +6,6 @@ use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
 use std::collections::HashSet;
-use std::path::Path;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
@@ -132,12 +131,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                     let p = get_kakoune_position(filename, &x.range.start, ctx).unwrap();
                     format!(
                         "{}:{}:{}: {}:{}",
-                        Path::new(filename)
-                            .strip_prefix(&ctx.root_path)
-                            .ok()
-                            .and_then(|p| Some(p.to_str().unwrap()))
-                            .or_else(|| Some(filename))
-                            .unwrap(),
+                        short_file_path(filename, &ctx.root_path),
                         p.line,
                         p.column,
                         match x.severity {
