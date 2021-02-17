@@ -48,9 +48,8 @@ pub fn editor_completion(
     let items = items
         .into_iter()
         .map(|x| {
-            let mut doc: String = match &x.documentation {
-                None => "".to_string(),
-                Some(doc) => match doc {
+            let mut doc = x.documentation.map(|doc| {
+                match doc {
                     Documentation::String(st) => st.clone(),
                     Documentation::MarkupContent(mup) => match mup.kind {
                         MarkupKind::PlainText => mup.value.clone(),
@@ -60,12 +59,17 @@ pub fn editor_completion(
                             .replace_all(&mup.value, r"$c")
                             .to_string(),
                     },
-                },
-            };
-            if let Some(d) = x.detail {
-                doc = format!("{}\n\n{}", d, doc);
+                }
+            });
+
+            if let Some(detail) = x.detail {
+                doc = doc.map(|doc| format!("{}\n\n{}", detail, doc));
             }
-            let doc = format!("info -style menu {}", editor_quote(&doc));
+
+            let doc = doc
+                .map(|doc| format!("info -style menu -- %§{}§", doc.replace("§", "\\§")))
+                .unwrap_or_else(|| String::from("nop"));
+
             let mut entry = x.label.clone();
             if let Some(k) = x.kind {
                 entry += &std::iter::repeat(" ")
@@ -113,7 +117,7 @@ pub fn editor_completion(
                     editor_quote(&regex::escape(insert_text)),
                     editor_quote(snippet)
                 );
-                let command = format!("eval {}", editor_quote(&command));
+                let command = format!("eval -verbatim -- {}", command);
                 editor_quote(&format!(
                     "{}|{}|{}",
                     escape_bar(insert_text),
