@@ -13,7 +13,7 @@ pub fn semantic_highlighting_notification(params: Params, ctx: &mut Context) {
     let params = params.unwrap();
     let path = params.text_document.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
-    let meta = match ctx.meta_for_buffer(buffile.to_string()) {
+    let meta = match ctx.meta_for_buffer(buffile) {
         Some(meta) => meta,
         None => return,
     };
@@ -115,7 +115,7 @@ pub fn make_scope_map(ctx: &mut Context) -> std::vec::Vec<std::string::String> {
         .as_ref()
         .and_then(|x| x.semantic_highlighting.as_ref())
         .and_then(|x| x.scopes.as_ref())
-        .map_or(Vec::new(), |v| map_scopes_to_faces(v, faces))
+        .map_or_else(Vec::new, |v| map_scopes_to_faces(v, faces))
 }
 
 fn map_scopes_to_faces(

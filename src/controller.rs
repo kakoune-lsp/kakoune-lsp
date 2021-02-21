@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::context::*;
 use crate::diagnostics;
 use crate::general;
@@ -51,7 +53,7 @@ pub fn start(
                 if to_editor
                     .send(EditorResponse {
                         meta: initial_request.meta,
-                        command,
+                        command: Cow::from(command),
                     })
                     .is_err()
                 {

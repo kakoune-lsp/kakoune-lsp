@@ -32,6 +32,7 @@ use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
+use std::borrow::Cow;
 use std::env;
 use std::fs;
 use std::io::{stdin, Read, Write};
@@ -292,7 +293,7 @@ fn report_config_error(matches: &ArgMatches, session: &str, error: &toml::de::Er
         .sender()
         .send(EditorResponse {
             meta: request.meta,
-            command,
+            command: Cow::from(command),
         })
         .is_err()
     {
