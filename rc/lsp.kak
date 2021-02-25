@@ -730,14 +730,13 @@ rm -rf ${tmp}
 define-command lsp-update-semantic-highlighting -hidden %{
     nop %sh{ (printf '
 session      = "%s"
-client       = "%s"
 buffile      = "%s"
 filetype     = "%s"
 version      = %d
 method       = "update-semantic-highlighting"
 [params]
 current = "%s"
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_lsp_semantic_highlighting}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_lsp_semantic_highlighting}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
 }
 
 # CCLS Extension
@@ -904,13 +903,12 @@ define-command rust-analyzer-inlay-hints -docstring "rust-analyzer-inlay-hints: 
 define-command -hidden rust-analyzer-inlay-hints-request %{
     nop %sh{ (printf '
 session   = "%s"
-client    = "%s"
 buffile   = "%s"
 filetype  = "%s"
 version   = %d
 method    = "rust-analyzer/inlayHints"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 # semantic tokens
@@ -922,13 +920,12 @@ define-command lsp-semantic-tokens -docstring "semantic-tokens-update: Request s
 define-command -hidden lsp-semantic-tokens-request %{
     nop %sh{ (printf '
 session   = "%s"
-client    = "%s"
 buffile   = "%s"
 filetype  = "%s"
 version   = %d
 method    = "textDocument/semanticTokens/full"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 ### Response handling ###
