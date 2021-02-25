@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::position::lsp_range_to_kakoune;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -82,11 +83,20 @@ pub fn editor_completion(
             // cursor. Kakoune will do this very edit if we simply pass it the replacement string
             // as completion.
             let is_simple_text_edit = x.text_edit.as_ref().map_or(false, |cte| {
+                let document = match ctx.documents.get(&meta.buffile) {
+                    Some(doc) => doc,
+                    None => {
+                        warn!("No document in context for file: {}", &meta.buffile);
+                        return false;
+                    }
+                };
                 if let CompletionTextEdit::Edit(text_edit) = cte {
-                    text_edit.range.start.line + 1 == params.position.line
-                        && text_edit.range.start.character + 1 == params.completion.offset
-                        && text_edit.range.end.line + 1 == params.position.line
-                        && text_edit.range.end.character + 1 == params.position.column
+                    let range =
+                        lsp_range_to_kakoune(&text_edit.range, &document.text, ctx.offset_encoding);
+                    range.start.line == params.position.line
+                        && range.end.line == params.position.line
+                        && (range.end.column == params.position.column // Not sure why this case happens, see #455
+                            || range.end.column + 1 == params.position.column)
                 } else {
                     false
                 }
