@@ -112,7 +112,6 @@ lsp_draft=$(printf '%s' "$lsp_draft" | sed 's/\\/\\\\/g ; s/"/\\"/g ; s/'"$(prin
 lsp_draft=${lsp_draft%.}
 printf '
 session  = "%s"
-client   = "%s"
 buffile  = "%s"
 filetype = "%s"
 version  = %d
@@ -120,7 +119,7 @@ method   = "textDocument/didChange"
 [params]
 draft    = """
 %s"""
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval ${kak_opt_lsp_cmd} --request
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval ${kak_opt_lsp_cmd} --request
 printf %s "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
 ) > /dev/null 2>&1 < /dev/null & }
         execute-keys -draft '%<a-|><ret>'
