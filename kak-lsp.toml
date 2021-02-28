@@ -182,18 +182,13 @@ args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rls); else r
 # args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rust-analyzer); else rust-analyzer; fi"]
 #
 # [language.rust.initialization_options]
-#
-# If you get 'unresolved proc macro' warnings, you have two options
-#
-# 1/ The safe choice is two disable the warning:
+# # If you get 'unresolved proc macro' warnings, you have two options
+# # 1. The safe choice is two disable the warning:
 # diagnostics.disabled = ["unresolved-proc-macro"]
-#
-# 2/ Or you can opt-in for proc macro support
+# # 2. Or you can opt-in for proc macro support
 # procMacro.enable = true
 # cargo.loadOutDirsFromCheck = true
-#
-# See https://github.com/rust-analyzer/rust-analyzer/issues/6448
-# for details
+# # See https://github.com/rust-analyzer/rust-analyzer/issues/6448
 
 [language.terraform]
 filetypes = ["terraform"]
