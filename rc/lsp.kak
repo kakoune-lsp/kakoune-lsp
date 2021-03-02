@@ -295,14 +295,6 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-goto-next-match -docstring 'Jump to the next goto match' %{
-    lsp-next-match '*goto*'
-}
-
-define-command lsp-goto-previous-match -docstring 'Jump to the previous goto match' %{
-    lsp-previous-match '*goto*'
-}
-
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
     lsp-did-change-and-then lsp-highlight-references-request
 }
@@ -405,14 +397,6 @@ version  = %d
 method   = "textDocument/documentSymbol"
 [params]
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
-}
-
-define-command lsp-symbols-next-match -docstring 'Jump to the next symbols match' %{
-    lsp-next-match '*symbols*'
-}
-
-define-command lsp-symbols-previous-match -docstring 'Jump to the previous symbols match' %{
-    lsp-previous-match '*symbols*'
 }
 
 define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
@@ -1688,4 +1672,21 @@ define-command -hidden lsp-diagnostics-open-error -params 4 %{
         echo -markup "{Information}{\}%arg{4}"
         try %{ focus }
     }
+}
+
+# Deprecated commands.
+define-command lsp-symbols-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next symbols match' %{
+    lsp-next-match '*symbols*'
+}
+
+define-command lsp-symbols-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous symbols match' %{
+    lsp-previous-match '*symbols*'
+}
+
+define-command lsp-goto-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next goto match' %{
+    lsp-next-match '*goto*'
+}
+
+define-command lsp-goto-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous goto match' %{
+    lsp-previous-match '*goto*'
 }
