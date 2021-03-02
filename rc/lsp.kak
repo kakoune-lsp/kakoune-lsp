@@ -945,13 +945,7 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
         edit! -scratch *diagnostics*
         set-option buffer filetype lsp-goto
         set-option buffer lsp_project_root "%arg{1}/"
-
-        # This buffer behaves a bit like a *make* buffer.
         alias buffer lsp-jump lsp-diagnostics-jump
-        remove-highlighter window/lsp-goto
-        add-highlighter window/lsp-diagnostics ref lsp-diagnostics
-        hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/lsp-diagnostics }
-
         set-register '"' %arg{2}
         execute-keys Pgg
     }
@@ -1619,11 +1613,6 @@ hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{ # from g
     add-highlighter window/lsp-goto/ line %{%opt{grep_current_line}} default+b
     hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/lsp-goto }
 }
-
-add-highlighter shared/lsp-diagnostics group # from make.kak
-add-highlighter shared/lsp-diagnostics/ regex "^((?:\w:)?[^:\n]+):(\d+):(?:(\d+):)?\h+(?:((?:fatal )?error)|(warning)|(note)|(required from(?: here)?))?.*?$" 1:cyan 2:green 3:green 4:red 5:yellow 6:blue 7:yellow
-add-highlighter shared/lsp-diagnostics/ regex "^\h*(~*(?:(\^)~*)?)$" 1:green 2:cyan+b
-add-highlighter shared/lsp-diagnostics/ line '%opt{grep_current_line}' default+b
 
 hook global WinSetOption filetype=lsp-goto %{
     hook buffer -group lsp-goto-hooks NormalKey <ret> lsp-jump
