@@ -57,6 +57,15 @@ declare-option -docstring "Character to signal a warning in the gutter" str lsp_
 declare-option -docstring "Format hover info" str lsp_show_hover_format 'printf ''%s\n\n%s'' "${lsp_info}" "${lsp_diagnostics}"'
 # If you want to see only hover info, try 
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
+declare-option -docstring %{Defines location patterns for lsp-next-location and lsp-previous-location.
+Default locations look like "file:line[:column][:message]"
+
+Capture groups must be:
+    1: filename
+    2: line number
+    3: optional column
+    4: optional message
+} regex lsp_location_format ^\h*([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
 
 # Options for information exposed by kak-lsp.
 
@@ -973,13 +982,16 @@ define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render doc
     }
 }
 
-define-command -hidden lsp-next-match -params 1 -docstring %{
-    buffile
-    Jump to next match in grep filetype buffile
-} %{
+define-command lsp-next-location -params 1 -docstring %{
+    lsp-next-location <bufname>
+    Jump to next location listed in the given grep-like buffer, usually one of
+    *diagnostics* *goto* *grep* *implementations* *lint-output* *make* *references* *symbols*
+
+    %opt{lsp_location_format} determines matching locations.
+} -buffer-completion %{
     evaluate-commands -try-client %opt{jumpclient} %{
         buffer %arg{1}
-        execute-keys "ge %opt{grep_current_line}g<a-l> /^[^:]+:\d+:<ret>"
+        execute-keys "ge %opt{grep_current_line}g<a-l> /%opt{lsp_location_format}<ret>"
         lsp-jump
     }
     try %{
@@ -990,13 +1002,16 @@ define-command -hidden lsp-next-match -params 1 -docstring %{
     }
 }
 
-define-command -hidden lsp-previous-match -params 1 -docstring %{
-    buffile
-    Jump to previous match in grep filetype buffile
-} %{
+define-command lsp-previous-location -params 1 -docstring %{
+    lsp-previous-location <bufname>
+    Jump to previous location listed in the given grep-like buffer, usually one of
+    *diagnostics* *goto* *grep* *implementations* *lint-output* *make* *references* *symbols*
+
+    %opt{lsp_location_format} determines matching locations.
+} -buffer-completion %{
     evaluate-commands -try-client %opt{jumpclient} %{
         buffer %arg{1}
-        execute-keys "ge %opt{grep_current_line}g<a-h> <a-/>^[^:]+:\d+:<ret>"
+        execute-keys "ge %opt{grep_current_line}g<a-h> <a-/>%opt{lsp_location_format}<ret>"
         lsp-jump
     }
     try %{
@@ -1609,7 +1624,7 @@ def lsp-snippets-select-next-placeholders %{
 
 hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{ # from grep.kak
     add-highlighter window/lsp-goto group
-    add-highlighter window/lsp-goto/ regex "^((?:\w:)?[^:\n]+):(\d+):(\d+)?" 1:cyan 2:green 3:green
+    add-highlighter window/lsp-goto/ regex %opt{lsp_location_format} 1:cyan 2:green 3:green
     add-highlighter window/lsp-goto/ line %{%opt{grep_current_line}} default+b
     hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/lsp-goto }
 }
@@ -1637,7 +1652,7 @@ define-command -hidden lsp-make-register-relative-to-root %{
 define-command -hidden lsp-jump %{ # from grep.kak
     evaluate-commands %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
-            execute-keys '<a-x>s^((?:\w:)?[^:]+):(\d+):(\d+)?<ret>'
+            execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
             lsp-make-register-relative-to-root
             set-option buffer grep_current_line %val{cursor_line}
             evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{1} %reg{2} %reg{3}
@@ -1648,7 +1663,7 @@ define-command -hidden lsp-jump %{ # from grep.kak
 
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
     evaluate-commands %{
-        execute-keys <a-h><a-l> s "((?:\w:)?[^:]+):(\d+):(?:(\d+):)?([^\n]+)\z" <ret>l
+        execute-keys <a-h><a-l> s %opt{lsp_location_format} <ret>l
         lsp-make-register-relative-to-root
         set-option buffer grep_current_line %val{cursor_line}
         lsp-diagnostics-open-error %reg{1} "%reg{2}" "%reg{3}" "%reg{4}"
@@ -1665,17 +1680,17 @@ define-command -hidden lsp-diagnostics-open-error -params 4 %{
 
 # Deprecated commands.
 define-command lsp-symbols-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next symbols match' %{
-    lsp-next-match '*symbols*'
+    lsp-next-location '*symbols*'
 }
 
 define-command lsp-symbols-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous symbols match' %{
-    lsp-previous-match '*symbols*'
+    lsp-previous-location '*symbols*'
 }
 
 define-command lsp-goto-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next goto match' %{
-    lsp-next-match '*goto*'
+    lsp-next-location '*goto*'
 }
 
 define-command lsp-goto-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous goto match' %{
-    lsp-previous-match '*goto*'
+    lsp-previous-location '*goto*'
 }
