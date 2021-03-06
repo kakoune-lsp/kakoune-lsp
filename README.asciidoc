@@ -105,7 +105,7 @@ To enable LSP support for configured languages (see the next section) just add t
 commands to your `kakrc`:
 
 ----
-eval %sh{kak-lsp --kakoune -s $kak_session}
+eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with plug.kak.
 lsp-enable
 ----
 
@@ -113,7 +113,7 @@ A bit more involved but recommended way is to enable kak-lsp only for specific f
 via `lsp-enable-window`, e.g.:
 
 ----
-eval %sh{kak-lsp --kakoune -s $kak_session}
+eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with plug.kak.
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
     lsp-enable-window
 }
