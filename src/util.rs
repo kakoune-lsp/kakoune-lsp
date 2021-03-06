@@ -6,11 +6,11 @@ use itertools::Itertools;
 use libc;
 use lsp_types::*;
 use ropey::Rope;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{stderr, stdout, BufReader, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
+use std::{collections::HashMap, path::Path};
 use std::{env, fs, path, process, thread};
 use whoami;
 
@@ -48,14 +48,8 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
                 ..
             } = symbol;
             let filename = location.uri.to_file_path().unwrap();
-            let filename = filename
-                .strip_prefix(&ctx.root_path)
-                .ok()
-                .and_then(|p| p.to_str())
-                .or_else(|| filename.to_str())
-                .unwrap();
-
-            let position = get_kakoune_position(filename, &location.range.start, ctx)
+            let filename_str = filename.to_str().unwrap();
+            let position = get_kakoune_position(filename_str, &location.range.start, ctx)
                 .unwrap_or_else(|| KakounePosition {
                     line: location.range.start.line + 1,
                     column: location.range.start.character + 1,
@@ -63,7 +57,10 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename, position.line, position.column, description
+                short_file_path(filename_str, &ctx.root_path),
+                position.line,
+                position.column,
+                description
             )
         })
         .join("\n")
@@ -83,23 +80,20 @@ pub fn format_document_symbol(
             let DocumentSymbol {
                 range, name, kind, ..
             } = symbol;
-            let filename = path::PathBuf::from(&meta.buffile);
-            let filename = filename
-                .strip_prefix(&ctx.root_path)
-                .ok()
-                .and_then(|p| p.to_str())
-                .unwrap_or(&meta.buffile);
-
-            let position = get_kakoune_position(filename, &range.start, ctx).unwrap_or_else(|| {
-                KakounePosition {
-                    line: range.start.line + 1,
-                    column: range.start.character + 1,
-                }
-            });
+            let position =
+                get_kakoune_position(&meta.buffile, &range.start, ctx).unwrap_or_else(|| {
+                    KakounePosition {
+                        line: range.start.line + 1,
+                        column: range.start.character + 1,
+                    }
+                });
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
-                filename, position.line, position.column, description
+                short_file_path(&meta.buffile, &ctx.root_path),
+                position.line,
+                position.column,
+                description
             )
         })
         .join("\n")
@@ -223,4 +217,12 @@ pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
                 .ok()
                 .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
         })
+}
+
+pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
+    Path::new(target)
+        .strip_prefix(current_dir)
+        .ok()
+        .and_then(|p| p.to_str())
+        .unwrap_or(target)
 }

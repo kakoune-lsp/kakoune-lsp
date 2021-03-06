@@ -132,17 +132,16 @@ Either way you get:
 * `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor
 * `lsp-implementation` command to find implementations for a symbol under the main cursor
 * `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
-** for the previous five commands, `\*goto*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
+** for the previous five commands, `\*goto*` buffer has `lsp-goto` filetype so you can press `<ret>` on a line or use the `lsp-jump` command
 * `lsp-find-error` command to jump to the next or previous error in the file
 ** `lsp-references-previous-match` and `lsp-references-next-match` to navigate between references
 * `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
 * `lsp-document-symbol` command to list current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
-** `\*symbols*` buffer has `grep` filetype so you can press `<ret>` on a line or use the `grep-jump` command
-** `lsp-symbols-previous-match` and `lsp-symbols-next-match` to navigate between symbols
+** `\*symbols*` buffer has `lsp-goto` filetype so you can press `<ret>` on a line or use the `lsp-jump` command
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
-** `\*diagnostics*` buffer has `make` filetype so you can press `<ret>` on a line or use the `make-jump` command
+** `\*diagnostics*` buffer has `lsp-goto` filetype so you can press `<ret>` on a line or use the `lsp-jump` command
 * inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or warnings; could be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options

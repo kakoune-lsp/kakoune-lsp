@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::position::lsp_range_to_kakoune;
 use crate::types::{EditorMeta, EditorParams, PositionParams};
-use crate::util::{editor_quote, get_file_contents, get_lsp_position};
+use crate::util::{editor_quote, get_file_contents, get_lsp_position, short_file_path};
 use itertools::Itertools;
 use lsp_types::request::{GotoDefinition, GotoImplementation, GotoTypeDefinition, References};
 use lsp_types::*;
@@ -63,14 +63,13 @@ pub fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Contex
             };
             locations
                 .map(|Location { range, .. }| {
-                    let stripped = path.strip_prefix(&ctx.root_path).unwrap_or(&path);
                     let pos = lsp_range_to_kakoune(&range, &contents, ctx.offset_encoding).start;
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
                     }
                     format!(
                         "{}:{}:{}:{}",
-                        stripped.display(),
+                        short_file_path(path_str, &ctx.root_path),
                         pos.line,
                         pos.column,
                         contents.line(range.start.line as usize),

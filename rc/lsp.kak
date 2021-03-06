@@ -78,6 +78,7 @@ declare-option -hidden range-specs lsp_semantic_highlighting
 declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs rust_analyzer_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
+declare-option -hidden str lsp_project_root
 
 ### Requests ###
 
@@ -963,9 +964,15 @@ define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
 define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch *diagnostics*
-        cd %arg{1}
-        try %{ set-option buffer working_folder %sh{pwd} }
-        set-option buffer filetype make
+        set-option buffer filetype lsp-goto
+        set-option buffer lsp_project_root "%arg{1}/"
+
+        # This buffer behaves a bit like a *make* buffer.
+        alias buffer lsp-jump lsp-diagnostics-jump
+        remove-highlighter window/lsp-goto
+        add-highlighter window/lsp-diagnostics ref lsp-diagnostics
+        hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/lsp-diagnostics }
+
         set-register '"' %arg{2}
         execute-keys Pgg
     }
@@ -974,10 +981,9 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
 define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch *goto*
-        cd %arg{1}
-        try %{ set-option buffer working_folder %sh{pwd} }
-        set-option buffer filetype grep
+        set-option buffer filetype lsp-goto
         set-option buffer grep_current_line 0
+        set-option buffer lsp_project_root "%arg{1}/"
         set-register '"' %arg{2}
         execute-keys Pgg
     }
@@ -986,10 +992,9 @@ define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto c
 define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch *symbols*
-        cd %arg{1}
-        try %{ set-option buffer working_folder %sh{pwd} }
-        set-option buffer filetype grep
+        set-option buffer filetype lsp-goto
         set-option buffer grep_current_line 0
+        set-option buffer lsp_project_root "%arg{1}/"
         set-register '"' %arg{2}
         execute-keys Pgg
     }
@@ -1002,7 +1007,7 @@ define-command -hidden lsp-next-match -params 1 -docstring %{
     evaluate-commands -try-client %opt{jumpclient} %{
         buffer %arg{1}
         execute-keys "ge %opt{grep_current_line}g<a-l> /^[^:]+:\d+:<ret>"
-        grep-jump
+        lsp-jump
     }
     try %{
         evaluate-commands -client %opt{toolsclient} %{
@@ -1019,7 +1024,7 @@ define-command -hidden lsp-previous-match -params 1 -docstring %{
     evaluate-commands -try-client %opt{jumpclient} %{
         buffer %arg{1}
         execute-keys "ge %opt{grep_current_line}g<a-h> <a-/>^[^:]+:\d+:<ret>"
-        grep-jump
+        lsp-jump
     }
     try %{
         evaluate-commands -client %opt{toolsclient} %{
@@ -1031,8 +1036,7 @@ define-command -hidden lsp-previous-match -params 1 -docstring %{
 
 define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
     evaluate-commands -save-regs '"' %{
-        cd %arg{1}
-        try %{ set-option buffer working_folder %sh{pwd} }
+        set-option buffer lsp_project_root "%arg{1}/"
         execute-keys '<a-;>%<a-;>d'
         set-register '"' %arg{2}
         execute-keys '<a-;>P<a-;>gg'
@@ -1183,7 +1187,7 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
     declare-option -hidden str lsp_ws_query
     evaluate-commands -try-client %opt[toolsclient] %{
         edit! -scratch *symbols*
-        set-option buffer filetype grep
+        set-option buffer filetype lsp-goto
         set-option buffer grep_current_line 0
         prompt -on-change %{ try %{
             # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
@@ -1607,5 +1611,59 @@ def lsp-snippets-select-next-placeholders %{
         printf '\n'
 
         printf "select %s\n" "$selections"
+    }
+}
+
+hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{ # from grep.kak
+    add-highlighter window/lsp-goto group
+    add-highlighter window/lsp-goto/ regex "^((?:\w:)?[^:\n]+):(\d+):(\d+)?" 1:cyan 2:green 3:green
+    add-highlighter window/lsp-goto/ line %{%opt{grep_current_line}} default+b
+    hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/lsp-goto }
+}
+
+add-highlighter shared/lsp-diagnostics group # from make.kak
+add-highlighter shared/lsp-diagnostics/ regex "^((?:\w:)?[^:\n]+):(\d+):(?:(\d+):)?\h+(?:((?:fatal )?error)|(warning)|(note)|(required from(?: here)?))?.*?$" 1:cyan 2:green 3:green 4:red 5:yellow 6:blue 7:yellow
+add-highlighter shared/lsp-diagnostics/ regex "^\h*(~*(?:(\^)~*)?)$" 1:green 2:cyan+b
+add-highlighter shared/lsp-diagnostics/ line '%opt{grep_current_line}' default+b
+
+hook global WinSetOption filetype=lsp-goto %{
+    hook buffer -group lsp-goto-hooks NormalKey <ret> lsp-jump
+    hook -once -always window WinSetOption filetype=.* %{ remove-hooks buffer lsp-goto-hooks }
+}
+
+define-command -hidden lsp-jump %{ # from grep.kak
+    evaluate-commands %{ # use evaluate-commands to ensure jumps are collapsed
+        try %{
+            execute-keys '<a-x>s^((?:\w:)?[^:]+):(\d+):(\d+)?<ret>'
+            set-option buffer grep_current_line %val{cursor_line}
+            try %{
+                execute-keys -draft s^/<ret>
+            } catch %{
+                set-register 1 "%opt{lsp_project_root}%reg{1}"
+            }
+            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{1} %reg{2} %reg{3}
+            try %{ focus %opt{jumpclient} }
+        }
+    }
+}
+
+define-command -hidden lsp-diagnostics-jump %{ # from make.kak
+    evaluate-commands %{
+        execute-keys <a-h><a-l> s "((?:\w:)?[^:]+):(\d+):(?:(\d+):)?([^\n]+)\z" <ret>l
+        set-option buffer grep_current_line %val{cursor_line}
+        try %{
+            execute-keys -draft s^/<ret>
+        } catch %{
+            set-register 1 "%opt{lsp_project_root}%reg{1}"
+        }
+        lsp-diagnostics-open-error %reg{1} "%reg{2}" "%reg{3}" "%reg{4}"
+    }
+}
+
+define-command -hidden lsp-diagnostics-open-error -params 4 %{
+    evaluate-commands -try-client %opt{jumpclient} %{
+        edit -existing "%arg{1}" %arg{2} %arg{3}
+        echo -markup "{Information}{\}%arg{4}"
+        try %{ focus }
     }
 }
