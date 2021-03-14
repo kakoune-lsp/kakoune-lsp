@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+echo "Testing binary $(command -v kak-lsp)"
+
+test="$(dirname "$0")"
+for file in $(
+	find "${@:-"$test"}" -type f -name '*.sh' | grep -v '/lib.sh$'
+)
+do
+	"$test"/littlecheck.py "$file"
+done

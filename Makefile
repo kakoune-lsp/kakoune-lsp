@@ -14,3 +14,4 @@ install:
 	install -Dm644 -t "$(SHARE_DIR)/$(PKGNAME)/examples/" $(PKGNAME).toml
 	install -Dm644 -t "$(SHARE_DIR)/$(PKGNAME)/rc/" rc/lsp.kak
 	install -Dm644 UNLICENSE "$(SHARE_DIR)/licenses/$(PKGNAME)/LICENSE"
+

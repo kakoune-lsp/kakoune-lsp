@@ -13,5 +13,20 @@ jobs:
         os: [macos-latest, ubuntu-latest]
     steps:
     - uses: actions/checkout@v2
-    - name: Run tests
-      run: cargo test
+    - name: Unit tests
+      run: cargo test --release
+    - name: Install system test dependencies
+      run: |
+        (cd && git clone https://github.com/mawww/kakoune)
+        (cd ~/kakoune && git rev-parse HEAD && make && sudo make install)
+
+        GO111MODULE=on go get golang.org/x/tools/gopls@v0.7.1
+        sudo ln "$HOME/go/bin/gopls" /usr/local/bin/
+    - if: matrix.os == 'macos-latest'
+      run: brew install tmux
+    - if: matrix.os == 'ubuntu-latest'
+      run: sudo apt update && sudo apt install tmux
+    - name: System tests
+      run: |
+        cargo build --release
+        PATH="$PWD/target/release:$PATH" sh -x test/run
