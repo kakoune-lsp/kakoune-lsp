@@ -280,7 +280,7 @@ pub fn initialize(
         initialization_options,
         process_id: Some(process::id()),
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
-        root_path: None,
+        root_path: Some(root_path.to_string()),
         trace: Some(TraceOption::Off),
         workspace_folders: None,
         client_info: Some(ClientInfo {
