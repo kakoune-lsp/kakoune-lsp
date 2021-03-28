@@ -1646,16 +1646,27 @@ hook global WinSetOption filetype=lsp-goto %{
     hook -once -always window WinSetOption filetype=.* %{ remove-hooks buffer lsp-goto-hooks }
 }
 
+define-command -hidden lsp-make-register-relative-to-root %{
+    evaluate-commands -draft -save-regs '"' %{
+        edit -scratch
+        set-register '"' %reg{1}
+        execute-keys <a-p>
+        try %{
+            # Is it an absolute path?
+            execute-keys s^/<ret>
+        } catch %{
+            set-register 1 "%opt{lsp_project_root}%reg{1}"
+        }
+        delete-buffer
+    }
+}
+
 define-command -hidden lsp-jump %{ # from grep.kak
     evaluate-commands %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
             execute-keys '<a-x>s^((?:\w:)?[^:]+):(\d+):(\d+)?<ret>'
+            lsp-make-register-relative-to-root
             set-option buffer grep_current_line %val{cursor_line}
-            try %{
-                execute-keys -draft s^/<ret>
-            } catch %{
-                set-register 1 "%opt{lsp_project_root}%reg{1}"
-            }
             evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{1} %reg{2} %reg{3}
             try %{ focus %opt{jumpclient} }
         }
@@ -1665,12 +1676,8 @@ define-command -hidden lsp-jump %{ # from grep.kak
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
     evaluate-commands %{
         execute-keys <a-h><a-l> s "((?:\w:)?[^:]+):(\d+):(?:(\d+):)?([^\n]+)\z" <ret>l
+        lsp-make-register-relative-to-root
         set-option buffer grep_current_line %val{cursor_line}
-        try %{
-            execute-keys -draft s^/<ret>
-        } catch %{
-            set-register 1 "%opt{lsp_project_root}%reg{1}"
-        }
         lsp-diagnostics-open-error %reg{1} "%reg{2}" "%reg{3}" "%reg{4}"
     }
 }
