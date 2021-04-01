@@ -139,8 +139,7 @@ command = "rnix-lsp"
 [language.ocaml]
 filetypes = ["ocaml"]
 roots = ["Makefile", "opam", "*.opam", "dune"]
-command = "ocaml-language-server"
-args = ["--stdio"]
+command = "ocamllsp"
 
 [language.php]
 filetypes = ["php"]
