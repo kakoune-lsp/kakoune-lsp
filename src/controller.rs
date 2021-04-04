@@ -43,7 +43,10 @@ pub fn start(
         lang_srv = match language_server_transport::start(&lang.command, &lang.args) {
             Ok(ls) => ls,
             Err(err) => {
-                if !lang.command.contains('/') {
+                // If we think that the server command is not from the default config, then we
+                // send a prominent error to the editor, since it's likely configuration error.
+                let might_be_from_default_config = !lang.command.contains('/') && !lang.command.contains(' ');
+                if might_be_from_default_config {
                     panic!("{}", err);
                 }
                 let command = format!(
