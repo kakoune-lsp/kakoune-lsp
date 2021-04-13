@@ -6,6 +6,7 @@ Breaking changes:
 
 Additions:
 - `lsp-rename-prompt` is added to to the `lsp` user mode, mapped to `R` (#441).
+- Default configuration for CSS variants "less" and "scss" (#473).
 
 Bug fixes:
 - `lsp-show-{diagnostics,goto-choices,document-symbols}` no longer `cd` to the project root (#454).

@@ -56,7 +56,19 @@ command = "scry"
 
 [language.css]
 filetypes = ["css"]
-roots = ["package.json"]
+roots = ["package.json", ".git"]
+command = "css-languageserver"
+args = ["--stdio"]
+
+[language.less]
+filetypes = ["less"]
+roots = ["package.json", ".git"]
+command = "css-languageserver"
+args = ["--stdio"]
+
+[language.scss]
+filetypes = ["scss"]
+roots = ["package.json", ".git"]
 command = "css-languageserver"
 args = ["--stdio"]
 
