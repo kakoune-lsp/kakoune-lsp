@@ -1338,6 +1338,8 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
         lsp-did-change
         %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
     }
+
+    lsp-did-change-config
 }
 
 define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
