@@ -1,6 +1,7 @@
 //! Small utility to correctly spawn crossbeam-channel based worker threads.
 //! Original source: https://github.com/rust-analyzer/rust-analyzer/blob/c7ceea82a5ab8aabab2f98e7c1e1ec94e82087c2/crates/thread_worker/src/lib.rs
 
+use std::panic;
 use std::thread;
 
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
@@ -26,7 +27,7 @@ impl Drop for ScopedThread {
         // escalate panic, but avoid aborting the process
         if let Err(e) = res {
             if !thread::panicking() {
-                panic!(e)
+                panic::panic_any(e);
             }
         }
     }
