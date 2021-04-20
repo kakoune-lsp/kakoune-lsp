@@ -11,6 +11,33 @@ use serde_json::Value;
 use std::process;
 use url::Url;
 
+pub fn workspace_folders_from_string(folders_string: String) -> Option<Vec<WorkspaceFolder>> {
+    let workspace_folders = folders_string
+        .split(":")
+        .map(|entry| entry.chars().skip_while(|c| c == &'/').collect::<String>())
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| format!("file://{}", entry)) // to uri format
+        .filter_map(|url_candidate| match Url::parse(&url_candidate) {
+            Ok(uri) => Some(WorkspaceFolder {
+                uri,
+                name: url_candidate.to_string(),
+            }),
+            Err(_) => None,
+        })
+        .collect::<Vec<WorkspaceFolder>>();
+
+    eprintln!("workspace_folders = {:#?}", workspace_folders);
+    if workspace_folders.is_empty() {
+        return None;
+    }
+    Some(workspace_folders)
+}
+
+pub fn workspace_folders_from_env() -> Option<Vec<WorkspaceFolder>> {
+    let folders_string: String = std::env::var("KAK_LSP_WORKSPACE_FOLDERS").ok()?;
+    workspace_folders_from_string(folders_string)
+}
+
 pub fn initialize(
     root_path: &str,
     initialization_options: Option<Value>,
@@ -80,7 +107,7 @@ pub fn initialize(
                 execute_command: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                workspace_folders: Some(false),
+                workspace_folders: Some(workspace_folders_from_env().is_some()),
                 configuration: Some(false),
                 semantic_tokens: None,
                 code_lens: None,
@@ -282,7 +309,7 @@ pub fn initialize(
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: Some(root_path.to_string()),
         trace: Some(TraceOption::Off),
-        workspace_folders: None,
+        workspace_folders: workspace_folders_from_env(),
         client_info: Some(ClientInfo {
             name: env!("CARGO_PKG_NAME").to_owned(),
             version: Some(env!("CARGO_PKG_VERSION").to_owned()),
@@ -466,5 +493,23 @@ fn request_initialization_options_from_kakoune(
                 None
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test_initialization {
+    use super::*;
+
+    #[test]
+    fn test_single_entry() {
+        assert!(
+            dbg!(workspace_folders_from_string(
+                "/home/user/programming/my-awesome-project".to_string()
+            )
+            .unwrap())
+            .len()
+                == 1
+        );
+        assert!(workspace_folders_from_string("".to_string()).is_none());
     }
 }
