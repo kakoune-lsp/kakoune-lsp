@@ -14,5 +14,6 @@ Bug fixes:
 - Fix completions of non-ASCII characters when using textEdit (which is not only partially supported) (#455).
 - Fix `lsp-rename` with `pyright` (#468).
 - Treat snippets containing `<` literally, instead of as Kakoune key names (#470)
+- Fix edits (by `lsp-rename` and friends) to files that were not opened as Kakoune buffers (#481).
 
 For release notes on v9.0.0 and older see <https://github.com/kak-lsp/kak-lsp/releases>.

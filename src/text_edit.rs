@@ -7,15 +7,13 @@ use ropey::{Rope, RopeSlice};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
+use std::os::unix::io::FromRawFd;
 
 pub fn apply_text_edits_to_file(
     uri: &Url,
     text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
     offset_encoding: OffsetEncoding,
 ) -> std::io::Result<()> {
-    let mut temp_path = temp_dir();
-    temp_path.push(format!("{:x}", rand::random::<u64>()));
-
     let path = uri.to_file_path().unwrap();
     let filename = path.to_str().unwrap();
 
@@ -35,8 +33,17 @@ pub fn apply_text_edits_to_file(
     let file = File::open(filename)?;
     let text = Rope::from_reader(BufReader::new(file))?;
 
-    let temp_file = File::create(&temp_path)?;
-
+    let (temp_path, temp_file) = {
+        let template = format!("{}.XXXXXX", filename);
+        let cstr = std::ffi::CString::new(template).unwrap();
+        let ptr = cstr.into_raw();
+        let temp_fd = unsafe { libc::mkstemp(ptr) };
+        let cstr = unsafe { std::ffi::CString::from_raw(ptr) };
+        let temp_fd = cvt(temp_fd)?;
+        let temp_path = cstr.into_string().unwrap();
+        let temp_file = unsafe { File::from_raw_fd(temp_fd) };
+        (temp_path, temp_file)
+    };
     fn apply_text_edits_to_file_impl(
         text: Rope,
         temp_file: File,
@@ -107,6 +114,15 @@ pub fn apply_text_edits_to_file(
             let _ = std::fs::remove_file(&temp_path);
             e
         })
+}
+
+// Adapted from std/src/sys/unix/mod.rs.
+fn cvt(t: i32) -> std::io::Result<i32> {
+    if t == -1 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(t)
+    }
 }
 
 fn character_to_offset_utf_8_code_points(line: RopeSlice, character: usize) -> Option<usize> {
