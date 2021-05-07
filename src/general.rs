@@ -136,6 +136,7 @@ pub fn initialize(
                         ]),
                     }),
                     context_support: Some(false),
+                    insert_text_mode: None,
                 }),
                 hover: Some(HoverClientCapabilities {
                     dynamic_registration: Some(false),
