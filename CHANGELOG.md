@@ -17,5 +17,6 @@ Bug fixes:
 - Fix `lsp-rename` with `pyright` (#468).
 - Treat snippets containing `<` literally, instead of as Kakoune key names (#470)
 - Fix edits (by `lsp-rename` and friends) to files that were not opened as Kakoune buffers (#481).
+- Nested entries in `lsp_server_initialization_options` like `a.b=1` are sent to language servers as `{"a":{"b":1}}` instead of `{"a.b":1}` (#480).
 
 For release notes on v9.0.0 and older see <https://github.com/kak-lsp/kak-lsp/releases>.

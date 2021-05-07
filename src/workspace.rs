@@ -44,15 +44,8 @@ where
     }
 }
 
-pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
-    let default_settings = toml::value::Table::new();
-
-    let raw_settings = params
-        .as_table()
-        .and_then(|t| t.get("settings"))
-        .and_then(|val| val.as_table())
-        .unwrap_or(&default_settings);
-
+// Take flattened tables like "a.b = 1" and produce "{"a":{"b":1}}".
+pub fn explode_string_table(raw_settings: &toml::value::Table) -> Value {
     let mut settings = serde_json::Map::new();
 
     for (raw_key, raw_value) in raw_settings.iter() {
@@ -82,9 +75,20 @@ pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
         }
     }
 
-    let params = DidChangeConfigurationParams {
-        settings: Value::Object(settings),
-    };
+    Value::Object(settings)
+}
+
+pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
+    let default_settings = toml::value::Table::new();
+
+    let raw_settings = params
+        .as_table()
+        .and_then(|t| t.get("settings"))
+        .and_then(|val| val.as_table())
+        .unwrap_or(&default_settings);
+
+    let settings = explode_string_table(raw_settings);
+    let params = DidChangeConfigurationParams { settings };
     ctx.notify::<DidChangeConfiguration>(params);
 }
 

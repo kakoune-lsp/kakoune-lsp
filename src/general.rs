@@ -2,6 +2,7 @@ use crate::context::*;
 use crate::controller;
 use crate::types::*;
 use crate::util::*;
+use crate::workspace::explode_string_table;
 use itertools::Itertools;
 use lsp_types::notification::*;
 use lsp_types::request::*;
@@ -450,9 +451,8 @@ fn request_initialization_options_from_kakoune(
     if options.trim().is_empty() {
         None
     } else {
-        let options = toml::from_str::<Value>(&options);
-        match options {
-            Ok(options) => Some(options),
+        match toml::from_str::<toml::value::Table>(&options) {
+            Ok(table) => Some(explode_string_table(&table)),
             Err(e) => {
                 error!("Failed to parse lsp_server_initialization_options: {:?}", e);
                 None
