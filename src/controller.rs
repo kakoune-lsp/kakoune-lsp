@@ -282,12 +282,6 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         "apply-workspace-edit" => {
             workspace::apply_edit_from_editor(meta, params, ctx);
         }
-        "semantic-scopes" => {
-            semantic_highlighting::debug_scopes(meta, &mut ctx);
-        }
-        "update-semantic-highlighting" => {
-            semantic_highlighting::editor_update(meta, params, &mut ctx);
-        }
         request::SemanticTokensFullRequest::METHOD => {
             semantic_tokens::tokens_request(meta, params, ctx);
         }
@@ -392,9 +386,6 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
                     editor_quote(params.done.map_or("", |_| "done"))
                 ),
             );
-        }
-        notification::SemanticHighlighting::METHOD => {
-            semantic_highlighting::semantic_highlighting_notification(params, &mut ctx);
         }
         "telemetry/event" => {
             debug!("{:?}", params);

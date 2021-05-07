@@ -74,7 +74,6 @@ declare-option -hidden line-specs lsp_error_lines 0 '0| '
 declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
-declare-option -hidden range-specs lsp_semantic_highlighting
 declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs rust_analyzer_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
@@ -727,18 +726,6 @@ cat ${pipe} | tee /tmp/pipe
 rm -rf ${tmp}
 }}
 
-define-command lsp-update-semantic-highlighting -hidden %{
-    nop %sh{ (printf '
-session      = "%s"
-buffile      = "%s"
-filetype     = "%s"
-version      = %d
-method       = "update-semantic-highlighting"
-[params]
-current = "%s"
-' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_lsp_semantic_highlighting}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
-}
-
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
@@ -1313,7 +1300,6 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
         fail 'lsp-enable: already enabled'
     }
     add-highlighter global/lsp_references ranges lsp_references
-    add-highlighter global/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter global/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
     add-highlighter global/lsp_snippets_placeholders ranges lsp_snippets_placeholders
@@ -1345,7 +1331,6 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
 define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
-    remove-highlighter global/lsp_semantic_highlighting
     remove-highlighter global/lsp_semantic_tokens
     remove-highlighter global/rust_analyzer_inlay_hints
     remove-highlighter global/lsp_snippets_placeholders
@@ -1368,7 +1353,6 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
         fail 'lsp-enable-window: already enabled'
     }
     add-highlighter window/lsp_references ranges lsp_references
-    add-highlighter window/lsp_semantic_highlighting ranges lsp_semantic_highlighting
     add-highlighter window/lsp_semantic_tokens ranges lsp_semantic_tokens
     add-highlighter window/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
     add-highlighter window/lsp_snippets_placeholders ranges lsp_snippets_placeholders
@@ -1398,7 +1382,6 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 define-command lsp-disable-window -docstring "Disable kak-lsp in the window scope" %{
     remove-highlighter window/cquery_semhl
     remove-highlighter window/lsp_references
-    remove-highlighter window/lsp_semantic_highlighting
     remove-highlighter window/lsp_semantic_tokens
     remove-highlighter window/rust_analyzer_inlay_hints
     remove-highlighter window/lsp_snippets_placeholders

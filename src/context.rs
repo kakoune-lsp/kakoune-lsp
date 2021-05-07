@@ -41,8 +41,6 @@ pub struct Context {
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
     pub offset_encoding: OffsetEncoding,
-    pub semantic_highlighting_faces: Vec<String>,
-    pub semantic_highlighting_lines: HashMap<String, Vec<SemanticHighlightingInformation>>,
 }
 
 impl Context {
@@ -72,8 +70,6 @@ impl Context {
             session,
             documents: HashMap::default(),
             offset_encoding,
-            semantic_highlighting_faces: Vec::new(),
-            semantic_highlighting_lines: HashMap::default(),
         }
     }
 

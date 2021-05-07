@@ -1,6 +1,5 @@
 use crate::context::*;
 use crate::controller;
-use crate::language_features::semantic_highlighting;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -35,7 +34,7 @@ pub fn initialize(
                     normalizes_line_endings: Some(false),
                     change_annotation_support: Some(
                         ChangeAnnotationWorkspaceEditClientCapabilities {
-                            groups_on_labels: None,
+                            groups_on_label: None,
                         },
                     ),
                 }),
@@ -105,6 +104,7 @@ pub fn initialize(
                         insert_replace_support: None,
                         resolve_support: None,
                         insert_text_mode_support: None,
+                        label_details_support: None,
                     }),
                     completion_item_kind: Some(CompletionItemKindCapability {
                         value_set: Some(vec![
@@ -238,9 +238,6 @@ pub fn initialize(
                 }),
                 folding_range: None,
                 selection_range: None,
-                semantic_highlighting_capabilities: Some(SemanticHighlightingClientCapability {
-                    semantic_highlighting: true,
-                }),
                 semantic_tokens: Some(SemanticTokensClientCapabilities {
                     dynamic_registration: Some(false),
                     requests: SemanticTokensClientCapabilitiesRequests {
@@ -275,6 +272,10 @@ pub fn initialize(
                 show_document: None,
             }),
             general: None,
+            offset_encoding: Some(vec![match ctx.offset_encoding {
+                OffsetEncoding::Utf8 => "utf-8".to_string(),
+                OffsetEncoding::Utf16 => "utf-16".to_string(),
+            }]),
             experimental: None,
         },
         initialization_options,
@@ -292,7 +293,6 @@ pub fn initialize(
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
         ctx.capabilities = Some(result.capabilities);
-        ctx.semantic_highlighting_faces = semantic_highlighting::make_scope_map(ctx);
         ctx.notify::<Initialized>(InitializedParams {});
         controller::dispatch_pending_editor_requests(ctx)
     });
@@ -408,15 +408,6 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                 .map(SemanticTokenModifier::as_str)
                 .join(", ")
         ));
-    }
-
-    if let Some(ref cap) = server_capabilities.semantic_highlighting {
-        if let Some(ref scopes) = cap.scopes {
-            features.push(format!(
-                "lsp-semantic-highlighting: scopes: [{}]",
-                scopes.iter().map(|xs| xs.join(".")).join(", ")
-            ));
-        }
     }
 
     let command = format!(

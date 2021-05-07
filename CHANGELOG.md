@@ -1,12 +1,14 @@
 ## Unreleased
 
 Breaking changes:
+- The semantic highlighting feature has been removed. It is superseded by semantic tokens which are officially part of LSP 3.16.
 - Buffers `*goto*`, `*symbols*`, `*diagnostics*` are given the `lsp-goto` filetype instead of `grep` or `make` (#454).
 - `ocamllsp` replaces the discontinued `ocaml-language-server` as default language server for OCaml (#471).
 
 Additions:
 - `lsp-rename-prompt` is added to to the `lsp` user mode, mapped to `R` (#441).
 - Default configuration for CSS variants "less" and "scss" (#473).
+- `kak-lsp` sends the configured offset encoding to the language server (see https://clangd.llvm.org/extensions.html#utf-8-offsets), which still defaults to `utf-16`.
 
 Bug fixes:
 - `lsp-show-{diagnostics,goto-choices,document-symbols}` no longer `cd` to the project root (#454).

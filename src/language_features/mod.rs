@@ -12,6 +12,5 @@ pub mod hover;
 pub mod range_formatting;
 pub mod rename;
 pub mod rust_analyzer;
-pub mod semantic_highlighting;
 pub mod semantic_tokens;
 pub mod signature_help;
