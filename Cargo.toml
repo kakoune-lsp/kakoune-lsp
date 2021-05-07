@@ -13,7 +13,7 @@ dirs = "2.0.2"
 enum_primitive = "0.1.1"
 glob = "0.3.0"
 itertools = "0.9.0"
-lsp-types = { version = "0.89.0", features = ["proposed"] }
+lsp-types = { git = "https://github.com/krobelus/lsp-types", branch = "allow-bool-linked-editing-range", features = ["proposed"] }
 jsonrpc-core = "14.2.0"
 libc = "0.2.71"
 rand = "0.7.3"

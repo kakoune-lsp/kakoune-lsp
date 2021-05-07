@@ -382,8 +382,7 @@ dependencies = [
 [[package]]
 name = "lsp-types"
 version = "0.89.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07731ecd4ee0654728359a5b95e2a254c857876c04b85225496a35d60345daa7"
+source = "git+https://github.com/krobelus/lsp-types?branch=allow-bool-linked-editing-range#8822d11cea2a5443c39bc90829e9bb19b76a0cf7"
 dependencies = [
  "bitflags",
  "serde",
