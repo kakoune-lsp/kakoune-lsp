@@ -511,8 +511,7 @@ method   = "textDocument/didSave"
 
 define-command -hidden lsp-did-change-config %{
     echo -debug "Config-change detected:" %opt{lsp_server_configuration}
-    nop %sh{
-((printf '
+    nop %sh{ ((printf '
 session  = "%s"
 client   = "%s"
 buffile  = "%s"
