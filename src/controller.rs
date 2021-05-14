@@ -332,6 +332,12 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         }
         _ => {
             warn!("Unsupported method: {}", method);
+            ctx.reply(
+                request.id,
+                Err(jsonrpc_core::Error::new(
+                    jsonrpc_core::ErrorCode::MethodNotFound,
+                )),
+            )
         }
     }
 }
