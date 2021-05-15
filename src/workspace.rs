@@ -2,7 +2,7 @@ use crate::context::*;
 use crate::language_features::rust_analyzer;
 use crate::types::*;
 use crate::util::*;
-use jsonrpc_core::{Id, Params};
+use jsonrpc_core::Params;
 use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -298,9 +298,12 @@ pub fn apply_edit_from_editor(meta: EditorMeta, params: EditorParams, ctx: &mut 
     apply_edit(meta, edit, ctx);
 }
 
-pub fn apply_edit_from_server(id: Id, params: Params, ctx: &mut Context) {
-    let params: ApplyWorkspaceEditParams = params.parse().expect("Failed to parse params");
+pub fn apply_edit_from_server(
+    params: Params,
+    ctx: &mut Context,
+) -> Result<Value, jsonrpc_core::Error> {
+    let params: ApplyWorkspaceEditParams = params.parse()?;
     let meta = ctx.meta_for_session();
     let response = apply_edit(meta, params.edit, ctx);
-    ctx.reply(id, Ok(serde_json::to_value(response).unwrap()));
+    Ok(serde_json::to_value(response).unwrap())
 }
