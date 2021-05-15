@@ -9,6 +9,7 @@ Additions:
 - `lsp-rename-prompt` is added to to the `lsp` user mode, mapped to `R` (#441).
 - Default configuration for CSS variants "less" and "scss" (#473).
 - `kak-lsp` sends the configured offset encoding to the language server (see https://clangd.llvm.org/extensions.html#utf-8-offsets), which still defaults to `utf-16`.
+- `lua-language-server` was added as default language server for Lua.
 
 Bug fixes:
 - `lsp-show-{diagnostics,goto-choices,document-symbols}` no longer `cd` to the project root (#454).

@@ -125,6 +125,11 @@ filetypes = ["latex"]
 roots = [".git"]
 command = "texlab"
 
+[language.lua]
+filetypes = ["lua"]
+roots = [".git"]
+command = "lua-language-server"
+
 [language.nim]
 filetypes = ["nim"]
 roots = ["*.nimble", ".git"]
