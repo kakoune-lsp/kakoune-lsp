@@ -330,6 +330,10 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.id, request.params, ctx);
         }
+        request::WorkspaceConfiguration::METHOD => {
+            let result = workspace::configuration(request.params, ctx);
+            ctx.reply(request.id, result);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
             ctx.reply(
