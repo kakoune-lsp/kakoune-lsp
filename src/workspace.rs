@@ -2,7 +2,7 @@ use crate::context::*;
 use crate::language_features::rust_analyzer;
 use crate::types::*;
 use crate::util::*;
-use jsonrpc_core::{Id, Params};
+use jsonrpc_core::Params;
 use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -90,6 +90,43 @@ pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
     let settings = explode_string_table(raw_settings);
     let params = DidChangeConfigurationParams { settings };
     ctx.notify::<DidChangeConfiguration>(params);
+}
+
+pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc_core::Error> {
+    let params = params.parse::<ConfigurationParams>()?;
+    let settings = ctx
+        .config
+        .language
+        .get(&ctx.language_id)
+        .and_then(|conf| conf.initialization_options.as_ref());
+
+    if settings.is_none() {
+        return Ok(Value::Array(Vec::new()));
+    }
+
+    // We can now safely unwrap
+    let settings = settings.unwrap();
+
+    let items = params
+        .items
+        .iter()
+        .map(|item| {
+            // There's also a `scopeUri`, which lists the file/folder
+            // that the config should apply to. But kak-lsp doesn't
+            // have a concept of per-file configuration and workspaces
+            // are separated by kak-lsp process.
+            item.section
+                .as_ref()
+                // The specification isn't clear about whether you should
+                // reply with just the value or with `json!({ section: <value> })`.
+                // Tests indicate the former.
+                .and_then(|section| settings.get(section))
+                .map(|v| v.clone())
+                .unwrap_or(Value::Null)
+        })
+        .collect::<Vec<Value>>();
+
+    Ok(Value::Array(items))
 }
 
 pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -261,9 +298,12 @@ pub fn apply_edit_from_editor(meta: EditorMeta, params: EditorParams, ctx: &mut 
     apply_edit(meta, edit, ctx);
 }
 
-pub fn apply_edit_from_server(id: Id, params: Params, ctx: &mut Context) {
-    let params: ApplyWorkspaceEditParams = params.parse().expect("Failed to parse params");
+pub fn apply_edit_from_server(
+    params: Params,
+    ctx: &mut Context,
+) -> Result<Value, jsonrpc_core::Error> {
+    let params: ApplyWorkspaceEditParams = params.parse()?;
     let meta = ctx.meta_for_session();
     let response = apply_edit(meta, params.edit, ctx);
-    ctx.reply(id, Ok(serde_json::to_value(response).unwrap()));
+    Ok(serde_json::to_value(response).unwrap())
 }

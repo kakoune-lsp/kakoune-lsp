@@ -326,14 +326,20 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
 
 fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
     let method: &str = &request.method;
-    match method {
+    let result = match method {
         request::ApplyWorkspaceEdit::METHOD => {
-            workspace::apply_edit_from_server(request.id, request.params, ctx);
+            workspace::apply_edit_from_server(request.params, ctx)
         }
+        request::WorkspaceConfiguration::METHOD => workspace::configuration(request.params, ctx),
         _ => {
             warn!("Unsupported method: {}", method);
+            Err(jsonrpc_core::Error::new(
+                jsonrpc_core::ErrorCode::MethodNotFound,
+            ))
         }
-    }
+    };
+
+    ctx.reply(request.id, result);
 }
 
 fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Context) {
