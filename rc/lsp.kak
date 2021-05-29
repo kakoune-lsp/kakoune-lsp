@@ -175,15 +175,11 @@ define-command -hidden lsp-did-change-and-then -params 1 -docstring %{
             echo "fail"
         fi
     }
-    declare-option -hidden str lsp_callback "evaluate-commands -client %val{client} %arg{1}"
     set-option buffer lsp_timestamp %val{timestamp}
     evaluate-commands -save-regs '|' %{
         set-register '|' %{
-# dump stdin synchronously
 # append a . to the end, otherwise the subshell strips trailing newlines
 lsp_draft=$(cat; printf '.')
-# and process it asynchronously
-(
 # replace \ with \\
 #         " with \"
 #     <tab> with \t
@@ -200,13 +196,11 @@ method   = "textDocument/didChange"
 draft    = """
 %s"""
 ' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval "${kak_opt_lsp_cmd} --request"
-printf %s\\n "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
-) > /dev/null 2>&1 < /dev/null & }
-        execute-keys -draft '%<a-|><ret>'
     }
-} catch %{
+        execute-keys -draft '%<a-|><ret>'
+    }}
     evaluate-commands %arg{1}
-}}
+}
 
 define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
     lsp-did-change-and-then lsp-completion-request
