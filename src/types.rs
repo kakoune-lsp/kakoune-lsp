@@ -1,5 +1,5 @@
 use jsonrpc_core::{Call, Output, Params};
-use lsp_types::Range;
+use lsp_types::{Range, SemanticTokenModifier};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
@@ -21,9 +21,7 @@ pub struct Config {
     #[serde(default)]
     pub snippet_support: bool,
     #[serde(default)]
-    pub semantic_tokens: HashMap<String, String>,
-    #[serde(default)]
-    pub semantic_token_modifiers: HashMap<String, String>,
+    pub semantic_tokens: Vec<SemanticTokenConfig>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -57,6 +55,14 @@ impl Default for ServerConfig {
 
 fn default_offset_encoding() -> OffsetEncoding {
     OffsetEncoding::Utf16
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct SemanticTokenConfig {
+    pub token: String,
+    pub face: String,
+    #[serde(default)]
+    pub modifiers: Vec<SemanticTokenModifier>,
 }
 
 // Editor

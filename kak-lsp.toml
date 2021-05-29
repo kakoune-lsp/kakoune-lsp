@@ -4,20 +4,37 @@ verbosity = 2
 # Semantic tokens support
 # See https://github.com/microsoft/vscode-languageserver-node/blob/8c8981eb4fb6adec27bf1bb5390a0f8f7df2899e/client/src/semanticTokens.proposed.ts#L288
 # for token/modifier types.
+[[semantic_tokens]]
+name = "type"
+face = "type"
 
-[semantic_tokens]
-type = "type"
-variable = "variable"
-namespace = "module"
-function = "function"
-string = "string"
-keyword = "keyword"
-operator = "operator"
-comment = "comment"
+[[semantic_tokens]]
+name = "variable"
+face = "variable"
 
-[semantic_token_modifiers]
-documentation = "documentation"
-readonly = "default+d"
+[[semantic_tokens]]
+name = "namespace"
+face = "module"
+
+[[semantic_tokens]]
+name = "function"
+face = "function"
+
+[[semantic_tokens]]
+name = "string"
+face = "string"
+
+[[semantic_tokens]]
+name = "keyword"
+face = "keyword"
+
+[[semantic_tokens]]
+name = "operator"
+face = "operator"
+
+[[semantic_tokens]]
+name = "comment"
+face = "comment"
 
 [server]
 # exit session if no requests were received during given period in seconds
