@@ -139,7 +139,7 @@ fn main() {
         Ok(cfg) => cfg,
         Err(err) => {
             report_config_error(&matches, &session, &err);
-            panic!("{}", err)
+            panic!("invalid configuration: {}", err)
         }
     };
 
