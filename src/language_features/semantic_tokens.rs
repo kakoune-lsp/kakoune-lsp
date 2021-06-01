@@ -112,7 +112,7 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
         )
         .collect::<Vec<String>>()
         .join(" ");
-    debug!("ranges: {:?}", &ranges);
+
     let command = format!(
         "set buffer lsp_semantic_tokens {} {}",
         meta.version, &ranges
