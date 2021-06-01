@@ -82,7 +82,7 @@ impl Context {
         params: R::Params,
         callback: F,
     ) where
-        R::Params: ToParams,
+        R::Params: IntoParams,
         R::Result: for<'a> Deserialize<'a>,
     {
         let ops: Vec<R::Params> = vec![params];
@@ -108,7 +108,7 @@ impl Context {
         ops: Vec<R::Params>,
         callback: F,
     ) where
-        R::Params: ToParams,
+        R::Params: IntoParams,
         R::Result: for<'a> Deserialize<'a>,
     {
         let batch_id = self.next_batch_id();
@@ -127,7 +127,7 @@ impl Context {
             ),
         );
         for params in ops {
-            let params = params.to_params();
+            let params = params.into_params();
             if params.is_err() {
                 error!("Failed to convert params");
                 return;
@@ -176,9 +176,9 @@ impl Context {
 
     pub fn notify<N: Notification>(&mut self, params: N::Params)
     where
-        N::Params: ToParams,
+        N::Params: IntoParams,
     {
-        let params = params.to_params();
+        let params = params.into_params();
         if params.is_err() {
             error!("Failed to convert params");
             return;

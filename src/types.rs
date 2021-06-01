@@ -166,15 +166,15 @@ pub enum ServerMessage {
     Response(Output),
 }
 
-pub trait ToParams {
-    fn to_params(self) -> Result<Params, Error>;
+pub trait IntoParams {
+    fn into_params(self) -> Result<Params, Error>;
 }
 
-impl<T> ToParams for T
+impl<T> IntoParams for T
 where
     T: Serialize,
 {
-    fn to_params(self) -> Result<Params, Error> {
+    fn into_params(self) -> Result<Params, Error> {
         let json_value = serde_json::to_value(self)?;
 
         let params = match json_value {
