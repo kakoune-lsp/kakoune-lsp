@@ -253,7 +253,7 @@ pub fn initialize(
                         .iter()
                         .cloned()
                         .map(|token| token.name.into())
-                        // Collect into HashSet first to remove duplicates
+                        // Collect into set first to remove duplicates
                         .collect::<HashSet<SemanticTokenType>>()
                         .into_iter()
                         .collect(),
@@ -264,7 +264,7 @@ pub fn initialize(
                         .cloned()
                         // Get all modifiers used in token definitions
                         .flat_map(|token| token.modifiers)
-                        // Collect into HashSet first to remove duplicates
+                        // Collect into set first to remove duplicates
                         .collect::<HashSet<SemanticTokenModifier>>()
                         .into_iter()
                         .collect(),

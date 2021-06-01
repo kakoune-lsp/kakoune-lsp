@@ -66,6 +66,8 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                     end: Position::new(line, start + length),
                 };
                 let range = lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
+                // See the spec for information on the integer encoding:
+                // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_semanticTokens
                 let token_name = legend.token_types[token_type as usize].as_str();
                 let token_modifiers: Vec<&SemanticTokenModifier> = (0..32)
                     // Find bits in the mask that equal `1`
