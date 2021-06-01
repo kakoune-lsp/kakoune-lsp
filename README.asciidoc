@@ -317,7 +317,7 @@ modifiers = ["constant", "declaration"]
 
 where `name` is the token's name as reported by the language server (see `lsp-capabilities`), `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` may be omitted, but `name` and `face` are required.
 
-You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entrie's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry. +
+You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entry's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry. +
 `kak-lsp` will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple entries match with the same number of modifiers, the one that was defined last in the configuration wins.
 
 *Example:*
