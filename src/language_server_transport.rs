@@ -106,8 +106,8 @@ pub fn start(cmd: &str, args: &[String]) -> Result<LanguageServerTransport, Stri
     );
 
     Ok(LanguageServerTransport {
-        from_lang_server,
         to_lang_server,
+        from_lang_server,
         errors,
     })
 }

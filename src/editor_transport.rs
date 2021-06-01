@@ -108,7 +108,7 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
     })
 }
 
-pub fn start_unix(path: &path::PathBuf, sender: Sender<EditorRequest>) {
+pub fn start_unix(path: &path::Path, sender: Sender<EditorRequest>) {
     let listener = match UnixListener::bind(&path) {
         Ok(listener) => listener,
         Err(e) => {

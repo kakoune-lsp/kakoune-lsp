@@ -121,7 +121,7 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
                 // reply with just the value or with `json!({ section: <value> })`.
                 // Tests indicate the former.
                 .and_then(|section| settings.get(section))
-                .map(|v| v.clone())
+                .cloned()
                 .unwrap_or(Value::Null)
         })
         .collect::<Vec<Value>>();
