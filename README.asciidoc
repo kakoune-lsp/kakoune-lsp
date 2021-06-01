@@ -267,7 +267,7 @@ language server's documentation says it wants a structure like this:
 ...you can achieve the same thing in Kakoune with:
 
 ----
-set-option global lsp_server_configuration rust.clippy_preference="on"
+set-option -add global lsp_server_configuration rust.clippy_preference="on"
 ----
 
 That is, the keys of the `lsp_server_configuration` option are a `.`-delimited path of JSON objects. For implementation reasons, the values use TOML serialisation rules rather than JSON rules, but they're pretty much the same thing for strings, numbers and booleans, which are the most common configuration types.
