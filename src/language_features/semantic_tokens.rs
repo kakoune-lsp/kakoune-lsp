@@ -3,11 +3,10 @@ use crate::position::lsp_range_to_kakoune;
 use crate::types::{EditorMeta, EditorParams};
 use crate::util::editor_quote;
 use lsp_types::request::SemanticTokensFullRequest;
-use lsp_types::SemanticTokenModifier;
 use lsp_types::{
-    Position, Range, SemanticToken, SemanticTokensOptions, SemanticTokensParams,
-    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities::*,
-    TextDocumentIdentifier,
+    Position, Range, SemanticToken, SemanticTokenModifier, SemanticTokensOptions,
+    SemanticTokensParams, SemanticTokensRegistrationOptions, SemanticTokensResult,
+    SemanticTokensServerCapabilities::*, TextDocumentIdentifier,
 };
 use url::Url;
 
