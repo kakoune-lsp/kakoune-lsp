@@ -75,40 +75,26 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                     .map(|bit| &legend.token_modifiers[bit as usize])
                     .collect();
 
-                let mut candidates = ctx
-                    .config
-                    .semantic_tokens
-                    .iter()
-                    .filter_map(|token_config| {
-                        if token_name != token_config.name {
-                            return None;
-                        }
-
+                let candidates = ctx.config.semantic_tokens.iter().filter(|token_config| {
+                    token_name == token_config.name &&
                         // All the config's modifiers must exist on the token for this
                         // config to match.
-                        if !token_config
-                            .modifiers
-                            .iter()
-                            .all(|modifier| token_modifiers.contains(&modifier))
-                        {
-                            return None;
-                        }
+                        token_config
+                        .modifiers
+                        .iter()
+                        .all(|modifier| token_modifiers.contains(&modifier))
+                });
 
-                        // But not all the token's modifiers must exist on the config.
-                        // Therefore, we get a count of matching ones and sort by that.
-                        let modifier_count = token_modifiers
-                            .iter()
-                            .filter(|modifier| token_config.modifiers.contains(modifier))
-                            .count();
+                // But not all the token's modifiers must exist on the config.
+                // Therefore, we use the config that matches the most modifiers.
+                let best = candidates.max_by_key(|token_config| {
+                    token_modifiers
+                        .iter()
+                        .filter(|modifier| token_config.modifiers.contains(modifier))
+                        .count()
+                });
 
-                        Some((&token_config.face, modifier_count))
-                    })
-                    .collect::<Vec<_>>();
-
-                // Sort by number of matching modifiers, in descending order
-                candidates.sort_by_key(|val| val.1);
-                candidates.reverse();
-                candidates.first().map(|val| format!("{}|{}", range, val.0))
+                best.map(|token_config| format!("{}|{}", range, token_config.face))
             },
         )
         .collect::<Vec<String>>()
