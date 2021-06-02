@@ -10,35 +10,35 @@ verbosity = 2
 # - TypeScript: https://github.com/microsoft/vscode-languageserver-node/blob/2645fb54ea1e764aff71dee0ecc8aceff3aabf56/client/src/common/semanticTokens.ts#L58
 # - Rust Analyzer: https://github.com/rust-analyzer/rust-analyzer/blob/f6da603c7fe56c19a275dc7bab1f30fe1ad39707/crates/ide/src/syntax_highlighting.rs#L42
 [[semantic_tokens]]
-name = "type"
+token = "type"
 face = "type"
 
 [[semantic_tokens]]
-name = "variable"
+token = "variable"
 face = "variable"
 
 [[semantic_tokens]]
-name = "namespace"
+token = "namespace"
 face = "module"
 
 [[semantic_tokens]]
-name = "function"
+token = "function"
 face = "function"
 
 [[semantic_tokens]]
-name = "string"
+token = "string"
 face = "string"
 
 [[semantic_tokens]]
-name = "keyword"
+token = "keyword"
 face = "keyword"
 
 [[semantic_tokens]]
-name = "operator"
+token = "operator"
 face = "operator"
 
 [[semantic_tokens]]
-name = "comment"
+token = "comment"
 face = "comment"
 
 [server]

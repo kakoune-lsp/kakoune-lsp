@@ -59,7 +59,7 @@ fn default_offset_encoding() -> OffsetEncoding {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct SemanticTokenConfig {
-    pub name: String,
+    pub token: String,
     pub face: String,
     #[serde(default)]
     pub modifiers: Vec<SemanticTokenModifier>,
