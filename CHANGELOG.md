@@ -1,3 +1,5 @@
+## Unreleased
+
 ## 10.0.0 - 2021-06-03
 
 This is a small release with a useful fix to `lsp-rename` (#481).
