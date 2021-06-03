@@ -11,21 +11,27 @@ fi
 
 old=$(git describe --tags | sed 's/^v//;s/-.*//')
 
+if git tag | grep -qxF "v$new"; then
+	echo "tag v$new already exists"
+	exit 1
+fi
+
 set -x
 
 sed -i "s/v$old/v$new/" README.asciidoc
 sed -i "0,/version/ s/$old-snapshot/$new/" Cargo.toml
+sed -i "1s/Unreleased/$new - $(date --iso)/" CHANGELOG.md
 cargo check # update Cargo.lock
 git commit -am "v$new"
 git tag "v$new"
 sed -i "0,/version/ s/$new/$new-snapshot/" Cargo.toml
 cargo check # update Cargo.lock
+sed -i 1i'## Unreleased\n' CHANGELOG.md
 git commit -am 'start new cycle'
 
 cat <<EOF
 
 Release checklist:
-- Prepare release notes
 - Push the tag v$new
 - Wait for the CI to create the release draft with release artifacts, then
   edit release notes and make the release at https://github.com/kak-lsp/kak-lsp/releases
