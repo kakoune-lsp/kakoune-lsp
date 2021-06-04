@@ -18,7 +18,7 @@ fi
 
 set -x
 
-sed -i "s/v$old/v$new/" README.asciidoc
+sed -i "s/v$old/v$new/g" README.asciidoc
 sed -i "0,/version/ s/$old-snapshot/$new/" Cargo.toml
 sed -i "1s/Unreleased/$new - $(date --iso)/" CHANGELOG.md
 cargo check # update Cargo.lock
