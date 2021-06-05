@@ -304,7 +304,75 @@ hook global WinSetOption filetype=<language> %{
 }
 ----
 
-The faces used for semantic tokens and modifiers can be modified in `kak-lsp.toml`, under the `semantic_tokens` and `semantic_token_modifiers` sections. The modifiers are used first if available, and then the main token type is used if no modifier face is specified.
+The faces used for semantic tokens and modifiers can be modified in `kak-lsp.toml`, under the `semantic_tokens` section.
+The syntax for such an entry is
+
+[source,toml]
+----
+[[semantic_tokens]]
+token = "variable"
+face = "const_variable_declaration"
+modifiers = ["constant", "declaration"]
+----
+
+where `token` is the token's name as reported by the language server (see `lsp-capabilities`), `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` may be omitted, but `token` and `face` are required.
+
+You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entry's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry. +
+`kak-lsp` will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple entries match with the same number of modifiers, the one that was defined last in the configuration wins.
+
+*Example:*
+
+Assuming the following configuration,
+
+[source,toml]
+----
+[[semantic_tokens]]
+token = "variable"
+face = "const_variable_declaration"
+modifiers = ["constant", "declaration"]
+
+[[semantic_tokens]]
+token = "variable"
+face = "const_variable"
+modifiers = ["constant"]
+
+[[semantic_tokens]]
+token = "variable"
+face = "variable"
+----
+
+`kak-lsp` will perform these mappings:
+
+[cols="1,1,2,5"]
+|===
+| Token | Modifiers | Face | Comment
+
+| `variable`
+| `constant`, `declaration`
+| `const_variable_declaration`
+| First entry matches with 2 modifiers.
+
+| `variable`
+| `constant`
+| `const_variable`
+| First and second entry match with 1 modifier, second wins.
+
+| `variable`
+| `declaration`
+| `variable`
+| Only third entry matches. First entry doesn't match, because `constant` is missing.
+
+| `variable`
+|
+| `variable`
+| Third entry matches.
+
+| `function`
+|
+|
+| No entries match and no face is applied.
+
+|===
 
 == Inlay Diagnostics
 

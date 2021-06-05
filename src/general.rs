@@ -8,6 +8,7 @@ use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde_json::Value;
+use std::collections::HashSet;
 use std::process;
 use url::Url;
 
@@ -249,16 +250,21 @@ pub fn initialize(
                     token_types: ctx
                         .config
                         .semantic_tokens
-                        .keys()
-                        .cloned()
-                        .map(|x| x.into())
+                        .iter()
+                        .map(|token_config| token_config.token.clone().into())
+                        // Collect into set first to remove duplicates
+                        .collect::<HashSet<SemanticTokenType>>()
+                        .into_iter()
                         .collect(),
                     token_modifiers: ctx
                         .config
-                        .semantic_token_modifiers
-                        .keys()
-                        .cloned()
-                        .map(|x| x.into())
+                        .semantic_tokens
+                        .iter()
+                        // Get all modifiers used in token definitions
+                        .flat_map(|token_config| token_config.modifiers.clone())
+                        // Collect into set first to remove duplicates
+                        .collect::<HashSet<SemanticTokenModifier>>()
+                        .into_iter()
                         .collect(),
                     formats: vec![TokenFormat::RELATIVE],
                     overlapping_token_support: None,

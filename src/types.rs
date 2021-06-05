@@ -1,6 +1,6 @@
 use jsonrpc_core::{Call, Output, Params};
-use lsp_types::Range;
-use serde::{Deserialize, Serialize};
+use lsp_types::{Range, SemanticTokenModifier};
+use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -20,10 +20,8 @@ pub struct Config {
     pub verbosity: u8,
     #[serde(default)]
     pub snippet_support: bool,
-    #[serde(default)]
-    pub semantic_tokens: HashMap<String, String>,
-    #[serde(default)]
-    pub semantic_token_modifiers: HashMap<String, String>,
+    #[serde(default, deserialize_with = "deserialize_semantic_tokens")]
+    pub semantic_tokens: Vec<SemanticTokenConfig>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -57,6 +55,25 @@ impl Default for ServerConfig {
 
 fn default_offset_encoding() -> OffsetEncoding {
     OffsetEncoding::Utf16
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct SemanticTokenConfig {
+    pub token: String,
+    pub face: String,
+    #[serde(default)]
+    pub modifiers: Vec<SemanticTokenModifier>,
+}
+
+fn deserialize_semantic_tokens<'de, D>(
+    deserializer: D,
+) -> Result<Vec<SemanticTokenConfig>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Vec::deserialize(deserializer).map_err(|e| {
+        D::Error::custom(e.to_string() + "\nSee https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens\n")
+    })
 }
 
 // Editor
