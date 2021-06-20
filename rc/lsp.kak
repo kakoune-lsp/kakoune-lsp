@@ -320,7 +320,7 @@ column    = %d
 }
 
 define-command lsp-rename -params 1 -docstring "Rename symbol under the main cursor" %{
-    lsp-did-change-and-then "lsp-rename-request '%arg{1}'"
+    lsp-did-change-and-then "lsp-rename-request ""%arg{1}"""
 }
 
 define-command -hidden lsp-rename-request -params 1 -docstring "Rename symbol under the main cursor" %{
@@ -341,6 +341,8 @@ column    = %d
 
 define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
     execute-keys <space><a-i>w
+    # include a leading single-quote for Rust lifetime specifiers
+    execute-keys <a-semicolon>Hs'?\w+<ret><a-semicolon>
     prompt -init "%val{selection}" 'New name: ' %{ lsp-rename %val{text} }
 }
 

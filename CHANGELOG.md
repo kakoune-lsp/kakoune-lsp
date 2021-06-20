@@ -3,6 +3,9 @@
 Breaking changes:
 - The configuration syntax for `semantic_tokens` has changed. See the updated `kak-lsp.toml` for an example (#488).
 
+Bug fixes:
+- Fix renaming of Rust lifetimes (#474).
+
 ## 10.0.0 - 2021-06-03
 
 This is a small release with a useful fix to `lsp-rename` (#481).
