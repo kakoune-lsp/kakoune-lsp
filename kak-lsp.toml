@@ -145,6 +145,33 @@ roots = ["package.json"]
 command = "html-languageserver"
 args = ["--stdio"]
 
+# Commented out by default because you still need to set the paths in the JDT
+# Language Server arguments below before this can become a valid configuration.
+# [language.java]
+# filetypes = ["java"]
+# roots = [".git", "mvnw", "gradlew"]
+# command = "java"
+# args = [
+#     "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+#     "-Dosgi.bundles.defaultStartLevel=4",
+#     "-Declipse.product=org.eclipse.jdt.ls.core.product",
+#     "-Dlog.level=ALL",
+#     "-Dfile.encoding=utf-8",
+#     "--add-modules=ALL-SYSTEM",
+#     "--add-opens",
+#     "java.base/java.util=ALL-UNNAMED",
+#     "--add-opens",
+#     "java.base/java.lang=ALL-UNNAMED",
+#     "-noverify",
+#     "-Xmx1G",
+#     "-jar",
+#     "/path/to/eclipse.jdt.ls/repository/plugins/org.eclipse.equinox.launcher_1.6.100.v20201223-0822.jar",
+#     "-configuration",
+#     "/path/to/eclipse.jdt.ls/repository/config_linux",
+#     "-data",
+#     "/path/to/eclipse-workspace"
+# ]
+
 [language.javascript]
 filetypes = ["javascript"]
 roots = [".flowconfig"]
