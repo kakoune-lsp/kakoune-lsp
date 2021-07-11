@@ -255,6 +255,10 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command -hidden lsp-show-code-actions -params .. -docstring "Present code actions to the user." %{
+    menu %arg{@}
+}
+
 define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
     declare-option -hidden str lsp_execute_command_command %arg{1}
     declare-option -hidden str lsp_execute_command_arguments %arg{2}

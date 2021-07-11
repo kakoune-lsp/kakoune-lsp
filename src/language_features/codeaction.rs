@@ -66,7 +66,7 @@ pub fn editor_code_actions(
         }
     }
 
-    let menu_args = result
+    let titles_and_commands = result
         .iter()
         .map(|c| match c {
             CodeActionOrCommand::Command(_) => c.clone(),
@@ -97,5 +97,8 @@ pub fn editor_code_actions(
             }
         })
         .join(" ");
-    ctx.exec(meta, format!("menu {}", menu_args));
+    ctx.exec(
+        meta,
+        format!("lsp-show-code-actions {}", titles_and_commands),
+    );
 }
