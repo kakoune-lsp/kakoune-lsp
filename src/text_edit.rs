@@ -134,7 +134,7 @@ fn character_to_offset_utf_8_code_points(line: RopeSlice, character: usize) -> O
 }
 
 fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<usize> {
-    if character < line.len_bytes() {
+    if character <= line.len_bytes() {
         Some(line.byte_to_char(character))
     } else {
         None
