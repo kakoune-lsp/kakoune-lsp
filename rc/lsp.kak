@@ -523,7 +523,7 @@ while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
     value="$(printf %s "$value"|sed -e 's/\\=/=/g')"
-    quotedkey='"'$(printf %s "$key"|sed -e 's/\\/\\\\/' -e 's/"/\\"/')'"'
+    quotedkey='"'$(printf %s "$key"|sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')'"'
 
     printf '%s = %s\n' "$quotedkey" "$value"
 
@@ -1089,7 +1089,7 @@ define-command -hidden lsp-get-server-initialization-options -params 1 -docstrin
 while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
-    quotedkey='"'$(printf %s "$key"|sed -e 's/\\/\\\\/' -e 's/"/\\"/')'"'
+    quotedkey='"'$(printf %s "$key"|sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')'"'
 
     printf '%s = %s\n' "$quotedkey" "$value"
 
