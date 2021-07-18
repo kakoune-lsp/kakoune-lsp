@@ -82,7 +82,7 @@ pub fn initialize(
                     dynamic_registration: Some(false),
                 }),
                 workspace_folders: Some(false),
-                configuration: Some(false),
+                configuration: Some(true),
                 semantic_tokens: None,
                 code_lens: None,
                 file_operations: None,
