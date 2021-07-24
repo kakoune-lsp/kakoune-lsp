@@ -2,6 +2,7 @@
 
 Breaking changes:
 - The configuration syntax for `semantic_tokens` has changed. See the updated `kak-lsp.toml` for an example (#488).
+- Snippet support has been disabled by default, as a workaround for conflicts with built-in completion (#282).
 
 Bug fixes:
 - Fix renaming of Rust lifetimes (#474).

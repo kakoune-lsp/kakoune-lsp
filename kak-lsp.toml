@@ -1,4 +1,4 @@
-snippet_support = true
+snippet_support = false
 verbosity = 2
 
 # Semantic tokens support
