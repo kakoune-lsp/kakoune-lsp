@@ -1,13 +1,12 @@
 use crate::context::*;
 use crate::controller;
+use crate::settings::request_initialization_options_from_kakoune;
 use crate::types::*;
 use crate::util::*;
-use crate::workspace::explode_string_table;
 use itertools::Itertools;
 use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde_json::Value;
 use std::collections::HashSet;
 use std::process;
 use url::Url;
@@ -426,35 +425,4 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         editor_escape(&features.join("\n"))
     );
     ctx.exec(meta, command);
-}
-
-/// User may override `initialization_options` provided in kak-lsp.toml on per-language server basis
-/// with `lsp_server_initialization_options` option in Kakoune
-/// (i.e. to customize it for specific project).
-/// This function asks Kakoune to give such override if any.
-fn request_initialization_options_from_kakoune(
-    meta: &EditorMeta,
-    ctx: &mut Context,
-) -> Option<Value> {
-    let fifo = temp_fifo()?;
-    ctx.exec(
-        meta.clone(),
-        format!(
-            "lsp-get-server-initialization-options {}",
-            editor_quote(&fifo.path)
-        ),
-    );
-    let options = std::fs::read_to_string(&fifo.path).unwrap();
-    debug!("lsp_server_initialization_options:\n{}", options);
-    if options.trim().is_empty() {
-        None
-    } else {
-        match toml::from_str::<toml::value::Table>(&options) {
-            Ok(table) => Some(explode_string_table(&table)),
-            Err(e) => {
-                error!("Failed to parse lsp_server_initialization_options: {:?}", e);
-                None
-            }
-        }
-    }
 }
