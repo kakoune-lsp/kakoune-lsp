@@ -18,6 +18,7 @@ mod language_server_transport;
 mod position;
 mod project_root;
 mod session;
+mod settings;
 mod text_edit;
 mod text_sync;
 mod thread_worker;
