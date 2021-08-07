@@ -138,7 +138,7 @@ fn main() {
     let mut config: Config = match toml::from_str(&config) {
         Ok(cfg) => cfg,
         Err(err) => {
-            report_config_error(&matches, &session, &err);
+            consume_stdin_and_report_config_error(&matches, &session, &err);
             panic!("invalid configuration: {}", err)
         }
     };
@@ -268,7 +268,11 @@ fn setup_logger(config: &Config, matches: &clap::ArgMatches<'_>) -> slog_scope::
     slog_scope::set_global_logger(logger)
 }
 
-fn report_config_error(matches: &ArgMatches, session: &str, error: &toml::de::Error) {
+fn consume_stdin_and_report_config_error(
+    matches: &ArgMatches,
+    session: &str,
+    error: &toml::de::Error,
+) {
     if !matches.is_present("initial-request") && !matches.is_present("request") {
         return; // Don't know how to reach the editor.
     }
