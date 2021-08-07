@@ -25,6 +25,12 @@ pub struct Config {
 }
 
 #[derive(Clone, Deserialize, Debug)]
+pub struct DynamicConfig {
+    #[serde(default)]
+    pub language: HashMap<String, DynamicLanguageConfig>,
+}
+
+#[derive(Clone, Deserialize, Debug)]
 pub struct ServerConfig {
     #[serde(default)]
     pub session: String,
@@ -42,6 +48,11 @@ pub struct LanguageConfig {
     pub initialization_options: Option<Value>,
     #[serde(default = "default_offset_encoding")]
     pub offset_encoding: OffsetEncoding,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct DynamicLanguageConfig {
+    pub initialization_options: Option<Value>,
 }
 
 impl Default for ServerConfig {

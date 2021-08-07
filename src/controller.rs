@@ -220,7 +220,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             text_document_did_save(meta, &mut ctx);
         }
         notification::DidChangeConfiguration::METHOD => {
-            workspace::did_change_configuration(params, &mut ctx);
+            workspace::did_change_configuration(meta, params, &mut ctx);
         }
         request::Completion::METHOD => {
             completion::text_document_completion(meta, params, &mut ctx);
@@ -330,7 +330,9 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.params, ctx)
         }
-        request::WorkspaceConfiguration::METHOD => workspace::configuration(request.params, ctx),
+        request::WorkspaceConfiguration::METHOD => {
+            workspace::configuration(request.params, ctx)
+        }
         _ => {
             warn!("Unsupported method: {}", method);
             Err(jsonrpc_core::Error::new(

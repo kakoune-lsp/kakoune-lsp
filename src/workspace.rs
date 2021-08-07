@@ -1,6 +1,6 @@
 use crate::context::*;
 use crate::language_features::rust_analyzer;
-use crate::settings::explode_string_table;
+use crate::settings::*;
 use crate::types::*;
 use crate::util::*;
 use jsonrpc_core::Params;
@@ -12,16 +12,29 @@ use serde_json::{self, Value};
 use std::fs;
 use std::io;
 
-pub fn did_change_configuration(params: EditorParams, ctx: &mut Context) {
-    let default_settings = toml::value::Table::new();
+pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx: &mut Context) {
+    let mut default_settings = toml::value::Table::new();
 
     let raw_settings = params
-        .as_table()
-        .and_then(|t| t.get("settings"))
-        .and_then(|val| val.as_table())
-        .unwrap_or(&default_settings);
+        .as_table_mut()
+        .and_then(|t| t.get_mut("settings"))
+        .and_then(|t| t.as_table_mut())
+        .unwrap_or(&mut default_settings);
 
-    let settings = explode_string_table(raw_settings);
+    let config_param = raw_settings.remove("lsp_config");
+    let config = config_param
+        .as_ref()
+        .map(|config| {
+            config
+                .as_str()
+                .expect("Parameter \"lsp_config\" must be a string")
+        })
+        .unwrap_or("");
+
+    let settings = parse_dynamic_config(&meta, ctx, config)
+        .and_then(|lang| lang.initialization_options)
+        .unwrap_or_else(|| Value::Object(explode_string_table(raw_settings)));
+
     let params = DidChangeConfigurationParams { settings };
     ctx.notify::<DidChangeConfiguration>(params);
 }
