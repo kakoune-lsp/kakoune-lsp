@@ -419,8 +419,8 @@ define-command -hidden lsp-workspace-symbol-buffer-request -params 4 -docstring 
 } %{ try %{
     evaluate-commands %sh{
         if [ -z "${4}" ];
-        then echo "fail";
-        else echo "nop";
+        then echo "fail"
+        else echo "nop"
         fi
     }
     nop %sh{ (printf '
@@ -517,7 +517,7 @@ filetype = "%s"
 version  = %d
 method   = "workspace/didChangeConfiguration"
 [params.settings]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}";
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}"
 eval "set -- $kak_quoted_opt_lsp_server_configuration"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
