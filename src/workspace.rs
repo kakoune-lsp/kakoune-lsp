@@ -100,12 +100,10 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
         .get(&ctx.language_id)
         .and_then(|conf| conf.initialization_options.as_ref());
 
-    if settings.is_none() {
-        return Ok(Value::Array(Vec::new()));
-    }
-
-    // We can now safely unwrap
-    let settings = settings.unwrap();
+    let settings = match settings {
+        Some(settings) => settings,
+        None => return Ok(Value::Array(Vec::new())),
+    };
 
     let items = params
         .items
