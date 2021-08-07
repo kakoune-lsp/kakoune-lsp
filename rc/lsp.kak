@@ -44,8 +44,14 @@ declare-option -docstring "Automatically highlight references with Reference fac
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
-declare-option -docstring "Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
-declare-option -docstring "Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
+
+declare-option -docstring "Dynamic TOML configuration string. Currently supports
+- [language.<filetype>.initialization_options]
+" str lsp_config
+# Highlight TOML keys in kakrc if they are supported by dynamic configuration.
+add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.initialization_options)\] 1:title
+declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
+declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
 # Line flags for inline diagnostics.
 declare-option -docstring "Character to signal an error in the gutter" str lsp_diagnostic_line_error_sign '*'
 declare-option -docstring "Character to signal a warning in the gutter" str lsp_diagnostic_line_warning_sign '!'
@@ -512,7 +518,7 @@ method   = "textDocument/didSave"
 }
 
 define-command -hidden lsp-did-change-config %{
-    echo -debug "kak-lsp: config-change detected:" %opt{lsp_server_configuration}
+    echo -debug "kak-lsp: config-change detected:" %opt{lsp_config}
     nop %sh{ ((printf '
 session  = "%s"
 client   = "%s"
@@ -521,7 +527,9 @@ filetype = "%s"
 version  = %d
 method   = "workspace/didChangeConfiguration"
 [params.settings]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}"
+lsp_config = """%s"""
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" \
+    "$(printf %s "${kak_opt_lsp_config}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
 eval "set -- $kak_quoted_opt_lsp_server_configuration"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
@@ -1124,6 +1132,13 @@ done
 ) > $1 }
 }
 
+define-command -hidden lsp-get-config -params 1 -docstring %{
+    lsp-get-config <fifo>
+    Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
+} %{
+    echo -to-file %arg{@} %opt{lsp_config}
+}
+
 ### Other commands ###
 
 define-command lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
@@ -1341,6 +1356,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     }
     hook -group lsp global BufClose .* lsp-did-close
     hook -group lsp global BufWritePost .* lsp-did-save
+    hook -group lsp global BufSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
     hook -group lsp global NormalIdle .* %{
@@ -1391,6 +1407,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window BufWritePost .* lsp-did-save
+    hook -group lsp window WinSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp window InsertIdle .* lsp-completion
     hook -group lsp window NormalIdle .* %{

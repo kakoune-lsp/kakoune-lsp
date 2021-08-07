@@ -12,6 +12,7 @@ Additions:
 - `lsp-show-message` has been replaced by four separate commands `lsp-show-message-{error,warning,info,log}`.
   The new default implementations log the given messages from the language server to the debug buffer. Important messages are shown in `%opt{toolsclient}`.
 - `lsp-code-actions` use the `menu` command to select an action interactively. The new command `lsp-show-code-actions` can be overridden to customize this behavior (#367).
+- `%opt{lsp_config}` allows to set server configuration dynamically (#500).
 - New commands `lsp-{next,previous}-location` generalize `grep-next-match`, `lsp-next-match` and friends (#466).
 - New option `lsp_location_format` to tell `lsp-{next,previous}-location` which "<file>:<line>"-style to match (#466).
 
@@ -22,6 +23,7 @@ Bug fixes:
 - Fix responses to `workspace/configuration` in case there are no initialization options set (#509).
 
 Deprecations:
+- `%opt{lsp_server_initialization_options}` and `%opt{lsp_server_configuration}` are deprecated in favor of setting `[language.<filetype>.initialization_options]` in `%opt{lsp_config}`(#500).
 - `lsp-{goto,symbols}-{next,previous}-match` are deprecated in favor of `lsp-next-location *goto*` and similar (#466).
 
 ## 10.0.0 - 2021-06-03

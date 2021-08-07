@@ -3,11 +3,63 @@ use crate::types::*;
 use crate::util::*;
 use serde_json::Value;
 
+pub fn request_dynamic_configuration_from_kakoune(
+    meta: &EditorMeta,
+    ctx: &mut Context,
+) -> Option<DynamicLanguageConfig> {
+    let fifo = temp_fifo()?;
+    ctx.exec(
+        meta.clone(),
+        format!("lsp-get-config {}", editor_quote(&fifo.path)),
+    );
+    let config = std::fs::read_to_string(&fifo.path).unwrap();
+    parse_dynamic_config(meta, ctx, &config)
+}
+
+pub fn request_initialization_options_from_kakoune(
+    meta: &EditorMeta,
+    ctx: &mut Context,
+) -> Option<Value> {
+    let settings = request_dynamic_configuration_from_kakoune(meta, ctx)
+        .and_then(|cfg| cfg.initialization_options);
+    if settings.is_some() {
+        return settings;
+    }
+
+    let legacy_settings = request_legacy_initialization_options_from_kakoune(meta, ctx);
+    if legacy_settings.is_some() {
+        return legacy_settings;
+    }
+
+    let language = ctx.config.language.get(&ctx.language_id).unwrap();
+    language.initialization_options.clone()
+}
+
+pub fn parse_dynamic_config(
+    meta: &EditorMeta,
+    ctx: &mut Context,
+    config: &str,
+) -> Option<DynamicLanguageConfig> {
+    debug!("lsp_config:\n{}", config);
+    let mut config: DynamicConfig = match toml::from_str(config) {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            let msg = format!("failed to parse %opt{{lsp_config}}: {}", e);
+            ctx.exec(
+                meta.clone(),
+                format!("lsp-show-error {}", editor_quote(&msg)),
+            );
+            panic!("{}", msg)
+        }
+    };
+    config.language.remove(&ctx.language_id)
+}
+
 /// User may override `initialization_options` provided in kak-lsp.toml on per-language server basis
 /// with `lsp_server_initialization_options` option in Kakoune
 /// (i.e. to customize it for specific project).
 /// This function asks Kakoune to give such override if any.
-pub fn request_initialization_options_from_kakoune(
+pub fn request_legacy_initialization_options_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<Value> {
@@ -25,7 +77,7 @@ pub fn request_initialization_options_from_kakoune(
         None
     } else {
         match toml::from_str::<toml::value::Table>(&options) {
-            Ok(table) => Some(explode_string_table(&table)),
+            Ok(table) => Some(Value::Object(explode_string_table(&table))),
             Err(e) => {
                 error!("Failed to parse lsp_server_initialization_options: {:?}", e);
                 None
@@ -66,9 +118,10 @@ where
         },
     }
 }
-
 // Take flattened tables like "a.b = 1" and produce "{"a":{"b":1}}".
-pub fn explode_string_table(raw_settings: &toml::value::Table) -> Value {
+pub fn explode_string_table(
+    raw_settings: &toml::value::Table,
+) -> serde_json::value::Map<String, Value> {
     let mut settings = serde_json::Map::new();
 
     for (raw_key, raw_value) in raw_settings.iter() {
@@ -98,5 +151,5 @@ pub fn explode_string_table(raw_settings: &toml::value::Table) -> Value {
         }
     }
 
-    Value::Object(settings)
+    settings
 }

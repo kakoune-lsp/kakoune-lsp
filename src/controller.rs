@@ -220,7 +220,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             text_document_did_save(meta, &mut ctx);
         }
         notification::DidChangeConfiguration::METHOD => {
-            workspace::did_change_configuration(params, &mut ctx);
+            workspace::did_change_configuration(meta, params, &mut ctx);
         }
         request::Completion::METHOD => {
             completion::text_document_completion(meta, params, &mut ctx);
