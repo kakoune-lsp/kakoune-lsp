@@ -114,7 +114,7 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
             // There's also a `scopeUri`, which lists the file/folder
             // that the config should apply to. But kak-lsp doesn't
             // have a concept of per-file configuration and workspaces
-            // are separated by kak-lsp process.
+            // are separated by kak-lsp processes.
             item.section
                 .as_ref()
                 // The specification isn't clear about whether you should
