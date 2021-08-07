@@ -8,7 +8,7 @@ NOTE: `kak-lsp.toml` destination in all described installation methods is just a
 Also, kak-lsp doesn't read the configuration file from the current working directory or binary's dir by default.
 Please consult <<Configuring kak-lsp>> to figure out where does kak-lsp expect `kak-lsp.toml`
 to be in your environment and how to specify a custom path to it.
-However, if you don't need to change configuration then feel free to skip copying it anywhere as the default configuration is embedded into kak-lsp binary.
+However, if you don't need to change configuration then feel free to skip copying it anywhere as the default configuration is embedded into the kak-lsp binary.
 
 === Pre-built binaries
 
@@ -54,7 +54,7 @@ mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
-=== From the source
+=== From source
 
 Generally, you need the latest stable version of Rust to build kak-lsp.
 
@@ -73,8 +73,8 @@ cp kak-lsp.toml ~/.config/kak-lsp/
 
 === With plug.kak
 
-If you don't mind using plugin manager, you can install kak-lsp
-with https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
+If you don't mind using a plugin manager, you can install kak-lsp
+via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
 
 ----
 plug "kak-lsp/kak-lsp" do %{
@@ -82,8 +82,8 @@ plug "kak-lsp/kak-lsp" do %{
 }
 ----
 
-You can replace `cargo install` with `ln -sf target/release/kak-lsp ~/.local/bin/`
-where `~/.local/bin/` can be replaced to something in your `$PATH`.
+You can replace `cargo install` with `ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
+where `~/.local/bin/` can be replaced with something in your `$PATH`.
 
 Examples of configuration with plug.kak can be found at https://github.com/kak-lsp/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
 
@@ -96,10 +96,10 @@ quick installation of language servers supported by kak-lsp out of the box.
 
 == Usage
 
-NOTE: Contents below corresponds to the master branch HEAD and could be slightly out-of-sync with
-the version installed from pre-built binaries. The most common case is new commands being in a
-pre-release testing stage. Please refer README.asciidoc revision tagged with version you use or
-README.asciidoc from the release archive (included starting from version 5.10.0).
+NOTE: Contents below corresponds to the master branch HEAD and could be slightly out-of-sync
+with the version installed from pre-built binaries. The most common case is new commands being
+in a pre-release testing stage. Please refer to the README.asciidoc revision tagged with the
+version you use or the README.asciidoc from the release archive.
 
 To enable LSP support for configured languages (see the next section) just add the following
 commands to your `kakrc`:
@@ -124,26 +124,26 @@ Either way you get:
 * completions
 * `lsp-definition` command to go to definition, mapped to `gd` by default
 * `lsp-hover` command to show hover info (including relevant diagnostics when available)
-** to automatically show hover when you move around use `lsp-auto-hover-enable`
-** to show hover anchored to hovered position do `set global lsp_hover_anchor true`
-** to exclude diagnostics do `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'`
+** to automatically show hover when you move around, use `lsp-auto-hover-enable`
+** to show hover anchored to hovered position, use `set global lsp_hover_anchor true`
+** to exclude diagnostics, use `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'`
 * `lsp-declaration` command to jump to the declaration of the symbol under the main cursor
 * `lsp-definition` command to jump to the definition of the symbol under the main cursor
 * `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor
-* `lsp-implementation` command to find implementations for a symbol under the main cursor
-* `lsp-references` command to find references for a symbol under the main cursor, mapped to `gr` by default
-** for the previous five commands, `\*goto*` buffer has `lsp-goto` filetype so you can press `<ret>` on a line or use the `lsp-jump` command
-* `lsp-find-error` command to jump to the next or previous error in the file
+* `lsp-implementation` command to find implementations for the symbol under the main cursor
+* `lsp-references` command to find references to the symbol under the main cursor, mapped to `gr` by default
+** for the previous five commands, the `\*goto*` buffer has filetype `lsp-goto`, so you can press `<ret>` on a line or use the `lsp-jump` command
+* `lsp-find-error` command to jump to the next or previous error in the current file
 ** `lsp-references-previous-match` and `lsp-references-next-match` to navigate between references
-* `lsp-highlight-references` command to highlight references in current buffer for a symbol under the main cursor with `Reference` face (which is equal to `MatchingChar` face by default)
-* `lsp-document-symbol` command to list current buffer's symbols
+* `lsp-highlight-references` command to highlight all references to the symbol under the main cursor in the current buffer with the `Reference` face (which is equal to the `MatchingChar` face by default)
+* `lsp-document-symbol` command to list the current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
-** `\*symbols*` buffer has `lsp-goto` filetype so you can press `<ret>` on a line or use the `lsp-jump` command
-* `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics)
-** `\*diagnostics*` buffer has `lsp-goto` filetype so you can press `<ret>` on a line or use the `lsp-jump` command
-* inline diagnostics highlighting using `DiagnosticError` and `DiagnosticWarning` faces; could be disabled with `lsp-inline-diagnostics-disable` command
-* flags in the left margin on lines with errors or warnings; could be disabled with `lsp-diagnostic-lines-disable` command
+** `\*symbols*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
+* `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics for)
+** `\*diagnostics*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
+* inline diagnostics highlighting using the `DiagnosticError` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
+* flags in the left margin on lines with errors or warnings; can be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
 
@@ -154,14 +154,14 @@ hook global WinSetOption filetype=rust %{
 ----
 
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
-* `lsp-code-actions` command to open a menu with code actions available for the current main cursor position
-* `lsp_diagnostic_error_count`  and `lsp_diagnostic_warning_count` options which contains number of diagnostics errors and warnings published for the current buffer. For example, you can put it into your modeline to see at a glance if there are errors in the current file
+* `lsp-code-actions` command to open a menu with code actions available at the main cursor position
+* `lsp_diagnostic_error_count`  and `lsp_diagnostic_warning_count` options which contain the number of errors and warnings diagnosed for the current buffer. For example, you can put it into your modeline to see at a glance if there are errors in the current file
 * starting new kak-lsp session when Kakoune session begins and stopping it when Kakoune session ends
 
-NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune during 30 minutes,
-even if Kakoune session is still up and running. Change `server.timeout` in `kak-lsp.toml` to tweak
-duration, or set it to 0 to disable this behaviour. In any scenario making new request would lead to
-attempt to spin up server if it is down.
+NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
+even if the Kakoune session is still up and running. Change `server.timeout` in `kak-lsp.toml`
+to tweak this duration, or set it to 0 to disable this behavior. In any scenario,  a new would
+spin up a fresh server if it is down.
 
 * `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode].
   The following example mapping gives you access to the shortcuts from below table after typing `,l`.
@@ -192,10 +192,10 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 | & | lsp-highlight-references
 |===
 
-To know which subset of kak-lsp commands is backed by current buffer filetype's language server use
+To know which subset of kak-lsp commands is backed by the current buffer's filetype's language server use
 `lsp-capabilities` command.
 
-All commands are also represented as subcommands of umbrella `lsp` command if you prefer this style.
+All commands are also represented as subcommands of the `lsp` umbrella command if you prefer this style.
 For example, you can use `lsp references` instead of `lsp-references`.
 
 == Configuration
@@ -204,13 +204,13 @@ kak-lsp itself has configuration, but it also adds configuration options to Kako
 
 === Configuring kak-lsp
 
-kak-lsp is configured via configuration file in https://github.com/toml-lang/toml[TOML] format. By
+kak-lsp is configured via a configuration file in https://github.com/toml-lang/toml[TOML] format. By
 default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under OS-specific config dir as described https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html[here],
 but you can override it with command-line option `--config`.
 
-Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-descriptive.
-The only example which is not covered by default `kak-lsp.toml` is setting initialization options
-for a language server. It's done like this:
+Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-explanatory.
+The only example which is not covered by the default `kak-lsp.toml` is how to set initialization
+options for a language server. It's done like this:
 
 [source=toml]
 ----
@@ -219,14 +219,14 @@ formatTool = "gofmt"
 ----
 
 *Important*: The configuration file does *not* extend the default configuration, but rather
-overwrites it. This means that if you want to customize any of the configuration, you must copy the
+overrides it. This means that if you want to customize any of the configuration, you must copy the
 *entire* default configuration and then edit it.
 
-If you are setting any options to server via cli do not forget to append them to
+If you are setting any server options via cli, do not forget to append them to
 `%sh{kak-lsp --kakoune ...}` in your `kakrc`. It's not needed if you change options in
-`~/.config/kak-lsp/kak-lsp.toml` file.
+`~/.config/kak-lsp/kak-lsp.toml`.
 
-Please let us know if you have any ideas about how to make default config more sensible.
+Please let us know if you have any ideas about how to make the default config more sensible.
 
 === Configuring Kakoune
 
@@ -234,12 +234,12 @@ kak-lsp's Kakoune integration declares the following options:
 
 * `lsp_completion_trigger` (str): This option is set to a Kakoune command, which is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a completion request to the language server.
 * `lsp_diagnostic_line_error_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an error, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
-* `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an warning, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
+* `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects a warning, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
 * `lsp_hover_anchor` (bool): When using `lsp-hover` or `lsp-auto-hover-enable`, if this option is `true` then the hover information will be displayed next to the active selection. Otherwise, the information will be displayed in a box in the lower-right corner.
 * `lsp_hover_max_lines` (int): If greater than 0 then limit rendered hover information to the given number of lines.
 * `lsp_hover_insert_mode_trigger` (str): This option is set to a Kakoune command. When using `lsp-auto-hover-insert-mode-enable`, this command is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a hover-information request for the text selected by the command.
 * `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
-* `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time user pauses in normal mode.
+* `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time the user pauses in normal mode.
 * `lsp_server_configuration` (str-to-str-map): At startup, and when this option is modified, kak-lsp
 will send its contents to the language server in a `workspace/DidChangeConfiguration` notification.
 Some languages servers allow dynamic configuration in this way. See below for more information about
@@ -287,7 +287,7 @@ hook global WinSetOption filetype=rust %{
 }
 ----
 
-You can change the face of the hints with `set-face global InlayHint <face>`.
+You can change the hints' face with `set-face global InlayHint <face>`.
 
 == Semantic Tokens
 
@@ -318,7 +318,7 @@ modifiers = ["constant", "declaration"]
 where `token` is the token's name as reported by the language server (see `lsp-capabilities`), `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` may be omitted, but `token` and `face` are required.
 
 You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entry's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry. +
-`kak-lsp` will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple entries match with the same number of modifiers, the one that was defined last in the configuration wins.
+`kak-lsp` will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple matching entries have the same number of modifiers, the one that was defined last in the configuration wins.
 
 *Example:*
 
@@ -376,7 +376,7 @@ face = "variable"
 
 == Inlay Diagnostics
 
-kak-lsp supports showing diagnostics inline after their respective line, but this behaviour can be somewhat buggy and must be enabled explicitly:
+kak-lsp supports showing diagnostics inline after their respective line, but this behavior can be somewhat buggy and must be enabled explicitly:
 
 ----
 lsp-inlay-diagnostics-enable global
@@ -418,9 +418,9 @@ LSP spec says that
 
 ____
 A position inside a document (see Position definition below) is expressed as a zero-based line and
-character offset. The offsets are based on a UTF-16 string representation. So a string of the form
-`a𐐀b` the character offset of the character `a` is 0, the character offset of `𐐀` is 1 and the
-character offset of `b` is 3 since `𐐀` is represented using two code units in UTF-16.
+character offset. The offsets are based on a UTF-16 string representation. So for a string of the
+form `a𐐀b` the character offset of the character `a` is 0, the character offset of `𐐀` is
+1 and the character offset of `b` is 3 since `𐐀` is represented using two code units in UTF-16.
 ____
 
 However, kak-lsp treats `Position.character` as an offset in UTF-8 code points by default.
@@ -435,7 +435,7 @@ are two main types of violations we met in the wild:
 characters outside BMP out of the box.
 
 2) Using UTF-8 code units (bytes), just like Kakoune does. Those are supported by kak-lsp but
-require adding `offset_encoding = "utf-8"` to language server configuration in `kak-lsp.toml`.
+require adding `offset_encoding = "utf-8"` to the language server configuration in `kak-lsp.toml`.
 
 == Troubleshooting
 
@@ -447,7 +447,7 @@ set global lsp_cmd "kak-lsp -s %val{session} -vvv --log /tmp/kak-lsp.log"
 
 to enable debug logging.
 
-If it will not give enough insights to fix the problem or if the problem is a bug in kak-lsp itself
+If it does not give enough insight to fix the problem or if the problem is a bug in kak-lsp itself
 please don't hesitate to raise an issue.
 
 NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
