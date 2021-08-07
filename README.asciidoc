@@ -208,7 +208,7 @@ kak-lsp is configured via a configuration file in https://github.com/toml-lang/t
 default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under OS-specific config dir as described https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html[here],
 but you can override it with command-line option `--config`.
 
-Look into the default `kak-lsp.toml` in the root of repository, it should be quite self-explanatory.
+Look into the default link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
 The only example which is not covered by the default `kak-lsp.toml` is how to set initialization
 options for a language server. It's done like this:
 
