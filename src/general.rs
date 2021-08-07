@@ -12,14 +12,16 @@ use std::collections::HashSet;
 use std::process;
 use url::Url;
 
-pub fn initialize(
-    root_path: &str,
-    initialization_options: Option<Value>,
-    meta: EditorMeta,
-    ctx: &mut Context,
-) {
+pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     let initialization_options =
-        request_initialization_options_from_kakoune(&meta, ctx).or(initialization_options);
+        request_initialization_options_from_kakoune(&meta, ctx).or_else(|| {
+            ctx.config
+                .language
+                .get(&ctx.language_id)
+                .unwrap()
+                .initialization_options
+                .clone()
+        });
     #[allow(deprecated)] // for root_path
     let params = InitializeParams {
         capabilities: ClientCapabilities {

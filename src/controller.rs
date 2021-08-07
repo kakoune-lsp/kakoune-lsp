@@ -33,12 +33,10 @@ pub fn start(
     config: Config,
 ) {
     let lang_srv: language_server_transport::LanguageServerTransport;
-    let options;
     let offset_encoding;
     {
         // should be fine to unwrap because request was already routed which means language is configured
         let lang = &config.language[&route.language];
-        options = lang.initialization_options.clone();
         offset_encoding = lang.offset_encoding;
         lang_srv = match language_server_transport::start(&lang.command, &lang.args) {
             Ok(ls) => ls,
@@ -80,7 +78,7 @@ pub fn start(
         offset_encoding,
     );
 
-    general::initialize(&route.root, options, initial_request_meta, &mut ctx);
+    general::initialize(&route.root, initial_request_meta, &mut ctx);
 
     'event_loop: loop {
         select! {
