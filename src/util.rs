@@ -33,6 +33,30 @@ pub fn temp_dir() -> path::PathBuf {
     path
 }
 
+pub struct TempFifo {
+    pub path: String,
+}
+
+pub fn temp_fifo() -> Option<TempFifo> {
+    let mut path = temp_dir();
+    path.push(format!("{:x}", rand::random::<u64>()));
+    let path = path.to_str().unwrap().to_string();
+    let fifo_result = unsafe {
+        let path = std::ffi::CString::new(path.clone()).unwrap();
+        libc::mkfifo(path.as_ptr(), 0o600)
+    };
+    if fifo_result != 0 {
+        return None;
+    }
+    Some(TempFifo { path })
+}
+
+impl Drop for TempFifo {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
 /// Represent list of symbol information as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
 pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -> String {

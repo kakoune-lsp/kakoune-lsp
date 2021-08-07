@@ -434,26 +434,16 @@ fn request_initialization_options_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<Value> {
-    let mut path = temp_dir();
-    path.push(format!("{:x}", rand::random::<u64>()));
-    let path = path.to_str().unwrap();
-    let fifo_result = unsafe {
-        let path = std::ffi::CString::new(path).unwrap();
-        libc::mkfifo(path.as_ptr(), 0o600)
-    };
-    if fifo_result != 0 {
-        return None;
-    }
+    let fifo = temp_fifo()?;
     ctx.exec(
         meta.clone(),
         format!(
             "lsp-get-server-initialization-options {}",
-            editor_quote(path)
+            editor_quote(&fifo.path)
         ),
     );
-    let options = std::fs::read_to_string(path).unwrap();
+    let options = std::fs::read_to_string(&fifo.path).unwrap();
     debug!("lsp_server_initialization_options:\n{}", options);
-    let _ = std::fs::remove_file(path);
     if options.trim().is_empty() {
         None
     } else {
