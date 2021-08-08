@@ -285,7 +285,7 @@ args = [
 #         else
 #             rust-analyzer
 #         fi
-#     """
+#     """,
 # ]
 # [language.rust.initialization_options]
 # # If you get 'unresolved proc macro' warnings, you have two options
