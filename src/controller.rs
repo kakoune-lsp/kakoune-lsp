@@ -50,7 +50,7 @@ pub fn start(
                 }
                 let command = format!(
                     "lsp-show-error {}",
-                    editor_quote(&format!("Failed to start language server: {}", err)),
+                    editor_quote(&format!("failed to start language server: {}", err)),
                 );
                 if to_editor
                     .send(EditorResponse {
@@ -108,7 +108,7 @@ pub fn start(
                             request::DocumentHighlightRequest::METHOD => (),
                             _ => ctx.exec(
                                 msg.meta.clone(),
-                                "lsp-show-error 'Language server is not initialized, parking request'"
+                                "lsp-show-error 'language server is not initialized, parking request'"
                                     .to_string(),
                             ),
                         }

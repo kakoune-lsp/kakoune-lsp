@@ -512,7 +512,7 @@ method   = "textDocument/didSave"
 }
 
 define-command -hidden lsp-did-change-config %{
-    echo -debug "Config-change detected:" %opt{lsp_server_configuration}
+    echo -debug "kak-lsp: config-change detected:" %opt{lsp_server_configuration}
     nop %sh{ ((printf '
 session  = "%s"
 client   = "%s"
@@ -946,7 +946,7 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 
 define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
     echo -debug "kak-lsp:" %arg{1}
-    info %arg{1}
+    info "kak-lsp: %arg{1}"
 }
 
 define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{

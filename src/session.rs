@@ -136,7 +136,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
 /// than to wait, cancel, and repeat.
 fn cancel_blocking_request(fifo: String) {
     debug!("Blocking request but LSP server is not running");
-    let command = "lsp-show-error 'Language server is not running, cancelling blocking request'";
+    let command = "lsp-show-error 'language server is not running, cancelling blocking request'";
     std::fs::write(fifo, command).expect("Failed to write command to fifo");
 }
 

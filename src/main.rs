@@ -292,7 +292,7 @@ fn consume_stdin_and_report_config_error(
     };
     let command = format!(
         "lsp-show-error {}",
-        editor_quote(&format!("Failed to parse config file: {}", error)),
+        editor_quote(&format!("failed to parse config file: {}", error)),
     );
     if editor
         .to_editor

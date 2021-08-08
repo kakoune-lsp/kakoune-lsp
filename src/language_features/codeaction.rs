@@ -55,7 +55,7 @@ pub fn editor_code_actions(
     };
 
     if result.is_empty() {
-        ctx.exec(meta, "lsp-show-error 'No actions available'");
+        ctx.exec(meta, "lsp-show-error 'no actions available'");
         return;
     }
 
