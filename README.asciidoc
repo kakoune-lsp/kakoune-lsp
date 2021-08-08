@@ -209,8 +209,7 @@ default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under OS-specific config di
 but you can override it with command-line option `--config`.
 
 Look into the default link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
-The only example which is not covered by the default `kak-lsp.toml` is how to set initialization
-options for a language server. It's done like this:
+For example, here is how to set server-specific configuration:
 
 [source=toml]
 ----
