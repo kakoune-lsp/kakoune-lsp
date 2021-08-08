@@ -26,7 +26,7 @@ set-face global InlayHint cyan+d
 declare-option -docstring "Display hover info anchored to the hovered position" bool lsp_hover_anchor false
 # Completions request is sent only when this expression doesn't fail.
 # By default, it ensures that preceding character is not a whitespace.
-declare-option -docstring "Completions request is sent only when this expression does not fail" str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
+declare-option -docstring "Completion request is sent only when this expression does not fail" str lsp_completion_trigger %{execute-keys '<a-h><a-k>\S.\z<ret>'}
 # Kakoune requires completions to point fragment start rather than cursor position.
 # This variable provides a way to customise how fragment start is detected.
 # By default, it tracks back to the first punctuation or whitespace.
@@ -44,9 +44,7 @@ declare-option -docstring "Automatically highlight references with Reference fac
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
-# Configuration to send in DidChangeNotification messages.
 declare-option -docstring "Configuration to send in DidChangeNotification messages" str-to-str-map lsp_server_configuration
-# Configuration to send in initializationOptions of Initialize messages.
 declare-option -docstring "Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
 # Line flags for inline diagnostics.
 declare-option -docstring "Character to signal an error in the gutter" str lsp_diagnostic_line_error_sign '*'
