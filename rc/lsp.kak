@@ -1040,11 +1040,41 @@ define-command -hidden lsp-show-signature-help -params 2 -docstring "Render sign
     echo %arg{2}
 }
 
-define-command -hidden lsp-show-message -params 2 -docstring %{
-    lsp-show-message <type> <message>
-    Render language server message.
+define-command -hidden lsp-show-message-error -params 1 -docstring %{
+    lsp-show-message-error <message>
+    Render language server message of the "error" level.
 } %{
-    info %arg{2}
+    echo -debug "kak-lsp: error from server:" %arg{1}
+    evaluate-commands -try-client %opt{toolsclient} %{
+        info "kak-lsp: error from server: %arg{1}"
+    }
+}
+
+define-command -hidden lsp-show-message-warning -params 1 -docstring %{
+    lsp-show-message-warning <message>
+    Render language server message of the "warning" level.
+} %{
+    echo -debug "kak-lsp: warning from server:" %arg{1}
+    evaluate-commands -try-client %opt{toolsclient} %{
+        echo "kak-lsp: warning from server:" %arg{1}
+    }
+}
+
+define-command -hidden lsp-show-message-info -params 1 -docstring %{
+    lsp-show-message-info <message>
+    Render language server message of the "info" level.
+} %{
+    echo -debug "kak-lsp: info from server:" %arg{1}
+    evaluate-commands -try-client %opt{toolsclient} %{
+        echo "kak-lsp: info from server:" %arg{1}
+    }
+}
+
+define-command -hidden lsp-show-message-log -params 1 -docstring %{
+    lsp-show-message-log <message>
+    Render language server message of the "log" level.
+} %{
+    echo -debug "kak-lsp: log:" %arg{1}
 }
 
 define-command -hidden lsp-insert-before-selection -params 1 -docstring %{

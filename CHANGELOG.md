@@ -3,6 +3,11 @@
 Breaking changes:
 - The configuration syntax for `semantic_tokens` has changed. See the updated `kak-lsp.toml` for an example (#488).
 - Snippet support has been disabled by default, as a workaround for conflicts with Kakoune's built-in completion (#282).
+- `lsp-show-message`, which handles `window/showMessage` requests from the server has been removed. See below for the replacement.
+
+Additions:
+- `lsp-show-message` has been replaced by four separate commands `lsp-show-message-{error,warning,info,log}`
+  The new default commands log the given messages from the language server to the debug buffer. Important messages are shown in `%opt{toolsclient}`.
 
 Bug fixes:
 - Fix renaming of Rust lifetimes (#474).

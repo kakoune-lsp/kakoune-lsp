@@ -78,7 +78,7 @@ pub fn start(
         offset_encoding,
     );
 
-    general::initialize(&route.root, initial_request_meta, &mut ctx);
+    general::initialize(&route.root, initial_request_meta.clone(), &mut ctx);
 
     'event_loop: loop {
         select! {
@@ -129,6 +129,7 @@ pub fn start(
                             }
                             Call::Notification(notification) => {
                                 dispatch_server_notification(
+                                    initial_request_meta.clone(),
                                     &notification.method,
                                     notification.params,
                                     &mut ctx,
@@ -341,7 +342,12 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
     ctx.reply(request.id, result);
 }
 
-fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Context) {
+fn dispatch_server_notification(
+    meta: EditorMeta,
+    method: &str,
+    params: Params,
+    mut ctx: &mut Context,
+) {
     match method {
         notification::PublishDiagnostics::METHOD => {
             diagnostics::publish_diagnostics(params, &mut ctx);
@@ -359,13 +365,15 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
             let params: ShowMessageParams = params
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
+            let command = match params.typ {
+                MessageType::Error => "lsp-show-message-error",
+                MessageType::Warning => "lsp-show-message-warning",
+                MessageType::Info => "lsp-show-message-info",
+                MessageType::Log => "lsp-show-message-log",
+            };
             ctx.exec(
-                ctx.meta_for_session(),
-                format!(
-                    "lsp-show-message {} {}",
-                    params.typ as u8,
-                    editor_quote(&params.message)
-                ),
+                meta,
+                format!("{} {}", command, editor_quote(&params.message)),
             );
         }
         "window/logMessage" => {
@@ -373,8 +381,8 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
                 .parse()
                 .expect("Failed to parse LogMessageParams params");
             ctx.exec(
-                ctx.meta_for_session(),
-                format!("echo -debug LSP: {}", editor_quote(&params.message)),
+                meta,
+                format!("lsp-show-message-log {}", editor_quote(&params.message)),
             );
         }
         "window/progress" => {
@@ -382,7 +390,7 @@ fn dispatch_server_notification(method: &str, params: Params, mut ctx: &mut Cont
                 .parse()
                 .expect("Failed to parse WindowProgress params");
             ctx.exec(
-                ctx.meta_for_session(),
+                meta,
                 format!(
                     "lsp-handle-progress {} {} {} {}",
                     editor_quote(&params.title),
