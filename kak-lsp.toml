@@ -240,14 +240,31 @@ args = ["stdio"]
 filetypes = ["rust"]
 roots = ["Cargo.toml"]
 command = "sh"
-args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rls); else rls; fi"]
+args = [
+    "-c",
+    """
+        if path=$(rustup which rls 2>/dev/null); then
+            "$path"
+        else
+            rls
+        fi
+    """,
+]
 
 # [language.rust]
 # filetypes = ["rust"]
 # roots = ["Cargo.toml"]
 # command = "sh"
-# args = ["-c", "if command -v rustup >/dev/null; then $(rustup which rust-analyzer); else rust-analyzer; fi"]
-#
+# args = [
+#     "-c",
+#     """
+#         if path=$(rustup which rust-analyzer 2>/dev/null); then
+#             "$path"
+#         else
+#             rust-analyzer
+#         fi
+#     """
+# ]
 # [language.rust.initialization_options]
 # # If you get 'unresolved proc macro' warnings, you have two options
 # # 1. The safe choice is two disable the warning:

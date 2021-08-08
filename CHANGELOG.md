@@ -12,6 +12,7 @@ Additions:
 
 Bug fixes:
 - Fix renaming of Rust lifetimes (#474).
+- The suggested config for `rust-analyzer` was fixed for the case that `rustup` is installed but `rust-analyzer` is not installed via `rustup`.
 
 ## 10.0.0 - 2021-06-03
 
