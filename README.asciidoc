@@ -227,6 +227,34 @@ If you are setting any server options via cli, do not forget to append them to
 
 Please let us know if you have any ideas about how to make the default config more sensible.
 
+==== Server-specific configuration
+
+Many servers accept configuration options that are not part of the LSP spec.
+The TOML table `[language.<filetype>.initialization_options]` can contain arbitrary values They will be sent to the server during server initialization, as well as in `workspace/didChangeConfiguration` whenever you change it via the `lsp_config` option.
+
+If a language server's documentation says it wants a structure like this:
+
+[source=json]
+----
+{
+    "settings": {
+        "rust": {
+            "clippy_preference": "on"
+        }
+    }
+}
+----
+
++...you can do that in `kak-lsp.toml` or in the `lsp_config` option with an equivalent TOML string:
+
+Be aware of TOML serialization rules: for example, if you want to serialize `{"clippy.preference":"on"}`, use `"clippy.preference" = "on"`.
+
+[source=toml]
+----
+[language.rust.initialization_options]
+rust.clippy_preference = "on"
+----
+
 === Configuring Kakoune
 
 kak-lsp's Kakoune integration declares the following options:
@@ -247,29 +275,6 @@ this option.
 language server kak-lsp will ask Kakoune for this option value in the buffer which provoked start of
 the language server. If value is non-empty then it will override `initialization_options` set for
 the buffer's filetype in `kak-lsp.toml`. See below for more information about this option.
-
-The `lsp_server_configuration` and `lsp_server_initialization_options` options are unusual, since
-the language server wants deeply-nested JSON objects, which are hard to represent in Kakoune. If a
-language server's documentation says it wants a structure like this:
-
-[source=json]
-----
-{
-    "settings": {
-        "rust": {
-            "clippy_preference": "on"
-        }
-    }
-}
-----
-
-...you can achieve the same thing in Kakoune with:
-
-----
-set-option -add global lsp_server_configuration rust.clippy_preference="on"
-----
-
-That is, the keys of the `lsp_server_configuration` option are a `.`-delimited path of JSON objects. For implementation reasons, the values use TOML serialisation rules rather than JSON rules, but they're pretty much the same thing for strings, numbers and booleans, which are the most common configuration types.
 
 == Inlay hints for rust-analyzer
 
