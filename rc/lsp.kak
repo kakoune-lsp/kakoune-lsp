@@ -44,7 +44,7 @@ declare-option -docstring "Automatically highlight references with Reference fac
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
-declare-option -docstring "Configuration to send in DidChangeNotification messages" str-to-str-map lsp_server_configuration
+declare-option -docstring "Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
 declare-option -docstring "Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
 # Line flags for inline diagnostics.
 declare-option -docstring "Character to signal an error in the gutter" str lsp_diagnostic_line_error_sign '*'
