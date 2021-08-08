@@ -6,6 +6,7 @@ Breaking changes:
 - `lsp-show-message`, which handles `window/showMessage` requests from the server has been removed. See below for the replacement.
 
 Additions:
+- Default configuration for Julia (#502).
 - `lsp-show-message` has been replaced by four separate commands `lsp-show-message-{error,warning,info,log}`.
   The new default implementations log the given messages from the language server to the debug buffer. Important messages are shown in `%opt{toolsclient}`.
 - `lsp-code-actions` use the `menu` command to select an action interactively. The new command `lsp-show-code-actions` can be overridden to customize this behavior (#367).

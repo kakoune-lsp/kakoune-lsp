@@ -184,6 +184,28 @@ roots = ["package.json"]
 command = "json-languageserver"
 args = ["--stdio"]
 
+# Requires Julia packages "LanguageServer", "StaticLint" and "SymbolServer"
+[language.julia]
+filetypes = ["julia"]
+roots = ["Project.toml", ".git"]
+command = "julia"
+args = [
+    "--startup-file=no",
+    "--history-file=no",
+    "-e",
+    """
+        using LanguageServer;
+        using Pkg;
+        import StaticLint;
+        import SymbolServer;
+        import REPL;
+        env_path = dirname(Pkg.Types.Context().env.project_file);
+        server = LanguageServer.LanguageServerInstance(stdin, stdout, env_path, "");
+        server.runlinter = true;
+        run(server);
+    """,
+]
+
 [language.latex]
 filetypes = ["latex"]
 roots = [".git"]
