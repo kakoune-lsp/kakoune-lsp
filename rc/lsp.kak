@@ -1084,12 +1084,8 @@ define-command -hidden lsp-insert-before-selection -params 1 -docstring %{
     It is used to apply text edits from language server.
 } %{
     declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    declare-option -hidden str lsp_text_edit_content %arg{1}
-    execute-keys %sh{
-        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
-        printf "!cat %s<ret>" $kak_opt_lsp_text_edit_tmp
-    }
-    nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
+    echo -to-file %opt{lsp_text_edit_tmp} %arg{1}
+    execute-keys "!cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
 }
 
 define-command -hidden lsp-replace-selection -params 1 -docstring %{
@@ -1097,12 +1093,8 @@ define-command -hidden lsp-replace-selection -params 1 -docstring %{
     It is used to apply text edits from language server.
 } %{
     declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    declare-option -hidden str lsp_text_edit_content %arg{1}
-    execute-keys %sh{
-        printf "%s" "$kak_opt_lsp_text_edit_content" > $kak_opt_lsp_text_edit_tmp
-        printf "|cat %s<ret>" $kak_opt_lsp_text_edit_tmp
-    }
-    nop %sh{ rm $kak_opt_lsp_text_edit_tmp }
+    echo -to-file %opt{lsp_text_edit_tmp} %arg{1}
+    execute-keys "|cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
 }
 
 define-command -hidden lsp-handle-progress -params 4 -docstring %{
