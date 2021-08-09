@@ -214,8 +214,7 @@ pub fn apply_text_edits_to_buffer(
                     KakouneTextEditCommand::Replace => "lsp-replace-selection",
                 };
                 let command = format!(
-                    "exec \"z{}<space>\"
-                    {} {}",
+                    "exec \"z{}<space>\"\n{} {}",
                     if selection_index > 0 {
                         format!("{})", selection_index)
                     } else {
@@ -233,9 +232,7 @@ pub fn apply_text_edits_to_buffer(
         .join("\n");
 
     let command = format!(
-        "select {}
-            exec -save-regs \"\" Z
-            {}",
+        "select {}\nexec -save-regs \"\" Z\n{}",
         selection_descs, apply_edits
     );
     let command = format!("eval -draft -save-regs ^ {}", editor_quote(&command));
