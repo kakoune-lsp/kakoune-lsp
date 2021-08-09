@@ -170,7 +170,7 @@ pub fn apply_text_edits_to_buffer(
         )
     });
 
-    let select_edits = edits
+    let selection_descs = edits
         .iter()
         .map(|edit| format!("{}", edit.range))
         .dedup()
@@ -236,7 +236,7 @@ pub fn apply_text_edits_to_buffer(
         "select {}
             exec -save-regs \"\" Z
             {}",
-        select_edits, apply_edits
+        selection_descs, apply_edits
     );
     let command = format!("eval -draft -save-regs ^ {}", editor_quote(&command));
     uri.and_then(|uri| uri.to_file_path().ok())
