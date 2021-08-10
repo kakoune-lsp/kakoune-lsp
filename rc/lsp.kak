@@ -342,10 +342,19 @@ column    = %d
 }
 
 define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
-    execute-keys <space><a-i>w
-    # include a leading single-quote for Rust lifetime specifiers
-    execute-keys <a-semicolon>Hs'?\w+<ret><a-semicolon>
-    prompt -init "%val{selection}" 'New name: ' %{ lsp-rename %val{text} }
+    evaluate-commands -save-regs ^s %{
+        execute-keys -save-regs "" Z
+        try %{
+            execute-keys <space><a-i>w
+            # include a leading single-quote for Rust lifetime specifiers
+            execute-keys <a-semicolon>Hs'?\w+<ret><a-semicolon>
+        } catch %{
+            fail "lsp-rename-propt: no identifier at cursor"
+        }
+        set-register s %val{selection}
+        execute-keys z
+        prompt -init %reg{s} 'New name: ' %{ lsp-rename %val{text} }
+    }
 }
 
 define-command lsp-signature-help -docstring "Request signature help for the main cursor position" %{

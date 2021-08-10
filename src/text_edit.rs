@@ -142,6 +142,7 @@ fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Op
 }
 
 pub fn apply_text_edits_to_buffer(
+    client: &Option<String>,
     uri: Option<&Url>,
     text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
     text: &Rope,
@@ -231,26 +232,38 @@ pub fn apply_text_edits_to_buffer(
         )
         .join("\n");
 
-    let command = format!(
+    let apply_edits = format!(
         "select {}\nexec -save-regs \"\" Z\n{}",
         selection_descs, apply_edits
     );
-    uri.and_then(|uri| uri.to_file_path().ok())
+    let apply_edits = uri
+        .and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| {
             path.to_str().map(|buffile| {
                 format!(
                     "eval -buffer {} -save-regs ^ {}",
                     editor_quote(buffile),
-                    editor_quote(&command)
+                    editor_quote(&apply_edits)
                 )
             })
         })
-        .or_else(|| {
-            Some(format!(
-                "eval -draft -save-regs ^ {}",
-                editor_quote(&command)
-            ))
-        })
+        .unwrap_or_else(|| format!("eval -draft -save-regs ^ {}", editor_quote(&apply_edits)));
+
+    let client = match client {
+        None => return Some(apply_edits),
+        Some(client) => client,
+    };
+
+    let apply_edits_and_restore_selections = format!(
+        "{}\n{}\n{}",
+        "set-register s %val{selections_desc}", &apply_edits, "select %reg{s}",
+    );
+
+    Some(format!(
+        "eval -client {} -save-regs s {}",
+        client,
+        &editor_quote(&apply_edits_and_restore_selections)
+    ))
 }
 
 enum KakouneTextEditCommand {

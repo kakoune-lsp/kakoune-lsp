@@ -205,7 +205,13 @@ pub fn apply_annotated_text_edits(
         .and_then(|path| path.to_str().and_then(|buffile| ctx.documents.get(buffile)))
     {
         let meta = meta.clone();
-        match apply_text_edits_to_buffer(Some(uri), edits, &document.text, ctx.offset_encoding) {
+        match apply_text_edits_to_buffer(
+            &meta.client,
+            Some(uri),
+            edits,
+            &document.text,
+            ctx.offset_encoding,
+        ) {
             Some(cmd) => ctx.exec(meta, cmd),
             // Nothing to do, but sending command back to the editor is required to handle case when
             // editor is blocked waiting for response via fifo.
