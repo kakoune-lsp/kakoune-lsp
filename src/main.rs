@@ -286,7 +286,7 @@ fn consume_stdin_and_report_config_error(
     let request: EditorRequest = toml::from_str(&data).expect("Failed to parse request");
     assert!(request.meta.session == session);
 
-    let editor = match editor_transport::start(&session, None) {
+    let editor = match editor_transport::start(session, None) {
         Ok(ed) => ed,
         Err(_code) => return,
     };

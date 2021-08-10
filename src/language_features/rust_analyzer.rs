@@ -27,6 +27,7 @@ pub struct InlayHintsParams {
     pub text_document: TextDocumentIdentifier,
 }
 
+#[allow(clippy::enum_variant_names)] // Allow because this is the same as in upstream.
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum InlayKind {
     TypeHint,

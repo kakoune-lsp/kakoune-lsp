@@ -39,7 +39,7 @@ pub fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: 
     let path = uri.to_file_path().unwrap();
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
-        let pos = lsp_range_to_kakoune(&range, &contents, ctx.offset_encoding).start;
+        let pos = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding).start;
         let command = format!(
             "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
             editor_quote(path_str),
@@ -63,7 +63,7 @@ pub fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Contex
             };
             locations
                 .map(|Location { range, .. }| {
-                    let pos = lsp_range_to_kakoune(&range, &contents, ctx.offset_encoding).start;
+                    let pos = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding).start;
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
                     }

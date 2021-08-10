@@ -222,7 +222,7 @@ pub fn apply_text_edits_to_buffer(
                         String::new()
                     },
                     command,
-                    editor_quote(&new_text)
+                    editor_quote(new_text)
                 );
                 if !merged_selections.contains(&i) {
                     selection_index += 1;
@@ -289,7 +289,7 @@ fn lsp_text_edit_to_kakoune(
     let Range { start, end } = range;
     let insert = start.line == end.line && start.character == end.character;
 
-    let range = lsp_range_to_kakoune(&range, text, offset_encoding);
+    let range = lsp_range_to_kakoune(range, text, offset_encoding);
 
     let command = if insert {
         KakouneTextEditCommand::InsertBefore

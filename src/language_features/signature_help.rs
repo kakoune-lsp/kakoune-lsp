@@ -40,7 +40,7 @@ pub fn editor_signature_help(
             let command = format!(
                 "lsp-show-signature-help {} {}",
                 params.position,
-                editor_quote(&contents)
+                editor_quote(contents)
             );
             ctx.exec(meta, command);
         }

@@ -193,7 +193,7 @@ pub fn start(
 }
 
 pub fn dispatch_pending_editor_requests(mut ctx: &mut Context) {
-    let mut requests = std::mem::replace(&mut ctx.pending_requests, vec![]);
+    let mut requests = std::mem::take(&mut ctx.pending_requests);
 
     for msg in requests.drain(..) {
         dispatch_editor_request(msg, &mut ctx);

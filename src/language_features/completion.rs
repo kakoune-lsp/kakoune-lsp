@@ -72,9 +72,7 @@ pub fn editor_completion(
 
             let mut entry = x.label.clone();
             if let Some(k) = x.kind {
-                entry += &std::iter::repeat(" ")
-                    .take(maxlen - x.label.len())
-                    .collect::<String>();
+                entry += &" ".repeat(maxlen - x.label.len());
                 entry += &format!(" {{MenuInfo}}{:?}", k);
             }
             // The generic textEdit property is not supported yet (#40).
@@ -119,7 +117,7 @@ pub fn editor_completion(
                 let insert_text = snippet_prefix_re
                     .find(snippet)
                     .map(|x| x.as_str())
-                    .unwrap_or(&snippet);
+                    .unwrap_or(snippet);
                 let command = format!(
                     "{}\nlsp-snippets-insert-completion {} {}",
                     doc,

@@ -181,7 +181,7 @@ pub fn get_kakoune_position(
     ctx: &Context,
 ) -> Option<KakounePosition> {
     get_file_contents(filename, ctx)
-        .map(|text| lsp_position_to_kakoune(&position, &text, ctx.offset_encoding))
+        .map(|text| lsp_position_to_kakoune(position, &text, ctx.offset_encoding))
 }
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
