@@ -235,18 +235,22 @@ pub fn apply_text_edits_to_buffer(
         "select {}\nexec -save-regs \"\" Z\n{}",
         selection_descs, apply_edits
     );
-    let command = format!("eval -draft -save-regs ^ {}", editor_quote(&command));
     uri.and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| {
             path.to_str().map(|buffile| {
                 format!(
-                    "eval -buffer {} {}",
+                    "eval -buffer {} -save-regs ^ {}",
                     editor_quote(buffile),
                     editor_quote(&command)
                 )
             })
         })
-        .or(Some(command))
+        .or_else(|| {
+            Some(format!(
+                "eval -draft -save-regs ^ {}",
+                editor_quote(&command)
+            ))
+        })
 }
 
 enum KakouneTextEditCommand {
