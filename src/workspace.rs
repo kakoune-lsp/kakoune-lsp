@@ -39,13 +39,23 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
     ctx.notify::<DidChangeConfiguration>(params);
 }
 
-pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc_core::Error> {
+pub fn configuration(
+    meta: EditorMeta,
+    params: Params,
+    ctx: &mut Context,
+) -> Result<Value, jsonrpc_core::Error> {
     let params = params.parse::<ConfigurationParams>()?;
-    let settings = ctx
-        .config
-        .language
-        .get(&ctx.language_id)
-        .and_then(|conf| conf.initialization_options.as_ref());
+
+    let dynamic_config = request_dynamic_configuration_from_kakoune(&meta, ctx);
+    let settings = dynamic_config
+        .as_ref()
+        .and_then(|cfg| cfg.initialization_options.as_ref())
+        .or_else(|| {
+            ctx.config
+                .language
+                .get(&ctx.language_id)
+                .and_then(|conf| conf.initialization_options.as_ref())
+        });
 
     let items = params
         .items

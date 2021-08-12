@@ -125,7 +125,7 @@ pub fn start(
                     ServerMessage::Request(call) => {
                         match call {
                             Call::MethodCall(request) => {
-                              dispatch_server_request(request, &mut ctx);
+                              dispatch_server_request(initial_request_meta.clone(), request, &mut ctx);
                             }
                             Call::Notification(notification) => {
                                 dispatch_server_notification(
@@ -324,14 +324,14 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     }
 }
 
-fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
+fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Context) {
     let method: &str = &request.method;
     let result = match method {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.params, ctx)
         }
         request::WorkspaceConfiguration::METHOD => {
-            workspace::configuration(request.params, ctx)
+            workspace::configuration(meta, request.params, ctx)
         }
         _ => {
             warn!("Unsupported method: {}", method);
