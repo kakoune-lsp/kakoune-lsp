@@ -20,6 +20,7 @@ Bug fixes:
 - The suggested config for `rust-analyzer` was fixed for the case that `rustup` is installed but `rust-analyzer` is not installed via `rustup`.
 - Fix spurious cursor movement on `lsp-rename` and `lsp-rename-prompt` (#504).
 - Fix responses to `workspace/configuration` in case there are no initialization options set (#509).
+- When responding to `workspace/configuration`, kak-lsp has already used the configured initialization options, but now ignores the `section` parameter. Consequently, the section should not be included in the initialization options, which makes the options usable for other requests (#507).
 
 Deprecations:
 - `%opt{lsp_server_initialization_options}` and `%opt{lsp_server_configuration}` are deprecated in favor of setting `[language.<filetype>.initialization_options]` in `%opt{lsp_config}`(#500).

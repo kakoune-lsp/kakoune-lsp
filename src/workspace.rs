@@ -45,7 +45,6 @@ pub fn configuration(
     ctx: &mut Context,
 ) -> Result<Value, jsonrpc_core::Error> {
     let params = params.parse::<ConfigurationParams>()?;
-
     let dynamic_config = request_dynamic_configuration_from_kakoune(&meta, ctx);
     let settings = dynamic_config
         .as_ref()
@@ -67,13 +66,15 @@ pub fn configuration(
             // are separated by kak-lsp processes.
             item.section
                 .as_ref()
+                // The "section" parameter is used to identify the language server, but we
+                // already know that from the filetype. Since we simply send initialization
+                // options, we actually don't want users to put section names in there, because
+                // it would make the initialization options unusable for initialization and
+                // didChangeConfiguration.
                 // The specification isn't clear about whether you should
                 // reply with just the value or with `json!({ section: <value> })`.
                 // Tests indicate the former.
-                .map(|section| match settings {
-                    None => Value::Null,
-                    Some(settings) => settings.get(section).unwrap_or(&Value::Null).clone(),
-                })
+                .map(|_section| settings.unwrap_or(&Value::Null).clone())
                 .unwrap_or(Value::Null)
         })
         .collect::<Vec<Value>>();
