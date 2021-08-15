@@ -1,61 +1,6 @@
 snippet_support = false
 verbosity = 2
 
-# Semantic tokens support
-# See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_semanticTokens
-# for the default list of tokens and modifiers.
-# However, many language servers implement their own values.
-# Make sure to check the output of `lsp-capabilities` and each server's documentation and source code as well.
-# Examples:
-# - TypeScript: https://github.com/microsoft/vscode-languageserver-node/blob/2645fb54ea1e764aff71dee0ecc8aceff3aabf56/client/src/common/semanticTokens.ts#L58
-# - Rust Analyzer: https://github.com/rust-analyzer/rust-analyzer/blob/f6da603c7fe56c19a275dc7bab1f30fe1ad39707/crates/ide/src/syntax_highlighting.rs#L42
-[[semantic_tokens]]
-token = "comment"
-face = "documentation"
-modifiers = ["documentation"]
-
-[[semantic_tokens]]
-token = "comment"
-face = "comment"
-
-[[semantic_tokens]]
-token = "function"
-face = "function"
-
-[[semantic_tokens]]
-token = "keyword"
-face = "keyword"
-
-[[semantic_tokens]]
-token = "namespace"
-face = "module"
-
-[[semantic_tokens]]
-token = "operator"
-face = "operator"
-
-[[semantic_tokens]]
-token = "string"
-face = "string"
-
-[[semantic_tokens]]
-token = "type"
-face = "type"
-
-[[semantic_tokens]]
-token = "variable"
-face = "default+d"
-modifiers = ["readonly"]
-
-[[semantic_tokens]]
-token = "variable"
-face = "default+d"
-modifiers = ["constant"]
-
-[[semantic_tokens]]
-token = "variable"
-face = "variable"
-
 [server]
 # exit session if no requests were received during given period in seconds
 # works only in unix sockets mode (-s/--session)
@@ -312,3 +257,58 @@ args = ["--stdio"]
 filetypes = ["zig"]
 roots = ["build.zig"]
 command = "zls"
+
+# Semantic tokens support
+# See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_semanticTokens
+# for the default list of tokens and modifiers.
+# However, many language servers implement their own values.
+# Make sure to check the output of `lsp-capabilities` and each server's documentation and source code as well.
+# Examples:
+# - TypeScript: https://github.com/microsoft/vscode-languageserver-node/blob/2645fb54ea1e764aff71dee0ecc8aceff3aabf56/client/src/common/semanticTokens.ts#L58
+# - Rust Analyzer: https://github.com/rust-analyzer/rust-analyzer/blob/f6da603c7fe56c19a275dc7bab1f30fe1ad39707/crates/ide/src/syntax_highlighting.rs#L42
+[[semantic_tokens]]
+token = "comment"
+face = "documentation"
+modifiers = ["documentation"]
+
+[[semantic_tokens]]
+token = "comment"
+face = "comment"
+
+[[semantic_tokens]]
+token = "function"
+face = "function"
+
+[[semantic_tokens]]
+token = "keyword"
+face = "keyword"
+
+[[semantic_tokens]]
+token = "namespace"
+face = "module"
+
+[[semantic_tokens]]
+token = "operator"
+face = "operator"
+
+[[semantic_tokens]]
+token = "string"
+face = "string"
+
+[[semantic_tokens]]
+token = "type"
+face = "type"
+
+[[semantic_tokens]]
+token = "variable"
+face = "default+d"
+modifiers = ["readonly"]
+
+[[semantic_tokens]]
+token = "variable"
+face = "default+d"
+modifiers = ["constant"]
+
+[[semantic_tokens]]
+token = "variable"
+face = "variable"
