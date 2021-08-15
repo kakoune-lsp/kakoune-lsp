@@ -4,17 +4,23 @@ Breaking changes:
 - The configuration syntax for `semantic_tokens` has changed. See the updated `kak-lsp.toml` for an example (#488).
 - Snippet support has been disabled by default, as a workaround for conflicts with Kakoune's built-in completion (#282).
 - `lsp-show-message`, which handles `window/showMessage` requests from the server has been removed. See below for the replacement.
+- Hidden commands `lsp-{next,previous}-match` were removed in favor of `lsp-{next,previous}-location` (#466).
 
 Additions:
 - Default configuration for Julia (#502).
 - `lsp-show-message` has been replaced by four separate commands `lsp-show-message-{error,warning,info,log}`.
   The new default implementations log the given messages from the language server to the debug buffer. Important messages are shown in `%opt{toolsclient}`.
 - `lsp-code-actions` use the `menu` command to select an action interactively. The new command `lsp-show-code-actions` can be overridden to customize this behavior (#367).
+- New commands `lsp-{next,previous}-location` generalize `grep-next-match`, `lsp-next-match` and friends (#466).
+- New option `lsp_location_format` to tell `lsp-{next,previous}-location` which "<file>:<line>"-style to match (#466).
 
 Bug fixes:
 - Fix renaming of Rust lifetimes (#474).
 - The suggested config for `rust-analyzer` was fixed for the case that `rustup` is installed but `rust-analyzer` is not installed via `rustup`.
 - Fix spurious cursor movement on `lsp-rename` and `lsp-rename-prompt` (#504).
+
+Deprecations:
+- `lsp-{goto,symbols}-{next,previous}-match` are deprecated in favor of `lsp-next-location *goto*` and similar (#466).
 
 ## 10.0.0 - 2021-06-03
 
