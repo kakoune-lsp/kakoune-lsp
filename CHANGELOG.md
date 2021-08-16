@@ -18,6 +18,7 @@ Bug fixes:
 - Fix renaming of Rust lifetimes (#474).
 - The suggested config for `rust-analyzer` was fixed for the case that `rustup` is installed but `rust-analyzer` is not installed via `rustup`.
 - Fix spurious cursor movement on `lsp-rename` and `lsp-rename-prompt` (#504).
+- Fix responses to `workspace/configuration` in case there are no initialization options set (#509).
 
 Deprecations:
 - `lsp-{goto,symbols}-{next,previous}-match` are deprecated in favor of `lsp-next-location *goto*` and similar (#466).

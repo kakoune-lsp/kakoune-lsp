@@ -100,11 +100,6 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
         .get(&ctx.language_id)
         .and_then(|conf| conf.initialization_options.as_ref());
 
-    let settings = match settings {
-        Some(settings) => settings,
-        None => return Ok(Value::Array(Vec::new())),
-    };
-
     let items = params
         .items
         .iter()
@@ -118,8 +113,10 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
                 // The specification isn't clear about whether you should
                 // reply with just the value or with `json!({ section: <value> })`.
                 // Tests indicate the former.
-                .and_then(|section| settings.get(section))
-                .cloned()
+                .map(|section| match settings {
+                    None => Value::Null,
+                    Some(settings) => settings.get(section).unwrap_or(&Value::Null).clone(),
+                })
                 .unwrap_or(Value::Null)
         })
         .collect::<Vec<Value>>();
