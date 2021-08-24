@@ -17,6 +17,7 @@ args = ["start"]
 filetypes = ["c", "cpp"]
 roots = ["compile_commands.json", ".clangd"]
 command = "clangd"
+offset_encoding = "utf-8"
 
 [language.crystal]
 filetypes = ["crystal"]
