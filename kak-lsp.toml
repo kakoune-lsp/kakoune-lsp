@@ -52,7 +52,7 @@ command = "dls"
 filetypes = ["dart"]
 roots = ["pubspec.yaml", ".git"]
 command = "sh"
-args = ["-c", "dart $(dirname $(which dart))/snapshots/analysis_server.dart.snapshot --lsp"]
+args = ["-c", "dart $(dirname $(command -v dart))/snapshots/analysis_server.dart.snapshot --lsp"]
 
 [language.elixir]
 filetypes = ["elixir"]
