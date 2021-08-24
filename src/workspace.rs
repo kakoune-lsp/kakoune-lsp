@@ -32,7 +32,14 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
         .unwrap_or("");
 
     let settings = parse_dynamic_config(&meta, ctx, config)
-        .and_then(|lang| lang.initialization_options)
+        .and_then(|lang| lang.settings)
+        .and_then(|settings| {
+            ctx.config
+                .language
+                .get(&ctx.language_id)
+                .and_then(|cfg| cfg.settings_section.as_ref())
+                .and_then(|section| settings.get(section).cloned())
+        })
         .unwrap_or_else(|| Value::Object(explode_string_table(raw_settings)));
 
     let params = DidChangeConfigurationParams { settings };
@@ -41,11 +48,17 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
 
 pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc_core::Error> {
     let params = params.parse::<ConfigurationParams>()?;
-    let settings = ctx
-        .config
-        .language
-        .get(&ctx.language_id)
-        .and_then(|conf| conf.initialization_options.as_ref());
+
+    let meta = ctx.meta_for_session();
+    let dynamic_settings = request_dynamic_configuration_from_kakoune(&meta, ctx);
+    let settings = dynamic_settings
+        .and_then(|cfg| cfg.settings.as_ref().cloned())
+        .or_else(|| {
+            ctx.config
+                .language
+                .get(&ctx.language_id)
+                .and_then(|conf| conf.settings.as_ref().cloned())
+        });
 
     let items = params
         .items
@@ -60,7 +73,7 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
                 // The specification isn't clear about whether you should
                 // reply with just the value or with `json!({ section: <value> })`.
                 // Tests indicate the former.
-                .map(|section| match settings {
+                .map(|section| match &settings {
                     None => Value::Null,
                     Some(settings) => settings.get(section).unwrap_or(&Value::Null).clone(),
                 })

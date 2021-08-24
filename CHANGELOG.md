@@ -1,7 +1,9 @@
 ## Unreleased
 
 Breaking changes:
-- The configuration syntax for `semantic_tokens` has changed. See the updated `kak-lsp.toml` for an example (#488).
+- Two breaking changes to the configuration format - see the updated `kak-lsp.toml` for examples. 
+  - `semantic_tokens` syntax has changed (#488)
+  - `settings` replaces `initialization_options` for server-specific configuration  (#511)
 - Snippet support has been disabled by default, as a workaround for conflicts with Kakoune's built-in completion (#282).
 - `lsp-show-message`, which handles `window/showMessage` requests from the server has been removed. See below for the replacement.
 - Hidden commands `lsp-{next,previous}-match` were removed in favor of `lsp-{next,previous}-location` (#466).
@@ -23,7 +25,7 @@ Bug fixes:
 - Fix responses to `workspace/configuration` in case there are no initialization options set (#509).
 
 Deprecations:
-- `%opt{lsp_server_initialization_options}` and `%opt{lsp_server_configuration}` are deprecated in favor of setting `[language.<filetype>.initialization_options]` in `%opt{lsp_config}`(#500).
+- `%opt{lsp_server_initialization_options}` and `%opt{lsp_server_configuration}` are deprecated in favor of setting `[language.<filetype>.settings]` in `%opt{lsp_config}`(#500).
 - `lsp-{goto,symbols}-{next,previous}-match` are deprecated in favor of `lsp-next-location *goto*` and similar (#466).
 
 ## 10.0.0 - 2021-06-03

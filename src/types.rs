@@ -45,14 +45,15 @@ pub struct LanguageConfig {
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
-    pub initialization_options: Option<Value>,
+    pub settings_section: Option<String>,
+    pub settings: Option<Value>,
     #[serde(default = "default_offset_encoding")]
     pub offset_encoding: OffsetEncoding,
 }
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct DynamicLanguageConfig {
-    pub initialization_options: Option<Value>,
+    pub settings: Option<Value>,
 }
 
 impl Default for ServerConfig {

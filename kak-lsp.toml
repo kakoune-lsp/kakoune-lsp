@@ -58,14 +58,19 @@ args = ["-c", "dart $(dirname $(command -v dart))/snapshots/analysis_server.dart
 filetypes = ["elixir"]
 roots = ["mix.exs"]
 command = "elixir-ls"
+settings_section = "elixirLS"
+[language.elixir.settings.elixirLS]
+# See https://github.com/elixir-lsp/elixir-ls/blob/master/apps/language_server/lib/language_server/server.ex
+# dialyzerEnable = true
 
 [language.elm]
 filetypes = ["elm"]
 roots = ["elm.json"]
 command = "elm-language-server"
 args = ["--stdio"]
-
-[language.elm.initialization_options]
+settings_section = "elmLS"
+[language.elm.settings.elmLS]
+# See https://github.com/elm-tooling/elm-language-server#server-settings
 runtime = "node"
 elmPath = "elm"
 elmFormatPath = "elm-format"
@@ -76,12 +81,20 @@ filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
 command = "gopls"
 offset_encoding = "utf-8"
+settings_section = "gopls"
+[language.go.settings.gopls]
+# See https://github.com/golang/tools/blob/master/gopls/doc/settings.md
+# "build.buildFlags" = []
 
 [language.haskell]
 filetypes = ["haskell"]
 roots = ["Setup.hs", "stack.yaml", "*.cabal"]
 command = "haskell-language-server-wrapper"
 args = ["--lsp"]
+settings_section = "haskell"
+[language.haskell.settings.haskell]
+# See https://github.com/latex-lsp/texlab/blob/e1ee8495b0f54b4411a1ffacf787efa621d8f826/src/options.rs
+# formattingProvider = "ormolu"
 
 [language.html]
 filetypes = ["html"]
@@ -115,6 +128,9 @@ args = ["--stdio"]
 #     "-data",
 #     "/path/to/eclipse-workspace",
 # ]
+# [language.java.settings]
+# # See https://github.dev/eclipse/eclipse.jdt.ls
+# # "java.format.insertSpaces" = true
 
 [language.javascript]
 filetypes = ["javascript"]
@@ -149,16 +165,31 @@ args = [
         run(server);
     """,
 ]
+[language.julia.settings]
+# See https://github.com/julia-vscode/LanguageServer.jl/blob/master/src/requests/workspace.jl
+# Format options. See https://github.com/julia-vscode/DocumentFormat.jl/blob/master/src/DocumentFormat.jl
+# "julia.format.indent" = 4
+# Lint options. See https://github.com/julia-vscode/StaticLint.jl/blob/master/src/linting/checks.jl
+# "julia.lint.call" = true
+# Other options, see https://github.com/julia-vscode/LanguageServer.jl/blob/master/src/requests/workspace.jl
+# "julia.lint.run" = "true"
 
 [language.latex]
 filetypes = ["latex"]
 roots = [".git"]
 command = "texlab"
+settings_section = "texlab"
+[language.latex.settings.texlab]
+# See https://github.com/latex-lsp/texlab/blob/master/src/options.rs
+# bibtexFormatter = "texlab"
 
 [language.lua]
 filetypes = ["lua"]
 roots = [".git"]
 command = "lua-language-server"
+[language.lua.settings]
+# See https://github.com/sumneko/vscode-lua/blob/master/setting/schema.json
+# "Lua.diagnostics.enable" = true
 
 [language.nim]
 filetypes = ["nim"]
@@ -180,15 +211,19 @@ filetypes = ["php"]
 roots = [".htaccess", "composer.json"]
 command = "intelephense"
 args = ["--stdio"]
-
-[language.php.initialization_options]
-storagePath = "/tmp/intelephense"
+settings_section = "intelephense"
+[language.php.settings]
+intelephense.storagePath = "/tmp/intelephense"
 
 [language.python]
 filetypes = ["python"]
 roots = ["requirements.txt", "setup.py", ".git", ".hg"]
 command = "pyls"
 offset_encoding = "utf-8"
+[language.python.settings]
+# See https://github.com/palantir/python-language-server#configuration
+# and https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
+# "pyls.configurationSources" = ["flake8"]
 
 [language.reason]
 filetypes = ["reason"]
@@ -200,6 +235,9 @@ filetypes = ["ruby"]
 roots = ["Gemfile"]
 command = "solargraph"
 args = ["stdio"]
+[language.ruby.settings]
+# See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
+# "solargraph.completion" = true
 
 [language.rust]
 filetypes = ["rust"]
@@ -215,6 +253,9 @@ args = [
         fi
     """,
 ]
+[language.rust.settings.rust]
+# See https://github.com/rust-lang/rls#configuration
+# features = []
 
 # [language.rust]
 # filetypes = ["rust"]
@@ -230,7 +271,11 @@ args = [
 #         fi
 #     """,
 # ]
-# [language.rust.initialization_options]
+# settings_section = "rust-analyzer"
+# [language.rust.settings.rust-analyzer]
+# hoverActions.enable = false # kak-lsp doesn't support this at the moment
+# # cargo.features = []
+# # See https://rust-analyzer.github.io/manual.html#configuration
 # # If you get 'unresolved proc macro' warnings, you have two options
 # # 1. The safe choice is two disable the warning:
 # diagnostics.disabled = ["unresolved-proc-macro"]
@@ -244,12 +289,19 @@ filetypes = ["terraform"]
 roots = ["*.tf"]
 command = "terraform-ls"
 args = ["serve"]
+[language.terraform.settings.terraform-ls]
+# See https://github.com/hashicorp/terraform-ls/blob/main/docs/SETTINGS.md
+# rootModulePaths = []
 
 [language.yaml]
 filetypes = ["yaml"]
 roots = [".git"]
 command = "yaml-language-server"
 args = ["--stdio"]
+[language.yaml.settings]
+# See https://github.com/redhat-developer/yaml-language-server#language-server-settings
+# Defaults are at https://github.com/redhat-developer/yaml-language-server/blob/master/src/yamlSettings.ts
+# yaml.format.enable = true
 
 [language.zig]
 filetypes = ["zig"]

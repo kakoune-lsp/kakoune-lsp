@@ -46,11 +46,11 @@ declare-option -docstring "Automatically highlight references with Reference fac
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
 
 declare-option -docstring "Dynamic TOML configuration string. Currently supports
-- [language.<filetype>.initialization_options]
+- [language.<filetype>.settings]
 " str lsp_config
 # Highlight TOML keys in kakrc if they are supported by dynamic configuration.
 try %{
-    add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.initialization_options)\] 1:title
+    add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.settings(?:\.[^\]])?)\] 1:title
 }
 declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
 declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
