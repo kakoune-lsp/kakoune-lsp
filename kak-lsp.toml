@@ -91,8 +91,8 @@ roots = ["package.json"]
 command = "html-languageserver"
 args = ["--stdio"]
 
-# Commented out by default because you still need to set the paths in the JDT
-# Language Server arguments below before this can become a valid configuration.
+# # Commented out by default because you still need to set the paths in the JDT
+# # Language Server arguments below before this can become a valid configuration.
 # [language.java]
 # filetypes = ["java"]
 # roots = [".git", "mvnw", "gradlew"]
@@ -115,7 +115,7 @@ args = ["--stdio"]
 #     "-configuration",
 #     "/path/to/eclipse.jdt.ls/repository/config_linux",
 #     "-data",
-#     "/path/to/eclipse-workspace"
+#     "/path/to/eclipse-workspace",
 # ]
 
 [language.javascript]
