@@ -80,9 +80,7 @@ offset_encoding = "utf-8"
 [language.haskell]
 filetypes = ["haskell"]
 roots = ["Setup.hs", "stack.yaml", "*.cabal"]
-# You might also be interested in the newer, but early stage, haskell-language-server
-# https://github.com/haskell/haskell-language-server
-command = "hie-wrapper"
+command = "haskell-language-server-wrapper"
 args = ["--lsp"]
 
 [language.html]

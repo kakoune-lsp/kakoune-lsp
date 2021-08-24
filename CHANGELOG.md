@@ -5,6 +5,7 @@ Breaking changes:
 - Snippet support has been disabled by default, as a workaround for conflicts with Kakoune's built-in completion (#282).
 - `lsp-show-message`, which handles `window/showMessage` requests from the server has been removed. See below for the replacement.
 - Hidden commands `lsp-{next,previous}-match` were removed in favor of `lsp-{next,previous}-location` (#466).
+- `haskell-language-server` is the new default language server for Haskell, replacing `haskell-ide-engine`.
 
 Additions:
 - Default configuration for Julia (#502).
