@@ -206,16 +206,8 @@ kak-lsp itself has configuration, but it also adds configuration options to Kako
 
 kak-lsp is configured via a configuration file in https://github.com/toml-lang/toml[TOML] format. By
 default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under OS-specific config dir as described https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html[here],
-but you can override it with command-line option `--config`.
-
-Look into the default link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
-For example, here is how to set server-specific configuration:
-
-[source=toml]
-----
-[language.go.initialization_options]
-formatTool = "gofmt"
-----
+but you can override it with command-line option `--config`.  Look into the default
+link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
 
 *Important*: The configuration file does *not* extend the default configuration, but rather
 overrides it. This means that if you want to customize any of the configuration, you must copy the
@@ -229,31 +221,23 @@ Please let us know if you have any ideas about how to make the default config mo
 
 ==== Server-specific configuration
 
-Many servers accept configuration options that are not part of the LSP spec.
-The TOML table `[language.<filetype>.initialization_options]` can contain arbitrary values They will be sent to the server during server initialization, as well as in `workspace/didChangeConfiguration` whenever you change it via the `lsp_config` option.
-
-If a language server's documentation says it wants a structure like this:
-
-[source=json]
-----
-{
-    "settings": {
-        "rust": {
-            "clippy_preference": "on"
-        }
-    }
-}
-----
-
-+...you can do that in `kak-lsp.toml` or in the `lsp_config` option with an equivalent TOML string:
-
-Be aware of TOML serialization rules: for example, if you want to serialize `{"clippy.preference":"on"}`, use `"clippy.preference" = "on"`.
+Many servers accept configuration options that are not part of the LSP spec.  The TOML table
+`[language.<filetype>.settings]` holds those configuration options.  It has the same structure
+as the corresponding fragments from VSCode's `settings.json`. For example:
 
 [source=toml]
 ----
-[language.rust.initialization_options]
-rust.clippy_preference = "on"
+[language.go]
+...
+settings_section = "gopls"
+[language.go.settings.gopls]
+"formatting.gofumpt" = true
 ----
+
+During server initialization, kak-lsp sends the section specified by `settings_section`; in this
+case `{"formatting.gofumpt":true}`.  Whenever you change the Kakoune option `lsp_config`, the
+same section is sent via `workspace/didChangeConfiguration`.  Additionally, kak-lsp will send
+arbitrary sections that are requested by the server in `workspace/configuration`.
 
 === Configuring Kakoune
 
@@ -268,13 +252,13 @@ kak-lsp's Kakoune integration declares the following options:
 * `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
 * `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time the user pauses in normal mode.
 * `lsp_config` (str): This is a TOML string of the same format as `kak-lsp.toml`, except it only supports one settings:
-** `[language.<filetype>.initialization_options]`: this works just like the static configuration of the same name in `kak-lsp.toml`, see the server-specific configuration section. This will override the static configuration of the given language.
+** `[language.<filetype>.settings]`: this works just like the static configuration of the same name in `kak-lsp.toml`, see the section about server-specific configuration. This will override the static configuration of the given language.
 
 For example, you can toggle an option dynamically with a command like this:
 
 ----
 set-option global lsp_config %{
-    [language.go.initialization_options]
+    [language.go.settings.gopls]
     "formatting.gofumpt" = true
 }
 ----
