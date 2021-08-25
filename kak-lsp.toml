@@ -193,8 +193,7 @@ offset_encoding = "utf-8"
 [language.reason]
 filetypes = ["reason"]
 roots = ["package.json", "Makefile", ".git", ".hg"]
-command = "ocaml-language-server"
-args = ["--stdio"]
+command = "ocamllsp"
 
 [language.ruby]
 filetypes = ["ruby"]
