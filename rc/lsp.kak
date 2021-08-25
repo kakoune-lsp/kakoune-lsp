@@ -49,7 +49,9 @@ declare-option -docstring "Dynamic TOML configuration string. Currently supports
 - [language.<filetype>.initialization_options]
 " str lsp_config
 # Highlight TOML keys in kakrc if they are supported by dynamic configuration.
-add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.initialization_options)\] 1:title
+try %{
+    add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.initialization_options)\] 1:title
+}
 declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
 declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
 # Line flags for inline diagnostics.
