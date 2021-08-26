@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::markup::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -72,7 +73,10 @@ pub fn editor_hover(
                     }
                 })
                 .join("\n"),
-            HoverContents::Markup(contents) => contents.value,
+            HoverContents::Markup(contents) => match contents.kind {
+                MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value),
+                MarkupKind::PlainText => contents.value,
+            },
         },
     };
 

@@ -967,8 +967,8 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
     content=$(printf %s "$content" | sed s/\'/\'\'/g)
 
     case $kak_opt_lsp_hover_anchor in
-        true) printf "info -anchor %%arg{1} -- '%s'" "$content";;
-        *)    printf "info -- '%s'" "$content";;
+        true) printf "info -markup -anchor %%arg{1} -- '%s'" "$content";;
+        *)    printf "info -markup -- '%s'" "$content";;
     esac
 }}
 
