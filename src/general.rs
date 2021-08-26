@@ -135,7 +135,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 }),
                 hover: Some(HoverClientCapabilities {
                     dynamic_registration: Some(false),
-                    content_format: Some(vec![MarkupKind::PlainText]),
+                    content_format: Some(vec![MarkupKind::PlainText, MarkupKind::Markdown]),
                 }),
                 signature_help: Some(SignatureHelpClientCapabilities {
                     dynamic_registration: Some(false),
@@ -272,7 +272,14 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 show_message: None,
                 show_document: None,
             }),
-            general: None,
+            general: Some(GeneralClientCapabilities {
+                regular_expressions: None,
+                markdown: Some(MarkdownClientCapabilities {
+                    parser: String::from("kak-lsp"),
+                    version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+                }),
+                stale_request_support: None,
+            }),
             offset_encoding: Some(vec![match ctx.offset_encoding {
                 OffsetEncoding::Utf8 => "utf-8".to_string(),
                 OffsetEncoding::Utf16 => "utf-16".to_string(),

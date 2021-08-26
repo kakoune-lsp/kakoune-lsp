@@ -4,6 +4,7 @@ use crate::text_edit::*;
 use crate::types::*;
 use itertools::Itertools;
 use lsp_types::*;
+use pulldown_cmark::{Event, Parser, Tag};
 use ropey::Rope;
 use std::fs::File;
 use std::io::{stderr, stdout, BufReader, Write};
@@ -241,4 +242,39 @@ pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
         .ok()
         .and_then(|p| p.to_str())
         .unwrap_or(target)
+}
+
+pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
+    let markdown = markdown.as_ref();
+    let parser = Parser::new(markdown);
+    let mut markup = String::with_capacity(markdown.len());
+
+    for e in parser {
+        match e {
+            Event::Start(tag) => match tag {
+                Tag::Paragraph => markup.push_str("\n"),
+                Tag::Heading(_) => markup.push_str("\n{header}"),
+                Tag::CodeBlock(_) => markup.push_str("\n{block}"),
+                Tag::Item => markup.push_str("{bullet}"),
+                Tag::Emphasis => markup.push_str("{default+i}"),
+                Tag::Strong => markup.push_str("{default+b}"),
+                Tag::Link(_, _, _) => markup.push_str("{link}"),
+                _ => {}
+            },
+            Event::End(t) => match t {
+                Tag::Paragraph => markup.push_str("\n"),
+                Tag::CodeBlock(_) | Tag::Heading(_) => markup.push_str("{default}\n"),
+                Tag::Item | Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => {
+                    markup.push_str("{default}")
+                }
+                _ => {}
+            },
+            Event::Code(c) => markup.push_str(&format!("{{mono}}{}{{default}}", c)),
+            Event::Text(t) => markup.push_str(&t.into_string().replace("{", "\\{")),
+            Event::SoftBreak | Event::HardBreak => markup.push_str("\n"),
+            _ => {}
+        }
+    }
+
+    markup
 }
