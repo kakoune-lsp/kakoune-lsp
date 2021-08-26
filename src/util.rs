@@ -359,5 +359,9 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
         }
     }
 
-    markup
+    if let Some(trimmed) = markup.strip_suffix("{default}") {
+        trimmed.to_owned()
+    } else {
+        markup
+    }
 }
