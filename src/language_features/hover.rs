@@ -62,9 +62,15 @@ pub fn editor_hover(
             HoverContents::Scalar(contents) => contents.plaintext(),
             HoverContents::Array(contents) => contents
                 .into_iter()
-                .map(|x| str::trim(&x.plaintext()).to_owned())
-                .filter(|x| !x.is_empty())
-                .map(|x| format!("• {}", x))
+                .filter_map(|x| {
+                    let text = x.plaintext();
+
+                    if !text.is_empty() {
+                        Some(format!("• {}", text.trim()))
+                    } else {
+                        None
+                    }
+                })
                 .join("\n"),
             HoverContents::Markup(contents) => contents.value,
         },
