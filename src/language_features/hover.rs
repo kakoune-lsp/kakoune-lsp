@@ -63,6 +63,7 @@ pub fn editor_hover(
                         .unwrap_or_else(|| "");
 
                     if !message.is_empty() {
+                        // Append `{default}` face to prevent bleeding over into the next entry
                         Some(format!("{}• {}{{default}}", face, message))
                     } else {
                         None
@@ -71,17 +72,29 @@ pub fn editor_hover(
                 .join("\n")
         })
         .unwrap_or_else(String::new);
+
     let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {
-            HoverContents::Scalar(contents) => contents.plaintext(),
+            HoverContents::Scalar(contents) => {
+                let markdown = match contents {
+                    MarkedString::String(s) => s,
+                    MarkedString::LanguageString(s) => format!("```\n{}\n```", s.value),
+                };
+                markdown_to_kakoune_markup(markdown)
+            }
             HoverContents::Array(contents) => contents
                 .into_iter()
-                .filter_map(|x| {
-                    let text = x.plaintext();
+                .filter_map(|marked| {
+                    let markdown = match marked {
+                        MarkedString::String(s) => s,
+                        MarkedString::LanguageString(s) => format!("```\n{}\n```", s.value),
+                    };
+                    let markup = markdown_to_kakoune_markup(markdown);
 
-                    if !text.is_empty() {
-                        Some(format!("• {}", text.trim()))
+                    if !markup.is_empty() {
+                        // Append `{default}` face to prevent bleeding over into the next entry
+                        Some(format!("• {}{{default}}", markup))
                     } else {
                         None
                     }
