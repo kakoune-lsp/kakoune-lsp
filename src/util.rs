@@ -249,29 +249,112 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     let parser = Parser::new(markdown);
     let mut markup = String::with_capacity(markdown.len());
 
+    // State to indicate a code block
+    let mut is_codeblock = false;
+    // State to indicate a block quote
+    let mut is_blockquote = false;
+    // State to indicate that at least one text line in a block quote
+    // as been emitted
+    let mut has_blockquote_text = false;
+    // A rudimentary stack to track nested lists.
+    // The value tracks ordered vs unordered and the current entry number.
+    let mut list: Vec<Option<u64>> = vec![];
+
     for e in parser {
         match e {
             Event::Start(tag) => match tag {
-                Tag::Paragraph => markup.push_str("\n"),
-                Tag::Heading(_) => markup.push_str("\n{header}"),
-                Tag::CodeBlock(_) => markup.push_str("\n{block}"),
-                Tag::Item => markup.push_str("{bullet}"),
+                Tag::Paragraph => {
+                    // Block quotes with empty lines are parsed into paragraphes.
+                    // However, even for the first of such paragraphs, `Tag::Blockquote` is emitted first.
+                    // Since we don't want two `>` at the start, we need to wait for the text first.
+                    if is_blockquote && has_blockquote_text {
+                        markup.push('>');
+                    }
+                    markup.push('\n')
+                }
+                Tag::Heading(level) => {
+                    // Color has `{header}` but keep the Markdown syntax to visualize the header level
+                    markup.push_str(&format!("\n{{header}}{} ", "#".repeat(level as usize)))
+                }
+                Tag::CodeBlock(_) => {
+                    is_codeblock = true;
+                    markup.push_str("\n{block}")
+                }
+                Tag::List(num) => list.push(num),
+                Tag::Item => {
+                    let list_level = list.len();
+                    // The parser shouldn't allow this to be empty
+                    let item = list.pop().expect("Tag::Item before Tag::List");
+
+                    if let Some(num) = item {
+                        markup.push_str(&format!(
+                            "\n{}{{bullet}}{} {{default}}",
+                            "  ".repeat(list_level),
+                            num
+                        ));
+                        // We need to keep track of the entry number ourselves.
+                        list.push(Some(num + 1));
+                    } else {
+                        markup.push_str(&format!(
+                            "\n{}{{bullet}}- {{default}}",
+                            "  ".repeat(list_level)
+                        ));
+                        list.push(item);
+                    }
+                }
                 Tag::Emphasis => markup.push_str("{default+i}"),
                 Tag::Strong => markup.push_str("{default+b}"),
+                // Kakoune doesn't support clickable links and the URL might be too long to show nicely.
+                // We'll only show the link title for now, which should be enough to search in the relevant resource.
                 Tag::Link(_, _, _) => markup.push_str("{link}"),
+                Tag::BlockQuote => is_blockquote = true,
                 _ => {}
             },
             Event::End(t) => match t {
-                Tag::Paragraph => markup.push_str("\n"),
-                Tag::CodeBlock(_) | Tag::Heading(_) => markup.push_str("{default}\n"),
-                Tag::Item | Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => {
+                Tag::Paragraph => markup.push('\n'),
+                Tag::List(_) => {
+                    // The parser shouldn't allow this to be empty
+                    list.pop()
+                        .expect("Event::End(Tag::List) before Event::Start(Tag::List)");
+                    if list.len() == 0 {
+                        markup.push('\n');
+                    }
+                }
+                Tag::CodeBlock(_) => {
+                    is_codeblock = false;
                     markup.push_str("{default}")
                 }
+                Tag::BlockQuote => {
+                    has_blockquote_text = false;
+                    is_blockquote = false
+                }
+                Tag::Heading(_) => markup.push_str("{default}\n"),
+                Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => markup.push_str("{default}"),
                 _ => {}
             },
-            Event::Code(c) => markup.push_str(&format!("{{mono}}{}{{default}}", c)),
-            Event::Text(t) => markup.push_str(&t.into_string().replace("{", "\\{")),
-            Event::SoftBreak | Event::HardBreak => markup.push_str("\n"),
+            Event::Code(c) => {
+                markup.push_str(&format!("{{mono}}{}{{default}}", c.replace("{", "\\{")))
+            }
+            Event::Text(text) => {
+                if is_blockquote {
+                    has_blockquote_text = true;
+                    markup.push_str("> ")
+                }
+                markup.push_str(&text.replace("{", "\\{"))
+            }
+            Event::Html(html) => markup.push_str(&html.replace("{", "\\{")),
+            // We don't know the size of the final render area, so we'll stick to just Markdown syntax
+            Event::Rule => markup.push_str("\n{comment}---{default}\n"),
+            // Soft breaks should be kept in `<pre>`-style blocks.
+            // Anywhere else, let the renderer handle line breaks.
+            Event::SoftBreak => {
+                if is_blockquote || is_codeblock {
+                    markup.push('\n')
+                } else {
+                    markup.push(' ')
+                }
+            }
+            Event::HardBreak => markup.push('\n'),
             _ => {}
         }
     }
