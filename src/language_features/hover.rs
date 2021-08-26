@@ -6,7 +6,6 @@ use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use std::str;
 use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -51,9 +50,24 @@ pub fn editor_hover(
                             && end.line == pos.line
                             && pos.character <= end.character)
                 })
-                .map(|x| str::trim(&x.message))
-                .filter(|x| !x.is_empty())
-                .map(|x| format!("• {}", x))
+                .filter_map(|x| {
+                    let message = markdown_to_kakoune_markup(&x.message);
+                    let face = x
+                        .severity
+                        .map(|sev| match sev {
+                            DiagnosticSeverity::Error => "{DiagnosticError}",
+                            DiagnosticSeverity::Warning => "{DiagnosticWarning}",
+                            DiagnosticSeverity::Information => "{Information}",
+                            DiagnosticSeverity::Hint => "{default}",
+                        })
+                        .unwrap_or("{default}");
+
+                    if !message.is_empty() {
+                        Some(format!("{}• {}", face, escape_brace(message.trim())))
+                    } else {
+                        None
+                    }
+                })
                 .join("\n")
         })
         .unwrap_or_else(String::new);
