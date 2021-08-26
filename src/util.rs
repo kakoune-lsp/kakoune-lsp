@@ -360,8 +360,8 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     }
 
     if let Some(trimmed) = markup.strip_suffix("{default}") {
-        trimmed.to_owned()
+        trimmed.trim().to_owned()
     } else {
-        markup
+        markup.trim().to_owned()
     }
 }

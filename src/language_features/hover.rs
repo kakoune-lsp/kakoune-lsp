@@ -63,7 +63,7 @@ pub fn editor_hover(
                         .unwrap_or_else(|| "");
 
                     if !message.is_empty() {
-                        Some(format!("{}• {}{{default}}", face, message.trim()))
+                        Some(format!("{}• {}{{default}}", face, message))
                     } else {
                         None
                     }
