@@ -5,7 +5,6 @@ use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use std::str;
 use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {

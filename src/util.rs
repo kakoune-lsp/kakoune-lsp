@@ -316,7 +316,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     // The parser shouldn't allow this to be empty
                     list.pop()
                         .expect("Event::End(Tag::List) before Event::Start(Tag::List)");
-                    if list.len() == 0 {
+                    if list.is_empty() {
                         markup.push('\n');
                     }
                 }
