@@ -105,7 +105,7 @@ pub fn editor_hover(
                 .join("\n"),
             HoverContents::Markup(contents) => match contents.kind {
                 MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value),
-                _ => contents.value,
+                MarkupKind::PlainText => contents.value,
             },
         },
     };
