@@ -1136,7 +1136,7 @@ done
 
 define-command -hidden lsp-get-config -params 1 -docstring %{
     lsp-get-config <fifo>
-    Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
+    Format lsp_config as TOML and write to the given <fifo> path.
 } %{
     echo -to-file %arg{@} %opt{lsp_config}
 }
