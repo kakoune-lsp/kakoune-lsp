@@ -132,6 +132,11 @@ pub fn editor_quote(s: &str) -> String {
     format!("'{}'", editor_escape(s))
 }
 
+/// Espace opening braces for Kakoune markup strings
+pub fn escape_brace(s: &str) -> String {
+    s.replace("{", "\\{")
+}
+
 // Cleanup and gracefully exit
 pub fn goodbye(session: &str, code: i32) {
     if code == 0 {
@@ -337,17 +342,15 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => markup.push_str("{default}"),
                 _ => {}
             },
-            Event::Code(c) => {
-                markup.push_str(&format!("{{mono}}{}{{default}}", c.replace("{", "\\{")))
-            }
+            Event::Code(c) => markup.push_str(&format!("{{mono}}{}{{default}}", escape_brace(&c))),
             Event::Text(text) => {
                 if is_blockquote {
                     has_blockquote_text = true;
                     markup.push_str("> ")
                 }
-                markup.push_str(&text.replace("{", "\\{"))
+                markup.push_str(&escape_brace(&text))
             }
-            Event::Html(html) => markup.push_str(&html.replace("{", "\\{")),
+            Event::Html(html) => markup.push_str(&escape_brace(&html)),
             // We don't know the size of the final render area, so we'll stick to just Markdown
             // syntax.
             Event::Rule => markup.push_str("\n{comment}---{default}\n"),
