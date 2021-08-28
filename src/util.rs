@@ -418,9 +418,15 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
         }
     }
 
-    if let Some(trimmed) = markup.strip_suffix("{default}") {
-        trimmed.trim().to_owned()
-    } else {
-        markup.trim().to_owned()
-    }
+    // Trim trailing whitespace and add a `{default}` at the end,
+    // to prevent bleeding markup when concatenated with other text.
+    // In some cases a `{default}` has been added after the trailing whitespace,
+    // so we need to strip that first.
+    let mut markup = markup
+        .strip_suffix("{default}")
+        .unwrap_or(&markup)
+        .trim()
+        .to_owned();
+    markup.push_str("{default}");
+    markup
 }

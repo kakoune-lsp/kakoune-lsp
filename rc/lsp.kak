@@ -74,7 +74,7 @@ if [ -n "${lsp_info}" ]; then
     printf "{+b}Info:{default}\n%s" "${lsp_info}"
 fi
 if [ -n "${lsp_info}${lsp_diagnostics}" ]; then
-    printf "\n"
+    printf "\n\n"
 fi
 if [ -n "${lsp_diagnostics}" ]; then
     printf "{+b}Diagnostics:{default}\n%s" "${lsp_diagnostics}"
