@@ -258,7 +258,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     let mut has_blockquote_text = false;
     // A rudimentary stack to track nested lists.
     // The value tracks ordered vs unordered and the current entry number.
-    let mut list: Vec<Option<u64>> = vec![];
+    let mut list_stack: Vec<Option<u64>> = vec![];
 
     for e in parser {
         match e {
@@ -280,11 +280,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     is_codeblock = true;
                     markup.push_str("\n{block}")
                 }
-                Tag::List(num) => list.push(num),
+                Tag::List(num) => list_stack.push(num),
                 Tag::Item => {
-                    let list_level = list.len();
+                    let list_level = list_stack.len();
                     // The parser shouldn't allow this to be empty
-                    let item = list.pop().expect("Tag::Item before Tag::List");
+                    let item = list_stack.pop().expect("Tag::Item before Tag::List");
 
                     if let Some(num) = item {
                         markup.push_str(&format!(
@@ -293,13 +293,13 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                             num
                         ));
                         // We need to keep track of the entry number ourselves.
-                        list.push(Some(num + 1));
+                        list_stack.push(Some(num + 1));
                     } else {
                         markup.push_str(&format!(
                             "\n{}{{bullet}}- {{default}}",
                             "  ".repeat(list_level)
                         ));
-                        list.push(item);
+                        list_stack.push(item);
                     }
                 }
                 Tag::Emphasis => markup.push_str("{default+i}"),
@@ -314,9 +314,10 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 Tag::Paragraph => markup.push('\n'),
                 Tag::List(_) => {
                     // The parser shouldn't allow this to be empty
-                    list.pop()
+                    list_stack
+                        .pop()
                         .expect("Event::End(Tag::List) before Event::Start(Tag::List)");
-                    if list.is_empty() {
+                    if list_stack.is_empty() {
                         markup.push('\n');
                     }
                 }
