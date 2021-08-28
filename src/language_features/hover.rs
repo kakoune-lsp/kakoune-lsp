@@ -51,7 +51,6 @@ pub fn editor_hover(
                             && pos.character <= end.character)
                 })
                 .filter_map(|x| {
-                    let message = markdown_to_kakoune_markup(&x.message);
                     let face = x
                         .severity
                         .map(|sev| match sev {
@@ -62,8 +61,14 @@ pub fn editor_hover(
                         })
                         .unwrap_or("{default}");
 
-                    if !message.is_empty() {
-                        Some(format!("{}• {}", face, escape_brace(message.trim())))
+                    if !x.message.is_empty() {
+                        Some(format!(
+                            "• {}{}",
+                            face,
+                            escape_brace(x.message.trim())
+                                // Indent line breaks to the same level as the bullet point
+                                .replace("\n", "\n  "),
+                        ))
                     } else {
                         None
                     }
