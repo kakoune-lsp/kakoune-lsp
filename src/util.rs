@@ -244,6 +244,7 @@ pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
         .unwrap_or(target)
 }
 
+/// Parses Markdown into Kakoune's markup syntax using faces for highlighting
 pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     let markdown = markdown.as_ref();
     let parser = Parser::new(markdown);
@@ -254,9 +255,9 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     // State to indicate a block quote
     let mut is_blockquote = false;
     // State to indicate that at least one text line in a block quote
-    // as been emitted
+    // has been emitted
     let mut has_blockquote_text = false;
-    // A rudimentary stack to track nested lists.
+    // A stack to track nested lists.
     // The value tracks ordered vs unordered and the current entry number.
     let mut list_stack: Vec<Option<u64>> = vec![];
 
@@ -265,7 +266,8 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             Event::Start(tag) => match tag {
                 Tag::Paragraph => {
                     // Block quotes with empty lines are parsed into paragraphes.
-                    // However, even for the first of such paragraphs, `Tag::Blockquote` is emitted first.
+                    // However, even for the first of such paragraphs, `Tag::Blockquote`
+                    // is emitted first.
                     // Since we don't want two `>` at the start, we need to wait for the text first.
                     if is_blockquote && has_blockquote_text {
                         markup.push('>');
@@ -273,7 +275,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     markup.push('\n')
                 }
                 Tag::Heading(level) => {
-                    // Color has `{header}` but keep the Markdown syntax to visualize the header level
+                    // Color as `{header}` but keep the Markdown syntax to visualize the header level
                     markup.push_str(&format!("\n{{header}}{} ", "#".repeat(level as usize)))
                 }
                 Tag::CodeBlock(_) => {
@@ -304,8 +306,10 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 }
                 Tag::Emphasis => markup.push_str("{default+i}"),
                 Tag::Strong => markup.push_str("{default+b}"),
-                // Kakoune doesn't support clickable links and the URL might be too long to show nicely.
-                // We'll only show the link title for now, which should be enough to search in the relevant resource.
+                // Kakoune doesn't support clickable links and the URL might be too long to show
+                // nicely.
+                // We'll only show the link title for now, which should be enough to search in the
+                // relevant resource.
                 Tag::Link(_, _, _) => markup.push_str("{link}"),
                 Tag::BlockQuote => is_blockquote = true,
                 _ => {}
@@ -344,7 +348,8 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 markup.push_str(&text.replace("{", "\\{"))
             }
             Event::Html(html) => markup.push_str(&html.replace("{", "\\{")),
-            // We don't know the size of the final render area, so we'll stick to just Markdown syntax
+            // We don't know the size of the final render area, so we'll stick to just Markdown
+            // syntax.
             Event::Rule => markup.push_str("\n{comment}---{default}\n"),
             // Soft breaks should be kept in `<pre>`-style blocks.
             // Anywhere else, let the renderer handle line breaks.

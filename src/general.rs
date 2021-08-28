@@ -275,7 +275,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
             general: Some(GeneralClientCapabilities {
                 regular_expressions: None,
                 markdown: Some(MarkdownClientCapabilities {
-                    parser: String::from("kak-lsp"),
+                    parser: "kak-lsp".to_string(),
                     version: Some(env!("CARGO_PKG_VERSION").to_owned()),
                 }),
                 stale_request_support: None,
