@@ -64,11 +64,24 @@ declare-option -docstring "Character to signal a warning in the gutter" str lsp_
 # Another good default:
 # set-option global lsp_diagnostic_line_error_sign '▓'
 # set-option global lsp_diagnostic_line_warning_sign '▒'
-# This is used to render lsp-hover response.
-# By default it shows both hover info and diagnostics.
-declare-option -docstring "Format hover info" str lsp_show_hover_format 'printf ''%s\n\n%s'' "${lsp_info}" "${lsp_diagnostics}"'
+
+# This is used to render lsp-hover responses.
+# By default it checks both hover info and diagnostics and shows them when defined.
+# The string is `eval`ed to produce the content to display, so anything send to stdout will
+# show up in the info box.
+declare-option -docstring "Format hover info" str lsp_show_hover_format '
+if [ -n "${lsp_info}" ]; then
+    printf "{+b}Info:{default}\n%s" "${lsp_info}"
+fi
+if [ -n "${lsp_info}${lsp_diagnostics}" ]; then
+    printf "\n"
+fi
+if [ -n "${lsp_diagnostics}" ]; then
+    printf "{+b}Diagnostics:{default}\n%s" "${lsp_diagnostics}"
+fi'
 # If you want to see only hover info, try 
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
+
 declare-option -docstring %{Defines location patterns for lsp-next-location and lsp-previous-location.
 Default locations look like "file:line[:column][:message]"
 
