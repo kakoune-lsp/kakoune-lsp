@@ -249,6 +249,19 @@ pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
         .unwrap_or(target)
 }
 
+/// Get the current base face, either the top face on the stack
+/// or a fallback
+fn get_base_face<'a>(stack: &'a Vec<String>, default: &'a str) -> &'a str {
+    stack.last().map(|s| s.as_str()).unwrap_or(default)
+}
+
+/// Removes the top most face from the stack, then returns the next entry
+/// as the current base face or a fallback
+fn pop_base_face<'a>(stack: &'a mut Vec<String>, default: &'a str) -> &'a str {
+    stack.pop();
+    get_base_face(stack, default)
+}
+
 /// Parses Markdown into Kakoune's markup syntax using faces for highlighting
 pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     let markdown = markdown.as_ref();
@@ -265,6 +278,12 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     // A stack to track nested lists.
     // The value tracks ordered vs unordered and the current entry number.
     let mut list_stack: Vec<Option<u64>> = vec![];
+    // A stack to track the current 'base' face.
+    // Certain tags can be nested, in which case it is not correct to just emit `{default}`
+    // when the inner tag ends. Markdown example: ``[`code` link](...)``
+    // The stack allows to track whatever face a closing tag needs to emit.
+    let mut face_stack: Vec<String> = vec![];
+    let default_face = "default";
 
     for e in parser {
         match e {
@@ -280,42 +299,60 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     markup.push('\n')
                 }
                 Tag::Heading(level) => {
+                    face_stack.push("header".into());
                     // Color as `{header}` but keep the Markdown syntax to visualize the header level
                     markup.push_str(&format!("\n{{header}}{} ", "#".repeat(level as usize)))
                 }
                 Tag::CodeBlock(_) => {
                     is_codeblock = true;
+                    face_stack.push("block".into());
                     markup.push_str("\n{block}")
                 }
                 Tag::List(num) => list_stack.push(num),
                 Tag::Item => {
+                    let base_face = face_stack
+                        .last()
+                        .map(|s| s.as_str())
+                        .unwrap_or(default_face);
+
                     let list_level = list_stack.len();
                     // The parser shouldn't allow this to be empty
                     let item = list_stack.pop().expect("Tag::Item before Tag::List");
 
                     if let Some(num) = item {
                         markup.push_str(&format!(
-                            "\n{}{{bullet}}{} {{default}}",
+                            "\n{}{{bullet}}{} {{{}}}",
                             "  ".repeat(list_level),
-                            num
+                            num,
+                            base_face
                         ));
                         // We need to keep track of the entry number ourselves.
                         list_stack.push(Some(num + 1));
                     } else {
                         markup.push_str(&format!(
-                            "\n{}{{bullet}}- {{default}}",
-                            "  ".repeat(list_level)
+                            "\n{}{{bullet}}- {{{}}}",
+                            "  ".repeat(list_level),
+                            base_face
                         ));
                         list_stack.push(item);
                     }
                 }
-                Tag::Emphasis => markup.push_str("{default+i}"),
-                Tag::Strong => markup.push_str("{default+b}"),
+                Tag::Emphasis => {
+                    let base_face = get_base_face(&face_stack, &default_face);
+                    markup.push_str(&format!("{{{}+i}}", base_face))
+                }
+                Tag::Strong => {
+                    let base_face = get_base_face(&face_stack, &default_face);
+                    markup.push_str(&format!("{{{}+b}}", base_face))
+                }
                 // Kakoune doesn't support clickable links and the URL might be too long to show
                 // nicely.
                 // We'll only show the link title for now, which should be enough to search in the
                 // relevant resource.
-                Tag::Link(_, _, _) => markup.push_str("{link}"),
+                Tag::Link(_, _, _) => {
+                    face_stack.push("link".into());
+                    markup.push_str("{link}")
+                }
                 Tag::BlockQuote => is_blockquote = true,
                 _ => {}
             },
@@ -332,17 +369,27 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 }
                 Tag::CodeBlock(_) => {
                     is_codeblock = false;
-                    markup.push_str("{default}")
+                    let base_face = pop_base_face(&mut face_stack, default_face);
+                    markup.push_str(&format!("{{{}}}", base_face));
                 }
                 Tag::BlockQuote => {
                     has_blockquote_text = false;
                     is_blockquote = false
                 }
-                Tag::Heading(_) => markup.push_str("{default}\n"),
-                Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => markup.push_str("{default}"),
+                Tag::Heading(_) => {
+                    let base_face = pop_base_face(&mut face_stack, default_face);
+                    markup.push_str(&format!("{{{}}}\n", base_face));
+                }
+                Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => {
+                    let base_face = pop_base_face(&mut face_stack, default_face);
+                    markup.push_str(&format!("{{{}}}", base_face));
+                }
                 _ => {}
             },
-            Event::Code(c) => markup.push_str(&format!("{{mono}}{}{{default}}", escape_brace(&c))),
+            Event::Code(c) => {
+                let base_face = get_base_face(&face_stack, &default_face);
+                markup.push_str(&format!("{{mono}}{}{{{}}}", escape_brace(&c), base_face))
+            }
             Event::Text(text) => {
                 if is_blockquote {
                     has_blockquote_text = true;
@@ -353,7 +400,10 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             Event::Html(html) => markup.push_str(&escape_brace(&html)),
             // We don't know the size of the final render area, so we'll stick to just Markdown
             // syntax.
-            Event::Rule => markup.push_str("\n{comment}---{default}\n"),
+            Event::Rule => {
+                let base_face = get_base_face(&face_stack, &default_face);
+                markup.push_str(&format!("\n{{comment}}---{{{}}}\n", base_face));
+            }
             // Soft breaks should be kept in `<pre>`-style blocks.
             // Anywhere else, let the renderer handle line breaks.
             Event::SoftBreak => {
