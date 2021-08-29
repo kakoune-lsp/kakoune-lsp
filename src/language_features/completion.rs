@@ -36,10 +36,13 @@ pub fn editor_completion(
     if result.is_none() {
         return;
     }
+
     let items = match result.unwrap() {
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
     };
+
+    // Length of the longest label in the current completion list
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
     let escape_bar = |s: &str| s.replace("|", r"\|");
     let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
@@ -89,11 +92,17 @@ pub fn editor_completion(
                 "info -style menu ''".to_string()
             };
 
-            let mut entry = x.label.clone();
-            if let Some(k) = x.kind {
-                entry += &" ".repeat(maxlen - x.label.len());
-                entry += &format!(" {{MenuInfo}}{:?}", k);
-            }
+            let entry = if let Some(k) = x.kind {
+                format!(
+                    "{}{} {{MenuInfo}}{:?}",
+                    &x.label,
+                    " ".repeat(maxlen - x.label.len()),
+                    k
+                )
+            } else {
+                x.label.clone()
+            };
+
             // The generic textEdit property is not supported yet (#40).
             // However, we can support simple text edits that only replace the token left of the
             // cursor. Kakoune will do this very edit if we simply pass it the replacement string
@@ -106,6 +115,7 @@ pub fn editor_completion(
                         return false;
                     }
                 };
+
                 if let CompletionTextEdit::Edit(text_edit) = cte {
                     let range =
                         lsp_range_to_kakoune(&text_edit.range, &document.text, ctx.offset_encoding);
@@ -117,7 +127,8 @@ pub fn editor_completion(
                     false
                 }
             });
-            let insert_text = &if is_simple_text_edit {
+
+            let insert_text = if is_simple_text_edit {
                 if let CompletionTextEdit::Edit(te) = x.text_edit.unwrap() {
                     te.new_text
                 } else {
@@ -126,24 +137,24 @@ pub fn editor_completion(
             } else {
                 x.insert_text.unwrap_or(x.label)
             };
-            let do_snippet = ctx.config.snippet_support;
-            let do_snippet = do_snippet
-                && x.insert_text_format
-                    .map(|f| f == InsertTextFormat::Snippet)
-                    .unwrap_or(false);
-            if do_snippet {
+
+            // If snippet support is both enabled and provided by the server,
+            // we'll need to perform some transformations on the completion commands.
+            if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::Snippet)
+            {
                 let snippet = insert_text;
                 let insert_text = snippet_prefix_re
-                    .find(snippet)
+                    .find(&snippet)
                     .map(|x| x.as_str())
-                    .unwrap_or(snippet);
+                    .unwrap_or(&snippet);
+
                 let command = format!(
-                    "{}\nlsp-snippets-insert-completion {} {}",
+                    "eval -verbatim -- {}\nlsp-snippets-insert-completion {} {}",
                     doc,
                     editor_quote(&regex::escape(insert_text)),
-                    editor_quote(snippet)
+                    editor_quote(&snippet)
                 );
-                let command = format!("eval -verbatim -- {}", command);
+
                 editor_quote(&format!(
                     "{}|{}|{}",
                     escape_bar(insert_text),
@@ -153,17 +164,19 @@ pub fn editor_completion(
             } else {
                 editor_quote(&format!(
                     "{}|{}|{}",
-                    escape_bar(insert_text),
+                    escape_bar(&insert_text),
                     escape_bar(&doc),
                     escape_bar(&entry),
                 ))
             }
         })
         .join(" ");
+
     let p = params.position;
     let command = format!(
         "set window lsp_completions {}.{}@{} {}\n",
         p.line, params.completion.offset, meta.version, items
     );
+
     ctx.exec(meta, command);
 }
