@@ -353,11 +353,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 }
                 Tag::Emphasis => {
                     let base_face = get_base_face(&face_stack, FACE_DEFAULT);
-                    markup.push_str(&format!("{{{}+i}}", base_face))
+                    markup.push_str(&format!("{{+i@{}}}", base_face))
                 }
                 Tag::Strong => {
                     let base_face = get_base_face(&face_stack, FACE_DEFAULT);
-                    markup.push_str(&format!("{{{}+b}}", base_face))
+                    markup.push_str(&format!("{{+b@{}}}", base_face))
                 }
                 // Kakoune doesn't support clickable links and the URL might be too long to show
                 // nicely.
