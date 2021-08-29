@@ -124,6 +124,7 @@ declare-option -hidden str lsp_project_root
 # set-face global InfoMono Information
 # set-face global InfoLinkMono Information
 # set-face global InfoRule Information
+# set-face global InfoQuote Information
 # set-face global InfoDiagnosticHint Information
 # set-face global InfoDiagnosticInformation Information
 # set-face global InfoDiagnosticWarning Information

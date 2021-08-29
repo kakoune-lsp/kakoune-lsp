@@ -270,6 +270,7 @@ pub const FACE_LINK: &str = "InfoLink";
 pub const FACE_MONO: &str = "InfoMono";
 pub const FACE_LINK_MONO: &str = "InfoLinkMono";
 pub const FACE_RULE: &str = "InfoRule";
+pub const FACE_QUOTE: &str = "InfoQuote";
 pub const FACE_DIAGNOSTIC_INFO: &str = "InfoDiagnosticInformation";
 pub const FACE_DIAGNOSTIC_HINT: &str = "InfoDiagnosticHint";
 pub const FACE_DIAGNOSTIC_ERROR: &str = "InfoDiagnosticError";
@@ -371,13 +372,17 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     face_stack.push(FACE_LINK.into());
                     markup.push_str(&format!("{{{}}}", FACE_LINK))
                 }
-                Tag::BlockQuote => is_blockquote = true,
+                Tag::BlockQuote => {
+                    face_stack.push(FACE_QUOTE.into());
+                    markup.push_str(&format!("{{{}}}", FACE_QUOTE));
+                    is_blockquote = true
+                }
                 _ => {}
             },
             Event::End(t) => match t {
                 Tag::Paragraph => markup.push('\n'),
                 Tag::List(_) => {
-                    // The parser shouldn't allow this to be empty
+                    // `.pop()` shouldn't fail here, unless the parser is having issues
                     list_stack
                         .pop()
                         .expect("Event::End(Tag::List) before Event::Start(Tag::List)");
@@ -392,8 +397,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 }
                 Tag::BlockQuote => {
                     has_blockquote_text = false;
-                    is_blockquote = false
+                    is_blockquote = false;
+                    let base_face = pop_base_face(&mut face_stack, FACE_DEFAULT);
+                    markup.push_str(&format!("{{{}}}", base_face));
                 }
+                // Don't refactor this into the next arm. There is an additional '\n' here.
                 Tag::Heading(_) => {
                     let base_face = pop_base_face(&mut face_stack, FACE_DEFAULT);
                     markup.push_str(&format!("{{{}}}\n", base_face));

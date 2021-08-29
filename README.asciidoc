@@ -414,6 +414,9 @@ Leaving it blank has the same effect.
 | `InfoRule`
 | The face used for horizontal lines (rules).
 
+| `InfoQuote`
+| The face used for block quotes. The `>` Markdown syntax is still rendered.
+
 | `InfoDiagnosticError`
 | Used for error messages in the diagnostics hover info. This defaults to Kakoune's built-in `Error` face.
 
@@ -427,6 +430,24 @@ Leaving it blank has the same effect.
 | Used for hints in the diagnostics hover info.
 
 |===
+
+For convenience, here is a snippet to paste into your theme/config:
+
+----
+face global InfoDefault               Information
+face global InfoHeader                Information
+face global InfoBlock                 Information
+face global InfoBullet                Information
+face global InfoLink                  Information
+face global InfoMono                  Information
+face global InfoLinkMono              Information
+face global InfoRule                  Information
+face global InfoQuote                 Information
+face global InfoDiagnosticHint        Information
+face global InfoDiagnosticInformation Information
+face global InfoDiagnosticWarning     Information
+face global InfoDiagnosticError       Error
+----
 
 Limitations of this feature are:
 
