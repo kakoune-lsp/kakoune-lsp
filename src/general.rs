@@ -93,8 +93,8 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                         snippet_support: Some(ctx.config.snippet_support),
                         commit_characters_support: Some(false),
                         documentation_format: Some(vec![
-                            MarkupKind::PlainText,
                             MarkupKind::Markdown,
+                            MarkupKind::PlainText,
                         ]),
                         deprecated_support: Some(false),
                         preselect_support: Some(false),
@@ -138,7 +138,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 }),
                 hover: Some(HoverClientCapabilities {
                     dynamic_registration: Some(false),
-                    content_format: Some(vec![MarkupKind::PlainText, MarkupKind::Markdown]),
+                    content_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
                 }),
                 signature_help: Some(SignatureHelpClientCapabilities {
                     dynamic_registration: Some(false),
