@@ -92,7 +92,10 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     completion_item: Some(CompletionItemCapability {
                         snippet_support: Some(ctx.config.snippet_support),
                         commit_characters_support: Some(false),
-                        documentation_format: Some(vec![MarkupKind::PlainText]),
+                        documentation_format: Some(vec![
+                            MarkupKind::PlainText,
+                            MarkupKind::Markdown,
+                        ]),
                         deprecated_support: Some(false),
                         preselect_support: Some(false),
                         tag_support: None,

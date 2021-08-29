@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::markup::*;
 use crate::position::lsp_range_to_kakoune;
 use crate::types::*;
 use crate::util::*;
@@ -40,7 +41,6 @@ pub fn editor_completion(
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
     };
-    let unescape_markdown_re = Regex::new(r"\\(?P<c>.)").unwrap();
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
     let escape_bar = |s: &str| s.replace("|", "\\|");
     let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
@@ -48,27 +48,43 @@ pub fn editor_completion(
     let items = items
         .into_iter()
         .map(|x| {
-            let mut doc = x.documentation.map(|doc| {
-                match doc {
-                    Documentation::String(st) => st,
-                    Documentation::MarkupContent(mup) => match mup.kind {
-                        MarkupKind::PlainText => mup.value,
-                        // NOTE just in case server ignored our documentationFormat capability
-                        // we want to unescape markdown to make text a bit more readable
-                        MarkupKind::Markdown => unescape_markdown_re
-                            .replace_all(&mup.value, r"$c")
-                            .to_string(),
-                    },
-                }
+            let doc = x.documentation.map(|doc| match doc {
+                Documentation::String(s) => s,
+                Documentation::MarkupContent(content) => content.value,
             });
 
-            if let Some(detail) = x.detail {
-                doc = doc.map(|doc| format!("{}\n\n{}", detail, doc));
-            }
+            // Combine the 'detail' line and the full-text documentation into
+            // a single string. If both exist, separate them with a horizontal rule.
+            let markdown = {
+                let mut markdown = String::new();
 
-            let doc = doc
-                .map(|doc| format!("info -style menu -- %§{}§", doc.replace("§", "\\§")))
-                .unwrap_or_else(|| String::from("nop"));
+                if let Some(detail) = x.detail {
+                    markdown.push_str(&detail);
+
+                    if doc.is_some() {
+                        markdown.push_str("\n\n---\n\n");
+                    }
+                }
+
+                if let Some(doc) = doc {
+                    markdown.push_str(&doc);
+                }
+
+                markdown
+            };
+
+            let doc = if !markdown.is_empty() {
+                let markup = markdown_to_kakoune_markup(markdown);
+                format!(
+                    "info -markup -style menu -- %§{}§",
+                    markup.replace("§", "\\§")
+                )
+            } else {
+                // When the user scrolls through the list of completion candidates, Kakoune
+                // does not clean up the info box. We need to do that explicitly, in this case by
+                // requesting an empty one.
+                "info -style menu ''".to_string()
+            };
 
             let mut entry = x.label.clone();
             if let Some(k) = x.kind {
