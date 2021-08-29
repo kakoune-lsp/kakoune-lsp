@@ -262,14 +262,18 @@ fn pop_base_face<'a>(stack: &'a mut Vec<String>, default: &'a str) -> &'a str {
     get_base_face(stack, default)
 }
 
-const FACE_DEFAULT: &str = "InfoDefault";
-const FACE_HEADER: &str = "InfoHeader";
-const FACE_BLOCK: &str = "InfoBlock";
-const FACE_LIST_ITEM: &str = "InfoBullet";
-const FACE_LINK: &str = "InfoLink";
-const FACE_MONO: &str = "InfoMono";
-const FACE_LINK_MONO: &str = "InfoLinkMono";
-const FACE_RULE: &str = "InfoRule";
+pub const FACE_DEFAULT: &str = "InfoDefault";
+pub const FACE_HEADER: &str = "InfoHeader";
+pub const FACE_BLOCK: &str = "InfoBlock";
+pub const FACE_LIST_ITEM: &str = "InfoBullet";
+pub const FACE_LINK: &str = "InfoLink";
+pub const FACE_MONO: &str = "InfoMono";
+pub const FACE_LINK_MONO: &str = "InfoLinkMono";
+pub const FACE_RULE: &str = "InfoRule";
+pub const FACE_DIAGNOSTIC_INFO: &str = "InfoDiagnosticInformation";
+pub const FACE_DIAGNOSTIC_HINT: &str = "InfoDiagnosticHint";
+pub const FACE_DIAGNOSTIC_ERROR: &str = "InfoDiagnosticError";
+pub const FACE_DIAGNOSTIC_WARNING: &str = "InfoDiagnosticWarning";
 
 /// Parses Markdown into Kakoune's markup syntax using faces for highlighting
 pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {

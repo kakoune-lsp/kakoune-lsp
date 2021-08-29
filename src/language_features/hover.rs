@@ -53,20 +53,22 @@ pub fn editor_hover(
                     let face = x
                         .severity
                         .map(|sev| match sev {
-                            DiagnosticSeverity::Error => "{InfoDiagnosticError}",
-                            DiagnosticSeverity::Warning => "{InfoDiagnosticWarning}",
-                            DiagnosticSeverity::Information => "{InfoDiagnosticInformation}",
-                            DiagnosticSeverity::Hint => "{InfoDiagnosticHint}",
+                            DiagnosticSeverity::Error => FACE_DIAGNOSTIC_ERROR,
+                            DiagnosticSeverity::Warning => FACE_DIAGNOSTIC_WARNING,
+                            DiagnosticSeverity::Information => FACE_DIAGNOSTIC_INFO,
+                            DiagnosticSeverity::Hint => FACE_DIAGNOSTIC_HINT,
                         })
-                        .unwrap_or_else(|| "");
+                        .unwrap_or(FACE_DEFAULT);
 
                     if !x.message.is_empty() {
-                        // Append `{default}` face to prevent bleeding over into the next entry
+                        // Append FACE_DEFAULT to prevent bleeding over into the next entry
                         Some(format!(
-                            "• {}{}{{default}}",
+                            "• {{{}}}{}{{{}}}",
                             face,
                             // Indent line breaks to the same level as the bullet point
-                            x.message.replace("\n", "\n  ")
+                            // and escape for Kakoune's markup syntax.
+                            escape_brace(&x.message.replace("\n", "\n  ")),
+                            FACE_DEFAULT
                         ))
                     } else {
                         None
