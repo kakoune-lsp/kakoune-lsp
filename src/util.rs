@@ -455,3 +455,13 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     markup.push_str(&format!("{{{}}}", FACE_DEFAULT));
     markup
 }
+
+/// Parse the contents of a `lsp_types::MarkedString` into Kakoune markup
+pub fn parse_marked_string(contents: MarkedString) -> String {
+    match contents {
+        MarkedString::String(s) => markdown_to_kakoune_markup(s),
+        MarkedString::LanguageString(s) => {
+            format!("{{{}}}{}{{{}}}", FACE_BLOCK, s.value, FACE_DEFAULT)
+        }
+    }
+}

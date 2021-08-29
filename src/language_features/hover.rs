@@ -79,25 +79,13 @@ pub fn editor_hover(
     let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {
-            HoverContents::Scalar(contents) => {
-                let markdown = match contents {
-                    MarkedString::String(s) => s,
-                    MarkedString::LanguageString(s) => format!("```\n{}\n```", s.value),
-                };
-                markdown_to_kakoune_markup(markdown)
-            }
+            HoverContents::Scalar(contents) => parse_marked_string(contents),
             HoverContents::Array(contents) => contents
                 .into_iter()
-                .filter_map(|marked| {
-                    let markdown = match marked {
-                        MarkedString::String(s) => s,
-                        MarkedString::LanguageString(s) => format!("```\n{}\n```", s.value),
-                    };
-                    let markup = markdown_to_kakoune_markup(markdown);
-
+                .map(parse_marked_string)
+                .filter_map(|markup| {
                     if !markup.is_empty() {
-                        // Append `{default}` face to prevent bleeding over into the next entry
-                        Some(format!("• {}{{default}}", markup))
+                        Some(format!("• {}", markup))
                     } else {
                         None
                     }
