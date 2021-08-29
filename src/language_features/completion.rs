@@ -150,7 +150,7 @@ pub fn editor_completion(
                     editor_quote(&regex::escape(insert_text)),
                     editor_quote(&snippet)
                 );
-                let command = format!("eval -verbatim -- {}", command);
+
                 editor_quote(&format!(
                     "{}|{}|{}",
                     escape_bar(insert_text),
