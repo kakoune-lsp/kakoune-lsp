@@ -54,16 +54,16 @@ pub fn editor_hover(
                     let face = x
                         .severity
                         .map(|sev| match sev {
-                            DiagnosticSeverity::Error => "{DiagnosticError}",
-                            DiagnosticSeverity::Warning => "{DiagnosticWarning}",
-                            DiagnosticSeverity::Information => "{Information}",
-                            DiagnosticSeverity::Hint => "{default}",
+                            DiagnosticSeverity::Error => FACE_INFO_DIAGNOSTIC_ERROR,
+                            DiagnosticSeverity::Warning => FACE_INFO_DIAGNOSTIC_WARNING,
+                            DiagnosticSeverity::Information => FACE_INFO_DIAGNOSTIC_INFO,
+                            DiagnosticSeverity::Hint => FACE_INFO_DIAGNOSTIC_HINT,
                         })
-                        .unwrap_or("{default}");
+                        .unwrap_or(FACE_INFO_DEFAULT);
 
                     if !x.message.is_empty() {
                         Some(format!(
-                            "• {}{}",
+                            "• {{{}}}{}",
                             face,
                             escape_brace(x.message.trim())
                                 // Indent line breaks to the same level as the bullet point
@@ -80,22 +80,11 @@ pub fn editor_hover(
     let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {
-            HoverContents::Scalar(contents) => {
-                let markdown = match contents {
-                    MarkedString::String(s) => s,
-                    MarkedString::LanguageString(s) => format!("```\n{}\n```", s.value),
-                };
-                markdown_to_kakoune_markup(markdown)
-            }
+            HoverContents::Scalar(contents) => marked_string_to_kakoune_markup(contents),
             HoverContents::Array(contents) => contents
                 .into_iter()
-                .filter_map(|marked| {
-                    let markdown = match marked {
-                        MarkedString::String(s) => s,
-                        MarkedString::LanguageString(s) => format!("```\n{}\n```", s.value),
-                    };
-                    let markup = markdown_to_kakoune_markup(markdown);
-
+                .map(marked_string_to_kakoune_markup)
+                .filter_map(|markup| {
                     if !markup.is_empty() {
                         Some(format!("• {}", markup))
                     } else {
