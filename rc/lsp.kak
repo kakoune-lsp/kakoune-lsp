@@ -71,13 +71,13 @@ declare-option -docstring "Character to signal a warning in the gutter" str lsp_
 # show up in the info box.
 declare-option -docstring "Format hover info" str lsp_show_hover_format '
 if [ -n "${lsp_info}" ]; then
-    printf "{+b}Info:{default}\n%s" "${lsp_info}"
+    printf "{InfoDefault+b}Info:{InfoDefault}\n%s" "${lsp_info}"
 fi
 if [ -n "${lsp_info}${lsp_diagnostics}" ]; then
     printf "\n\n"
 fi
 if [ -n "${lsp_diagnostics}" ]; then
-    printf "{+b}Diagnostics:{default}\n%s" "${lsp_diagnostics}"
+    printf "{InfoDefault+b}Diagnostics:{InfoDefault}\n%s" "${lsp_diagnostics}"
 fi'
 # If you want to see only hover info, try 
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
@@ -110,6 +110,25 @@ declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs rust_analyzer_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
 declare-option -hidden str lsp_project_root
+
+# Faces used for Markdown highlighting in the info box
+# We can't assume the user's theme and any best effort attempts
+# for picking colors will likely not work for many users.
+# Therefore, by default, most are not defined until the user does so
+# explicitly.
+# set-face global InfoDefault Information
+# set-face global InfoHeader Information
+# set-face global InfoBlock Information
+# set-face global InfoBullet Information
+# set-face global InfoLink Information
+# set-face global InfoMono Information
+# set-face global InfoLinkMono Information
+# set-face global InfoRule Information
+# set-face global InfoDiagnosticHint Information
+# set-face global InfoDiagnosticInformation Information
+# set-face global InfoDiagnosticWarning Information
+set-face global InfoDiagnosticError Error
+
 
 ### Requests ###
 

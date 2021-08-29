@@ -53,10 +53,10 @@ pub fn editor_hover(
                     let face = x
                         .severity
                         .map(|sev| match sev {
-                            DiagnosticSeverity::Error => "{DiagnosticError}",
-                            DiagnosticSeverity::Warning => "{DiagnosticWarning}",
-                            DiagnosticSeverity::Information => "{Information}",
-                            _ => "",
+                            DiagnosticSeverity::Error => "{InfoDiagnosticError}",
+                            DiagnosticSeverity::Warning => "{InfoDiagnosticWarning}",
+                            DiagnosticSeverity::Information => "{InfoDiagnosticInformation}",
+                            DiagnosticSeverity::Hint => "{InfoDiagnosticHint}",
                         })
                         .unwrap_or_else(|| "");
 
