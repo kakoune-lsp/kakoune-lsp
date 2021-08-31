@@ -39,6 +39,7 @@ pub struct ServerConfig {
 }
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct LanguageConfig {
     pub filetypes: Vec<String>,
     pub roots: Vec<String>,
