@@ -1,4 +1,4 @@
-## Unreleased
+## 11.0.0 - 2021-09-01
 
 Breaking changes:
 - Two incompatible changes to the configuration format - see the updated `kak-lsp.toml` for examples. 

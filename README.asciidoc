@@ -23,8 +23,8 @@ brew install kak-lsp/kak-lsp/kak-lsp
 ===== Manual
 
 ----
-curl -O -L https://github.com/kak-lsp/kak-lsp/releases/download/v10.0.0/kak-lsp-v10.0.0-x86_64-apple-darwin.tar.gz
-tar xzvf kak-lsp-v10.0.0-x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/kak-lsp/kak-lsp/releases/download/v11.0.0/kak-lsp-v11.0.0-x86_64-apple-darwin.tar.gz
+tar xzvf kak-lsp-v11.0.0-x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
@@ -44,8 +44,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ===== Others
 
 ----
-wget https://github.com/kak-lsp/kak-lsp/releases/download/v10.0.0/kak-lsp-v10.0.0-x86_64-unknown-linux-musl.tar.gz
-tar xzvf kak-lsp-v10.0.0-x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/kak-lsp/kak-lsp/releases/download/v11.0.0/kak-lsp-v11.0.0-x86_64-unknown-linux-musl.tar.gz
+tar xzvf kak-lsp-v11.0.0-x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
