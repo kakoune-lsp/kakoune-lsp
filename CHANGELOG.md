@@ -12,7 +12,7 @@ Breaking changes:
 - `haskell-language-server` is the new default language server for Haskell, replacing `haskell-ide-engine`.
 
 Additions:
-- `%opt{lsp_config}` allows to set server-speicific settings dynamically (#500).
+- `%opt{lsp_config}` allows to set server-specific settings dynamically (#500).
 - Default configuration for Julia (#502).
 - `lsp-show-message` has been replaced by four separate commands `lsp-show-message-{error,warning,info,log}`.
   The new default implementations log the given messages from the language server to the debug buffer. Important messages are shown in `%opt{toolsclient}`.
