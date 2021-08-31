@@ -84,14 +84,11 @@ pub fn editor_hover(
             HoverContents::Array(contents) => contents
                 .into_iter()
                 .map(marked_string_to_kakoune_markup)
-                .filter_map(|markup| {
-                    if !markup.is_empty() {
-                        Some(format!("• {}", markup))
-                    } else {
-                        None
-                    }
-                })
-                .join("\n"),
+                .filter(|markup| !markup.is_empty())
+                .join(&format!(
+                    "\n{{{}}}---{{{}}}\n",
+                    FACE_INFO_RULE, FACE_INFO_DEFAULT
+                )),
             HoverContents::Markup(contents) => match contents.kind {
                 MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value),
                 MarkupKind::PlainText => contents.value,
