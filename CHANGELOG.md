@@ -1,22 +1,22 @@
 ## Unreleased
 
 Breaking changes:
-- Two breaking changes to the configuration format - see the updated `kak-lsp.toml` for examples. 
-  - `semantic_tokens` syntax has changed (#488)
-  - `settings` replaces `initialization_options` for server-specific configuration  (#511)
+- Two incompatible changes to the configuration format - see the updated `kak-lsp.toml` for examples. 
+  - `semantic_tokens` syntax has changed, allowing for more fine-grained face configuration (#488)
+  - `settings` replaces `initialization_options` for server-specific settings (#511)
 - Snippet support has been disabled by default, as a workaround for conflicts with Kakoune's built-in completion (#282).
 - `lsp-show-message`, which handles `window/showMessage` requests from the server has been removed. See below for the replacement.
-- Hidden commands `lsp-{next,previous}-match` were removed in favor of `lsp-{next,previous}-location` (#466).
+- Hidden commands `lsp-next-match` and `lsp-previous-match` were removed in favor of `lsp-next-location` and `lsp-previous-location` (#466).
 - `haskell-language-server` is the new default language server for Haskell, replacing `haskell-ide-engine`.
 
 Additions:
+- `%opt{lsp_config}` allows to set server-speicific settings dynamically (#500).
 - Default configuration for Julia (#502).
 - `lsp-show-message` has been replaced by four separate commands `lsp-show-message-{error,warning,info,log}`.
   The new default implementations log the given messages from the language server to the debug buffer. Important messages are shown in `%opt{toolsclient}`.
-- `lsp-code-actions` use the `menu` command to select an action interactively. The new command `lsp-show-code-actions` can be overridden to customize this behavior (#367).
-- `%opt{lsp_config}` allows to set server configuration dynamically (#500).
+- The new command `lsp-show-code-actions` can be overridden to customize the default menu behavior of `lsp-code-actions` (#367).
 - New commands `lsp-{next,previous}-location` generalize `grep-next-match`, `lsp-next-match` and friends (#466).
-- New option `lsp_location_format` to tell `lsp-{next,previous}-location` which "<file>:<line>"-style to match (#466).
+- New option `lsp_location_format` to customize the "<file>:<line>"-style location patterns that `lsp-{next,previous}-location` can match (#466).
 
 Bug fixes:
 - Fix renaming of Rust lifetimes (#474).
@@ -26,7 +26,7 @@ Bug fixes:
 
 Deprecations:
 - `%opt{lsp_server_initialization_options}` and `%opt{lsp_server_configuration}` are deprecated in favor of setting `[language.<filetype>.settings]` in `%opt{lsp_config}`(#500).
-- `lsp-{goto,symbols}-{next,previous}-match` are deprecated in favor of `lsp-next-location *goto*` and similar (#466).
+- `lsp-{goto,symbols}-{next,previous}-match` are deprecated in favor of commands like `lsp-next-location *goto*` and similar (#466).
 
 ## 10.0.0 - 2021-06-03
 
