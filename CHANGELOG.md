@@ -1,5 +1,8 @@
 ## Unreleased
 
+Bug fixes:
+- Fix default config for `lua-language-server`
+
 ## 11.0.0 - 2021-09-01
 
 Breaking changes:

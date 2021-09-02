@@ -187,9 +187,9 @@ settings_section = "texlab"
 filetypes = ["lua"]
 roots = [".git"]
 command = "lua-language-server"
-[language.lua.settings]
+[language.lua.settings.Lua]
 # See https://github.com/sumneko/vscode-lua/blob/master/setting/schema.json
-# "Lua.diagnostics.enable" = true
+# diagnostics.enable = true
 
 [language.nim]
 filetypes = ["nim"]
