@@ -1,7 +1,8 @@
 ## Unreleased
 
 Bug fixes:
-- Fix default config for `lua-language-server`
+- Fix example server configuration for `lua-language-server`.
+- Fix completion of Rust lifetimes (#510).
 
 ## 11.0.0 - 2021-09-01
 
