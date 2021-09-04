@@ -39,8 +39,8 @@ pub fn editor_document_highlights(
         return;
     }
     let document = document.unwrap();
-    if let Some(highlights) = result {
-        let ranges = highlights
+    let ranges = match result {
+        Some(highlights) => highlights
             .into_iter()
             .map(|highlight| {
                 format!(
@@ -53,11 +53,12 @@ pub fn editor_document_highlights(
                     }
                 )
             })
-            .join(" ");
-        let command = format!(
-            "set-option window lsp_references {} {}",
-            meta.version, ranges,
-        );
-        ctx.exec(meta, command);
+            .join(" "),
+        None => "".to_string(),
     };
+    let command = format!(
+        "set-option window lsp_references {} {}",
+        meta.version, ranges,
+    );
+    ctx.exec(meta, command);
 }
