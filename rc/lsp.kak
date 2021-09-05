@@ -973,15 +973,19 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 } %{ evaluate-commands %sh{
     lsp_info=$2
     lsp_diagnostics=$3
+
+    # To make sure we always show diagnostics, restrict only the info portion based
+    # on the configured maximum line count
+    if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
+        diagnostics_count=$(printf "%s", "$lsp_diagnostics" | wc -l)
+        lsp_info=$(printf %s "$lsp_info" | head -n $(($kak_opt_lsp_hover_max_lines - 2 - $diagnostics_count)))
+    fi
+
     content=$(eval "${kak_opt_lsp_show_hover_format}")
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
     # remove trailing whitespace characters
     content="${content%"${content##*[![:space:]]}"}"
-
-    if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
-        content=$(printf %s "$content" | head -n $kak_opt_lsp_hover_max_lines)
-    fi
 
     content=$(printf %s "$content" | sed s/\'/\'\'/g)
 
