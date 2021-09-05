@@ -373,7 +373,7 @@ kak-lsp supports showing diagnostics inline after their respective line, but thi
 lsp-inlay-diagnostics-enable global
 ----
 
-== Markdown parsing
+== Markdown rendering in info box
 
 kak-lsp offers multiple ways to show additional information provided by the language server, such as documentation for the token under the cursor or documentation for completion candidates. The Language Server Protocol allows for both plain text and Markdown in these scenarios, and most servers do implement Markdown.
 
