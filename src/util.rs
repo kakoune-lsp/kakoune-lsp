@@ -249,19 +249,6 @@ pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
         .unwrap_or(target)
 }
 
-/// Get the current base face, either the top face on the stack
-/// or a fallback
-fn get_base_face<'a>(stack: &'a Vec<String>, default: &'a str) -> &'a str {
-    stack.last().map(|s| s.as_str()).unwrap_or(default)
-}
-
-/// Removes the top most face from the stack, then returns the next entry
-/// as the current base face or a fallback
-fn pop_base_face<'a>(stack: &'a mut Vec<String>, default: &'a str) -> &'a str {
-    stack.pop();
-    get_base_face(stack, default)
-}
-
 pub const FACE_DEFAULT: &str = "InfoDefault";
 pub const FACE_HEADER: &str = "InfoHeader";
 pub const FACE_BLOCK: &str = "InfoBlock";
@@ -297,6 +284,19 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     // when the inner tag ends. Markdown example: ``[`code` link](...)``
     // The stack allows to track whatever face a closing tag needs to emit.
     let mut face_stack: Vec<String> = vec![];
+
+    /// Get the current base face, either the top face on the stack
+    /// or a fallback
+    fn get_base_face(stack: &Vec<String>) -> &str {
+        stack.last().map(|s| s.as_str()).unwrap_or(FACE_DEFAULT)
+    }
+
+    /// Removes the top most face from the stack, then returns the next entry
+    /// as the current base face or a fallback
+    fn pop_base_face(stack: &mut Vec<String>) -> &str {
+        stack.pop();
+        get_base_face(stack)
+    }
 
     for e in parser {
         match e {
@@ -357,11 +357,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     }
                 }
                 Tag::Emphasis => {
-                    let base_face = get_base_face(&face_stack, FACE_DEFAULT);
+                    let base_face = get_base_face(&face_stack);
                     markup.push_str(&format!("{{+i@{}}}", base_face))
                 }
                 Tag::Strong => {
-                    let base_face = get_base_face(&face_stack, FACE_DEFAULT);
+                    let base_face = get_base_face(&face_stack);
                     markup.push_str(&format!("{{+b@{}}}", base_face))
                 }
                 // Kakoune doesn't support clickable links and the URL might be too long to show
@@ -392,28 +392,28 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 }
                 Tag::CodeBlock(_) => {
                     is_codeblock = false;
-                    let base_face = pop_base_face(&mut face_stack, FACE_DEFAULT);
+                    let base_face = pop_base_face(&mut face_stack);
                     markup.push_str(&format!("{{{}}}", base_face));
                 }
                 Tag::BlockQuote => {
                     has_blockquote_text = false;
                     is_blockquote = false;
-                    let base_face = pop_base_face(&mut face_stack, FACE_DEFAULT);
+                    let base_face = pop_base_face(&mut face_stack);
                     markup.push_str(&format!("{{{}}}", base_face));
                 }
                 // Don't refactor this into the next arm. There is an additional '\n' here.
                 Tag::Heading(_) => {
-                    let base_face = pop_base_face(&mut face_stack, FACE_DEFAULT);
+                    let base_face = pop_base_face(&mut face_stack);
                     markup.push_str(&format!("{{{}}}\n", base_face));
                 }
                 Tag::Emphasis | Tag::Strong | Tag::Link(_, _, _) => {
-                    let base_face = pop_base_face(&mut face_stack, FACE_DEFAULT);
+                    let base_face = pop_base_face(&mut face_stack);
                     markup.push_str(&format!("{{{}}}", base_face));
                 }
                 _ => {}
             },
             Event::Code(c) => {
-                let base_face = get_base_face(&face_stack, FACE_DEFAULT);
+                let base_face = get_base_face(&face_stack);
                 let face = if base_face == FACE_LINK {
                     FACE_LINK_MONO
                 } else {
@@ -438,7 +438,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             // We don't know the size of the final render area, so we'll stick to just Markdown
             // syntax.
             Event::Rule => {
-                let base_face = get_base_face(&face_stack, FACE_DEFAULT);
+                let base_face = get_base_face(&face_stack);
                 markup.push_str(&format!("\n{{{}}}---{{{}}}\n", FACE_RULE, base_face));
             }
             // Soft breaks should be kept in `<pre>`-style blocks.
