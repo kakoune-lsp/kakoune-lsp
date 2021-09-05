@@ -462,13 +462,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     // to prevent bleeding markup when concatenated with other text.
     // In some cases a `{default}` has been added after the trailing whitespace,
     // so we need to strip that first.
-    let mut markup = markup
+    markup
         .strip_suffix(&format!("{{{}}}", FACE_INFO_DEFAULT))
         .unwrap_or(&markup)
         .trim()
-        .to_owned();
-    markup.push_str(&format!("{{{}}}", FACE_INFO_DEFAULT));
-    markup
+        .to_owned()
 }
 
 /// Parse the contents of a `lsp_types::MarkedString` into Kakoune markup
