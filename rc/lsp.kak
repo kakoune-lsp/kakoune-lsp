@@ -70,14 +70,9 @@ declare-option -docstring "Character to signal a warning in the gutter" str lsp_
 # The string is `eval`ed to produce the content to display, so anything send to stdout will
 # show up in the info box.
 declare-option -docstring "Format hover info" str lsp_show_hover_format '
-if [ -n "${lsp_info}" ]; then
-    printf "{InfoDefault+b}Info:{InfoDefault}\n%s" "${lsp_info}"
-fi
-if [ -n "${lsp_info}${lsp_diagnostics}" ]; then
-    printf "\n\n"
-fi
+printf "%s\n\n" "${lsp_info}"
 if [ -n "${lsp_diagnostics}" ]; then
-    printf "{InfoDefault+b}Diagnostics:{InfoDefault}\n%s" "${lsp_diagnostics}"
+    printf "{+b@InfoDefault}Diagnostics:{InfoDefault}\n%s" "${lsp_diagnostics}"
 fi'
 # If you want to see only hover info, try 
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
