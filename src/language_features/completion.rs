@@ -68,7 +68,7 @@ pub fn editor_completion(
                     markdown.push_str(&detail);
 
                     if doc.is_some() {
-                        markdown.push_str("\n---\n");
+                        markdown.push_str("\n\n---\n\n");
                     }
                 }
 
