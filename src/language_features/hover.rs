@@ -53,12 +53,12 @@ pub fn editor_hover(
                     let face = x
                         .severity
                         .map(|sev| match sev {
-                            DiagnosticSeverity::Error => FACE_DIAGNOSTIC_ERROR,
-                            DiagnosticSeverity::Warning => FACE_DIAGNOSTIC_WARNING,
-                            DiagnosticSeverity::Information => FACE_DIAGNOSTIC_INFO,
-                            DiagnosticSeverity::Hint => FACE_DIAGNOSTIC_HINT,
+                            DiagnosticSeverity::Error => FACE_INFO_DIAGNOSTIC_ERROR,
+                            DiagnosticSeverity::Warning => FACE_INFO_DIAGNOSTIC_WARNING,
+                            DiagnosticSeverity::Information => FACE_INFO_DIAGNOSTIC_INFO,
+                            DiagnosticSeverity::Hint => FACE_INFO_DIAGNOSTIC_HINT,
                         })
-                        .unwrap_or(FACE_DEFAULT);
+                        .unwrap_or(FACE_INFO_DEFAULT);
 
                     if !x.message.is_empty() {
                         // Append FACE_DEFAULT to prevent bleeding over into the next entry
@@ -68,7 +68,7 @@ pub fn editor_hover(
                             // Indent line breaks to the same level as the bullet point
                             // and escape for Kakoune's markup syntax.
                             escape_brace(&x.message.replace("\n", "\n  ")),
-                            FACE_DEFAULT
+                            FACE_INFO_DEFAULT
                         ))
                     } else {
                         None
@@ -86,7 +86,7 @@ pub fn editor_hover(
                 .into_iter()
                 .map(parse_marked_string)
                 .filter(|markup| !markup.is_empty())
-                .join(&format!("\n{{{}}}---{{{}}}\n", FACE_RULE, FACE_DEFAULT)),
+                .join(&format!("\n{{{}}}---{{{}}}\n", FACE_INFO_RULE, FACE_INFO_DEFAULT)),
             HoverContents::Markup(contents) => match contents.kind {
                 MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value),
                 MarkupKind::PlainText => contents.value,

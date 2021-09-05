@@ -389,11 +389,20 @@ To ensure compatiblity, these faces are, by default, undefined and fall back to 
 | The default text color. You'll likely want to set this to `Information`, the default face for text in the info box.
 Leaving it blank has the same effect.
 
+| `InfoBlock`
+| The face used for code blocks. Language specific syntax highlighting for code blocks is not possible.
+
+| `InfoBlockQuote`
+| The face used for block quotes. The `>` Markdown syntax is still rendered.
+
+| `InfoBullet`
+| The face used to highlight the list symbol for both ordered and unordered lists. For the list item's text `InfoDefault` is used.
+
+| `InfoHeader`
+| The face used for headings. There is currently no distinction between different heading levels.
+
 | `InfoLink`
 | The face used to highlight link titles. Maybe some classic `blue+u` for this one?
-
-| `InfoMono`
-| The face used for inline monospace blocks, i.e. inline code.
 
 | `InfoLinkMono`
 | This face is assigned to inline code within link titles, such as in the following Markdown snippet. Here `format` would receive the `InfoLinkMono` face.
@@ -402,32 +411,23 @@ Leaving it blank has the same effect.
 [the `format` function](https://example.com)
 ----
 
-| `InfoBlock`
-| The face used for code blocks. Language specific syntax highlighting for code blocks is not possible.
-
-| `InfoBullet`
-| The face used to highlight the list symbol for both ordered and unordered lists. For the list item's text `InfoDefault` is used.
-
-| `InfoHeader`
-| The face used for headings. There is currently no distinction between different heading levels.
+| `InfoMono`
+| The face used for inline monospace blocks, i.e. inline code.
 
 | `InfoRule`
 | The face used for horizontal lines (rules).
 
-| `InfoQuote`
-| The face used for block quotes. The `>` Markdown syntax is still rendered.
-
 | `InfoDiagnosticError`
 | Used for error messages in the diagnostics hover info. This defaults to Kakoune's built-in `Error` face.
 
-| `InfoDiagnosticWarning`
-| Used for warning messages in the diagnostics hover info.
+| `InfoDiagnosticHint`
+| Used for hints in the diagnostics hover info.
 
 | `InfoDiagnosticInformation`
 | Used for informational messages in the diagnostics hover info.
 
-| `InfoDiagnosticHint`
-| Used for hints in the diagnostics hover info.
+| `InfoDiagnosticWarning`
+| Used for warning messages in the diagnostics hover info.
 
 |===
 
@@ -435,18 +435,18 @@ For convenience, here is a snippet to paste into your theme/config:
 
 ----
 face global InfoDefault               Information
-face global InfoHeader                Information
 face global InfoBlock                 Information
+face global InfoBlockQuote            Information
 face global InfoBullet                Information
+face global InfoHeader                Information
 face global InfoLink                  Information
-face global InfoMono                  Information
 face global InfoLinkMono              Information
+face global InfoMono                  Information
 face global InfoRule                  Information
-face global InfoQuote                 Information
+face global InfoDiagnosticError       Error
 face global InfoDiagnosticHint        Information
 face global InfoDiagnosticInformation Information
 face global InfoDiagnosticWarning     Information
-face global InfoDiagnosticError       Error
 ----
 
 Limitations of this feature are:

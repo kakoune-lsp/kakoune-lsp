@@ -249,19 +249,19 @@ pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
         .unwrap_or(target)
 }
 
-pub const FACE_DEFAULT: &str = "InfoDefault";
-pub const FACE_HEADER: &str = "InfoHeader";
-pub const FACE_BLOCK: &str = "InfoBlock";
-pub const FACE_LIST_ITEM: &str = "InfoBullet";
-pub const FACE_LINK: &str = "InfoLink";
-pub const FACE_MONO: &str = "InfoMono";
-pub const FACE_LINK_MONO: &str = "InfoLinkMono";
-pub const FACE_RULE: &str = "InfoRule";
-pub const FACE_QUOTE: &str = "InfoQuote";
-pub const FACE_DIAGNOSTIC_INFO: &str = "InfoDiagnosticInformation";
-pub const FACE_DIAGNOSTIC_HINT: &str = "InfoDiagnosticHint";
-pub const FACE_DIAGNOSTIC_ERROR: &str = "InfoDiagnosticError";
-pub const FACE_DIAGNOSTIC_WARNING: &str = "InfoDiagnosticWarning";
+pub const FACE_INFO_DEFAULT: &str = "InfoDefault";
+pub const FACE_INFO_HEADER: &str = "InfoHeader";
+pub const FACE_INFO_BLOCK: &str = "InfoBlock";
+pub const FACE_INFO_LIST_ITEM: &str = "InfoBullet";
+pub const FACE_INFO_LINK: &str = "InfoLink";
+pub const FACE_INFO_MONO: &str = "InfoMono";
+pub const FACE_INFO_LINK_MONO: &str = "InfoLinkMono";
+pub const FACE_INFO_RULE: &str = "InfoRule";
+pub const FACE_INFO_BLOCK_QUOTE: &str = "InfoBlockQuote";
+pub const FACE_INFO_DIAGNOSTIC_INFO: &str = "InfoDiagnosticInformation";
+pub const FACE_INFO_DIAGNOSTIC_HINT: &str = "InfoDiagnosticHint";
+pub const FACE_INFO_DIAGNOSTIC_ERROR: &str = "InfoDiagnosticError";
+pub const FACE_INFO_DIAGNOSTIC_WARNING: &str = "InfoDiagnosticWarning";
 
 /// Parses Markdown into Kakoune's markup syntax using faces for highlighting
 pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
@@ -288,7 +288,10 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     /// Get the current base face, either the top face on the stack
     /// or a fallback
     fn get_base_face(stack: &Vec<String>) -> &str {
-        stack.last().map(|s| s.as_str()).unwrap_or(FACE_DEFAULT)
+        stack
+            .last()
+            .map(|s| s.as_str())
+            .unwrap_or(FACE_INFO_DEFAULT)
     }
 
     /// Removes the top most face from the stack, then returns the next entry
@@ -312,25 +315,25 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     markup.push('\n')
                 }
                 Tag::Heading(level) => {
-                    face_stack.push(FACE_HEADER.into());
+                    face_stack.push(FACE_INFO_HEADER.into());
                     // Color as `{header}` but keep the Markdown syntax to visualize the header level
                     markup.push_str(&format!(
                         "\n{{{}}}{} ",
-                        FACE_HEADER,
+                        FACE_INFO_HEADER,
                         "#".repeat(level as usize)
                     ))
                 }
                 Tag::CodeBlock(_) => {
                     is_codeblock = true;
-                    face_stack.push(FACE_BLOCK.into());
-                    markup.push_str(&format!("\n{{{}}}", FACE_BLOCK))
+                    face_stack.push(FACE_INFO_BLOCK.into());
+                    markup.push_str(&format!("\n{{{}}}", FACE_INFO_BLOCK))
                 }
                 Tag::List(num) => list_stack.push(num),
                 Tag::Item => {
                     let base_face = face_stack
                         .last()
                         .map(|s| s.as_str())
-                        .unwrap_or(FACE_DEFAULT);
+                        .unwrap_or(FACE_INFO_DEFAULT);
 
                     let list_level = list_stack.len();
                     // The parser shouldn't allow this to be empty
@@ -340,7 +343,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                         markup.push_str(&format!(
                             "\n{}{{{}}}{}. {{{}}}",
                             "  ".repeat(list_level),
-                            FACE_LIST_ITEM,
+                            FACE_INFO_LIST_ITEM,
                             num,
                             base_face
                         ));
@@ -350,7 +353,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                         markup.push_str(&format!(
                             "\n{}{{{}}}- {{{}}}",
                             "  ".repeat(list_level),
-                            FACE_LIST_ITEM,
+                            FACE_INFO_LIST_ITEM,
                             base_face
                         ));
                         list_stack.push(item);
@@ -369,12 +372,12 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 // We'll only show the link title for now, which should be enough to search in the
                 // relevant resource.
                 Tag::Link(_, _, _) => {
-                    face_stack.push(FACE_LINK.into());
-                    markup.push_str(&format!("{{{}}}", FACE_LINK))
+                    face_stack.push(FACE_INFO_LINK.into());
+                    markup.push_str(&format!("{{{}}}", FACE_INFO_LINK))
                 }
                 Tag::BlockQuote => {
-                    face_stack.push(FACE_QUOTE.into());
-                    markup.push_str(&format!("{{{}}}", FACE_QUOTE));
+                    face_stack.push(FACE_INFO_BLOCK_QUOTE.into());
+                    markup.push_str(&format!("{{{}}}", FACE_INFO_BLOCK_QUOTE));
                     is_blockquote = true
                 }
                 _ => {}
@@ -414,10 +417,10 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             },
             Event::Code(c) => {
                 let base_face = get_base_face(&face_stack);
-                let face = if base_face == FACE_LINK {
-                    FACE_LINK_MONO
+                let face = if base_face == FACE_INFO_LINK {
+                    FACE_INFO_LINK_MONO
                 } else {
-                    FACE_MONO
+                    FACE_INFO_MONO
                 };
 
                 markup.push_str(&format!(
@@ -439,7 +442,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             // syntax.
             Event::Rule => {
                 let base_face = get_base_face(&face_stack);
-                markup.push_str(&format!("\n{{{}}}---{{{}}}\n", FACE_RULE, base_face));
+                markup.push_str(&format!("\n{{{}}}---{{{}}}\n", FACE_INFO_RULE, base_face));
             }
             // Soft breaks should be kept in `<pre>`-style blocks.
             // Anywhere else, let the renderer handle line breaks.
@@ -460,11 +463,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     // In some cases a `{default}` has been added after the trailing whitespace,
     // so we need to strip that first.
     let mut markup = markup
-        .strip_suffix(&format!("{{{}}}", FACE_DEFAULT))
+        .strip_suffix(&format!("{{{}}}", FACE_INFO_DEFAULT))
         .unwrap_or(&markup)
         .trim()
         .to_owned();
-    markup.push_str(&format!("{{{}}}", FACE_DEFAULT));
+    markup.push_str(&format!("{{{}}}", FACE_INFO_DEFAULT));
     markup
 }
 
@@ -473,7 +476,10 @@ pub fn parse_marked_string(contents: MarkedString) -> String {
     match contents {
         MarkedString::String(s) => markdown_to_kakoune_markup(s),
         MarkedString::LanguageString(s) => {
-            format!("{{{}}}{}{{{}}}", FACE_BLOCK, s.value, FACE_DEFAULT)
+            format!(
+                "{{{}}}{}{{{}}}",
+                FACE_INFO_BLOCK, s.value, FACE_INFO_DEFAULT
+            )
         }
     }
 }
