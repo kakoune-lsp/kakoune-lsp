@@ -106,25 +106,6 @@ declare-option -hidden range-specs rust_analyzer_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
 declare-option -hidden str lsp_project_root
 
-# Faces used for Markdown highlighting in the info box
-# We can't assume the user's theme and any best effort attempts
-# for picking colors will likely not work for many users.
-# Therefore, by default, most are not defined until the user does so
-# explicitly.
-# set-face global InfoDefault Information
-# set-face global InfoHeader Information
-# set-face global InfoBlock Information
-# set-face global InfoBullet Information
-# set-face global InfoLink Information
-# set-face global InfoMono Information
-# set-face global InfoLinkMono Information
-# set-face global InfoRule Information
-# set-face global InfoQuote Information
-# set-face global InfoDiagnosticHint Information
-# set-face global InfoDiagnosticInformation Information
-# set-face global InfoDiagnosticWarning Information
-set-face global InfoDiagnosticError Error
-
 
 ### Requests ###
 
