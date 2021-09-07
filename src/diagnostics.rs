@@ -5,7 +5,7 @@ use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
@@ -69,37 +69,69 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             )
         })
         .join(" ");
-    let mut lines_with_errors = HashSet::new();
-    let diagnostic_ranges = diagnostics
+
+    // Assemble a list of diagnostics by line number
+    let mut lines_with_diagnostics = HashMap::new();
+    for diagnostic in diagnostics {
+        let face = match diagnostic.severity {
+            Some(DiagnosticSeverity::Error) => "InlayDiagnosticError",
+            Some(DiagnosticSeverity::Hint) => "InlayDiagnosticHint",
+            Some(DiagnosticSeverity::Information) => "InlayDiagnosticInfo",
+            Some(DiagnosticSeverity::Warning) | None => "InlayDiagnosticWarning",
+        };
+        let line_diagnostics = lines_with_diagnostics
+            .entry(diagnostic.range.end.line)
+            .or_insert(LineDiagnostics {
+                range_end: diagnostic.range.end,
+                symbols: String::new(),
+                text: String::new(),
+                text_face: "",
+                text_severity: None,
+            });
+
+        let severity = diagnostic.severity.unwrap_or(DiagnosticSeverity::Warning);
+        if line_diagnostics
+            .text_severity
+            // Smaller == higher severity
+            .map_or(true, |text_severity| severity < text_severity)
+        {
+            line_diagnostics.text = diagnostic
+                .message
+                .split('\n')
+                .next()
+                .unwrap_or_default()
+                .replace("|", "\\|");
+            line_diagnostics.text_face = face;
+            line_diagnostics.text_severity = diagnostic.severity;
+        }
+
+        line_diagnostics
+            .symbols
+            .push_str(&format!("{{{}}}%opt[lsp_inlay_diagnostic_sign]", face))
+    }
+
+    // Assemble ranges based on the lines
+    let diagnostic_ranges = lines_with_diagnostics
         .iter()
-        .map(|x| {
-            let face = match x.severity {
-                Some(DiagnosticSeverity::Error) => "InlayDiagnosticError",
-                Some(DiagnosticSeverity::Hint) => "InlayDiagnosticHint",
-                Some(DiagnosticSeverity::Information) => "InlayDiagnosticInfo",
-                Some(DiagnosticSeverity::Warning) | None => "InlayDiagnosticWarning",
-            };
-            // Pretend the language server sent us the diagnostic past the end of line
-            let line = x.range.end.line;
-            let line_text = get_line(line as usize, &document.text);
-            let mut pos =
-                lsp_position_to_kakoune(&x.range.end, &document.text, ctx.offset_encoding);
+        .map(|(line_number, line_diagnostics)| {
+            let line_text = get_line(*line_number as usize, &document.text);
+            let mut pos = lsp_position_to_kakoune(
+                &line_diagnostics.range_end,
+                &document.text,
+                ctx.offset_encoding,
+            );
             pos.column = line_text.len_bytes() as u32;
-            // separate all but the first diagnostic on the same line
-            let sep = if lines_with_errors.insert(line) {
-                ""
-            } else {
-                ", "
-            };
-            editor_quote(&format!(
-                "{}+0|{{{}}}{{\\}}{} {}",
+
+            format!(
+                "\"{}+0|%opt[lsp_inlay_diagnostic_gap]{} {{{}}}{{\\}}{}\"",
                 pos,
-                face,
-                sep,
-                x.message.replace("|", "\\|")
-            ))
+                line_diagnostics.symbols,
+                line_diagnostics.text_face,
+                editor_escape(&line_diagnostics.text)
+            )
         })
         .join(" ");
+
     // Always show a space on line one if no other highlighter is there,
     // to make sure the column always has the right width
     // Also wrap line_flags in another eval and quotes, to make sure the %opt[] tags are expanded
