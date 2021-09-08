@@ -30,14 +30,18 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 lsp_range_to_kakoune(&x.range, &document.text, ctx.offset_encoding),
                 match x.severity {
                     Some(DiagnosticSeverity::Error) => "DiagnosticError",
+                    Some(DiagnosticSeverity::Hint) => "DiagnosticHint",
+                    Some(DiagnosticSeverity::Information) => "DiagnosticInfo",
                     _ => "DiagnosticWarning",
                 }
             )
         })
         .join(" ");
 
-    let mut error_count = 0;
-    let mut warning_count = 0;
+    let mut error_count: u32 = 0;
+    let mut warning_count: u32 = 0;
+    let mut info_count: u32 = 0;
+    let mut hint_count: u32 = 0;
     let line_flags = diagnostics
         .iter()
         .map(|x| {
@@ -47,11 +51,19 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 match x.severity {
                     Some(DiagnosticSeverity::Error) => {
                         error_count += 1;
-                        "%opt[lsp_diagnostic_line_error_sign]"
+                        "{LineFlagError}%opt[lsp_diagnostic_line_error_sign]"
+                    }
+                    Some(DiagnosticSeverity::Hint) => {
+                        hint_count += 1;
+                        "{LineFlagHint}%opt[lsp_diagnostic_line_hint_sign]"
+                    }
+                    Some(DiagnosticSeverity::Information) => {
+                        info_count += 1;
+                        "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
                     }
                     _ => {
                         warning_count += 1;
-                        "%opt[lsp_diagnostic_line_warning_sign]"
+                        "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
                     }
                 }
             )
@@ -63,6 +75,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         .map(|x| {
             let face = match x.severity {
                 Some(DiagnosticSeverity::Error) => "InlayDiagnosticError",
+                Some(DiagnosticSeverity::Hint) => "InlayDiagnosticHint",
+                Some(DiagnosticSeverity::Information) => "InlayDiagnosticInfo",
                 _ => "InlayDiagnosticWarning",
             };
             // Pretend the language server sent us the diagnostic past the end of line
@@ -91,11 +105,15 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     // Also wrap line_flags in another eval and quotes, to make sure the %opt[] tags are expanded
     let command = format!(
         "set buffer lsp_diagnostic_error_count {}; \
+         set buffer lsp_diagnostic_hint_count {}; \
+         set buffer lsp_diagnostic_info_count {}; \
          set buffer lsp_diagnostic_warning_count {}; \
          set buffer lsp_errors {} {}; \
          eval \"set buffer lsp_error_lines {} {} '0| '\"; \
          set buffer lsp_diagnostics {} {}",
         error_count,
+        hint_count,
+        info_count,
         warning_count,
         version,
         ranges,
@@ -136,6 +154,8 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                         p.column,
                         match x.severity {
                             Some(DiagnosticSeverity::Error) => "error",
+                            Some(DiagnosticSeverity::Hint) => "hint",
+                            Some(DiagnosticSeverity::Information) => "info",
                             _ => "warning",
                         },
                         x.message

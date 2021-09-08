@@ -142,8 +142,8 @@ Either way you get:
 ** `\*symbols*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics for)
 ** `\*diagnostics*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
-* inline diagnostics highlighting using the `DiagnosticError` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
-* flags in the left margin on lines with errors or warnings; can be disabled with `lsp-diagnostic-lines-disable` command
+* inline diagnostics highlighting using the `DiagnosticError`, `DiagnosticHint`, `DiagnosticInfo` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
+* flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
 
@@ -155,7 +155,7 @@ hook global WinSetOption filetype=rust %{
 
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
 * `lsp-code-actions` command to open a menu with code actions available at the main cursor position
-* `lsp_diagnostic_error_count`  and `lsp_diagnostic_warning_count` options which contain the number of errors and warnings diagnosed for the current buffer. For example, you can put it into your modeline to see at a glance if there are errors in the current file
+* `lsp_diagnostic_error_count`, `lsp_diagnostic_hint_count`, `lsp_diagnostic_info_count` and `lsp_diagnostic_warning_count` options which contain the number of diagnostics of the respective level for the current buffer. For example, you can put it into your modeline to see at a glance if there are errors in the current file
 * starting new kak-lsp session when Kakoune session begins and stopping it when Kakoune session ends
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
@@ -244,8 +244,7 @@ arbitrary sections that are requested by the server in `workspace/configuration`
 kak-lsp's Kakoune integration declares the following options:
 
 * `lsp_completion_trigger` (str): This option is set to a Kakoune command, which is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a completion request to the language server.
-* `lsp_diagnostic_line_error_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an error, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
-* `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects a warning, kak-lsp will add a flag to the left-most column of the window, using this string and the `LineFlagErrors` face.
+* `lsp_diagnostic_line_error_sign`, `lsp_diagnostic_line_hint_sign`, `lsp_diagnostic_line_info_sign`, and `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an error or another diagnostic, kak-lsp will add a flag to the left-most column of the window, using this string and one of the corresponding faces `LineFlagError`, `LineFlagHint`, `LineFlagInfo` or `LineFlagWarning`.
 * `lsp_hover_anchor` (bool): When using `lsp-hover` or `lsp-auto-hover-enable`, if this option is `true` then the hover information will be displayed next to the active selection. Otherwise, the information will be displayed in a box in the lower-right corner.
 * `lsp_hover_max_lines` (int): If greater than 0 then limit rendered hover information to the given number of lines.
 * `lsp_hover_insert_mode_trigger` (str): This option is set to a Kakoune command. When using `lsp-auto-hover-insert-mode-enable`, this command is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a hover-information request for the text selected by the command.
