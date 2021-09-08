@@ -1658,17 +1658,13 @@ hook global WinSetOption filetype=lsp-goto %{
 }
 
 define-command -hidden lsp-make-register-relative-to-root %{
-    evaluate-commands -draft -save-regs '"' %{
-        edit -scratch
-        set-register '"' %reg{1}
-        execute-keys <a-p>
+    evaluate-commands -save-regs / %{
         try %{
             # Is it an absolute path?
-            execute-keys s^/<ret>
+            execute-keys s\A/.*<ret>
         } catch %{
             set-register 1 "%opt{lsp_project_root}%reg{1}"
         }
-        delete-buffer
     }
 }
 

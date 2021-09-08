@@ -4,6 +4,7 @@ Bug fixes:
 - Fix example server configuration for `lua-language-server`.
 - Fix completion of Rust lifetimes (#510).
 - `lsp-highlight-references` clears highlights on failure, improving the behavior when `%opt{lsp_auto_highlight_references}` is true (#457).
+- Fix jumping to locations when Kakoune working directory is different from project root (#517).
 
 ## 11.0.0 - 2021-09-01
 
