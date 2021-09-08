@@ -32,7 +32,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                     Some(DiagnosticSeverity::Error) => "DiagnosticError",
                     Some(DiagnosticSeverity::Hint) => "DiagnosticHint",
                     Some(DiagnosticSeverity::Information) => "DiagnosticInfo",
-                    _ => "DiagnosticWarning",
+                    Some(DiagnosticSeverity::Warning) | None => "DiagnosticWarning",
                 }
             )
         })
@@ -61,7 +61,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                         info_count += 1;
                         "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
                     }
-                    _ => {
+                    Some(DiagnosticSeverity::Warning) | None => {
                         warning_count += 1;
                         "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
                     }
@@ -77,7 +77,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 Some(DiagnosticSeverity::Error) => "InlayDiagnosticError",
                 Some(DiagnosticSeverity::Hint) => "InlayDiagnosticHint",
                 Some(DiagnosticSeverity::Information) => "InlayDiagnosticInfo",
-                _ => "InlayDiagnosticWarning",
+                Some(DiagnosticSeverity::Warning) | None => "InlayDiagnosticWarning",
             };
             // Pretend the language server sent us the diagnostic past the end of line
             let line = x.range.end.line;
@@ -156,7 +156,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             Some(DiagnosticSeverity::Error) => "error",
                             Some(DiagnosticSeverity::Hint) => "hint",
                             Some(DiagnosticSeverity::Information) => "info",
-                            _ => "warning",
+                            Some(DiagnosticSeverity::Warning) | None => "warning",
                         },
                         x.message
                     )
