@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::markup::*;
 use crate::position::lsp_range_to_kakoune;
 use crate::types::*;
 use crate::util::*;
@@ -36,11 +37,13 @@ pub fn editor_completion(
     if result.is_none() {
         return;
     }
+
     let items = match result.unwrap() {
         CompletionResponse::Array(items) => items,
         CompletionResponse::List(list) => list.items,
     };
-    let unescape_markdown_re = Regex::new(r"\\(?P<c>.)").unwrap();
+
+    // Length of the longest label in the current completion list
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
     let escape_bar = |s: &str| s.replace("|", "\\|");
     let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
@@ -48,33 +51,54 @@ pub fn editor_completion(
     let items = items
         .into_iter()
         .map(|x| {
-            let mut doc = x.documentation.map(|doc| {
-                match doc {
-                    Documentation::String(st) => st,
-                    Documentation::MarkupContent(mup) => match mup.kind {
-                        MarkupKind::PlainText => mup.value,
-                        // NOTE just in case server ignored our documentationFormat capability
-                        // we want to unescape markdown to make text a bit more readable
-                        MarkupKind::Markdown => unescape_markdown_re
-                            .replace_all(&mup.value, r"$c")
-                            .to_string(),
-                    },
-                }
+            let doc = x.documentation.map(|doc| match doc {
+                Documentation::String(s) => s,
+                Documentation::MarkupContent(content) => content.value,
             });
 
-            if let Some(detail) = x.detail {
-                doc = doc.map(|doc| format!("{}\n\n{}", detail, doc));
-            }
+            // Combine the 'detail' line and the full-text documentation into
+            // a single string. If both exist, separate them with a horizontal rule.
+            let markdown = {
+                let mut markdown = String::new();
 
-            let doc = doc
-                .map(|doc| format!("info -style menu -- %§{}§", doc.replace("§", "\\§")))
-                .unwrap_or_else(|| String::from("nop"));
+                if let Some(detail) = x.detail {
+                    markdown.push_str(&detail);
 
-            let mut entry = x.label.clone();
-            if let Some(k) = x.kind {
-                entry += &" ".repeat(maxlen - x.label.len());
-                entry += &format!(" {{MenuInfo}}{:?}", k);
-            }
+                    if doc.is_some() {
+                        markdown.push_str("\n\n---\n\n");
+                    }
+                }
+
+                if let Some(doc) = doc {
+                    markdown.push_str(&doc);
+                }
+
+                markdown
+            };
+
+            let doc = if !markdown.is_empty() {
+                let markup = markdown_to_kakoune_markup(markdown);
+                format!(
+                    "info -markup -style menu -- %§{}§",
+                    markup.replace("§", "\\§")
+                )
+            } else {
+                // When the user scrolls through the list of completion candidates, Kakoune
+                // does not clean up the info box. We need to do that explicitly, in this case by
+                // requesting an empty one.
+                "info -style menu ''".to_string()
+            };
+
+            let entry = match x.kind {
+                Some(k) => format!(
+                    "{}{} {{MenuInfo}}{:?}",
+                    &x.label,
+                    " ".repeat(maxlen - x.label.len()),
+                    k
+                ),
+                None => x.label.clone(),
+            };
+
             // The generic textEdit property is not supported yet (#40).
             // However, we can support simple text edits that only replace the token left of the
             // cursor. Kakoune will do this very edit if we simply pass it the replacement string
@@ -87,6 +111,7 @@ pub fn editor_completion(
                         return false;
                     }
                 };
+
                 if let CompletionTextEdit::Edit(text_edit) = cte {
                     let range =
                         lsp_range_to_kakoune(&text_edit.range, &document.text, ctx.offset_encoding);
@@ -98,7 +123,8 @@ pub fn editor_completion(
                     false
                 }
             });
-            let insert_text = &if is_simple_text_edit {
+
+            let insert_text = if is_simple_text_edit {
                 if let CompletionTextEdit::Edit(te) = x.text_edit.unwrap() {
                     te.new_text
                 } else {
@@ -107,24 +133,24 @@ pub fn editor_completion(
             } else {
                 x.insert_text.unwrap_or(x.label)
             };
-            let do_snippet = ctx.config.snippet_support;
-            let do_snippet = do_snippet
-                && x.insert_text_format
-                    .map(|f| f == InsertTextFormat::Snippet)
-                    .unwrap_or(false);
-            if do_snippet {
+
+            // If snippet support is both enabled and provided by the server,
+            // we'll need to perform some transformations on the completion commands.
+            if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::Snippet)
+            {
                 let snippet = insert_text;
                 let insert_text = snippet_prefix_re
-                    .find(snippet)
+                    .find(&snippet)
                     .map(|x| x.as_str())
-                    .unwrap_or(snippet);
+                    .unwrap_or(&snippet);
+
                 let command = format!(
                     "{}\nlsp-snippets-insert-completion {} {}",
                     doc,
                     editor_quote(&regex::escape(insert_text)),
-                    editor_quote(snippet)
+                    editor_quote(&snippet)
                 );
-                let command = format!("eval -verbatim -- {}", command);
+
                 editor_quote(&format!(
                     "{}|{}|{}",
                     escape_bar(insert_text),
@@ -134,17 +160,19 @@ pub fn editor_completion(
             } else {
                 editor_quote(&format!(
                     "{}|{}|{}",
-                    escape_bar(insert_text),
+                    escape_bar(&insert_text),
                     escape_bar(&doc),
                     escape_bar(&entry),
                 ))
             }
         })
         .join(" ");
+
     let p = params.position;
     let command = format!(
         "set window lsp_completions {}.{}@{} {}\n",
         p.line, params.completion.offset, meta.version, items
     );
+
     ctx.exec(meta, command);
 }

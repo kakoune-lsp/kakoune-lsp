@@ -76,11 +76,20 @@ declare-option -docstring "Character(s) to separate the actual line contents fro
 # Another good default:
 # set-option global lsp_diagnostic_line_error_sign '▓'
 # set-option global lsp_diagnostic_line_warning_sign '▒'
-# This is used to render lsp-hover response.
+
+# This is used to render lsp-hover responses.
 # By default it shows both hover info and diagnostics.
-declare-option -docstring "Format hover info" str lsp_show_hover_format 'printf ''%s\n\n%s'' "${lsp_info}" "${lsp_diagnostics}"'
+# The string is `eval`ed to produce the content to display, so anything sent to stdout will
+# show up in the info box.
+declare-option -docstring "Format hover info" str lsp_show_hover_format %{
+printf "%s\n\n" "${lsp_info}"
+if [ -n "${lsp_diagnostics}" ]; then
+    printf "{+b@InfoDefault}Diagnostics:{InfoDefault}\n%s" "${lsp_diagnostics}"
+fi
+}
 # If you want to see only hover info, try
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
+
 declare-option -docstring %{Defines location patterns for lsp-next-location and lsp-previous-location.
 Default locations look like "file:line[:column][:message]"
 
@@ -954,21 +963,31 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 } %{ evaluate-commands %sh{
     lsp_info=$2
     lsp_diagnostics=$3
+
+    # To make sure we always show diagnostics, restrict only the info portion based
+    # on the configured maximum line count
+    if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
+        diagnostics_count=$(printf %s "$lsp_diagnostics" | wc -l)
+        if [ $diagnostics_count -gt 0 ]; then
+            # By default, we print blank lines before diagnostics, plus the "Diagnostics:"
+            # header, so subtract 3.
+            lsp_info=$(printf %s "$lsp_info" | head -n $(($kak_opt_lsp_hover_max_lines - 3 - $diagnostics_count)))
+        else
+            lsp_info=$(printf %s "$lsp_info" | head -n $kak_opt_lsp_hover_max_lines)
+        fi
+    fi
+
     content=$(eval "${kak_opt_lsp_show_hover_format}")
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
     # remove trailing whitespace characters
     content="${content%"${content##*[![:space:]]}"}"
 
-    if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
-        content=$(printf %s "$content" | head -n $kak_opt_lsp_hover_max_lines)
-    fi
-
     content=$(printf %s "$content" | sed s/\'/\'\'/g)
 
     case $kak_opt_lsp_hover_anchor in
-        true) printf "info -anchor %%arg{1} -- '%s'" "$content";;
-        *)    printf "info -- '%s'" "$content";;
+        true) printf "info -markup -anchor %%arg{1} -- '%s'" "$content";;
+        *)    printf "info -markup -- '%s'" "$content";;
     esac
 }}
 

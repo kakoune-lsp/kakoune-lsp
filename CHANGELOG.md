@@ -11,6 +11,7 @@ Bug fixes:
 - Diagnostics of level "info" and "hint" are no longer shown as "warning", and are given distinct faces. Also, `find-next-error` will skip over "info" and "hint" diagnostics (#516).
 
 Additions:
+- Render Markdown from hover and from completions in info box. You can set custom faces to highlight different syntax elements (#73, #513).
 - Multiple inlay diagnostics on a single line are coalesced (#515).
 
 ## 11.0.0 - 2021-09-01

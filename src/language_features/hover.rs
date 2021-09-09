@@ -1,11 +1,11 @@
 use crate::context::*;
+use crate::markup::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use std::str;
 use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -50,29 +50,49 @@ pub fn editor_hover(
                             && end.line == pos.line
                             && pos.character <= end.character)
                 })
-                .map(|x| str::trim(&x.message))
-                .filter(|x| !x.is_empty())
-                .map(|x| format!("• {}", x))
-                .join("\n")
-        })
-        .unwrap_or_else(String::new);
-    let contents = match result {
-        None => "".to_string(),
-        Some(result) => match result.contents {
-            HoverContents::Scalar(contents) => contents.plaintext(),
-            HoverContents::Array(contents) => contents
-                .into_iter()
                 .filter_map(|x| {
-                    let text = x.plaintext();
+                    let face = x
+                        .severity
+                        .map(|sev| match sev {
+                            DiagnosticSeverity::Error => FACE_INFO_DIAGNOSTIC_ERROR,
+                            DiagnosticSeverity::Warning => FACE_INFO_DIAGNOSTIC_WARNING,
+                            DiagnosticSeverity::Information => FACE_INFO_DIAGNOSTIC_INFO,
+                            DiagnosticSeverity::Hint => FACE_INFO_DIAGNOSTIC_HINT,
+                        })
+                        .unwrap_or(FACE_INFO_DEFAULT);
 
-                    if !text.is_empty() {
-                        Some(format!("• {}", text.trim()))
+                    if !x.message.is_empty() {
+                        Some(format!(
+                            "• {{{}}}{}",
+                            face,
+                            escape_brace(x.message.trim())
+                                // Indent line breaks to the same level as the bullet point
+                                .replace("\n", "\n  "),
+                        ))
                     } else {
                         None
                     }
                 })
-                .join("\n"),
-            HoverContents::Markup(contents) => contents.value,
+                .join("\n")
+        })
+        .unwrap_or_else(String::new);
+
+    let contents = match result {
+        None => "".to_string(),
+        Some(result) => match result.contents {
+            HoverContents::Scalar(contents) => marked_string_to_kakoune_markup(contents),
+            HoverContents::Array(contents) => contents
+                .into_iter()
+                .map(marked_string_to_kakoune_markup)
+                .filter(|markup| !markup.is_empty())
+                .join(&format!(
+                    "\n{{{}}}---{{{}}}\n",
+                    FACE_INFO_RULE, FACE_INFO_DEFAULT
+                )),
+            HoverContents::Markup(contents) => match contents.kind {
+                MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value),
+                MarkupKind::PlainText => contents.value,
+            },
         },
     };
 

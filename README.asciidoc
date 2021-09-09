@@ -372,6 +372,88 @@ kak-lsp supports showing diagnostics inline after their respective line, but thi
 lsp-inlay-diagnostics-enable global
 ----
 
+== Markdown rendering in info box
+
+kak-lsp shows some additional information provided by the language server in an info box. This information includes documentation for the token under the cursor (`lsp-hover`) and documentation for completion candidates. In both cases, the Language Server Protocol allows for both plain text and Markdown, and most servers do implement Markdown.
+
+To make use of Markdown, kak-lsp transpiles it into Kakoune's markup language, utilizing various faces for styling.
+These faces all default to the `Information` face, to ensure that the text in the info box works with any color scheme.
+
+To enable Markdown highlighting, define some of the following faces in your theme or `kakrc`:
+
+[cols="1a,3a"]
+|===
+| Face | Usage
+
+| `InfoDefault`
+| The default text color. You'll likely want to leave this at the default `Information`.
+
+| `InfoBlock`
+| The face used for code blocks. Language specific syntax highlighting for code blocks is not supported.
+
+| `InfoBlockQuote`
+| The face used for block quotes. The `>` Markdown syntax is still rendered.
+
+| `InfoBullet`
+| The face used to highlight the list symbol for both ordered and unordered lists. For list items' text, `InfoDefault` is used.
+
+| `InfoHeader`
+| The face used for headings. There is currently no distinction between different heading levels.
+
+| `InfoLink`
+| The face used to highlight link titles. Maybe some classic `blue+u` for this one?
+
+| `InfoLinkMono`
+| This face is assigned to inline code spans within link titles, such as in the following Markdown snippet. Here, the word `format` will receive the `InfoLinkMono` face.
+
+----
+[the `format` function](https://example.com)
+----
+
+| `InfoMono`
+| The face used for inline code spans (backtick strings).
+
+| `InfoRule`
+| The face used for horizontal lines (rules).
+
+| `InfoDiagnosticError`
+| Used for error messages in the diagnostics inside hover info. This defaults to Kakoune's built-in `Error` face.
+
+| `InfoDiagnosticHint`
+| Used for hints in the diagnostics inside hover info.
+
+| `InfoDiagnosticInformation`
+| Used for informational messages in the diagnostics inside hover info.
+
+| `InfoDiagnosticWarning`
+| Used for warnings in the diagnostics inside hover info.
+
+|===
+
+For convenience, here is a snippet to paste into your theme/config:
+
+----
+face global InfoDefault               Information
+face global InfoBlock                 Information
+face global InfoBlockQuote            Information
+face global InfoBullet                Information
+face global InfoHeader                Information
+face global InfoLink                  Information
+face global InfoLinkMono              Information
+face global InfoMono                  Information
+face global InfoRule                  Information
+face global InfoDiagnosticError       Information
+face global InfoDiagnosticHint        Information
+face global InfoDiagnosticInformation Information
+face global InfoDiagnosticWarning     Information
+----
+
+Current limitations of this feature are:
+
+* Language specific syntax highlighting for code blocks is not supported.
+* For hyperlinks, only their title (the pretty name) is shown.
+* The original syntax for headings is retained to visualize their level.
+
 == Snippets
 
 kak-lsp has experimental support for snippets. It is enabled by setting `snippet_support = true` at the top level of the config.
