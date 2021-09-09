@@ -8,12 +8,19 @@ declare-option -docstring "Command with which lsp is run" str lsp_cmd "kak-lsp -
 
 # Faces used by inline diagnostics.
 set-face global DiagnosticError red
+set-face global DiagnosticHint default
+set-face global DiagnosticInfo default
 set-face global DiagnosticWarning yellow
 # Faces used by inlay diagnostics.
 set-face global InlayDiagnosticError DiagnosticError
+set-face global InlayDiagnosticHint DiagnosticHint
+set-face global InlayDiagnosticInfo DiagnosticInfo
 set-face global InlayDiagnosticWarning DiagnosticWarning
-# Line flags for errors and warnings both use this face.
-set-face global LineFlagErrors red
+# Faces used by line flags
+set-face global LineFlagError red
+set-face global LineFlagHint default
+set-face global LineFlagInfo default
+set-face global LineFlagWarning yellow
 # Face for highlighting references.
 set-face global Reference MatchingChar
 set-face global ReferenceBind +u@Reference
@@ -60,6 +67,8 @@ declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to se
 declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
 # Line flags for inline diagnostics.
 declare-option -docstring "Character to signal an error in the gutter" str lsp_diagnostic_line_error_sign '*'
+declare-option -docstring "Character to signal a hint in the gutter" str lsp_diagnostic_line_hint_sign '-'
+declare-option -docstring "Character to signal an info in the gutter" str lsp_diagnostic_line_info_sign 'i'
 declare-option -docstring "Character to signal a warning in the gutter" str lsp_diagnostic_line_warning_sign '!'
 # Another good default:
 # set-option global lsp_diagnostic_line_error_sign '▓'
@@ -67,7 +76,7 @@ declare-option -docstring "Character to signal a warning in the gutter" str lsp_
 # This is used to render lsp-hover response.
 # By default it shows both hover info and diagnostics.
 declare-option -docstring "Format hover info" str lsp_show_hover_format 'printf ''%s\n\n%s'' "${lsp_info}" "${lsp_diagnostics}"'
-# If you want to see only hover info, try 
+# If you want to see only hover info, try
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
 declare-option -docstring %{Defines location patterns for lsp-next-location and lsp-previous-location.
 Default locations look like "file:line[:column][:message]"
@@ -83,6 +92,8 @@ Capture groups must be:
 
 # Count of diagnostics published for the current buffer.
 declare-option -docstring "Number of errors" int lsp_diagnostic_error_count 0
+declare-option -docstring "Number of hints" int lsp_diagnostic_hint_count 0
+declare-option -docstring "Number of infos" int lsp_diagnostic_info_count 0
 declare-option -docstring "Number of warnings" int lsp_diagnostic_warning_count 0
 
 # Internal variables.
@@ -425,7 +436,7 @@ define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
     Open buffer with a list of project-wide symbols matching the query
     on behalf of the buffile at timestamp
 } %{
-    lsp-did-change-and-then "lsp-workspace-symbol-buffer-request '%arg{1}' '%arg{2}' '%arg{3}' '%arg{4}'" 
+    lsp-did-change-and-then "lsp-workspace-symbol-buffer-request '%arg{1}' '%arg{2}' '%arg{3}' '%arg{4}'"
 }
 
 define-command -hidden lsp-workspace-symbol-buffer-request -params 4 -docstring %{
@@ -1151,13 +1162,13 @@ define-command lsp-find-error -params 0..2 -docstring "lsp-find-error [--previou
 Jump to the next or previous diagnostic error" %{
     evaluate-commands %sh{
         previous=false
-        errorCompare="DiagnosticError"
         if [ "$1" = "--previous" ]; then
             previous=true
             shift
         fi
+        includeWarnings=false
         if [ "$1" = "--include-warnings" ]; then
-            errorCompare="Diagnostic"
+            includeWarnings=true
         fi
         #expand quoting, stores option in $@
         eval set -- "${kak_quoted_opt_lsp_errors}"
@@ -1167,7 +1178,9 @@ Jump to the next or previous diagnostic error" %{
         prev=""
         selection=""
         for e in "$@"; do
-            if [ -z "${e##*${errorCompare}*}" ]; then # e contains errorCompare
+            if [ -z "${e##*DiagnosticError*}" ] || {
+                $includeWarnings && [ -z "${e##*DiagnosticWarning*}" ]
+            } then # e is an error or warning
                 e=${e%,*}
                 line=${e%.*}
                 column=${e#*.}
@@ -1245,7 +1258,7 @@ define-command lsp-inline-diagnostics-disable -params 1 -docstring "lsp-inline-d
 }
 
 define-command lsp-diagnostic-lines-enable -params 1 -docstring "lsp-diagnostic-lines-enable <scope>: Show flags on lines with diagnostics in <scope>" %{
-    add-highlighter "%arg{1}/lsp_error_lines" flag-lines LineFlagErrors lsp_error_lines
+    add-highlighter "%arg{1}/lsp_error_lines" flag-lines default lsp_error_lines
 }
 
 define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic-lines-disable <scope>: Hide flags on lines with diagnostics in <scope>"  %{
@@ -1319,7 +1332,7 @@ declare-user-mode lsp
 map global lsp a '<esc>: lsp-code-actions<ret>'           -docstring 'show code actions for current position'
 map global lsp c '<esc>: lsp-capabilities<ret>'           -docstring 'show language server capabilities'
 map global lsp d '<esc>: lsp-definition<ret>'             -docstring 'go to definition'
-map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list project errors and warnings'
+map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list project errors, info, hints and warnings'
 map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buffer'
 map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
 map global lsp i '<esc>: lsp-implementation<ret>'         -docstring 'go to implementation'
