@@ -1,5 +1,5 @@
 use jsonrpc_core::{Call, Output, Params};
-use lsp_types::{Range, SemanticTokenModifier};
+use lsp_types::{DiagnosticSeverity, Position, Range, SemanticTokenModifier};
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
@@ -234,4 +234,13 @@ pub enum OffsetEncoding {
     /// UTF-16 code units
     #[serde(rename = "utf-16")]
     Utf16,
+}
+
+// An intermediate representation of the diagnostics on a line, for use with inlay diagnostics
+pub struct LineDiagnostics {
+    pub range_end: Position,
+    pub symbols: String,
+    pub text: String,
+    pub text_face: &'static str,
+    pub text_severity: Option<DiagnosticSeverity>,
 }

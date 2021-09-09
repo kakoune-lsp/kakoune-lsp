@@ -10,6 +10,9 @@ Bug fixes:
 - Fix jumping to locations when Kakoune working directory is different from project root (#517).
 - Diagnostics of level "info" and "hint" are no longer shown as "warning", and are given distinct faces. Also, `find-next-error` will skip over "info" and "hint" diagnostics (#516).
 
+Additions:
+- Multiple inlay diagnostics on a single line are coalesced (#515).
+
 ## 11.0.0 - 2021-09-01
 
 Breaking changes:
