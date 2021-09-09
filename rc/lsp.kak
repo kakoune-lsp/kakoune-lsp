@@ -1251,27 +1251,27 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
 
 define-command lsp-inline-diagnostics-enable -params 1 -docstring "lsp-inline-diagnostics-enable <scope>: Enable inline diagnostics highlighting for <scope>" %{
     add-highlighter "%arg{1}/lsp_errors" ranges lsp_errors
-}
+} -shell-script-candidates %{ printf '%s\n' global buffer window }
 
 define-command lsp-inline-diagnostics-disable -params 1 -docstring "lsp-inline-diagnostics-disable <scope>: Disable inline diagnostics highlighting for <scope>"  %{
     remove-highlighter "%arg{1}/lsp_errors"
-}
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-diagnostic-lines-enable -params 1 -docstring "lsp-diagnostic-lines-enable <scope>: Show flags on lines with diagnostics in <scope>" %{
     add-highlighter "%arg{1}/lsp_error_lines" flag-lines default lsp_error_lines
-}
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic-lines-disable <scope>: Hide flags on lines with diagnostics in <scope>"  %{
     remove-highlighter "%arg{1}/lsp_error_lines"
-}
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-enable -params 1 -docstring "lsp-inlay-diagnostics-enable <scope>: Enable inlay diagnostics highlighting for <scope>" %{
     add-highlighter "%arg{1}/lsp_diagnostics" replace-ranges lsp_diagnostics
-}
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-diagnostics-disable <scope>: Disable inlay diagnostics highlighting for <scope>"  %{
     remove-highlighter "%arg{1}/lsp_diagnostics"
-}
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
     hook -group lsp-auto-hover global NormalIdle .* %{
