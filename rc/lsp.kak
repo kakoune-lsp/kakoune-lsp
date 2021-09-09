@@ -1162,13 +1162,13 @@ define-command lsp-find-error -params 0..2 -docstring "lsp-find-error [--previou
 Jump to the next or previous diagnostic error" %{
     evaluate-commands %sh{
         previous=false
-        errorCompare="DiagnosticError"
         if [ "$1" = "--previous" ]; then
             previous=true
             shift
         fi
+        includeWarnings=false
         if [ "$1" = "--include-warnings" ]; then
-            errorCompare="Diagnostic"
+            includeWarnings=true
         fi
         #expand quoting, stores option in $@
         eval set -- "${kak_quoted_opt_lsp_errors}"
@@ -1178,7 +1178,9 @@ Jump to the next or previous diagnostic error" %{
         prev=""
         selection=""
         for e in "$@"; do
-            if [ -z "${e##*${errorCompare}*}" ]; then # e contains errorCompare
+            if [ -z "${e##*DiagnosticError*}" ] || {
+                $includeWarnings && [ -z "${e##*DiagnosticWarning*}" ]
+            } then # e is an error or warning
                 e=${e%,*}
                 line=${e%.*}
                 column=${e#*.}
