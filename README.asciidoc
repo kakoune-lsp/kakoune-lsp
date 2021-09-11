@@ -522,6 +522,8 @@ to enable debug logging.
 If it does not give enough insight to fix the problem or if the problem is a bug in kak-lsp itself
 please don't hesitate to raise an issue.
 
+=== Default configuration
+
 Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific settings in your `~/.config/kak-lsp/kak-lsp.toml` and/or `~/.config/kak/`. Use this command to start Kakoune with kak-lsp enabled, both with pristine settings.
 
 ----
