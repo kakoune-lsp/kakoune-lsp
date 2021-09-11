@@ -99,45 +99,44 @@ pub fn editor_completion(
                 None => x.label.clone(),
             };
 
-            // The generic textEdit property is not supported yet (#40).
-            // However, we can support simple text edits that only replace the token left of the
-            // cursor. Kakoune will do this very edit if we simply pass it the replacement string
-            // as completion.
-            let is_simple_text_edit = x.text_edit.as_ref().map_or(false, |cte| {
-                let document = match ctx.documents.get(&meta.buffile) {
-                    Some(doc) => doc,
-                    None => {
-                        warn!("No document in context for file: {}", &meta.buffile);
-                        return false;
-                    }
-                };
+            let insert_text = x
+                .text_edit
+                .and_then(|cte| {
+                    let document = match ctx.documents.get(&meta.buffile) {
+                        Some(doc) => doc,
+                        None => {
+                            warn!("No document in context for file: {}", &meta.buffile);
+                            return None;
+                        }
+                    };
 
-                match cte {
-                    CompletionTextEdit::Edit(text_edit) => {
-                        let range = lsp_range_to_kakoune(
-                            &text_edit.range,
-                            &document.text,
-                            ctx.offset_encoding,
-                        );
-                        range.start.line == params.position.line
+                    match cte {
+                        CompletionTextEdit::Edit(text_edit) => {
+                            // The generic textEdit property is not supported yet (#40).  However,
+                            // we can support simple text edits that only replace the token left
+                            // of the cursor. Kakoune will do this very edit if we simply pass it
+                            // the replacement string as completion.
+                            let range = lsp_range_to_kakoune(
+                                &text_edit.range,
+                                &document.text,
+                                ctx.offset_encoding,
+                            );
+                            if range.start.line == params.position.line
                             && range.end.line == params.position.line
                             // Not sure why this case happens, see #455
                             && (range.end.column == params.position.column
                                 || range.end.column + 1 == params.position.column)
+                            {
+                                Some(text_edit.new_text)
+                            } else {
+                                None
+                            }
+                        }
+                        CompletionTextEdit::InsertAndReplace(_) => None,
                     }
-                    CompletionTextEdit::InsertAndReplace(_) => false,
-                }
-            });
-
-            let insert_text = if is_simple_text_edit {
-                if let CompletionTextEdit::Edit(te) = x.text_edit.unwrap() {
-                    te.new_text
-                } else {
-                    x.insert_text.unwrap_or(x.label)
-                }
-            } else {
-                x.insert_text.unwrap_or(x.label)
-            };
+                })
+                .or(x.insert_text)
+                .unwrap_or(x.label);
 
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.
