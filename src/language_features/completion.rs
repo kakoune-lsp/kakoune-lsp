@@ -112,15 +112,20 @@ pub fn editor_completion(
                     }
                 };
 
-                if let CompletionTextEdit::Edit(text_edit) = cte {
-                    let range =
-                        lsp_range_to_kakoune(&text_edit.range, &document.text, ctx.offset_encoding);
-                    range.start.line == params.position.line
-                        && range.end.line == params.position.line
-                        && (range.end.column == params.position.column // Not sure why this case happens, see #455
-                            || range.end.column + 1 == params.position.column)
-                } else {
-                    false
+                match cte {
+                    CompletionTextEdit::Edit(text_edit) => {
+                        let range = lsp_range_to_kakoune(
+                            &text_edit.range,
+                            &document.text,
+                            ctx.offset_encoding,
+                        );
+                        range.start.line == params.position.line
+                            && range.end.line == params.position.line
+                            // Not sure why this case happens, see #455
+                            && (range.end.column == params.position.column
+                                || range.end.column + 1 == params.position.column)
+                    }
+                    CompletionTextEdit::InsertAndReplace(_) => false,
                 }
             });
 
