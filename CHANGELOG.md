@@ -5,7 +5,7 @@ Breaking changes:
 
 Bug fixes:
 - Fix example server configuration for `lua-language-server`.
-- Fix completion of Rust lifetimes (#510).
+- Fix completion of tokens containing non-word characters, such as Ruby attributes, Ruby symbols and Rust lifetimes (#378, #510).
 - `lsp-highlight-references` clears highlights on failure, improving the behavior when `%opt{lsp_auto_highlight_references}` is true (#457).
 - Fix jumping to locations when Kakoune working directory is different from project root (#517).
 - Diagnostics of level "info" and "hint" are no longer shown as "warning", and are given distinct faces. Also, `find-next-error` will skip over "info" and "hint" diagnostics (#516).

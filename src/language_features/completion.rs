@@ -48,6 +48,9 @@ pub fn editor_completion(
     let escape_bar = |s: &str| s.replace("|", "\\|");
     let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
 
+    let mut inferred_offset: Option<u32> = None;
+    let mut can_infer_offset = true;
+
     let items = items
         .into_iter()
         .map(|x| {
@@ -106,6 +109,7 @@ pub fn editor_completion(
                         Some(doc) => doc,
                         None => {
                             warn!("No document in context for file: {}", &meta.buffile);
+                            can_infer_offset = false;
                             return None;
                         }
                     };
@@ -121,6 +125,18 @@ pub fn editor_completion(
                                 &document.text,
                                 ctx.offset_encoding,
                             );
+
+                            if can_infer_offset {
+                                match inferred_offset {
+                                    None => inferred_offset = Some(range.start.column),
+                                    Some(offset) if offset != range.start.column => {
+                                        can_infer_offset = false;
+                                        inferred_offset = None
+                                    }
+                                    _ => (),
+                                }
+                            };
+
                             if range.start.line == params.position.line
                             && range.end.line == params.position.line
                             // Not sure why this case happens, see #455
@@ -132,7 +148,10 @@ pub fn editor_completion(
                                 None
                             }
                         }
-                        CompletionTextEdit::InsertAndReplace(_) => None,
+                        CompletionTextEdit::InsertAndReplace(_) => {
+                            can_infer_offset = false;
+                            None
+                        }
                     }
                 })
                 .or(x.insert_text)
@@ -173,9 +192,10 @@ pub fn editor_completion(
         .join(" ");
 
     let p = params.position;
+    let offset = inferred_offset.unwrap_or(params.completion.offset);
     let command = format!(
         "set window lsp_completions {}.{}@{} {}\n",
-        p.line, params.completion.offset, meta.version, items
+        p.line, offset, meta.version, items
     );
 
     ctx.exec(meta, command);
