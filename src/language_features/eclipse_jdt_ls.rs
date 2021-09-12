@@ -7,9 +7,10 @@ use lsp_types::*;
 pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
     let file_uri = Url::from_file_path(&meta.buffile).unwrap();
 
+    let file_uri: String = file_uri.into();
     let req_params = ExecuteCommandParams {
         command: "java.edit.organizeImports".to_string(),
-        arguments: vec![serde_json::json!(file_uri.into_string())],
+        arguments: vec![serde_json::json!(file_uri)],
         ..ExecuteCommandParams::default()
     };
     ctx.call::<ExecuteCommand, _>(
