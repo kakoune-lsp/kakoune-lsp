@@ -1698,29 +1698,36 @@ define-command -hidden lsp-make-register-relative-to-root %{
             # Is it an absolute path?
             execute-keys s\A/.*<ret>
         } catch %{
-            set-register 1 "%opt{lsp_project_root}%reg{1}"
+            set-register a "%opt{lsp_project_root}%reg{a}"
         }
     }
 }
 
 define-command -hidden lsp-jump %{ # from grep.kak
-    evaluate-commands %{ # use evaluate-commands to ensure jumps are collapsed
+    evaluate-commands -save-regs abc %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
             execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+            set-register a "%reg{1}"
+            set-register b "%reg{2}"
+            set-register c "%reg{3}"
             lsp-make-register-relative-to-root
             set-option buffer grep_current_line %val{cursor_line}
-            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{1} %reg{2} %reg{3}
+            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{a} %reg{b} %reg{c}
             try %{ focus %opt{jumpclient} }
         }
     }
 }
 
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
-    evaluate-commands %{
-        execute-keys <a-h><a-l> s %opt{lsp_location_format} <ret>l
+    evaluate-commands -save-regs abcd %{
+        execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+        set-register a "%reg{1}"
+        set-register b "%reg{2}"
+        set-register c "%reg{3}"
+        set-register d "%reg{4}"
         lsp-make-register-relative-to-root
         set-option buffer grep_current_line %val{cursor_line}
-        lsp-diagnostics-open-error %reg{1} "%reg{2}" "%reg{3}" "%reg{4}"
+        lsp-diagnostics-open-error %reg{a} "%reg{b}" "%reg{c}" "%reg{d}"
     }
 }
 
