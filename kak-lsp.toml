@@ -275,24 +275,6 @@ args = ["stdio"]
 # See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
 # "solargraph.completion" = true
 
-[language.rust]
-filetypes = ["rust"]
-roots = ["Cargo.toml"]
-command = "sh"
-args = [
-    "-c",
-    """
-        if path=$(rustup which rls 2>/dev/null); then
-            "$path"
-        else
-            rls
-        fi
-    """,
-]
-[language.rust.settings.rust]
-# See https://github.com/rust-lang/rls#configuration
-# features = []
-
 # [language.rust]
 # filetypes = ["rust"]
 # roots = ["Cargo.toml"]
@@ -300,25 +282,43 @@ args = [
 # args = [
 #     "-c",
 #     """
-#         if path=$(rustup which rust-analyzer 2>/dev/null); then
+#         if path=$(rustup which rls 2>/dev/null); then
 #             "$path"
 #         else
-#             rust-analyzer
+#             rls
 #         fi
 #     """,
 # ]
-# settings_section = "rust-analyzer"
-# [language.rust.settings.rust-analyzer]
-# hoverActions.enable = false # kak-lsp doesn't support this at the moment
-# # cargo.features = []
-# # See https://rust-analyzer.github.io/manual.html#configuration
-# # If you get 'unresolved proc macro' warnings, you have two options
-# # 1. The safe choice is two disable the warning:
-# diagnostics.disabled = ["unresolved-proc-macro"]
-# # 2. Or you can opt-in for proc macro support
-# procMacro.enable = true
-# cargo.loadOutDirsFromCheck = true
-# # See https://github.com/rust-analyzer/rust-analyzer/issues/6448
+# [language.rust.settings.rust]
+# # See https://github.com/rust-lang/rls#configuration
+# # features = []
+
+[language.rust]
+filetypes = ["rust"]
+roots = ["Cargo.toml"]
+command = "sh"
+args = [
+    "-c",
+    """
+        if path=$(rustup which rust-analyzer 2>/dev/null); then
+            "$path"
+        else
+            rust-analyzer
+        fi
+    """,
+]
+settings_section = "rust-analyzer"
+[language.rust.settings.rust-analyzer]
+hoverActions.enable = false # kak-lsp doesn't support this at the moment
+# cargo.features = []
+# See https://rust-analyzer.github.io/manual.html#configuration
+# If you get 'unresolved proc macro' warnings, you have two options
+# 1. The safe choice is two disable the warning:
+diagnostics.disabled = ["unresolved-proc-macro"]
+# 2. Or you can opt-in for proc macro support
+procMacro.enable = true
+cargo.loadOutDirsFromCheck = true
+# See https://github.com/rust-analyzer/rust-analyzer/issues/6448
 
 [language.terraform]
 filetypes = ["terraform"]
