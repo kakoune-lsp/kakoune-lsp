@@ -15,7 +15,7 @@ args = ["start"]
 
 [language.c_cpp]
 filetypes = ["c", "cpp"]
-roots = ["compile_commands.json", ".clangd"]
+roots = ["compile_commands.json", ".clangd", ".git", ".hg"]
 command = "clangd"
 offset_encoding = "utf-8"
 
@@ -26,19 +26,19 @@ command = "scry"
 
 [language.css]
 filetypes = ["css"]
-roots = ["package.json", ".git"]
+roots = ["package.json", ".git", ".hg"]
 command = "css-languageserver"
 args = ["--stdio"]
 
 [language.less]
 filetypes = ["less"]
-roots = ["package.json", ".git"]
+roots = ["package.json", ".git", ".hg"]
 command = "css-languageserver"
 args = ["--stdio"]
 
 [language.scss]
 filetypes = ["scss"]
-roots = ["package.json", ".git"]
+roots = ["package.json", ".git", ".hg"]
 command = "css-languageserver"
 args = ["--stdio"]
 
@@ -50,7 +50,7 @@ command = "dls"
 [language.dart]
 # start shell to find path to dart analysis server source
 filetypes = ["dart"]
-roots = ["pubspec.yaml", ".git"]
+roots = ["pubspec.yaml", ".git", ".hg"]
 command = "sh"
 args = ["-c", "dart $(dirname $(command -v dart))/snapshots/analysis_server.dart.snapshot --lsp"]
 
@@ -147,7 +147,7 @@ args = ["--stdio"]
 # Requires Julia packages "LanguageServer", "StaticLint" and "SymbolServer"
 [language.julia]
 filetypes = ["julia"]
-roots = ["Project.toml", ".git"]
+roots = ["Project.toml", ".git", ".hg"]
 command = "julia"
 args = [
     "--startup-file=no",
@@ -176,7 +176,7 @@ args = [
 
 [language.latex]
 filetypes = ["latex"]
-roots = [".git"]
+roots = [".git", ".hg"]
 command = "texlab"
 settings_section = "texlab"
 [language.latex.settings.texlab]
@@ -185,7 +185,7 @@ settings_section = "texlab"
 
 [language.lua]
 filetypes = ["lua"]
-roots = [".git"]
+roots = [".git", ".hg"]
 command = "lua-language-server"
 [language.lua.settings.Lua]
 # See https://github.com/sumneko/vscode-lua/blob/master/setting/schema.json
@@ -193,12 +193,12 @@ command = "lua-language-server"
 
 [language.nim]
 filetypes = ["nim"]
-roots = ["*.nimble", ".git"]
+roots = ["*.nimble", ".git", ".hg"]
 command = "nimlsp"
 
 [language.nix]
 filetypes = ["nix"]
-roots = ["flake.nix", "shell.nix", ".git"]
+roots = ["flake.nix", "shell.nix", ".git", ".hg"]
 command = "rnix-lsp"
 
 [language.ocaml]
@@ -295,7 +295,7 @@ args = ["serve"]
 
 [language.yaml]
 filetypes = ["yaml"]
-roots = [".git"]
+roots = [".git", ".hg"]
 command = "yaml-language-server"
 args = ["--stdio"]
 [language.yaml.settings]

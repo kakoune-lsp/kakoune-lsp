@@ -10,6 +10,7 @@ Bug fixes:
 - Fix jumping to locations when Kakoune working directory is different from project root (#517).
 - Fix jumping to locations with absolute paths (#519).
 - Diagnostics of level "info" and "hint" are no longer shown as "warning", and are given distinct faces. Also, `find-next-error` will skip over "info" and "hint" diagnostics (#516).
+- The default `kak-lsp.toml` recognizes `.git` and `.hg` as project root markers for C/C++ files. This makes `lsp-references` work better out-of-the-box for projects like Kakoune that don't need a `compile_commands.json`.
 
 Additions:
 - Render Markdown from hover and from completions in info box. You can set custom faces to highlight different syntax elements (#73, #513).
