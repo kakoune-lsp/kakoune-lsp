@@ -1,3 +1,5 @@
+## Unreleased
+
 ## 11.0.1 - 2021-09-17
 
 This is mostly a bug fix release but also includes Markdown rendering and enhanced inlay diagnostics.
