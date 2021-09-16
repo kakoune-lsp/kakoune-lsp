@@ -185,13 +185,13 @@ pub fn apply_text_edits_to_buffer(
         .filter_map(|(i, pair)| {
             let end = &pair[0].range.end;
             let start = &pair[1].range.start;
-            // Replacing adjoin selection with empty content effectively removes it.
-            let remove_adjoin = pair[0].new_text.is_empty()
+            // Replacing adjacent selection with empty content effectively removes it.
+            let remove_adjacent = pair[0].new_text.is_empty()
                 && (end.line == start.line && end.column + 1 == start.column)
                 || (end.line + 1 == start.line && end.column == EOL_OFFSET && start.column == 1);
             // Inserting in the same place doesn't produce extra selection.
             let insert_the_same = end.line == start.line && end.column == start.column;
-            if remove_adjoin || insert_the_same {
+            if remove_adjacent || insert_the_same {
                 Some(i)
             } else {
                 None
