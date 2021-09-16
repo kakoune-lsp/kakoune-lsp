@@ -183,14 +183,22 @@ pub fn apply_text_edits_to_buffer(
         .windows(2)
         .enumerate()
         .filter_map(|(i, pair)| {
-            let end = &pair[0].range.end;
-            let start = &pair[1].range.start;
+            let first_end = &pair[0].range.end;
+            let second_start = &pair[1].range.start;
+            let second_end = &pair[1].range.end;
             // Replacing adjacent selection with empty content effectively removes it.
             let remove_adjacent = pair[0].new_text.is_empty()
-                && (end.line == start.line && end.column + 1 == start.column)
-                || (end.line + 1 == start.line && end.column == EOL_OFFSET && start.column == 1);
+                && (first_end.line == second_start.line
+                    && first_end.column + 1 == second_start.column)
+                || (first_end.line + 1 == second_start.line
+                    && first_end.column == EOL_OFFSET
+                    && second_start.column == 1);
+            let second_is_insert =
+                second_start.line == second_end.line && second_start.column == second_end.column;
             // Inserting in the same place doesn't produce extra selection.
-            let insert_the_same = end.line == start.line && end.column == start.column;
+            let insert_the_same = first_end.line == second_start.line
+                && (first_end.column == second_start.column
+                    || second_is_insert && first_end.column + 1 == second_start.column);
             if remove_adjacent || insert_the_same {
                 Some(i)
             } else {
@@ -301,5 +309,57 @@ fn lsp_text_edit_to_kakoune(
         range,
         new_text: new_text.to_owned(),
         command,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn text_edits() {
+        let edit = |start, end, new_text: &str| {
+            OneOf::Left(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: start,
+                    },
+                    end: Position {
+                        line: 0,
+                        character: end,
+                    },
+                },
+                new_text: new_text.to_string(),
+            })
+        };
+        let text_edits = vec![
+            edit(4, 7, "std"),
+            edit(7, 9, ""),
+            edit(9, 12, ""),
+            edit(14, 21, "ffi"),
+            edit(21, 21, "::"),
+            edit(21, 21, "{CStr, CString}"),
+        ];
+        let buffer = Rope::from_str("use std::ffi::CString;");
+        let result =
+            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+        let expected =
+            r#"eval -draft -save-regs ^ 'select 1.5,1.7 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
+exec -save-regs "" Z
+exec "z<space>"
+lsp-replace-selection ''std''
+exec "z1)<space>"
+lsp-replace-selection ''''
+exec "z1)<space>"
+lsp-replace-selection ''''
+exec "z2)<space>"
+lsp-replace-selection ''ffi''
+exec "z2)<space>"
+lsp-insert-before-selection ''::''
+exec "z2)<space>"
+lsp-insert-before-selection ''{CStr, CString}'''"#
+                .to_string();
+        assert_eq!(result, Some(expected));
     }
 }
