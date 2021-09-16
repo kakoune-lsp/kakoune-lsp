@@ -50,6 +50,7 @@ pub struct LanguageConfig {
     pub settings: Option<Value>,
     #[serde(default = "default_offset_encoding")]
     pub offset_encoding: OffsetEncoding,
+    pub workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
 }
 
 #[derive(Clone, Deserialize, Debug)]

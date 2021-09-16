@@ -77,20 +77,28 @@ pub fn editor_hover(
         })
         .unwrap_or_else(String::new);
 
+    let force_plaintext = ctx
+        .config
+        .language
+        .get(&ctx.language_id)
+        .and_then(|l| l.workaround_server_sends_plaintext_labeled_as_markdown)
+        .unwrap_or(false);
     let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {
-            HoverContents::Scalar(contents) => marked_string_to_kakoune_markup(contents),
+            HoverContents::Scalar(contents) => {
+                marked_string_to_kakoune_markup(contents, force_plaintext)
+            }
             HoverContents::Array(contents) => contents
                 .into_iter()
-                .map(marked_string_to_kakoune_markup)
+                .map(|md| marked_string_to_kakoune_markup(md, force_plaintext))
                 .filter(|markup| !markup.is_empty())
                 .join(&format!(
                     "\n{{{}}}---{{{}}}\n",
                     FACE_INFO_RULE, FACE_INFO_DEFAULT
                 )),
             HoverContents::Markup(contents) => match contents.kind {
-                MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value),
+                MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value, force_plaintext),
                 MarkupKind::PlainText => contents.value,
             },
         },

@@ -15,6 +15,7 @@ Bug fixes:
 
 Additions:
 - Render Markdown from hover and from completions in info box. You can set custom faces to highlight different syntax elements (#73, #513).
+  - Some servers like `pyls` send that info in plaintext but label it as Markdown. Work around this with a new configuration option `workaround_server_sends_plaintext_labeled_as_markdown` in the default `kak-lsp.toml` to force plaintext rendering.
 - Multiple inlay diagnostics on a single line are coalesced (#515).
 
 ## 11.0.0 - 2021-09-01
