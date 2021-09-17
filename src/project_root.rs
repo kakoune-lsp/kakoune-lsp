@@ -30,7 +30,9 @@ pub fn roots_by_marker(roots: &[String], path: &str) -> String {
             if let Ok(mut m) = matches {
                 if m.next().is_some() {
                     // ditto unwrap
-                    return pwd.to_str().unwrap().to_string();
+                    let root_dir = pwd.to_str().unwrap().to_string();
+                    info!("Found project root \"{}\" because it contains \"{}\"", root_dir, root);
+                    return root_dir;
                 }
             }
             if !pwd.pop() {
