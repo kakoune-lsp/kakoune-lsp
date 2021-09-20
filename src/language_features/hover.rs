@@ -63,11 +63,12 @@ pub fn editor_hover(
 
                     if !x.message.is_empty() {
                         Some(format!(
-                            "• {{{}}}{}",
+                            "• {{{}}}{}{{{}}}",
                             face,
                             escape_brace(x.message.trim())
                                 // Indent line breaks to the same level as the bullet point
                                 .replace("\n", "\n  "),
+                            FACE_INFO_DEFAULT,
                         ))
                     } else {
                         None
