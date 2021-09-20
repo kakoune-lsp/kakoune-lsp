@@ -12,6 +12,7 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest]
     steps:
+    - uses: Swatinem/rust-cache@v1.3.0
     - uses: actions/checkout@v2
     - name: Unit tests
       run: cargo test --release
