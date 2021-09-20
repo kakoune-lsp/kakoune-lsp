@@ -35,11 +35,45 @@ jobs:
     - name: Build kak-lsp
       run: cargo build --locked --release
 
-    - name: Install integration test dependencies
-      run: |
-        (cd && git clone https://github.com/mawww/kakoune)
-        (cd ~/kakoune && git rev-parse HEAD && make && sudo make install)
+    - name: Fetch Kakoune
+      uses: actions/checkout@v2
+      with:
+        repository: 'mawww/kakoune'
+        # Always relative to `${{ github.workspace }}`
+        path: 'kakoune'
 
+    # Use the current commit hash as part of the cache key, so that we only
+    # need to rebuild when code changes.
+    - name: Get Kakoune commit id
+      id: kakoune-commit-id
+      run: echo "::set-output name=id::$(git -C $GITHUB_WORKSPACE/kakoune rev-parse HEAD)"
+
+    - name: Cache Kakoune
+      id: cache-kakoune
+      uses: actions/cache@v2
+      with:
+        key: ${{ runner.os }}-kakoune-${{ steps.kakoune-commit-id.outputs.id }}
+        path: |
+          ${{ github.workspace }}/kakoune/src/kak
+          ${{ github.workspace }}/kakoune/src/kak.opt
+          ${{ github.workspace }}/kakoune/src/.*.opt.d
+          ${{ github.workspace }}/kakoune/src/.*.opt.o
+
+    - name: Build Kakoune
+      working-directory: ${{ github.workspace }}/kakoune/src
+      run: |
+        if [ "${{ steps.cache-kakoune.outputs.cache-hit }}" ]; then
+          # The source files created by actions/checkout are newer than the
+          # output extracted from cache. So we need to touch these targets
+          # to tell "make install" that they are indeed up-to-date.
+          make -t
+        else
+          make -j$([ "${{ matrix.os }}" = "macos-latest" ] && sysctl -n hw.logicalcpu || nproc)
+        fi
+        sudo make install
+
+    - name: Install gopls
+      run: |
         GO111MODULE=on go get golang.org/x/tools/gopls@v0.7.1
         sudo ln "$HOME/go/bin/gopls" /usr/local/bin/
 
