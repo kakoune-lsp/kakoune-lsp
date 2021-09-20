@@ -35,14 +35,58 @@ jobs:
     - name: Build kak-lsp
       run: cargo build --locked --release
 
-    - name: Install integration test dependencies
-      run: |
-        (cd && git clone https://github.com/mawww/kakoune)
-        (cd ~/kakoune && git rev-parse HEAD && make && sudo make install)
+    - name: Fetch Kakoune
+      uses: actions/checkout@v2
+      with:
+        repository: 'mawww/kakoune'
+        ref: 'v2021.08.28'
+        # Always relative to `${{ github.workspace }}`
+        path: 'kakoune'
 
+    # Use the current commit hash as part of the cache key, so that we only
+    # need to rebuild when code changes.
+    - name: Get Kakoune commit id
+      id: kakoune-commit-id
+      run: echo "::set-output name=id::$(cd $GITHUB_WORKSPACE/kakoune && git rev-parse HEAD)"
+
+    - name: Cache Kakoune
+      id: cache-kakoune
+      uses: actions/cache@v2
+      with:
+        key: ${{ runner.os }}-kakoune-${{ steps.kakoune-commit-id.outputs.id }}
+        path: |
+          ${{ github.workspace }}/kakoune/src/kak
+          ${{ github.workspace }}/kakoune/src/kak.opt
+          ${{ github.workspace }}/kakoune/src/.*.opt.d
+          ${{ github.workspace }}/kakoune/src/.*.opt.o
+
+    - name: Build Kakoune
+      if: steps.cache-kakoune.outputs.cache-hit != 'true'
+      working-directory: ${{ github.workspace }}/kakoune/src
+      run: |
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          n=$(sysctl -n hw.logicalcpu)
+        else
+          n=$(nproc)
+        fi
+
+        make -j$n
+
+    - name: Touch build targets
+      if: steps.cache-kakoune.outputs.cache-hit
+      working-directory: ${{ github.workspace }}/kakoune/src
+      run: make -t
+
+    - name: Install Kakoune
+      working-directory: ${{ github.workspace }}/kakoune/src
+      run: sudo make install
+
+    - name: Install gopls
+      run: |
         GO111MODULE=on go get golang.org/x/tools/gopls@v0.7.1
         sudo ln "$HOME/go/bin/gopls" /usr/local/bin/
 
+    # For a single package, it's not yet worth the effort to cache them.
     - name: Install Tmux via homebrew
       if: matrix.os == 'macos-latest'
       run: brew install tmux
