@@ -83,7 +83,11 @@ jobs:
 
     - name: Install Tmux via apt
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt update && sudo apt install tmux
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends tmux
+      env:
+        DEBIAN_FRONTEND: noninteractive
 
     - name: Run system tests
       run: PATH="$PWD/target/release:$PATH" sh -x test/run
