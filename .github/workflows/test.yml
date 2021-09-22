@@ -3,10 +3,8 @@ name: Test kak-lsp
 on: [push, pull_request]
 
 env:
-  CARGO_TERM_COLOR: always
-  # CI builds are closer to a from-scratch build anyways
-  # and incremental compilation hurts reproducibility
   CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
 
 jobs:
   unit-tests:
@@ -69,21 +67,22 @@ jobs:
           ${{ github.workspace }}/kakoune/src/.*.opt.o
 
     - name: Build Kakoune
-      if: steps.cache-kakoune.outputs.cache-hit != 'true'
       working-directory: ${{ github.workspace }}/kakoune/src
       run: |
-        if [ "${{ matrix.os }}" = "macos-latest" ]; then
-          n=$(sysctl -n hw.logicalcpu)
+        # The source files created by actions/checkout are newer than the
+        # output extracted from cache. So we need to touch these targets
+        # to tell Make that they are indeed up-to-date.
+        if [ "${{ steps.cache-kakoune.outputs.cache-hit }}" = "true" ]; then
+          make -t
         else
-          n=$(nproc)
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            n=$(sysctl -n hw.logicalcpu)
+          else
+            n=$(nproc)
+          fi
+
+          make -j$n
         fi
-
-        make -j$n
-
-    - name: Touch build targets
-      if: steps.cache-kakoune.outputs.cache-hit
-      working-directory: ${{ github.workspace }}/kakoune/src
-      run: make -t
 
     - name: Install Kakoune
       working-directory: ${{ github.workspace }}/kakoune/src
