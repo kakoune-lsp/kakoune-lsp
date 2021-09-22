@@ -25,7 +25,7 @@ jobs:
     - name: Run unit tests
       run: cargo test --release
 
-  integration-tests:
+  system-tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -102,5 +102,5 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
 
-    - name: Run integration tests
+    - name: Run system tests
       run: PATH="$PWD/target/release:$PATH" sh -x test/run
