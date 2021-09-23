@@ -238,6 +238,7 @@ pub fn apply_text_edits_to_buffer(
         .collect::<HashSet<_>>();
 
     let mut selection_index = 0;
+    let mut cleanup_sentinel = false;
     let apply_edits = edits
         .iter()
         .enumerate()
@@ -252,6 +253,14 @@ pub fn apply_text_edits_to_buffer(
                     KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
                     KakouneTextEditCommand::Replace => "lsp-replace-selection",
                 };
+                // Add a temporary sentinel character from Unicode private use area to work
+                // around https://github.com/mawww/kakoune/issues/4373
+                let new_text = if new_text.starts_with("\n") {
+                    cleanup_sentinel = true;
+                    editor_quote(&("\u{00E000}".to_owned() + new_text))
+                } else {
+                    editor_quote(new_text)
+                };
                 let command = format!(
                     "exec \"z{}<space>\"\n{} {}",
                     if selection_index > 0 {
@@ -260,7 +269,7 @@ pub fn apply_text_edits_to_buffer(
                         String::new()
                     },
                     command,
-                    editor_quote(new_text)
+                    new_text,
                 );
                 if !merged_selections.contains(&i) {
                     selection_index += 1;
@@ -270,10 +279,13 @@ pub fn apply_text_edits_to_buffer(
         )
         .join("\n");
 
-    let apply_edits = format!(
+    let mut apply_edits = format!(
         "select {}\nexec -save-regs \"\" Z\n{}",
         selection_descs, apply_edits
     );
+    if cleanup_sentinel {
+        apply_edits = format!("{}\nexec <percent>s\\u00E000<ret>d", apply_edits);
+    }
     let apply_edits = uri
         .and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| {
@@ -445,6 +457,30 @@ lsp-replace-selection ''println''
 exec "z2)<space>"
 lsp-replace-selection '''''"#
                 .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    // Test the case when both the selection and the new text start with a newline character.
+    #[test]
+    pub fn apply_text_edits_to_buffer_kakoune_issue_4373() {
+        let text_edits = vec![
+            edit(0, 1, 1, 1, "\nx"), //
+            edit(1, 1, 1, 1, "e"),   //
+        ];
+        let buffer = Rope::from_str("1\n23");
+        let result =
+            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+        let expected = r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
+exec -save-regs "" Z
+exec "z<space>"
+lsp-replace-selection ''"#
+            .to_owned()
+            + "\u{00E000}"
+            + r#"
+x''
+exec "z<space>"
+lsp-insert-before-selection ''e''
+exec <percent>s\u00E000<ret>d'"#;
         assert_eq!(result, Some(expected));
     }
 }
