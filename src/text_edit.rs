@@ -316,30 +316,37 @@ fn lsp_text_edit_to_kakoune(
 mod tests {
     use super::*;
 
-    #[test]
-    pub fn text_edits() {
-        let edit = |start, end, new_text: &str| {
-            OneOf::Left(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: start,
-                    },
-                    end: Position {
-                        line: 0,
-                        character: end,
-                    },
+    fn edit(
+        start_line: u32,
+        start_character: u32,
+        end_line: u32,
+        end_character: u32,
+        new_text: &str,
+    ) -> OneOf<TextEdit, AnnotatedTextEdit> {
+        OneOf::Left(TextEdit {
+            range: Range {
+                start: Position {
+                    line: start_line,
+                    character: start_character,
                 },
-                new_text: new_text.to_string(),
-            })
-        };
+                end: Position {
+                    line: end_line,
+                    character: end_character,
+                },
+            },
+            new_text: new_text.to_string(),
+        })
+    }
+
+    #[test]
+    pub fn apply_text_edits_to_buffer_issue_521() {
         let text_edits = vec![
-            edit(4, 7, "std"),
-            edit(7, 9, ""),
-            edit(9, 12, ""),
-            edit(14, 21, "ffi"),
-            edit(21, 21, "::"),
-            edit(21, 21, "{CStr, CString}"),
+            edit(0, 4, 0, 7, "std"),
+            edit(0, 7, 0, 9, ""),
+            edit(0, 9, 0, 12, ""),
+            edit(0, 14, 0, 21, "ffi"),
+            edit(0, 21, 0, 21, "::"),
+            edit(0, 21, 0, 21, "{CStr, CString}"),
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
         let result =
