@@ -1,6 +1,7 @@
 use crate::context::*;
 use crate::language_features::rust_analyzer;
 use crate::settings::*;
+use crate::text_edit::{apply_annotated_text_edits, apply_text_edits};
 use crate::types::*;
 use crate::util::*;
 use jsonrpc_core::Params;

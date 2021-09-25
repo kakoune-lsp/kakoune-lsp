@@ -1,7 +1,8 @@
 use crate::context::Context;
 use crate::position::{lsp_position_to_kakoune, lsp_range_to_kakoune};
+use crate::text_edit::apply_text_edits;
 use crate::types::{EditorMeta, EditorParams, KakounePosition};
-use crate::util::{apply_text_edits, editor_quote};
+use crate::util::editor_quote;
 use crate::workspace;
 use lsp_types::request::Request;
 use lsp_types::ExecuteCommandParams;

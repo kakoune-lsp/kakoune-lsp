@@ -1,6 +1,5 @@
 use crate::context::*;
 use crate::position::*;
-use crate::text_edit::*;
 use crate::types::*;
 use itertools::Itertools;
 use lsp_types::*;
@@ -182,44 +181,6 @@ pub fn get_kakoune_position(
 ) -> Option<KakounePosition> {
     get_file_contents(filename, ctx)
         .map(|text| lsp_position_to_kakoune(position, &text, ctx.offset_encoding))
-}
-
-/// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
-/// buffer or by editing file directly when it's not open in editor.
-pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx: &Context) {
-    let edits = edits.into_iter().map(OneOf::Left).collect::<Vec<_>>();
-    apply_annotated_text_edits(meta, uri, &edits, ctx)
-}
-
-/// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
-/// buffer or by editing file directly when it's not open in editor.
-pub fn apply_annotated_text_edits(
-    meta: &EditorMeta,
-    uri: &Url,
-    edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
-    ctx: &Context,
-) {
-    if let Some(document) = uri
-        .to_file_path()
-        .ok()
-        .and_then(|path| path.to_str().and_then(|buffile| ctx.documents.get(buffile)))
-    {
-        let meta = meta.clone();
-        match apply_text_edits_to_buffer(
-            &meta.client,
-            Some(uri),
-            edits,
-            &document.text,
-            ctx.offset_encoding,
-        ) {
-            Some(cmd) => ctx.exec(meta, cmd),
-            // Nothing to do, but sending command back to the editor is required to handle case when
-            // editor is blocked waiting for response via fifo.
-            None => ctx.exec(meta, "nop"),
-        }
-    } else if let Err(e) = apply_text_edits_to_file(uri, edits, ctx.offset_encoding) {
-        error!("Failed to apply edits to file {} ({})", uri, e);
-    }
 }
 
 /// Get the contents of a file.
