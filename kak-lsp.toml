@@ -225,7 +225,7 @@ settings_section = "_"
 [language.python.settings._]
 # See https://github.com/palantir/python-language-server#configuration
 # and https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
-# "pyls.configurationSources" = ["flake8"]
+# pyls.configurationSources = ["flake8"]
 
 [language.reason]
 filetypes = ["reason"]
