@@ -344,6 +344,11 @@ token = "operator"
 face = "operator"
 
 [[semantic_tokens]]
+token = "operator"
+face = "keyword"
+modifiers = ["controlFlow"]
+
+[[semantic_tokens]]
 token = "string"
 face = "string"
 
