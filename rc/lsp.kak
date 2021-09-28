@@ -1143,7 +1143,14 @@ define-command -hidden lsp-replace-selection -params 1 -docstring %{
 } %{
     declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
     echo -to-file %opt{lsp_text_edit_tmp} %arg{1}
-    execute-keys "|cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
+    try %{
+        execute-keys -draft <a-k>\n\z<ret>
+        execute-keys "|cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
+    } catch %{
+        # The input has no newline. Kakoune would add one to the input, but also strip it from
+        # the output. Account for that.
+        execute-keys "|cat $kak_opt_lsp_text_edit_tmp; echo; rm $kak_opt_lsp_text_edit_tmp<ret>"
+    }
 }
 
 define-command -hidden lsp-handle-progress -params 4 -docstring %{
