@@ -318,6 +318,10 @@ pub fn apply_text_edits_to_buffer(
         )
         .join("\n");
 
+    let maybe_buffile = uri
+        .and_then(|uri| uri.to_file_path().ok())
+        .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
+
     let mut apply_edits = format!(
         "select {}\nexec -save-regs \"\" Z\n{}",
         selection_descs, apply_edits
@@ -325,33 +329,41 @@ pub fn apply_text_edits_to_buffer(
     if cleanup_sentinel {
         apply_edits = format!("{}\nexec <percent>s\\u00E000<ret>d", apply_edits);
     }
-    let apply_edits = uri
-        .and_then(|uri| uri.to_file_path().ok())
-        .and_then(|path| {
-            path.to_str().map(|buffile| {
-                format!(
-                    "eval -buffer {} -save-regs ^ {}",
-                    editor_quote(buffile),
-                    editor_quote(&apply_edits)
-                )
-            })
-        })
-        .unwrap_or_else(|| format!("eval -draft -save-regs ^ {}", editor_quote(&apply_edits)));
 
     let client = match client {
-        None => return Some(apply_edits),
+        None => {
+            return Some(
+                maybe_buffile
+                    .map(|buffile| {
+                        format!(
+                            "eval -buffer {} -save-regs ^ {}",
+                            editor_quote(&buffile),
+                            editor_quote(&apply_edits)
+                        )
+                    })
+                    .unwrap_or_else(|| {
+                        format!("eval -draft -save-regs ^ {}", editor_quote(&apply_edits))
+                    }),
+            );
+        }
         Some(client) => client,
     };
 
-    let apply_edits_and_restore_selections = format!(
-        "{}\n{}\n{}",
-        "set-register s %val{selections_desc}", &apply_edits, "select %reg{s}",
-    );
+    // Go to the target file, in case it's not active.
+    let apply_edits = maybe_buffile
+        .map(|buffile| {
+            format!(
+                "edit -existing -- {}\n{}",
+                editor_quote(&buffile),
+                &apply_edits
+            )
+        })
+        .unwrap_or(apply_edits);
 
     Some(format!(
-        "eval -client {} -save-regs s {}",
+        "eval -client {} -draft -save-regs ^ {}",
         client,
-        &editor_quote(&apply_edits_and_restore_selections)
+        &editor_quote(&apply_edits)
     ))
 }
 
