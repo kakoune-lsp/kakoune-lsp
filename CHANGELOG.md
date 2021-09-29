@@ -1,7 +1,16 @@
 ## Unreleased
 
+Additions:
+ - Show lightbulb in modeline when code actions are available (#538).
+ - Sequences of text edits (like from `lsp-code-actions` or `lsp-formatting`) will create just one undo entry (#533).
+ - Fix go-to-defintion for files containing invalid UTF-8 (#535).
+
 Bug fixes:
 - Fix default server-specific configuration for `pyls` (regressed in 11.0.0).
+- Use the LineNumbers face for the flag-lines highlighter that shows diagnostics, to work better with non-default backgrounds (#524).
+- Fix applying sequences of text edits, like from `lsp-code-actions` or `lsp-formatting` (#527).
+  - Also, do not drop trailing newline from text edits (e9af1aa).
+- Quoting and escaping fixes for diagnostics and hover info.
 
 ## 11.0.1 - 2021-09-17
 
