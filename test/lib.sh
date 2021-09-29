@@ -20,7 +20,7 @@ kak_startup_commands='
 	set-option global lsp_cmd "kak-lsp -s %val{session} -vvv --log ./log"
 '
 
-jiffy=.3
+jiffy=1
 if test -n "$CI"; then
 	jiffy=10
 fi
