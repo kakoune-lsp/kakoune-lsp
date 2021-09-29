@@ -155,6 +155,36 @@ pub fn apply_text_edits_to_buffer(
     }
     let mut edits = text_edits
         .iter()
+        .filter(|text_edit| {
+            // Drop redundant text edits because Kakoune treats them differently. Here's how
+            //
+            // 0. Assume we have two adjacent selections "foo" "bar".
+            // 1. Use "Z" to save the two selection .
+            // 2. Use "<space>" to select "foo"
+            // 3. Type "|echo foo<ret>"
+            // 4. Run "z" to restore the two selections. Observe that "foo" is still selected.
+            //
+            // If we repeat step 3 with any other text, running "z" will show that the first
+            // selection goes away because it was merged into the second one. This is what our
+            // logic to compute merged selections will do later. It doesn't account for Kakoune
+            // optimizing redundant text edits, so just drop them here.
+            let text_edit = match text_edit {
+                OneOf::Left(text_edit) => text_edit,
+                OneOf::Right(annotated) => &annotated.text_edit,
+            };
+            let range = text_edit.range;
+            // TODO Also drop redundant edits that span multiple lines.
+            if range.start.line != range.end.line {
+                return true;
+            }
+            let line = text.line(range.start.line as _);
+            let start_byte = line.char_to_byte(range.start.character as _);
+            let end_byte = line.char_to_byte(range.end.character as _);
+            let bytes = line.bytes_at(start_byte);
+            let contents = bytes.take(end_byte - start_byte).collect::<Vec<u8>>();
+            let redundant = text_edit.new_text.as_bytes() == contents;
+            !redundant
+        })
         .map(|text_edit| lsp_text_edit_to_kakoune(text_edit, text, offset_encoding))
         .collect::<Vec<_>>();
 
@@ -186,13 +216,13 @@ pub fn apply_text_edits_to_buffer(
             let first_end = &pair[0].range.end;
             let second_start = &pair[1].range.start;
             let second_end = &pair[1].range.end;
-            // Replacing adjacent selection with empty content effectively removes it.
-            let remove_adjacent = pair[0].new_text.is_empty()
-                && (first_end.line == second_start.line
+            // Replacing adjacent selection effectively removes one.
+            let remove_adjacent = pair[0].command == KakouneTextEditCommand::Replace
+                && ((first_end.line == second_start.line
                     && first_end.column + 1 == second_start.column)
-                || (first_end.line + 1 == second_start.line
-                    && first_end.column == EOL_OFFSET
-                    && second_start.column == 1);
+                    || (first_end.line + 1 == second_start.line
+                        && first_end.column == EOL_OFFSET
+                        && second_start.column == 1));
             let second_is_insert =
                 second_start.line == second_end.line && second_start.column == second_end.column;
             // Inserting in the same place doesn't produce extra selection.
@@ -208,6 +238,7 @@ pub fn apply_text_edits_to_buffer(
         .collect::<HashSet<_>>();
 
     let mut selection_index = 0;
+    let mut cleanup_sentinel = false;
     let apply_edits = edits
         .iter()
         .enumerate()
@@ -222,6 +253,14 @@ pub fn apply_text_edits_to_buffer(
                     KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
                     KakouneTextEditCommand::Replace => "lsp-replace-selection",
                 };
+                // Add a temporary sentinel character from Unicode private use area to work
+                // around https://github.com/mawww/kakoune/issues/4373
+                let new_text = if new_text.starts_with("\n") {
+                    cleanup_sentinel = true;
+                    editor_quote(&("\u{00E000}".to_owned() + new_text))
+                } else {
+                    editor_quote(new_text)
+                };
                 let command = format!(
                     "exec \"z{}<space>\"\n{} {}",
                     if selection_index > 0 {
@@ -230,7 +269,7 @@ pub fn apply_text_edits_to_buffer(
                         String::new()
                     },
                     command,
-                    editor_quote(new_text)
+                    new_text,
                 );
                 if !merged_selections.contains(&i) {
                     selection_index += 1;
@@ -240,10 +279,13 @@ pub fn apply_text_edits_to_buffer(
         )
         .join("\n");
 
-    let apply_edits = format!(
+    let mut apply_edits = format!(
         "select {}\nexec -save-regs \"\" Z\n{}",
         selection_descs, apply_edits
     );
+    if cleanup_sentinel {
+        apply_edits = format!("{}\nexec <percent>s\\u00E000<ret>d", apply_edits);
+    }
     let apply_edits = uri
         .and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| {
@@ -274,6 +316,7 @@ pub fn apply_text_edits_to_buffer(
     ))
 }
 
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum KakouneTextEditCommand {
     InsertBefore,
     Replace,
@@ -316,50 +359,128 @@ fn lsp_text_edit_to_kakoune(
 mod tests {
     use super::*;
 
-    #[test]
-    pub fn text_edits() {
-        let edit = |start, end, new_text: &str| {
-            OneOf::Left(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: start,
-                    },
-                    end: Position {
-                        line: 0,
-                        character: end,
-                    },
+    fn edit(
+        start_line: u32,
+        start_character: u32,
+        end_line: u32,
+        end_character: u32,
+        new_text: &str,
+    ) -> OneOf<TextEdit, AnnotatedTextEdit> {
+        OneOf::Left(TextEdit {
+            range: Range {
+                start: Position {
+                    line: start_line,
+                    character: start_character,
                 },
-                new_text: new_text.to_string(),
-            })
-        };
+                end: Position {
+                    line: end_line,
+                    character: end_character,
+                },
+            },
+            new_text: new_text.to_string(),
+        })
+    }
+
+    #[test]
+    pub fn apply_text_edits_to_buffer_issue_521() {
         let text_edits = vec![
-            edit(4, 7, "std"),
-            edit(7, 9, ""),
-            edit(9, 12, ""),
-            edit(14, 21, "ffi"),
-            edit(21, 21, "::"),
-            edit(21, 21, "{CStr, CString}"),
+            edit(0, 4, 0, 7, "std"),
+            edit(0, 7, 0, 9, ""),
+            edit(0, 9, 0, 12, ""),
+            edit(0, 14, 0, 21, "ffi"),
+            edit(0, 21, 0, 21, "::"),
+            edit(0, 21, 0, 21, "{CStr, CString}"),
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
         let result =
             apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
-        let expected =
-            r#"eval -draft -save-regs ^ 'select 1.5,1.7 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
+        let expected = r#"eval -draft -save-regs ^ 'select 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
 exec -save-regs "" Z
 exec "z<space>"
-lsp-replace-selection ''std''
-exec "z1)<space>"
+lsp-replace-selection ''''
+exec "z<space>"
 lsp-replace-selection ''''
 exec "z1)<space>"
-lsp-replace-selection ''''
-exec "z2)<space>"
 lsp-replace-selection ''ffi''
-exec "z2)<space>"
+exec "z1)<space>"
 lsp-insert-before-selection ''::''
-exec "z2)<space>"
+exec "z1)<space>"
 lsp-insert-before-selection ''{CStr, CString}'''"#
+            .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn apply_text_edits_to_buffer_issue_527() {
+        let text_edits = vec![
+            edit(0, 4, 0, 9, "if"),
+            edit(0, 10, 0, 13, "let"),
+            edit(0, 13, 0, 13, " "),
+            edit(0, 13, 0, 13, "Test::Foo"),
+            edit(0, 13, 0, 13, " "),
+            edit(0, 13, 0, 13, "="),
+            edit(0, 13, 0, 13, " "),
+            edit(0, 13, 0, 13, "foo"),
+            edit(1, 8, 1, 12, "println"),
+            edit(1, 12, 1, 14, ""),
+        ];
+
+        let buffer = Rope::from_str(
+            "    match foo {
+        Test::Foo => println!(\"foo\"),
+        _ => {}
+    }",
+        );
+        let result =
+            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+        let expected =
+            r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 1.14,1.14 2.9,2.12 2.13,2.14
+exec -save-regs "" Z
+exec "z<space>"
+lsp-replace-selection ''if''
+exec "z1)<space>"
+lsp-replace-selection ''let''
+exec "z1)<space>"
+lsp-insert-before-selection '' ''
+exec "z1)<space>"
+lsp-insert-before-selection ''Test::Foo''
+exec "z1)<space>"
+lsp-insert-before-selection '' ''
+exec "z1)<space>"
+lsp-insert-before-selection ''=''
+exec "z1)<space>"
+lsp-insert-before-selection '' ''
+exec "z1)<space>"
+lsp-insert-before-selection ''foo''
+exec "z2)<space>"
+lsp-replace-selection ''println''
+exec "z2)<space>"
+lsp-replace-selection '''''"#
                 .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    // Test the case when both the selection and the new text start with a newline character.
+    #[test]
+    pub fn apply_text_edits_to_buffer_kakoune_issue_4373() {
+        let text_edits = vec![
+            edit(0, 1, 1, 1, "\nx"), //
+            edit(1, 1, 1, 1, "e"),   //
+        ];
+        let buffer = Rope::from_str("1\n23");
+        let result =
+            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+        let expected = r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
+exec -save-regs "" Z
+exec "z<space>"
+lsp-replace-selection ''"#
+            .to_owned()
+            + "\u{00E000}"
+            + r#"
+x''
+exec "z<space>"
+lsp-insert-before-selection ''e''
+exec <percent>s\u00E000<ret>d'"#;
         assert_eq!(result, Some(expected));
     }
 }
