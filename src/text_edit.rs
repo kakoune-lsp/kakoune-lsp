@@ -294,7 +294,7 @@ pub fn apply_text_edits_to_buffer(
                 };
                 // Add a temporary sentinel character from Unicode private use area to work
                 // around https://github.com/mawww/kakoune/issues/4373
-                let new_text = if new_text.starts_with("\n") {
+                let new_text = if new_text.starts_with('\n') {
                     cleanup_sentinel = true;
                     editor_quote(&("\u{00E000}".to_owned() + new_text))
                 } else {
