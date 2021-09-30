@@ -435,9 +435,9 @@ fn ensure_did_open(request: &EditorRequest, mut ctx: &mut Context) {
             params.insert("draft".to_string(), toml::Value::String(draft));
             text_document_did_open(request.meta.clone(), toml::Value::Table(params), &mut ctx);
         }
-        Err(_) => error!(
-            "Failed to read file {} to simulate textDocument/didOpen",
-            buffile
+        Err(err) => error!(
+            "Failed to read file {} to simulate textDocument/didOpen: {}",
+            buffile, err
         ),
     };
 }
