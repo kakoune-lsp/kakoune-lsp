@@ -429,7 +429,7 @@ fn ensure_did_open(request: &EditorRequest, mut ctx: &mut Context) {
     if request.method == notification::DidChangeTextDocument::METHOD {
         return text_document_did_open(request.meta.clone(), request.params.clone(), &mut ctx);
     }
-    match std::fs::read_to_string(buffile) {
+    match read_document(buffile) {
         Ok(draft) => {
             let mut params = toml::value::Table::default();
             params.insert("draft".to_string(), toml::Value::String(draft));

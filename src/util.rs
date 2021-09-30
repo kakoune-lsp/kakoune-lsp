@@ -4,12 +4,11 @@ use crate::types::*;
 use itertools::Itertools;
 use lsp_types::*;
 use ropey::Rope;
-use std::fs::File;
-use std::io::{stderr, stdout, BufReader, Write};
+use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{collections::HashMap, path::Path};
-use std::{env, fs, path, process, thread};
+use std::{env, fs, io, path, process, thread};
 
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
@@ -186,14 +185,23 @@ pub fn get_kakoune_position(
 /// Get the contents of a file.
 /// Searches ctx.documents first and falls back to reading the file directly.
 pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
-    ctx.documents
-        .get(filename)
-        .map(|doc| doc.text.clone())
-        .or_else(|| {
-            File::open(filename)
-                .ok()
-                .and_then(|f| Rope::from_reader(BufReader::new(f)).ok())
-        })
+    if let Some(doc) = ctx.documents.get(filename) {
+        return Some(doc.text.clone());
+    }
+
+    match read_document(filename) {
+        Ok(text) => Some(Rope::from_str(&text)),
+        Err(err) => {
+            error!("Failed to read file {}: {}", filename, err);
+            None
+        }
+    }
+}
+
+pub fn read_document(filename: &str) -> io::Result<String> {
+    // We can ignore invalid UTF-8 since we only use this to compute positions.  The width of
+    // the replacement character is 1, which should usually be correct.
+    Ok(String::from_utf8_lossy(&fs::read(filename)?).to_string())
 }
 
 pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
