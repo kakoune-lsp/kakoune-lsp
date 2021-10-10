@@ -127,7 +127,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 pos,
                 line_diagnostics.symbols,
                 line_diagnostics.text_face,
-                editor_escape(&line_diagnostics.text)
+                editor_escape_double_quotes(&line_diagnostics.text)
             )
         })
         .join(" ");

@@ -124,9 +124,19 @@ pub fn editor_escape(s: &str) -> String {
     s.replace("'", "''")
 }
 
+/// Escape Kakoune string wrapped into double quote
+pub fn editor_escape_double_quotes(s: &str) -> String {
+    s.replace("\"", "\"\"")
+}
+
 /// Convert to Kakoune string by wrapping into quotes and escaping
 pub fn editor_quote(s: &str) -> String {
     format!("'{}'", editor_escape(s))
+}
+
+/// Convert to Kakoune string by wrapping into double quotes and escaping
+pub fn editor_quote_double_quotes(s: &str) -> String {
+    format!("\"{}\"", editor_escape_double_quotes(s))
 }
 
 // Cleanup and gracefully exit
