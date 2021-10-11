@@ -120,7 +120,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 &document.text,
                 ctx.offset_encoding,
             );
-            pos.column = line_text.len_bytes() as u32;
+            pos.column = std::cmp::max(line_text.len_bytes() as u32, 1);
 
             format!(
                 "\"{}+0|%opt[lsp_inlay_diagnostic_gap]{} {{{}}}{{\\}}{}\"",
