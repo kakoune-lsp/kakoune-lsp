@@ -105,6 +105,7 @@ pub fn start(
                             notification::DidSaveTextDocument::METHOD => (),
                             // TODO if auto-hover or auto-hl-references is not enabled we might want warning about parking as well
                             request::HoverRequest::METHOD => (),
+                            request::CodeActionRequest::METHOD => (),
                             request::DocumentHighlightRequest::METHOD => (),
                             _ => ctx.exec(
                                 msg.meta.clone(),

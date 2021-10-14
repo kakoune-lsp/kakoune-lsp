@@ -151,9 +151,16 @@ pub struct TextDocumentCompletionParams {
     pub completion: EditorCompletion,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Copy, Deserialize, Debug)]
 pub struct PositionParams {
     pub position: KakounePosition,
+}
+
+#[derive(Clone, Copy, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeActionsParams {
+    pub position: KakounePosition,
+    pub perform_code_action: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -202,7 +209,7 @@ where
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 pub struct KakounePosition {
     pub line: u32,
     pub column: u32, // in bytes, not chars!!!

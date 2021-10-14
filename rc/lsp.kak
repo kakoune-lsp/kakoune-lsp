@@ -100,6 +100,20 @@ Capture groups must be:
     4: optional message
 } regex lsp_location_format ^\h*([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
 
+# Callback functions. Override these to tune kak-lsp's behavior.
+
+define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
+    set-option buffer lsp_modeline "💡 "
+}
+
+define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
+    set-option buffer lsp_modeline ""
+}
+
+define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on :lsp-code-actions" %{
+    menu %arg{@}
+}
+
 # Options for information exposed by kak-lsp.
 
 # Count of diagnostics published for the current buffer.
@@ -120,6 +134,9 @@ declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs rust_analyzer_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
 declare-option -hidden str lsp_project_root
+
+declare-option -hidden str lsp_modeline
+set-option global modelinefmt "%%opt{lsp_modeline}%opt{modelinefmt}"
 
 ### Requests ###
 
@@ -279,11 +296,11 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-code-actions -docstring "Request code actions for the main cursor position" %{
-    lsp-did-change-and-then lsp-code-actions-request
+define-command lsp-code-actions -docstring "Perform code actions for the main cursor position" %{
+    lsp-did-change-and-then 'lsp-code-actions-request true'
 }
 
-define-command -hidden lsp-code-actions-request -docstring "Request code actions for the main cursor position" %{
+define-command -hidden lsp-code-actions-request -params 1 -docstring "Request code actions for the main cursor position" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -291,14 +308,11 @@ buffile   = "%s"
 filetype  = "%s"
 version   = %d
 method    = "textDocument/codeAction"
-[params.position]
-line      = %d
-column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
-}
-
-define-command -hidden lsp-show-code-actions -params .. -docstring "Present code actions to the user." %{
-    menu %arg{@}
+[params]
+position.line     = %d
+position.column   = %d
+performCodeAction = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
@@ -1408,7 +1422,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
     hook -group lsp global NormalIdle .* %{
-        lsp-did-change
+        lsp-did-change-and-then 'lsp-code-actions-request false'
         %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
     }
 
@@ -1459,7 +1473,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp window InsertIdle .* lsp-completion
     hook -group lsp window NormalIdle .* %{
-        lsp-did-change
+        lsp-did-change-and-then 'lsp-code-actions-request false'
         %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
     }
 
