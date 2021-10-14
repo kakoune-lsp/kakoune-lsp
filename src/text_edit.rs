@@ -254,7 +254,6 @@ pub fn apply_text_edits_to_buffer(
         .filter_map(|(i, pair)| {
             let first_end = &pair[0].range.end;
             let second_start = &pair[1].range.start;
-            let second_end = &pair[1].range.end;
             // Replacing adjacent selection effectively removes one.
             let remove_adjacent = pair[0].command == KakouneTextEditCommand::Replace
                 && ((first_end.line == second_start.line
@@ -262,12 +261,9 @@ pub fn apply_text_edits_to_buffer(
                     || (first_end.line + 1 == second_start.line
                         && first_end.column == EOL_OFFSET
                         && second_start.column == 1));
-            let second_is_insert =
-                second_start.line == second_end.line && second_start.column == second_end.column;
             // Inserting in the same place doesn't produce extra selection.
-            let insert_the_same = first_end.line == second_start.line
-                && (first_end.column == second_start.column
-                    || second_is_insert && first_end.column + 1 == second_start.column);
+            let insert_the_same =
+                first_end.line == second_start.line && first_end.column == second_start.column;
             if remove_adjacent || insert_the_same {
                 Some(i)
             } else {
@@ -457,6 +453,22 @@ exec "z1)<space>"
 lsp-insert-before-selection ''::''
 exec "z1)<space>"
 lsp-insert-before-selection ''{CStr, CString}'''"#
+            .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn apply_text_edits_to_buffer_insert_adjacent_to_replace() {
+        let text_edits = vec![edit(0, 1, 0, 1, "inserted"), edit(0, 2, 0, 3, "replaced")];
+        let buffer = Rope::from_str("0123");
+        let result =
+            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+        let expected = r#"eval -draft -save-regs ^ 'select 1.2,1.2 1.3,1.3
+exec -save-regs "" Z
+exec "z<space>"
+lsp-insert-before-selection ''inserted''
+exec "z1)<space>"
+lsp-replace-selection ''replaced'''"#
             .to_string();
         assert_eq!(result, Some(expected));
     }
