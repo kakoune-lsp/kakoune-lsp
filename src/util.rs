@@ -134,6 +134,7 @@ pub fn editor_quote(s: &str) -> String {
     format!("'{}'", editor_escape(s))
 }
 
+#[allow(dead_code)]
 /// Convert to Kakoune string by wrapping into double quotes and escaping
 pub fn editor_quote_double_quotes(s: &str) -> String {
     format!("\"{}\"", editor_escape_double_quotes(s))
