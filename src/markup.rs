@@ -231,12 +231,12 @@ pub fn marked_string_to_kakoune_markup(contents: MarkedString, have_plaintext: b
     match contents {
         MarkedString::String(s) => markdown_to_kakoune_markup(s, have_plaintext),
         MarkedString::LanguageString(s) => {
-            let value = if have_plaintext {
-                escape_brace(&s.value)
-            } else {
-                s.value
-            };
-            format!("{{{}}}{}{{{}}}", FACE_INFO_BLOCK, value, FACE_INFO_DEFAULT)
+            format!(
+                "{{{}}}{}{{{}}}",
+                FACE_INFO_BLOCK,
+                escape_brace(&s.value),
+                FACE_INFO_DEFAULT
+            )
         }
     }
 }
