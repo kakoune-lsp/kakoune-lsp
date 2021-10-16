@@ -31,7 +31,10 @@ pub fn roots_by_marker(roots: &[String], path: &str) -> String {
                 if m.next().is_some() {
                     // ditto unwrap
                     let root_dir = pwd.to_str().unwrap().to_string();
-                    info!("Found project root \"{}\" because it contains \"{}\"", root_dir, root);
+                    info!(
+                        "Found project root \"{}\" because it contains \"{}\"",
+                        root_dir, root
+                    );
                     return root_dir;
                 }
             }
