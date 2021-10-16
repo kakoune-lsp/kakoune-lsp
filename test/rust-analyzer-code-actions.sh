@@ -36,8 +36,8 @@ test_sleep_until 'test_tmux capture-pane -p | grep 💡'
 # CHECK: 💡 main.rs 7:11  1 sel - client0@[session]
 
 test_tmux send-keys ,la # lsp-code-actions
-test_sleep_until 'test_tmux capture-pane -p | grep -E "Replace"'
-# CHECK: Replace match with if let{{.*}}
+test_sleep_until 'test_tmux capture-pane -p | grep Replace'
+# CHECK: {{.*}}Replace match with if let{{.*}}
 
 test_tmux send-keys Enter
 test_sleep_until 'test_tmux capture-pane -p | grep -q if.let.Test'
@@ -52,7 +52,7 @@ test_tmux capture-pane -p
 
 test_tmux send-keys ,la # lsp-code-actions
 test_sleep_until 'test_tmux capture-pane -p | grep Replace'
-# CHECK: Replace if let with match{{.*}}
+# CHECK: {{.*}}Replace if let with match{{.*}}
 
 test_tmux send-keys Enter
 test_sleep_until 'test_tmux capture-pane -p | grep -q match.foo'

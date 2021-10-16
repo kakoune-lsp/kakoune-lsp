@@ -131,7 +131,39 @@ define-command -hidden lsp-hide-code-actions -docstring "Called when no code act
 }
 
 define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on :lsp-code-actions" %{
-    menu %arg{@}
+    # This is a really convoluted way of saying "menu %arg{@}". The difference is that by using
+    # prompt mode instead of menu mode, we allow fuzzy search.
+    evaluate-commands %sh{
+        shellquote() {
+            printf "'"
+            printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2"
+            printf "'"
+        }
+        cases=
+        completion=
+        nl=$(printf '\n.'); nl=${nl%.}
+        while [ $# -gt 0 ]; do
+            title=$1; shift
+            command=$1; shift
+            completion="${completion}${title}${nl}"
+            cases="${cases}
+            $(shellquote "$title" s/¶/¶¶/g))
+                printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
+                ;;"
+        done
+        printf "\
+        define-command -override -hidden lsp-perform-code-action-menu -params 1 %%§
+            evaluate-commands %%sh¶
+                case \"\$1\" in%s
+                *) echo fail no such code action: \"\$1\" ;;
+                esac
+            ¶
+        §" "$cases"
+        printf ' -menu -shell-script-candidates %%§
+            printf %%s %s
+            §' "$(shellquote "$completion")"
+    }
+    execute-keys %{: lsp-perform-code-action-menu <tab>}
 }
 
 # Options for information exposed by kak-lsp.
