@@ -8,8 +8,8 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params =
-        PositionParams::deserialize(params).expect("Params should follow PositionParams structure");
+    let params = CodeActionsParams::deserialize(params)
+        .expect("Params should follow CodeActionsParams structure");
     let position = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
 
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
@@ -40,7 +40,7 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
         partial_result_params: Default::default(),
     };
     ctx.call::<CodeActionRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_code_actions(meta, result, ctx)
+        editor_code_actions(meta, result, ctx, params)
     });
 }
 
@@ -48,16 +48,12 @@ pub fn editor_code_actions(
     meta: EditorMeta,
     result: Option<CodeActionResponse>,
     ctx: &mut Context,
+    params: CodeActionsParams,
 ) {
     let result = match result {
         Some(result) => result,
         None => return,
     };
-
-    if result.is_empty() {
-        ctx.exec(meta, "lsp-show-error 'no actions available'");
-        return;
-    }
 
     for cmd in &result {
         match cmd {
@@ -97,8 +93,19 @@ pub fn editor_code_actions(
             }
         })
         .join(" ");
-    ctx.exec(
-        meta,
-        format!("lsp-show-code-actions {}", titles_and_commands),
-    );
+
+    let command = if params.perform_code_action {
+        if result.is_empty() {
+            "lsp-show-error 'no actions available'".to_string()
+        } else {
+            format!( "lsp-perform-code-action {}\n", titles_and_commands )
+        }
+    } else {
+        if result.is_empty() {
+                "lsp-hide-code-actions\n".to_string()
+            } else {
+                format!("lsp-show-code-actions {}\n", titles_and_commands)
+            }
+    };
+    ctx.exec(meta, command);
 }
