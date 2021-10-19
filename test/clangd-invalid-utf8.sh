@@ -15,17 +15,15 @@ void callee() {}
  */
 EOF
 
-$tmux new-session -d -x 80 -y 6 kak -e "$kak_startup_commands; lsp-enable" main.c
-$tmux resize-window -x 80 -y 6 ||: # Workaround for macOS.
-sleep "$jiffy"
-$tmux send-keys / callee Enter gd
-sleep "$jiffy"
-$tmux send-keys 'i%()' Escape
-
-$tmux capture-pane -p
+test_tmux_kak_start main.c
+test_tmux send-keys / callee Enter gd
+test_sleep
+test_tmux send-keys 'i%()' Escape
+test_tmux capture-pane -p
 # CHECK: %()void callee() {}
 # CHECK: /* Invalid UTF-8 in comment:
 # CHECK:  */
 # CHECK: ~
 # CHECK: ~
-# CHECK: callee.c 1:4 [+] 1 sel - client0@[{{\d+}}]
+# CHECK: ~
+# CHECK: callee.c 1:4 [+] 1 sel - client0@[session]

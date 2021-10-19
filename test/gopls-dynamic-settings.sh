@@ -13,15 +13,11 @@ func format_me() {
 }
 EOF
 
-session=session
-$tmux new-session -d -x 80 -y 7 kak -s "$session" -e "$kak_startup_commands; lsp-enable" main.go
-$tmux resize-window -x 80 -y 7 ||: # Workaround for macOS.
-sleep "$jiffy"
+test_tmux_kak_start main.go
 
-$tmux send-keys h,lf
-sleep "$jiffy"
-
-$tmux capture-pane -p
+test_tmux send-keys h,lf # lsp-formatting
+test_sleep
+test_tmux capture-pane -p
 # CHECK: package main
 # CHECK:
 # CHECK: func format_me() {
@@ -35,13 +31,11 @@ echo '
 set global lsp_config %{
 	[language.go.settings.gopls]
 	"formatting.gofumpt" = true
-}' | kak -p $session
-sleep "$jiffy"
-
-$tmux send-keys ,lf # :lsp-formatting
-sleep "$jiffy"
-
-$tmux capture-pane -p
+}' | kak -p "$test_kak_session"
+test_sleep
+test_tmux send-keys ,lf # lsp-formatting
+test_sleep
+test_tmux capture-pane -p
 # CHECK: package main
 # CHECK:
 # CHECK: func format_me() {
