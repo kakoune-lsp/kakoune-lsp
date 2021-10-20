@@ -3,9 +3,13 @@
 set -e
 
 if [ -z "$KAK_LSP_TEST_INSTALLED" ]; then
-	binaries=$(command -v $PWD/target/debug/kak-lsp $PWD/target/release/kak-lsp)
-	binary=$(printf %s "$binaries" | head -1)
-	PATH=$(dirname "$binary"):"$PATH"
+	for build in debug release
+	do
+		if command -v "$PWD/target/$build/kak-lsp" >/dev/null; then
+			PATH="$PWD/target/$build:$PATH"
+			break
+		fi
+	done
 fi
 
 command -v tmux >/dev/null
