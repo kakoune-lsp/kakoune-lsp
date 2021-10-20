@@ -8,9 +8,14 @@ command -v tmux >/dev/null
 HOME=$(mktemp -d)
 cd "$HOME"
 export TMPDIR=$HOME # Avoid interfering with other kak-lsp processes.
-XDG_CONFIG_HOME=$HOME/.config
-XDG_RUNTIME_DIR=$HOME/xdg_runtime_dir
-XDG_DATA_DIR=$HOME/xdg_data_dir
+env=$(env)
+if printf %s "$env" | grep -q ^XDG_CONFIG_HOME=; then
+	XDG_CONFIG_HOME=$HOME/.config
+fi
+if printf %s "$env" | grep -q ^XDG_RUNTIME_DIR=; then
+	XDG_RUNTIME_DIR=$HOME/xdg_runtime_dir
+	mkdir -m 700 "$XDG_RUNTIME_DIR"
+fi
 
 test_kak_session=session
 mkdir .config
