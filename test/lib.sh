@@ -2,6 +2,12 @@
 
 set -e
 
+if [ -z "$KAK_LSP_TEST_INSTALLED" ]; then
+	binaries=$(command -v $PWD/target/debug/kak-lsp $PWD/target/release/kak-lsp)
+	binary=$(printf %s "$binaries" | head -1)
+	PATH=$(dirname "$binary"):"$PATH"
+fi
+
 command -v tmux >/dev/null
 
 # Export a fresh HOME, so Kakoune runs without user configuration.

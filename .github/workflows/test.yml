@@ -110,4 +110,4 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
 
     - name: Run system tests
-      run: PATH="$PWD/target/release:$PATH" sh -x test/run
+      run: sh -x test/run
