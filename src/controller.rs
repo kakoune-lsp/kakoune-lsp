@@ -236,7 +236,17 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             hover::text_document_hover(meta, params, &mut ctx);
         }
         request::GotoDefinition::METHOD => {
-            goto::text_document_definition(meta, params, &mut ctx);
+            let omnisharp_workaround = ctx
+                .config
+                .language
+                .get(&ctx.language_id)
+                .and_then(|l| l.workaround_use_omnisharp_go_to_definition)
+                .unwrap_or(false);
+            if omnisharp_workaround {
+                omnisharp::go_to_definition(meta, params, ctx);
+            } else {
+                goto::text_document_definition(meta, params, &mut ctx);
+            }
         }
         request::GotoImplementation::METHOD => {
             goto::text_document_implementation(meta, params, &mut ctx);

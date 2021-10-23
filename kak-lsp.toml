@@ -24,6 +24,7 @@ filetypes = ["csharp"]
 roots = ["*.sln"]
 command = "omnisharp"
 args = ["-lsp"]
+workaround_use_omnisharp_go_to_definition = true
 
 [language.crystal]
 filetypes = ["crystal"]
