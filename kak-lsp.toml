@@ -19,6 +19,12 @@ roots = ["compile_commands.json", ".clangd", ".git", ".hg"]
 command = "clangd"
 offset_encoding = "utf-8"
 
+[language.csharp]
+filetypes = ["csharp"]
+roots = ["*.sln"]
+command = "omnisharp"
+args = ["-lsp"]
+
 [language.crystal]
 filetypes = ["crystal"]
 roots = ["shard.yml"]
