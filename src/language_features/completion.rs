@@ -89,7 +89,7 @@ pub fn editor_completion(
                 let markup = markdown_to_kakoune_markup(markdown, force_plaintext);
                 format!(
                     "info -markup -style menu -- %§{}§",
-                    markup.replace("§", "\\§")
+                    markup.replace("§", "§§")
                 )
             } else {
                 // When the user scrolls through the list of completion candidates, Kakoune

@@ -112,8 +112,8 @@ pub fn editor_hover(
     let command = format!(
         "lsp-show-hover {} %§{}§ %§{}§",
         params.position,
-        contents.replace("§", "\\§"),
-        diagnostics.replace("§", "\\§")
+        contents.replace("§", "§§"),
+        diagnostics.replace("§", "§§")
     );
 
     ctx.exec(meta, command);
