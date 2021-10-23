@@ -702,6 +702,20 @@ method   = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command lsp-cancel-progress -params 1 -docstring "Cancel a cancelable progress item." %{
+    remove-hooks global lsp
+    nop %sh{ (printf '
+session  = "%s"
+client   = "%s"
+buffile  = "%s"
+filetype = "%s"
+version  = %d
+method   = "window/workDoneProgress/cancel"
+[params]
+token    = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-apply-workspace-edit -params 1 -hidden %{
     lsp-did-change-and-then %sh{
         printf "lsp-apply-workspace-edit-request '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
@@ -1301,8 +1315,8 @@ define-command -hidden lsp-replace-selection -params 1 -docstring %{
     }
 }
 
-define-command -hidden lsp-handle-progress -params 4 -docstring %{
-  lsp-handle-progress <title> <message> <percentage> <done>
+define-command -hidden lsp-handle-progress -params 6 -docstring %{
+  lsp-handle-progress <token> <title> <cancelable> <message> <percentage> <done>
   Handle progress messages sent from the language server. Override to handle this.
 } %{ nop }
 

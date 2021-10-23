@@ -41,6 +41,7 @@ pub struct Context {
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
     pub offset_encoding: OffsetEncoding,
+    pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
 }
 
 impl Context {
@@ -70,6 +71,7 @@ impl Context {
             session,
             documents: HashMap::default(),
             offset_encoding,
+            work_done_progress: HashMap::default(),
         }
     }
 
