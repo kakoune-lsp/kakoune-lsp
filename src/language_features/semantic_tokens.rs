@@ -10,6 +10,12 @@ use lsp_types::{
 };
 use url::Url;
 
+pub fn refresh(ctx: &mut Context) -> Result<jsonrpc_core::Value, jsonrpc_core::Error> {
+    let meta = ctx.meta_for_session();
+    ctx.exec(meta, "lsp-semantic-tokens-refresh");
+    Ok(jsonrpc_core::Value::Null)
+}
+
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
     let req_params = SemanticTokensParams {
         partial_result_params: Default::default(),

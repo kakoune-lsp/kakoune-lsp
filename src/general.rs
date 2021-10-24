@@ -77,7 +77,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 }),
                 workspace_folders: Some(false),
                 configuration: Some(true),
-                semantic_tokens: None,
+                semantic_tokens: Some(SemanticTokensWorkspaceClientCapabilities {
+                    refresh_support: Some(true),
+                }),
                 code_lens: None,
                 file_operations: None,
             }),

@@ -1094,6 +1094,12 @@ method    = "textDocument/semanticTokens/full"
 ' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command -hidden lsp-semantic-tokens-refresh %{
+    evaluate-commands %sh{
+        printf 'evaluate-commands -client %s lsp-semantic-tokens-request\n' $kak_quoted_client_list
+    }
+}
+
 ### Response handling ###
 
 # Feel free to override these commands in your config if you need to customise response handling.

@@ -341,6 +341,7 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.params, ctx)
         }
+        request::SemanticTokensRefesh::METHOD => semantic_tokens::refresh(ctx),
         request::WorkDoneProgressCreate::METHOD => {
             progress::work_done_progress_create(request.params, ctx)
         }
