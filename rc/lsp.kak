@@ -1079,7 +1079,7 @@ method    = "rust-analyzer/inlayHints"
 
 # semantic tokens
 
-define-command lsp-semantic-tokens -docstring "semantic-tokens-update: Request semantic tokens" %{
+define-command lsp-semantic-tokens -docstring "lsp-semantic-tokens: Request semantic tokens" %{
   lsp-did-change-and-then lsp-semantic-tokens-request
 }
 
