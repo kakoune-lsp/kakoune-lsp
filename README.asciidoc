@@ -163,8 +163,8 @@ hook global WinSetOption filetype=rust %{
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
 even if the Kakoune session is still up and running. Change `server.timeout` in `kak-lsp.toml`
-to tweak this duration, or set it to 0 to disable this behavior. In any scenario,  a new would
-spin up a fresh server if it is down.
+to tweak this duration, or set it to 0 to disable this behavior. In any scenario,  a new request
+would spin up a fresh server if it is down.
 
 * `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode].
   The following example mapping gives you access to the shortcuts from below table after typing `,l`.
