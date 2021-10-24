@@ -602,18 +602,6 @@ method   = "capabilities"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-semantic-available-scopes -docstring "List available scopes for current filetype" %{
-    nop %sh{ (printf '
-session  = "%s"
-client   = "%s"
-buffile  = "%s"
-filetype = "%s"
-version  = %d
-method   = "semantic-scopes"
-[params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
-}
-
 define-command -hidden lsp-did-open %{
     # see lsp-did-change
     set-option buffer lsp_timestamp %val{timestamp}
