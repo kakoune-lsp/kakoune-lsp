@@ -98,7 +98,7 @@ jobs:
         sudo mv rust-analyzer /usr/local/bin/
 
     - name: Install typescript-language-server
-      run: sudo npm install -g typescript typescript-language-server
+      run: sudo npm install -g typescript@4.4.4 typescript-language-server@0.6.4
 
     - name: Install Tmux via homebrew
       if: matrix.os == 'macos-latest'
