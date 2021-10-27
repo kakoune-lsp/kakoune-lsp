@@ -1,16 +1,28 @@
 ## Unreleased
 
 Additions:
- - Show lightbulb in modeline when code actions are available and `lsp_auto_show_code_actions` is set (#538).
- - Sequences of text edits (like from `lsp-code-actions` or `lsp-formatting`) will create just one undo entry (#533).
- - Fix go-to-defintion for files containing invalid UTF-8 (#535).
+- Default configuration for Erlang (#548), R (#555) and Racket (#568).
+- Goto/get hover info of next/previous function with new `lsp-next-function`/`lsp-hover-next-function` (#557).
+- Allow to show hover info in the `*hover*` buffer (instead of the info box) with new `lsp-hover-buffer` (#564, #257).
+- Show lightbulb in modeline when code actions are available and `lsp_auto_show_code_actions` is set (#538).
+- Run specific code actions with new `lsp-code-action` (#566).
+- Support LSP's Call Hierarchy, to show callers/callees of the function at cursor with `lsp-incoming-calls`/`lsp-outgoing-calls` (#554).
+- Support LSP's Selection Range, to quickly select interesting ranges around cursors with `lsp-selection-range` (#288).
+- Create just one undo entry for sequences of text edits (like from `lsp-code-actions` or `lsp-formatting`) (#533).
+- Set new environment variable `KAK_LSP_FORCE_PROJECT_ROOT` to use the same project root even for files outside a project, to reuse a single language server (#542).
+- Support server progress notifications via `$/progress`, removing support for the non-standard `window/progress` (#545).
+- Support for `filterText` in completions, which depends on a proposed Kakoune feature (#551).
+- Allow multiple characters and spaces in diagnostic gutter via `lsp_diagnostic_line_error_sign` and friends (#571).
+- Support LaTeX language server `texlab`'s custom commands with `texlab-build` and `texlab-forward-search` (SyncTeX support) (#573).
 
 Bug fixes:
+- Honor `extra_word_chars` for completions, fixing completion of Lisps (#568).
+- Fix go-to-definition for files containing invalid UTF-8 (#535).
 - Fix default server-specific configuration for `pyls` (regressed in 11.0.0).
 - Use the LineNumbers face for the flag-lines highlighter that shows diagnostics, to work better with non-default backgrounds (#524).
 - Fix applying sequences of text edits, like from `lsp-code-actions` or `lsp-formatting` (#527).
   - Also, do not drop trailing newline from text edits (e9af1aa).
-- Quoting and escaping fixes for diagnostics and hover info.
+- Quoting/escaping fixes for diagnostics and hover info.
 
 ## 11.0.1 - 2021-09-17
 
