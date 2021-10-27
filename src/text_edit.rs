@@ -274,7 +274,7 @@ pub fn apply_text_edits_to_buffer(
 
     let mut selection_index = 0;
     let mut cleanup_sentinel = false;
-    let apply_edits = edits
+    let mut apply_edits = edits
         .iter()
         .enumerate()
         .map(
@@ -318,12 +318,15 @@ pub fn apply_text_edits_to_buffer(
         .and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
 
-    let mut apply_edits = format!(
-        "select {}\nexec -save-regs \"\" Z\n{}",
-        selection_descs, apply_edits
-    );
-    if cleanup_sentinel {
-        apply_edits = format!("{}\nexec <percent>s\\u00E000<ret>d", apply_edits);
+    if !selection_descs.is_empty() {
+        apply_edits = format!(
+            "select {}\nexec -save-regs \"\" Z\n{}",
+            selection_descs, apply_edits
+        );
+
+        if cleanup_sentinel {
+            apply_edits = format!("{}\nexec <percent>s\\u00E000<ret>d", apply_edits);
+        }
     }
 
     let client = match client {

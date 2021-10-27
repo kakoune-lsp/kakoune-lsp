@@ -97,6 +97,9 @@ jobs:
         chmod +x rust-analyzer
         sudo mv rust-analyzer /usr/local/bin/
 
+    - name: Install typescript-language-server
+      run: sudo npm install -g typescript typescript-language-server
+
     - name: Install Tmux via homebrew
       if: matrix.os == 'macos-latest'
       run: brew install tmux
