@@ -295,6 +295,21 @@ args = ["serve"]
 # See https://github.com/hashicorp/terraform-ls/blob/main/docs/SETTINGS.md
 # rootModulePaths = []
 
+[language.typescript]
+filetypes = ["typescript"]
+roots = ["package.json", "tsconfig.json", ".git", ".hg"]
+command = "typescript-language-server"
+args = ["--stdio"]
+
+# [language.typescript]
+# filetypes = ["typescript"]
+# roots = ["package.json", "tsconfig.json", ".git", ".hg"]
+# command = "deno"
+# args = ["lsp"]
+# [language.typescript.settings.deno]
+# enable = true
+# lint = true
+
 [language.yaml]
 filetypes = ["yaml"]
 roots = [".git", ".hg"]
