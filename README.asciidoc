@@ -216,6 +216,20 @@ link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
 overrides it. This means that if you want to customize any of the configuration, you must copy the
 *entire* default configuration and then edit it.
 
+In the language section of `kak-lsp.toml`, the `roots` parameter is a list of file globs.
+Whenever your editor session wants to send an LSP request, the first glob that matches a file
+in any of the current buffer's parent directories will cause `kak-lsp` to set the project root
+to that parent directory.
+
+You can define an environment variable like `KAK_LSP_PROJECT_ROOT_RUST=/my/project` to always
+use `/my/project` as root for Rust files inside `/my/project`.  Substitute `RUST` with another
+language ID to do the same for other file types.
+
+The environment variable `KAK_LSP_FORCE_PROJECT_ROOT=/my/project` will make `kak-lsp` always
+use `/my/project` as project root, even for files outside this directory. This avoids starting
+separate language servers for files outside `/my/project`, and ensures that your language server
+is aware of your project's build configuration even when navigating library code.
+
 If you are setting any server options via cli, do not forget to append them to
 `%sh{kak-lsp --kakoune ...}` in your `kakrc`. It's not needed if you change options in
 `~/.config/kak-lsp/kak-lsp.toml`.
