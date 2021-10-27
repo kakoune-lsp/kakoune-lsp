@@ -123,7 +123,7 @@ Capture groups must be:
 # Callback functions. Override these to tune kak-lsp's behavior.
 
 define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
-    set-option buffer lsp_modeline "💡 "
+    set-option buffer lsp_modeline_code_actions "💡"
 }
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
@@ -156,8 +156,10 @@ declare-option -hidden range-specs rust_analyzer_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
 declare-option -hidden str lsp_project_root
 
-declare-option -hidden str lsp_modeline
-set-option global modelinefmt "%%opt{lsp_modeline}%opt{modelinefmt}"
+declare-option -hidden str lsp_modeline_code_actions
+declare-option -hidden str lsp_modeline_progress ""
+declare-option -hidden str lsp_modeline '%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}'
+set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 ### Requests ###
 
@@ -1495,7 +1497,17 @@ define-command -hidden lsp-replace-selection -params 1 -docstring %{
 define-command -hidden lsp-handle-progress -params 6 -docstring %{
   lsp-handle-progress <token> <title> <cancelable> <message> <percentage> <done>
   Handle progress messages sent from the language server. Override to handle this.
-} %{ nop }
+} %{
+    set-option global lsp_modeline_progress %sh{
+        if ! "$6"; then
+            echo ⌛
+            # More verbose alternative that shows what the server is working on.  Don't show this in
+            # the modeline by default because the modeline is part of the terminal title; changing
+            # that too quickly can be noisy.
+            # echo "$2${5:+" ($5%)"}${4:+": $4"}"
+        fi
+    }
+}
 
 ### Handling requests from server ###
 
