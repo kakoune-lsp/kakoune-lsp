@@ -23,8 +23,7 @@ EOF
 test_tmux_kak_start main.ts
 
 test_tmux send-keys :lsp-formatting-sync Enter
-test_sleep
-test_sleep
+test_sleep_until 'test_tmux capture-pane -p | grep -qF [+]'
 test_tmux capture-pane -p
 # CHECK:  /**
 # CHECK:   * Test class to format

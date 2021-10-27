@@ -78,6 +78,22 @@ test_sleep()
 	fi
 }
 
+test_sleep_until()
+{
+	i=0
+	while [ $i -lt 100 ] && ! eval "$1" >/dev/null
+	do
+		sleep 1
+		i=$((i + 1))
+	done
+	if [ $i -eq 100 ]; then
+		printf %s\\n "timeout wating for $1" >&2
+		return 1
+	else
+		eval "$1"
+	fi
+}
+
 test_cleanup() {
 	test_tmux kill-server ||:
 	# Language servers might still be running, so ignore errors for now.

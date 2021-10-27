@@ -28,18 +28,15 @@ EOF
 test_tmux_kak_start main.rs
 
 test_tmux send-keys j/foo Enter vtj
-test_sleep
-test_tmux capture-pane -p | grep 💡
+test_sleep_until 'test_tmux capture-pane -p | grep 💡'
 # CHECK: 💡 main.rs 7:11  1 sel - client0@[session]
 
 test_tmux send-keys ,la # lsp-code-actions
-test_sleep
-test_tmux capture-pane -p | grep -E '\b(Replace|menu)\b'
+test_sleep_until 'test_tmux capture-pane -p | grep -E "Replace"'
 # CHECK: Replace match with if let{{.*}}
-# CHECK: 💡 main.rs 7:11  menu - client0@[session]
 
 test_tmux send-keys Enter
-test_sleep
+test_sleep_until 'test_tmux capture-pane -p | grep -q if.let.Test'
 test_tmux capture-pane -p
 # CHECK:     let foo: Test = Test::Foo;
 # CHECK:     if let Test::Foo = foo {
@@ -50,12 +47,11 @@ test_tmux capture-pane -p
 # CHECK: 💡 main.rs 7:27 [+] 1 sel - client0@[session]
 
 test_tmux send-keys ,la # lsp-code-actions
-test_sleep
-test_tmux capture-pane -p | grep Replace
+test_sleep_until 'test_tmux capture-pane -p | grep Replace'
 # CHECK: Replace if let with match{{.*}}
 
 test_tmux send-keys Enter
-test_sleep
+test_sleep_until 'test_tmux capture-pane -p | grep -q match.foo'
 test_tmux capture-pane -p
 # CHECK:      let foo: Test = Test::Foo;
 # CHECK:      match foo {
