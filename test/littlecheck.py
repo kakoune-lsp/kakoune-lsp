@@ -716,6 +716,8 @@ def main():
         subs["s"] = path
         starttime = datetime.datetime.now()
         ret = check_path(path, subs, config, TestFailure.print_message)
+        if ret is SKIP:
+            skip_count += 1
         if not ret:
             failed = True
         elif config.progress:
@@ -724,7 +726,6 @@ def main():
             reason = "ok"
             color = "{GREEN}"
             if ret is SKIP:
-                skip_count += 1
                 reason = "SKIPPED"
                 color = "{BLUE}"
             print(

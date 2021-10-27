@@ -1,11 +1,13 @@
 #!/bin/sh
 
-set -e
-
 test="$(dirname "$0")"
 for file in $(
 	find "${@:-"$test"}" -type f -name '*.sh' | grep -v '/lib.sh$'
 )
 do
 	"$test"/littlecheck.py "$file"
+	rc=$?
+	if [ $rc -ne 0 ] && [ $rc -ne 125 ]; then
+		exit $rc
+	fi
 done
