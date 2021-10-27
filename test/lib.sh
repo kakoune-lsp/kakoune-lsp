@@ -49,8 +49,10 @@ lsp-enable
 EOF
 
 test_tmux_kak_start() {
-	test_tmux new-session -d -x 80 -y 7 kak -s "$test_kak_session" "$@"
+	# If we directly run kak, then "lsp-stop" will not send the exit notification.
+	test_tmux new-session -d -x 80 -y 7 /bin/sh
 	test_tmux resize-window -x 80 -y 7 ||: # Workaround for macOS.
+	test_tmux send-keys "kak -s $test_kak_session $@" Enter
 	test_sleep
 }
 
@@ -95,8 +97,10 @@ test_sleep_until()
 }
 
 test_cleanup() {
-	test_tmux kill-server ||:
-	# Language servers might still be running, so ignore errors for now.
-	rm -rf "$HOME" >/dev/null 2>&1 ||:
+	echo kill! | kak -p "$test_kak_session"
+	test_sleep_until "! kak -c $test_kak_session -ui dummy -e quit >/dev/null 2>&1"
+	sleep .1
+	test_tmux kill-server >/dev/null 2>&1
+	rm -rf "$HOME"
 }
 trap test_cleanup EXIT
