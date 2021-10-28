@@ -76,6 +76,13 @@ elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
 
+[language.erlang]
+filetypes = ["erlang"]
+# See https://github.com/erlang-ls/erlang_ls.git for more information and
+# how to configure. This default config should work in most cases though.
+roots = ["rebar.config", "erlang.mk", ".git", ".hg"]
+command = "erlang_ls"
+
 [language.go]
 filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
