@@ -98,14 +98,14 @@ pub fn editor_code_actions(
         if result.is_empty() {
             "lsp-show-error 'no actions available'".to_string()
         } else {
-            format!( "lsp-perform-code-action {}\n", titles_and_commands )
+            format!("lsp-perform-code-action {}\n", titles_and_commands)
         }
     } else {
         if result.is_empty() {
-                "lsp-hide-code-actions\n".to_string()
-            } else {
-                format!("lsp-show-code-actions {}\n", titles_and_commands)
-            }
+            "lsp-hide-code-actions\n".to_string()
+        } else {
+            format!("lsp-show-code-actions {}\n", titles_and_commands)
+        }
     };
     ctx.exec(meta, command);
 }

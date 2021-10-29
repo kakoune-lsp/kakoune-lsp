@@ -23,6 +23,11 @@ jobs:
     - name: Run unit tests
       run: cargo test --release
 
+    - name: Run cargo fmt
+      run: |
+         rustfmt --version
+         cargo fmt --verbose -- --check
+
   system-tests:
     runs-on: ${{ matrix.os }}
     strategy:
