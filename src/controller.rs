@@ -294,7 +294,7 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             workspace::apply_edit_from_editor(meta, params, ctx);
         }
         request::SemanticTokensFullRequest::METHOD => {
-            semantic_tokens::tokens_request(meta, params, ctx);
+            semantic_tokens::tokens_request(meta, ctx);
         }
 
         // CCLS

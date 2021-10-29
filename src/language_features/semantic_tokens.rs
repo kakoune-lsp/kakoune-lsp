@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::position::lsp_range_to_kakoune;
-use crate::types::{EditorMeta, EditorParams};
+use crate::types::EditorMeta;
 use crate::util::editor_quote;
 use lsp_types::request::SemanticTokensFullRequest;
 use lsp_types::{
@@ -10,7 +10,7 @@ use lsp_types::{
 };
 use url::Url;
 
-pub fn tokens_request(meta: EditorMeta, _params: EditorParams, ctx: &mut Context) {
+pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
     let req_params = SemanticTokensParams {
         partial_result_params: Default::default(),
         text_document: TextDocumentIdentifier {
