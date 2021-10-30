@@ -48,6 +48,8 @@ str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
 declare-option -docstring "Prefer spaces over tabs" bool lsp_insert_spaces true
 # Set to true to automatically highlight references with Reference face.
 declare-option -docstring "Automatically highlight references with Reference face" bool lsp_auto_highlight_references false
+# Set to true to highlight when code actions are available.
+declare-option -docstring "Show available code actions (default: a 💡 in the modeline)" bool lsp_auto_show_code_actions false
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
@@ -179,7 +181,7 @@ method   = "textDocument/didChange"
 draft    = """
 %s"""
 ' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval ${kak_opt_lsp_cmd} --request
-printf %s "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
+printf %s\\n "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
 ) > /dev/null 2>&1 < /dev/null & }
         execute-keys -draft '%<a-|><ret>'
     }
@@ -1422,8 +1424,11 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
     hook -group lsp global NormalIdle .* %{
-        lsp-did-change-and-then 'lsp-code-actions-request false'
-        %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
+        lsp-did-change
+        evaluate-commands %sh{
+            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
+        }
     }
 
     lsp-did-change-config
@@ -1473,8 +1478,11 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp window InsertIdle .* lsp-completion
     hook -group lsp window NormalIdle .* %{
-        lsp-did-change-and-then 'lsp-code-actions-request false'
-        %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
+        lsp-did-change
+        evaluate-commands %sh{
+            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
+        }
     }
 
     lsp-did-open

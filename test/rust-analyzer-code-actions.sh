@@ -11,6 +11,10 @@ roots = ["Cargo.toml"]
 command = "rust-analyzer"
 EOF
 
+cat >> .config/kak/kakrc << EOF
+set-option global lsp_auto_show_code_actions true
+EOF
+
 cat > main.rs << EOF
 enum Test {
     Foo,
