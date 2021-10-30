@@ -4,7 +4,7 @@ use crate::types::{EditorMeta, EditorParams, PositionParams};
 use crate::util::get_lsp_position;
 use itertools::Itertools;
 use lsp_types::{
-    request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind::Write,
+    request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
     DocumentHighlightParams, TextDocumentIdentifier, TextDocumentPositionParams,
 };
 use serde::Deserialize;
@@ -46,7 +46,7 @@ pub fn editor_document_highlights(
                 format!(
                     "{}|{}",
                     lsp_range_to_kakoune(&highlight.range, &document.text, ctx.offset_encoding),
-                    if highlight.kind == Some(Write) {
+                    if highlight.kind == Some(DocumentHighlightKind::WRITE) {
                         "ReferenceBind"
                     } else {
                         "Reference"

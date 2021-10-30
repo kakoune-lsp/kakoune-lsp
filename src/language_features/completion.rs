@@ -165,7 +165,7 @@ pub fn editor_completion(
 
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.
-            if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::Snippet)
+            if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::SNIPPET)
             {
                 let snippet = insert_text;
                 let insert_text = snippet_prefix_re

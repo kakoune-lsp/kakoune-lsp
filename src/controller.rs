@@ -367,10 +367,14 @@ fn dispatch_server_notification(
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
             let command = match params.typ {
-                MessageType::Error => "lsp-show-message-error",
-                MessageType::Warning => "lsp-show-message-warning",
-                MessageType::Info => "lsp-show-message-info",
-                MessageType::Log => "lsp-show-message-log",
+                MessageType::ERROR => "lsp-show-message-error",
+                MessageType::WARNING => "lsp-show-message-warning",
+                MessageType::INFO => "lsp-show-message-info",
+                MessageType::LOG => "lsp-show-message-log",
+                _ => {
+                    warn!("Unexpected ShowMessageParams type: {:?}", params.typ);
+                    "nop"
+                }
             };
             ctx.exec(
                 meta,

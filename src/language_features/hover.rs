@@ -54,10 +54,14 @@ pub fn editor_hover(
                     let face = x
                         .severity
                         .map(|sev| match sev {
-                            DiagnosticSeverity::Error => FACE_INFO_DIAGNOSTIC_ERROR,
-                            DiagnosticSeverity::Warning => FACE_INFO_DIAGNOSTIC_WARNING,
-                            DiagnosticSeverity::Information => FACE_INFO_DIAGNOSTIC_INFO,
-                            DiagnosticSeverity::Hint => FACE_INFO_DIAGNOSTIC_HINT,
+                            DiagnosticSeverity::ERROR => FACE_INFO_DIAGNOSTIC_ERROR,
+                            DiagnosticSeverity::WARNING => FACE_INFO_DIAGNOSTIC_WARNING,
+                            DiagnosticSeverity::INFORMATION => FACE_INFO_DIAGNOSTIC_INFO,
+                            DiagnosticSeverity::HINT => FACE_INFO_DIAGNOSTIC_HINT,
+                            _ => {
+                                warn!("Unexpected DiagnosticSeverity: {:?}", sev);
+                                FACE_INFO_DEFAULT
+                            }
                         })
                         .unwrap_or(FACE_INFO_DEFAULT);
 

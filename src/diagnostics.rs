@@ -29,10 +29,14 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 "{}|{}",
                 lsp_range_to_kakoune(&x.range, &document.text, ctx.offset_encoding),
                 match x.severity {
-                    Some(DiagnosticSeverity::Error) => "DiagnosticError",
-                    Some(DiagnosticSeverity::Hint) => "DiagnosticHint",
-                    Some(DiagnosticSeverity::Information) => "DiagnosticInfo",
-                    Some(DiagnosticSeverity::Warning) | None => "DiagnosticWarning",
+                    Some(DiagnosticSeverity::ERROR) => "DiagnosticError",
+                    Some(DiagnosticSeverity::HINT) => "DiagnosticHint",
+                    Some(DiagnosticSeverity::INFORMATION) => "DiagnosticInfo",
+                    Some(DiagnosticSeverity::WARNING) | None => "DiagnosticWarning",
+                    Some(_) => {
+                        warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                        "DiagnosticWarning"
+                    }
                 }
             )
         })
@@ -49,21 +53,25 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 "{}|{}",
                 x.range.start.line + 1,
                 match x.severity {
-                    Some(DiagnosticSeverity::Error) => {
+                    Some(DiagnosticSeverity::ERROR) => {
                         error_count += 1;
                         "{LineFlagError}%opt[lsp_diagnostic_line_error_sign]"
                     }
-                    Some(DiagnosticSeverity::Hint) => {
+                    Some(DiagnosticSeverity::HINT) => {
                         hint_count += 1;
                         "{LineFlagHint}%opt[lsp_diagnostic_line_hint_sign]"
                     }
-                    Some(DiagnosticSeverity::Information) => {
+                    Some(DiagnosticSeverity::INFORMATION) => {
                         info_count += 1;
                         "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
                     }
-                    Some(DiagnosticSeverity::Warning) | None => {
+                    Some(DiagnosticSeverity::WARNING) | None => {
                         warning_count += 1;
                         "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
+                    }
+                    Some(_) => {
+                        warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                        ""
                     }
                 }
             )
@@ -74,10 +82,14 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let mut lines_with_diagnostics = HashMap::new();
     for diagnostic in diagnostics {
         let face = match diagnostic.severity {
-            Some(DiagnosticSeverity::Error) => "InlayDiagnosticError",
-            Some(DiagnosticSeverity::Hint) => "InlayDiagnosticHint",
-            Some(DiagnosticSeverity::Information) => "InlayDiagnosticInfo",
-            Some(DiagnosticSeverity::Warning) | None => "InlayDiagnosticWarning",
+            Some(DiagnosticSeverity::ERROR) => "InlayDiagnosticError",
+            Some(DiagnosticSeverity::HINT) => "InlayDiagnosticHint",
+            Some(DiagnosticSeverity::INFORMATION) => "InlayDiagnosticInfo",
+            Some(DiagnosticSeverity::WARNING) | None => "InlayDiagnosticWarning",
+            Some(_) => {
+                warn!("Unexpected DiagnosticSeverity: {:?}", diagnostic.severity);
+                "InlayDiagnosticWarning"
+            }
         };
         let line_diagnostics = lines_with_diagnostics
             .entry(diagnostic.range.end.line)
@@ -89,7 +101,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 text_severity: None,
             });
 
-        let severity = diagnostic.severity.unwrap_or(DiagnosticSeverity::Warning);
+        let severity = diagnostic.severity.unwrap_or(DiagnosticSeverity::WARNING);
         if line_diagnostics
             .text_severity
             // Smaller == higher severity
@@ -185,10 +197,14 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                         p.line,
                         p.column,
                         match x.severity {
-                            Some(DiagnosticSeverity::Error) => "error",
-                            Some(DiagnosticSeverity::Hint) => "hint",
-                            Some(DiagnosticSeverity::Information) => "info",
-                            Some(DiagnosticSeverity::Warning) | None => "warning",
+                            Some(DiagnosticSeverity::ERROR) => "error",
+                            Some(DiagnosticSeverity::HINT) => "hint",
+                            Some(DiagnosticSeverity::INFORMATION) => "info",
+                            Some(DiagnosticSeverity::WARNING) | None => "warning",
+                            Some(_) => {
+                                warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                                "warning"
+                            }
                         },
                         x.message
                     )
