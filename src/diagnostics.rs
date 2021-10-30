@@ -107,12 +107,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             // Smaller == higher severity
             .map_or(true, |text_severity| severity < text_severity)
         {
-            line_diagnostics.text = diagnostic
-                .message
-                .split('\n')
-                .next()
-                .unwrap_or_default()
-                .replace("|", "\\|");
+            let first_line = diagnostic.message.split('\n').next().unwrap_or_default();
+            line_diagnostics.text = escape_tuple_element(first_line);
             line_diagnostics.text_face = face;
             line_diagnostics.text_severity = diagnostic.severity;
         }

@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::position::{lsp_position_to_kakoune, lsp_range_to_kakoune};
 use crate::text_edit::apply_text_edits;
 use crate::types::{EditorMeta, EditorParams, KakounePosition};
-use crate::util::editor_quote;
+use crate::util::{editor_quote, escape_tuple_element};
 use crate::workspace;
 use lsp_types::request::Request;
 use lsp_types::ExecuteCommandParams;
@@ -63,7 +63,7 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
         .into_iter()
         .map(|InlayHint { range, kind, label }| {
             let range = lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
-            let label = label.replace("|", "\\|");
+            let label = escape_tuple_element(&label);
             match kind {
                 InlayKind::TypeHint => {
                     let pos = KakounePosition {

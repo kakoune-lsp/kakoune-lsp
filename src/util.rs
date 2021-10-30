@@ -140,6 +140,12 @@ pub fn editor_quote_double_quotes(s: &str) -> String {
     format!("\"{}\"", editor_escape_double_quotes(s))
 }
 
+/// Escape Kakoune tuple element, as used in option types "completions", "line-specs" and
+/// "range-specs".
+pub fn escape_tuple_element(s: &str) -> String {
+    s.replace("\\", "\\\\").replace("|", "\\|")
+}
+
 // Cleanup and gracefully exit
 pub fn goodbye(session: &str, code: i32) {
     if code == 0 {

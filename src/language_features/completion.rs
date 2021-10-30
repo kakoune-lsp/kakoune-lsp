@@ -45,7 +45,6 @@ pub fn editor_completion(
 
     // Length of the longest label in the current completion list
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
-    let escape_bar = |s: &str| s.replace("|", "\\|");
     let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
 
     let mut inferred_offset: Option<u32> = None;
@@ -182,16 +181,16 @@ pub fn editor_completion(
 
                 editor_quote(&format!(
                     "{}|{}|{}",
-                    escape_bar(insert_text),
-                    escape_bar(&command),
-                    escape_bar(&entry),
+                    escape_tuple_element(insert_text),
+                    escape_tuple_element(&command),
+                    escape_tuple_element(&entry),
                 ))
             } else {
                 editor_quote(&format!(
                     "{}|{}|{}",
-                    escape_bar(&insert_text),
-                    escape_bar(&doc),
-                    escape_bar(&entry),
+                    escape_tuple_element(&insert_text),
+                    escape_tuple_element(&doc),
+                    escape_tuple_element(&entry),
                 ))
             }
         })
