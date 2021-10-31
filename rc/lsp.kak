@@ -208,6 +208,13 @@ define-command -hidden lsp-completion -docstring "Request completions for the ma
     lsp-did-change-and-then lsp-completion-request
 }
 
+declare-option -hidden bool lsp_have_kakoune_feature_filtertext
+declare-option -hidden completions lsp_have_kakoune_feature_filtertext_tmp
+try %{
+    set-option global lsp_have_kakoune_feature_filtertext_tmp 1.1@0 insert_text|filter_text|on_select|menu
+    set-option global lsp_have_kakoune_feature_filtertext true
+}
+
 define-command -hidden lsp-completion-request -docstring "Request completions for the main cursor position" %{
 try %{
     # Fail if preceding character is a whitespace (by default; the trigger could be customized).
@@ -238,7 +245,9 @@ line      = %d
 column    = %d
 [params.completion]
 offset    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} ${kak_opt_lsp_completion_offset} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+[params]
+have_kakoune_feature_filtertext = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} ${kak_opt_lsp_completion_offset} ${kak_opt_lsp_have_kakoune_feature_filtertext} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }}
 
 define-command lsp-hover -docstring "Request hover info for the main cursor position" %{
