@@ -24,6 +24,8 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let diagnostics = &ctx.diagnostics[buffile];
     let ranges = diagnostics
         .iter()
+        .sorted_unstable_by_key(|x| x.severity)
+        .rev()
         .map(|x| {
             format!(
                 "{}|{}",
