@@ -236,7 +236,7 @@ settings_section = "_"
 
 [language.r]
 filetypes = ["r"]
-roots = [".git", ".hg", "DESCRIPTION"]
+roots = ["DESCRIPTION", ".git", ".hg"]
 command = "R"
 args = ["--slave", "-e", "languageserver::run()"]
 
