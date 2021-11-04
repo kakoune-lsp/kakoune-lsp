@@ -234,6 +234,12 @@ settings_section = "_"
 # and https://github.com/palantir/python-language-server/blob/develop/vscode-client/package.json
 # pyls.configurationSources = ["flake8"]
 
+[language.r]
+filetypes = ["r"]
+roots = [".git", ".hg", "DESCRIPTION"]
+command = "R"
+args = ["--slave", "-e", "languageserver::run()"]
+
 [language.reason]
 filetypes = ["reason"]
 roots = ["package.json", "Makefile", ".git", ".hg"]
