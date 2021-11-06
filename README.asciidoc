@@ -148,6 +148,8 @@ Either way you get:
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
+* `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
+* `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 
 ----
 hook global WinSetOption filetype=rust %{
@@ -196,7 +198,15 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 | n | lsp-find-error
 | p | lsp-find-error --previous
 | y | lsp-type-definition
+| 9 | lsp-hover-previous-symbol Function
+| 0 | lsp-hover-next-symbol Function
 | & | lsp-highlight-references
+| ( | lsp-previous-symbol Function
+| ) | lsp-next-symbol Function
+| [ | lsp-hover-previous-symbol Any
+| ] | lsp-hover-next-symbol Any
+| { | lsp-previous-symbol Any
+| } | lsp-next-symbol Any
 |===
 
 To know which subset of kak-lsp commands is backed by the current buffer's filetype's language server use

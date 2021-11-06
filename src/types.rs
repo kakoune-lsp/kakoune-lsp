@@ -170,6 +170,20 @@ pub struct CodeActionsParams {
     pub perform_code_action: bool,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct NextOrPrevSymbolParams {
+    pub position: KakounePosition,
+    pub symbol_kind: String,
+    /// If true then searches forward ("next")
+    /// otherwise searches backward ("previous")
+    pub search_next: bool,
+    /// If true, don't navigate to the next/previous symbol but show its hover
+    /// otherwise goto the next/previous symbol
+    #[serde(default)]
+    pub hover: bool,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TextDocumentRenameParams {
@@ -216,10 +230,23 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KakounePosition {
     pub line: u32,
     pub column: u32, // in bytes, not chars!!!
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HoverModal {
+    pub context: String,
+    pub do_after: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HoverModalParams {
+    pub hover_modal: Option<HoverModal>,
 }
 
 #[derive(Debug, PartialEq)]

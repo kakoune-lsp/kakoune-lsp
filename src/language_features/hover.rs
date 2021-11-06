@@ -2,14 +2,16 @@ use crate::context::*;
 use crate::markup::*;
 use crate::position::*;
 use crate::types::*;
+use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
+pub fn text_document_hover(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+    let params = PositionParams::deserialize(editor_params.clone()).unwrap();
+    let hover_modal_params = HoverModalParams::deserialize(editor_params).unwrap();
     let req_params = HoverParams {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier {
@@ -20,12 +22,13 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         work_done_progress_params: Default::default(),
     };
     ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_hover(meta, params, result, ctx)
+        editor_hover(meta, hover_modal_params.hover_modal, params, result, ctx)
     });
 }
 
 pub fn editor_hover(
     meta: EditorMeta,
+    maybe_hover_modal: Option<HoverModal>,
     params: PositionParams,
     result: Option<Hover>,
     ctx: &mut Context,
@@ -88,7 +91,7 @@ pub fn editor_hover(
         .get(&ctx.language_id)
         .and_then(|l| l.workaround_server_sends_plaintext_labeled_as_markdown)
         .unwrap_or(false);
-    let contents = match result {
+    let mut contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {
             HoverContents::Scalar(contents) => {
@@ -109,16 +112,35 @@ pub fn editor_hover(
         },
     };
 
-    if contents.is_empty() && diagnostics.is_empty() {
+    if contents.is_empty() && diagnostics.is_empty() && maybe_hover_modal.is_none() {
         return;
     }
 
-    let command = format!(
+    let anchor_or_style = if let Some(hover_modal) = maybe_hover_modal.as_ref() {
+        contents = format!("{}\n---\n{}", hover_modal.context, contents);
+        "modal".to_string()
+    } else {
+        format!("{}", params.position)
+    };
+
+    let mut command = format!(
         "lsp-show-hover {} %§{}§ %§{}§",
-        params.position,
+        anchor_or_style,
         contents.replace("§", "§§"),
         diagnostics.replace("§", "§§")
     );
+
+    // Wrap if we're using a HoverModal
+    if let Some(hover_modal) = maybe_hover_modal {
+        command = formatdoc!(
+            "eval %§
+                 {}
+                 {}
+             §",
+            command.replace("§", "§§"),
+            hover_modal.do_after.replace("§", "§§")
+        );
+    }
 
     ctx.exec(meta, command);
 }
