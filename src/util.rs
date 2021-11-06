@@ -69,11 +69,8 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
             } = symbol;
             let filename = location.uri.to_file_path().unwrap();
             let filename_str = filename.to_str().unwrap();
-            let position = get_kakoune_position(filename_str, &location.range.start, ctx)
-                .unwrap_or_else(|| KakounePosition {
-                    line: location.range.start.line + 1,
-                    column: location.range.start.character + 1,
-                });
+            let position =
+                get_kakoune_position_with_fallback(filename_str, location.range.start, ctx);
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
@@ -86,9 +83,19 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
         .join("\n")
 }
 
+pub fn get_kakoune_position_with_fallback(
+    filename_str: &str,
+    position: Position,
+    ctx: &Context,
+) -> KakounePosition {
+    get_kakoune_position(filename_str, &position, ctx).unwrap_or_else(|| KakounePosition {
+        line: position.line + 1,
+        column: position.character + 1,
+    })
+}
+
 /// Represent list of document symbol as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
-
 pub fn format_document_symbol(
     items: Vec<DocumentSymbol>,
     meta: &EditorMeta,
@@ -100,13 +107,7 @@ pub fn format_document_symbol(
             let DocumentSymbol {
                 range, name, kind, ..
             } = symbol;
-            let position =
-                get_kakoune_position(&meta.buffile, &range.start, ctx).unwrap_or_else(|| {
-                    KakounePosition {
-                        line: range.start.line + 1,
-                        column: range.start.character + 1,
-                    }
-                });
+            let position = get_kakoune_position_with_fallback(&meta.buffile, range.start, ctx);
             let description = format!("{:?} {}", kind, name);
             format!(
                 "{}:{}:{}:{}",
