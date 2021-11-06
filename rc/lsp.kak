@@ -228,7 +228,7 @@ define-command lsp-hover -docstring "Request hover info for the main cursor posi
     lsp-did-change-and-then lsp-hover-request
 }
 
-define-command -hidden lsp-hover-request -docstring "Request hover info for the main cursor position" %{
+define-command -hidden lsp-hover-request -params 0..2 -docstring "Request hover info for the main cursor position" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -236,10 +236,149 @@ buffile   = "%s"
 filetype  = "%s"
 version   = %d
 method    = "textDocument/hover"
-[params.position]
-line      = %d
-column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+[params]
+position.line = %d
+position.column = %d
+style = "%s"
+context = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" "$2" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+declare-option -hidden str lsp_symbol_kind_completion %{
+  symbol_kinds="
+  File Module Namespace Package Class Method Property Field Constructor Enum Interface Function
+  Variable Constant String Number Boolean Array Object Key Null EnumMember Struct Event Operator
+  TypeParameter
+  "
+  for symbol_kind in ${symbol_kinds}; do
+    printf '%s\n' "${symbol_kind}"
+  done
+}
+
+define-command lsp-goto-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-goto-previous-symbol [<symbol-kind>]: Goto to previous document symbol of type <symbol-kind>. If <symbol-kind> is not given, it means _any_ symbol" %{
+    lsp-did-change-and-then "lsp-goto-previous-symbol-request %arg{@}"
+}
+
+define-command -hidden lsp-goto-previous-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-goto-previous-symbol-request [<symbol-kind>]: Goto to the previous symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "kak-lsp/next-or-previous-symbol"
+[params]
+position.line      = %d
+position.column    = %d
+symbolKind = "%s"
+searchNext = false
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command lsp-goto-next-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-goto-next-symbol [<symbol-kind>]: Goto to the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
+    lsp-did-change-and-then "lsp-goto-next-symbol-request %arg{@}"
+}
+
+define-command -hidden lsp-goto-next-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-goto-next-symbol-request [<symbol-kind>]: Goto to the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "kak-lsp/next-or-previous-symbol"
+[params]
+position.line      = %d
+position.column    = %d
+symbolKind = "%s"
+searchNext = true
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+# Frequently used, provided for convenience
+define-command lsp-goto-next-function -params 0 \
+    -docstring "lsp-goto-next-function: Goto to the next function in the document" %{
+    lsp-goto-next-symbol Function
+}
+
+# Frequently used, provided for convenience
+define-command lsp-goto-previous-function -params 0 \
+    -docstring "lsp-goto-previous-function: Goto to the previous function in the document" %{
+    lsp-goto-previous-symbol Function
+}
+
+# Frequently used, provided for convenience
+define-command lsp-goto-next-method -params 0 \
+    -docstring "lsp-goto-next-method: Goto to the next method in the document" %{
+    lsp-goto-next-symbol Method
+}
+
+# Frequently used, provided for convenience
+define-command lsp-goto-previous-method -params 0 \
+    -docstring "lsp-goto-previous-method: Goto to the previous method in the document" %{
+    lsp-goto-previous-symbol Method
+}
+
+define-command lsp-hover-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-hover-previous-symbol [<symbol-kind>]: Show hover of the previous symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the symbol hover information" %{
+    lsp-did-change-and-then "lsp-hover-previous-symbol-request %arg{@}"
+}
+
+define-command -hidden lsp-hover-previous-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-hover-previous-symbol-request [<symbol-kind>]: Show hover of the previous symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the symbol hover information" %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "kak-lsp/next-or-previous-symbol"
+[params]
+position.line   = %d
+position.column = %d
+symbolKind      = "%s"
+searchNext      = false
+hover           = true
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command lsp-hover-next-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-hover-next-symbol-request [<symbol-kind>]: Show hover of the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the symbol hover information" %{
+    lsp-did-change-and-then "lsp-hover-next-symbol-request %arg{@}"
+}
+
+define-command -hidden lsp-hover-next-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-hover-next-symbol-request [<symbol-kind>]: Show hover of the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the symbol hover information" %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "kak-lsp/next-or-previous-symbol"
+[params]
+position.line   = %d
+position.column = %d
+symbolKind      = "%s"
+searchNext      = true
+hover           = true
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
+# Frequently used, provided for convenience
+define-command lsp-hover-next-function -params 0 \
+    -docstring "lsp-hover-next-function: Show hover of the next function in the document. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the function hover information. _Tip_: If your cursor is within a function, it will tell you which function you're in!" %{
+     lsp-hover-next-symbol Function
+}
+
+# Frequently used, provided for convenience
+define-command lsp-hover-previous-function -params 0 \
+    -docstring "lsp-hover-previous-function: Show hover of the previous function in the document. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the function hover information" %{
+     lsp-hover-previous-symbol Function
 }
 
 define-command lsp-definition -docstring "Go to definition" %{
@@ -999,10 +1138,17 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 
     content=$(printf %s "$content" | sed s/\'/\'\'/g)
 
-    case $kak_opt_lsp_hover_anchor in
-        true) printf "info -markup -anchor %%arg{1} -- '%s'" "$content";;
-        *)    printf "info -markup -- '%s'" "$content";;
+    case $1 in
+        modal) printf "info -markup -style modal -- '%s'" "$content";;
+        above) printf "info -markup -style above -- '%s'" "$content";;
+        below) printf "info -markup -style below -- '%s'" "$content";;
+        menu)  printf "info -markup -style menu -- '%s'" "$content";;
+        *) case $kak_opt_lsp_hover_anchor in
+               true) printf "info -markup -anchor %%arg{1} -- '%s'" "$content";;
+               *)    printf "info -markup -- '%s'" "$content";;
+           esac;;
     esac
+
 }}
 
 define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
@@ -1388,8 +1534,16 @@ map global lsp n '<esc>: lsp-find-error<ret>'             -docstring 'find next 
 map global lsp p '<esc>: lsp-find-error --previous<ret>'  -docstring 'find previous error'
 map global lsp q '<esc>: lsp-exit<ret>'                   -docstring 'exit session'
 map global lsp y '<esc>: lsp-type-definition<ret>'        -docstring 'go to type definition'
-map global lsp <&> '<esc>: lsp-highlight-references<ret>' -docstring 'lsp-highlight-references'
-map global lsp = '<esc>: lsp-range-formatting<ret>'       -docstring 'format selections'
+map global lsp <[> '<esc>: lsp-hover-previous-symbol<ret>'   -docstring 'show hover for previous symbol'
+map global lsp <]> '<esc>: lsp-hover-next-symbol<ret>'       -docstring 'show hover for next symbol'
+map global lsp <{> '<esc>: lsp-goto-previous-symbol<ret>'    -docstring 'goto previous symbol'
+map global lsp <}> '<esc>: lsp-goto-next-symbol<ret>'        -docstring 'goto next symbol'
+map global lsp <9> '<esc>: lsp-hover-previous-function<ret>' -docstring 'show hover for previous function'
+map global lsp <0> '<esc>: lsp-hover-next-function<ret>'     -docstring 'show hover for next function'
+map global lsp <(> '<esc>: lsp-goto-previous-function<ret>'  -docstring 'goto previous function'
+map global lsp <)> '<esc>: lsp-goto-next-function<ret>'      -docstring 'goto next function'
+map global lsp <&> '<esc>: lsp-highlight-references<ret>'    -docstring 'lsp-highlight-references'
+map global lsp = '<esc>: lsp-range-formatting<ret>'          -docstring 'format selections'
 
 ### Default integration ###
 

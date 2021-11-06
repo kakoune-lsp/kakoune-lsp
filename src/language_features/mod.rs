@@ -9,6 +9,7 @@ pub mod formatting;
 pub mod goto;
 pub mod highlights;
 pub mod hover;
+pub mod kak_lsp_custom;
 pub mod range_formatting;
 pub mod rename;
 pub mod rust_analyzer;
