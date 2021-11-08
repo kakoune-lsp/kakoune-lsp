@@ -1023,26 +1023,23 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
     }
 }
 
-define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
+define-command -hidden lsp-show-goto-buffer -params 3 %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch *goto*
+        edit! -scratch %arg{1}
         set-option buffer filetype lsp-goto
         set-option buffer grep_current_line 0
-        set-option buffer lsp_project_root "%arg{1}/"
-        set-register '"' %arg{2}
+        set-option buffer lsp_project_root "%arg{2}/"
+        set-register '"' %arg{3}
         execute-keys Pgg
     }
 }
 
+define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
+    lsp-show-goto-buffer *goto* %arg{@}
+}
+
 define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
-    evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch *symbols*
-        set-option buffer filetype lsp-goto
-        set-option buffer grep_current_line 0
-        set-option buffer lsp_project_root "%arg{1}/"
-        set-register '"' %arg{2}
-        execute-keys Pgg
-    }
+    lsp-show-goto-buffer *goto* %arg{@}
 }
 
 define-command lsp-next-location -params 1 -docstring %{
