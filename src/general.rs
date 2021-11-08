@@ -268,7 +268,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     multiline_token_support: None,
                 }),
                 linked_editing_range: None,
-                call_hierarchy: None,
+                call_hierarchy: Some(CallHierarchyClientCapabilities {
+                    dynamic_registration: Some(false),
+                }),
                 moniker: None,
             }),
             window: Some(WindowClientCapabilities {

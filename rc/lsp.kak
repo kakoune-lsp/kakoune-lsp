@@ -780,6 +780,29 @@ cat ${pipe} | tee /tmp/pipe
 rm -rf ${tmp}
 }}
 
+define-command lsp-incoming-calls -docstring "Open buffer with calls to the function at the main cursor position" %{
+    lsp-call-hierarchy-request true
+}
+
+define-command lsp-outgoing-calls -docstring "Open buffer with calls by the function at the main cursor position" %{
+    lsp-call-hierarchy-request false
+}
+
+define-command -hidden lsp-call-hierarchy-request -params 1 %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/prepareCallHierarchy"
+[params]
+position.line = %d
+position.column = %d
+incomingOrOutgoing = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_cursor_line}" "${kak_cursor_column}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
@@ -1040,6 +1063,14 @@ define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto c
 
 define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
     lsp-show-goto-buffer *goto* %arg{@}
+}
+
+define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render callers" %{
+    lsp-show-goto-buffer *callers* %arg{@}
+}
+
+define-command -hidden lsp-show-outgoing-calls -params 2 -docstring "Render callees" %{
+    lsp-show-goto-buffer *callees* %arg{@}
 }
 
 define-command lsp-next-location -params 1 -docstring %{
@@ -1378,6 +1409,8 @@ map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list proje
 map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buffer'
 map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
 map global lsp i '<esc>: lsp-implementation<ret>'         -docstring 'go to implementation'
+map global lsp j '<esc>: lsp-outgoing-calls<ret>'         -docstring 'list outgoing call for function at cursor'
+map global lsp k '<esc>: lsp-incoming-calls<ret>'         -docstring 'list incoming call for function at cursor'
 map global lsp r '<esc>: lsp-references<ret>'             -docstring 'list symbol references'
 map global lsp R '<esc>: lsp-rename-prompt<ret>'          -docstring 'rename symbol'
 map global lsp s '<esc>: lsp-signature-help<ret>'         -docstring 'show function signature help'
