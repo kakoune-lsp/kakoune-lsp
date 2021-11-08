@@ -349,15 +349,12 @@ The syntax for such an entry is
 
 [source,toml]
 ----
-[[semantic_tokens]]
-token = "variable"
-face = "const_variable_declaration"
-modifiers = ["constant", "declaration"]
+"[token][+modifier1[+modifier2]...]" = "face"
 ----
 
-where `token` is the token's name as reported by the language server (see `lsp-capabilities`), `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` may be omitted, but `token` and `face` are required.
+where `token` is the token's name as reported by the language server (see `lsp-capabilities`), `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` or `token` may be omitted. An entry with no token will match any token (but should still have modifiers)
 
-You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entry's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry. +
+You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entry's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry.
 `kak-lsp` will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple matching entries have the same number of modifiers, the one that was defined last in the configuration wins.
 
 *Example:*
@@ -366,19 +363,10 @@ Assuming the following configuration,
 
 [source,toml]
 ----
-[[semantic_tokens]]
-token = "variable"
-face = "const_variable_declaration"
-modifiers = ["constant", "declaration"]
-
-[[semantic_tokens]]
-token = "variable"
-face = "const_variable"
-modifiers = ["constant"]
-
-[[semantic_tokens]]
-token = "variable"
-face = "variable"
+[semantic_tokens]
+"variable+constant+declaration" = "const_variable_declaration"
+"variable+constant" = "const_variable"
+"variable" = "variable"
 ----
 
 `kak-lsp` will perform these mappings:

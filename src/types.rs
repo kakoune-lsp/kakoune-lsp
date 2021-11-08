@@ -81,7 +81,16 @@ fn deserialize_semantic_tokens<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    Vec::deserialize(deserializer).map_err(|e| {
+    HashMap::<String, String>::deserialize(deserializer).map(|xs| {
+                xs.into_iter().map(|(k, face)| {
+                    let mut token_mods = k.split('+').map(String::from);
+                    let token = token_mods.next().unwrap_or_default();
+                    let modifiers = token_mods.map(SemanticTokenModifier::from).collect::<Vec<_>>();
+                    SemanticTokenConfig {
+                        token, face, modifiers
+                    }
+                }).collect()
+        }).map_err(|e| {
         D::Error::custom(e.to_string() + "\nSee https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens\n")
     })
 }

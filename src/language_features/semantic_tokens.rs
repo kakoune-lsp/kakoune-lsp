@@ -76,7 +76,7 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                     .collect();
 
                 let candidates = ctx.config.semantic_tokens.iter().filter(|token_config| {
-                    token_name == token_config.token &&
+                    (token_name == token_config.token || token_config.token.is_empty()) &&
                         // All the config's modifiers must exist on the token for this
                         // config to match.
                         token_config
