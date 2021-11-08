@@ -142,6 +142,8 @@ Either way you get:
 ** `\*symbols*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
 * `lsp-diagnostics` command to list project-wide diagnostics (current buffer determines project and language to collect diagnostics for)
 ** `\*diagnostics*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
+* `lsp-incoming-calls` and `lsp-outgoing-calls` commands to list callers and callees of the function at the cursor.
+** `\*callers*` and `\*callees*` buffers have filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
 * inline diagnostics highlighting using the `DiagnosticError`, `DiagnosticHint`, `DiagnosticInfo` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
@@ -184,6 +186,8 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 | f | lsp-formatting
 | h | lsp-hover
 | i | lsp-implementation
+| j | lsp-outgoing-calls
+| k | lsp-incoming-calls
 | r | lsp-references
 | R | lsp-rename-prompt
 | s | lsp-signature-help
