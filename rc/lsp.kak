@@ -100,7 +100,7 @@ Capture groups must be:
     2: line number
     3: optional column
     4: optional message
-} regex lsp_location_format ^\h*([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
+} regex lsp_location_format ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
 
 # Callback functions. Override these to tune kak-lsp's behavior.
 
