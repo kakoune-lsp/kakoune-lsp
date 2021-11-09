@@ -348,6 +348,7 @@ command = "zls"
 # Examples:
 # - TypeScript: https://github.com/microsoft/vscode-languageserver-node/blob/2645fb54ea1e764aff71dee0ecc8aceff3aabf56/client/src/common/semanticTokens.ts#L58
 # - Rust Analyzer: https://github.com/rust-analyzer/rust-analyzer/blob/f6da603c7fe56c19a275dc7bab1f30fe1ad39707/crates/ide/src/syntax_highlighting.rs#L42
+# Syntax: "[token][+modifier1[+modifier2]...]" = "face"
 [semantic_tokens]
 "comment+documentation" = "documentation"
 "comment" = "comment"
