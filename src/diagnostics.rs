@@ -188,7 +188,13 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
             diagnostics
                 .iter()
                 .map(|x| {
-                    let p = get_kakoune_position(filename, &x.range.start, ctx).unwrap();
+                    let p = match get_kakoune_position(filename, &x.range.start, ctx) {
+                        Some(position) => position,
+                        None => {
+                            warn!("Cannot get position from file {}", filename);
+                            return "".to_string();
+                        }
+                    };
                     format!(
                         "{}:{}:{}: {}:{}",
                         short_file_path(filename, &ctx.root_path),
