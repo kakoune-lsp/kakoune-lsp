@@ -3,6 +3,7 @@ use crate::controller;
 use crate::settings::request_initialization_options_from_kakoune;
 use crate::types::*;
 use crate::util::*;
+use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::notification::*;
 use lsp_types::request::*;
@@ -421,8 +422,10 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         ));
     }
 
-    let command = format!(
-        "info 'kak-lsp commands supported by {} language server:\n\n{}'",
+    let command = formatdoc!(
+        "info 'kak-lsp commands supported by {} language server:
+
+         {}'",
         ctx.language_id,
         editor_escape(&features.join("\n"))
     );
