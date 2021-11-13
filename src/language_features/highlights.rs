@@ -1,7 +1,6 @@
 use crate::context::Context;
-use crate::position::lsp_range_to_kakoune;
+use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, PositionParams};
-use crate::util::get_lsp_position;
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,

@@ -1,6 +1,6 @@
 use crate::context::*;
 use crate::markup::*;
-use crate::position::lsp_range_to_kakoune;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use indoc::formatdoc;

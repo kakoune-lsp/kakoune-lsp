@@ -1,7 +1,7 @@
 use crate::context::*;
 use crate::markup::*;
+use crate::position::*;
 use crate::types::*;
-use crate::util::*;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
