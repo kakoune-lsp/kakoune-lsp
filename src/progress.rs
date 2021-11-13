@@ -9,6 +9,7 @@ use lsp_types::{
 };
 use serde::Deserialize;
 use std::collections::hash_map;
+use std::time::{self, Duration};
 
 pub fn work_done_progress_cancel(_meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = WorkDoneProgressCancelParams::deserialize(params).expect("Failed to parse params");
@@ -99,6 +100,11 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
             }
         }
         ProgressParamsValue::WorkDone(WorkDoneProgress::Report(report)) => {
+            if ctx.work_done_progress_report_timestamp.elapsed() < Duration::from_millis(50) {
+                warn!("Progress report arrived too fast, dropping");
+                return;
+            }
+            ctx.work_done_progress_report_timestamp = time::Instant::now();
             match ctx.work_done_progress.get_mut(&params.token) {
                 Some(Some(progress)) => {
                     let command = handle_progress_command(

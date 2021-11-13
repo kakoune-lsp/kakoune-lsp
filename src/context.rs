@@ -7,7 +7,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fs;
+use std::{fs, time};
 
 // Copy of Kakoune's timestamped buffer content.
 pub struct Document {
@@ -42,6 +42,7 @@ pub struct Context {
     pub documents: HashMap<String, Document>,
     pub offset_encoding: OffsetEncoding,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
+    pub work_done_progress_report_timestamp: time::Instant,
 }
 
 impl Context {
@@ -72,6 +73,7 @@ impl Context {
             documents: HashMap::default(),
             offset_encoding,
             work_done_progress: HashMap::default(),
+            work_done_progress_report_timestamp: time::Instant::now(),
         }
     }
 
