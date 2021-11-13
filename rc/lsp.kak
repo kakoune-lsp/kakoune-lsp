@@ -1765,11 +1765,13 @@ define-command -hidden lsp-make-register-relative-to-root %{
 define-command -hidden lsp-jump %{ # from grep.kak
     evaluate-commands -save-regs abc %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
-            execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
-            set-register a "%reg{1}"
-            set-register b "%reg{2}"
-            set-register c "%reg{3}"
-            lsp-make-register-relative-to-root
+            evaluate-commands -draft %{
+                execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+                set-register a "%reg{1}"
+                set-register b "%reg{2}"
+                set-register c "%reg{3}"
+                lsp-make-register-relative-to-root
+            }
             set-option buffer grep_current_line %val{cursor_line}
             evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{a} %reg{b} %reg{c}
             try %{ focus %opt{jumpclient} }
@@ -1779,12 +1781,14 @@ define-command -hidden lsp-jump %{ # from grep.kak
 
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
     evaluate-commands -save-regs abcd %{
-        execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
-        set-register a "%reg{1}"
-        set-register b "%reg{2}"
-        set-register c "%reg{3}"
-        set-register d "%reg{4}"
-        lsp-make-register-relative-to-root
+        evaluate-commands -draft %{
+            execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+            set-register a "%reg{1}"
+            set-register b "%reg{2}"
+            set-register c "%reg{3}"
+            set-register d "%reg{4}"
+            lsp-make-register-relative-to-root
+        }
         set-option buffer grep_current_line %val{cursor_line}
         lsp-diagnostics-open-error %reg{a} "%reg{b}" "%reg{c}" "%reg{d}"
     }
