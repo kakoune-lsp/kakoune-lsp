@@ -2,7 +2,9 @@ use crate::context::*;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
-use indoc::{formatdoc, indoc};
+use indoc::formatdoc;
+#[cfg(test)]
+use indoc::indoc;
 use itertools::Itertools;
 use lsp_types::*;
 use ropey::{Rope, RopeSlice};
@@ -10,6 +12,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::os::unix::io::FromRawFd;
+#[cfg(test)]
 use unindent::unindent;
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
