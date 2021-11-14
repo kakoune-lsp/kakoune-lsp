@@ -17,16 +17,16 @@ pub const FACE_INFO_DIAGNOSTIC_HINT: &str = "InfoDiagnosticHint";
 pub const FACE_INFO_DIAGNOSTIC_INFO: &str = "InfoDiagnosticInformation";
 pub const FACE_INFO_DIAGNOSTIC_WARNING: &str = "InfoDiagnosticWarning";
 
-/// Espace opening braces for Kakoune markup strings
-pub fn escape_brace(s: &str) -> String {
-    s.replace("{", "\\{")
+/// Espace backslashes and opening braces for Kakoune markup strings
+pub fn escape_kakoune_markup(s: &str) -> String {
+    s.replace(r"\", r"\\").replace("{", r"\{")
 }
 
 /// Transpile Markdown into Kakoune's markup syntax using faces for highlighting
 pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S, have_plaintext: bool) -> String {
     let markdown = markdown.as_ref();
     if have_plaintext {
-        return escape_brace(markdown);
+        return escape_kakoune_markup(markdown);
     }
     let parser = Parser::new(markdown);
     let mut markup = String::with_capacity(markdown.len());
@@ -178,7 +178,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S, have_plaintext: bo
                     has_blockquote_text = true;
                     markup.push_str("> ")
                 }
-                markup.push_str(&escape_brace(&text))
+                markup.push_str(&escape_kakoune_markup(&text))
             }
             Event::Code(c) => {
                 let base_face = base_face(&face_stack);
@@ -191,11 +191,11 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S, have_plaintext: bo
                 markup.push_str(&format!(
                     "{{{}}}{}{{{}}}",
                     face,
-                    escape_brace(&c),
+                    escape_kakoune_markup(&c),
                     base_face
                 ))
             }
-            Event::Html(html) => markup.push_str(&escape_brace(&html)),
+            Event::Html(html) => markup.push_str(&escape_kakoune_markup(&html)),
             Event::FootnoteReference(_) => warn!("Unsupported Markdown event: {:?}", e),
             // Soft breaks should be kept in `<pre>`-style blocks.
             // Anywhere else, let the renderer handle line breaks.
@@ -234,7 +234,7 @@ pub fn marked_string_to_kakoune_markup(contents: MarkedString, have_plaintext: b
             format!(
                 "{{{}}}{}{{{}}}",
                 FACE_INFO_BLOCK,
-                escape_brace(&s.value),
+                escape_kakoune_markup(&s.value),
                 FACE_INFO_DEFAULT
             )
         }
