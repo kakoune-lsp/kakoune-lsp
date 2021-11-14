@@ -69,7 +69,7 @@ pub fn editor_hover(
                         Some(format!(
                             "• {{{}}}{}{{{}}}",
                             face,
-                            escape_brace(x.message.trim())
+                            escape_kakoune_markup(x.message.trim())
                                 // Indent line breaks to the same level as the bullet point
                                 .replace("\n", "\n  "),
                             FACE_INFO_DEFAULT,
