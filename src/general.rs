@@ -161,7 +161,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 document_symbol: Some(DocumentSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: None,
-                    hierarchical_document_symbol_support: None,
+                    hierarchical_document_symbol_support: Some(true),
                     tag_support: None,
                 }),
                 formatting: Some(DynamicRegistrationClientCapabilities {

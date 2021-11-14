@@ -92,11 +92,12 @@ pub fn format_document_symbol(
     items
         .into_iter()
         .map(|symbol| {
-            let DocumentSymbol {
-                range, name, kind, ..
-            } = symbol;
-            let position = get_kakoune_position_with_fallback(&meta.buffile, range.start, ctx);
-            let description = format!("{:?} {}", kind, name);
+            let position = get_kakoune_position_with_fallback(
+                &meta.buffile,
+                symbol.selection_range.start,
+                ctx,
+            );
+            let description = format!("{:?} {}", symbol.kind, symbol.name);
             format!(
                 "{}:{}:{}:{}",
                 short_file_path(&meta.buffile, &ctx.root_path),
