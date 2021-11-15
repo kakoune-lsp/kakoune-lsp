@@ -245,14 +245,13 @@ context = "%s"
 }
 
 declare-option -hidden str lsp_symbol_kind_completion %{
-  symbol_kinds="
-  File Module Namespace Package Class Method Property Field Constructor Enum Interface Function
-  Variable Constant String Number Boolean Array Object Key Null EnumMember Struct Event Operator
-  TypeParameter
-  "
-  for symbol_kind in ${symbol_kinds}; do
-    printf '%s\n' "${symbol_kind}"
-  done
+    symbol_kinds="
+    File Module Namespace Package Class Method Property Field Constructor Enum Interface Function
+    Variable Constant String Number Boolean Array Object Key Null EnumMember Struct Event Operator
+    TypeParameter
+    "
+
+    printf '%s\n' "${symbol_kinds}"
 }
 
 define-command lsp-goto-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
@@ -300,25 +299,25 @@ searchNext = true
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-next-function -params 0 \
+define-command lsp-goto-next-function \
     -docstring "lsp-goto-next-function: Goto to the next function in the document" %{
     lsp-goto-next-symbol Function
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-previous-function -params 0 \
+define-command lsp-goto-previous-function \
     -docstring "lsp-goto-previous-function: Goto to the previous function in the document" %{
     lsp-goto-previous-symbol Function
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-next-method -params 0 \
+define-command lsp-goto-next-method \
     -docstring "lsp-goto-next-method: Goto to the next method in the document" %{
     lsp-goto-next-symbol Method
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-previous-method -params 0 \
+define-command lsp-goto-previous-method \
     -docstring "lsp-goto-previous-method: Goto to the previous method in the document" %{
     lsp-goto-previous-symbol Method
 }
@@ -370,13 +369,13 @@ hover           = true
 }
 
 # Frequently used, provided for convenience
-define-command lsp-hover-next-function -params 0 \
+define-command lsp-hover-next-function \
     -docstring "lsp-hover-next-function: Show hover of the next function in the document. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the function hover information. _Tip_: If your cursor is within a function, it will tell you which function you're in!" %{
      lsp-hover-next-symbol Function
 }
 
 # Frequently used, provided for convenience
-define-command lsp-hover-previous-function -params 0 \
+define-command lsp-hover-previous-function \
     -docstring "lsp-hover-previous-function: Show hover of the previous function in the document. The editor does _not_ actually navigate to that symbol. This command is useful to peek at the function hover information" %{
      lsp-hover-previous-symbol Function
 }
@@ -1140,9 +1139,6 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 
     case $1 in
         modal) printf "info -markup -style modal -- '%s'" "$content";;
-        above) printf "info -markup -style above -- '%s'" "$content";;
-        below) printf "info -markup -style below -- '%s'" "$content";;
-        menu)  printf "info -markup -style menu -- '%s'" "$content";;
         *) case $kak_opt_lsp_hover_anchor in
                true) printf "info -markup -anchor %%arg{1} -- '%s'" "$content";;
                *)    printf "info -markup -- '%s'" "$content";;
