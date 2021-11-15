@@ -108,7 +108,7 @@ fn next_or_prev_response(
 
             // This context is shown at the top of the modal
             let context = format!(
-                                "line {}:{}:{{+b@KindAndName}}{:?} {}{{KindAndName}} (Press `g` to goto this position. Press any other key to continue)",
+                                "line {}:{}:{{+b@KindAndName}}{:?} {}{{KindAndName}} (Press 'g' to goto this position. Press any other key to continue)",
                                 symbol_position.line, symbol_position.column, kind, escape_brace(&name)
                             );
 
