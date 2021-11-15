@@ -256,13 +256,13 @@ declare-option -hidden str lsp_symbol_kind_completion %{
     printf '%s\n' "${symbol_kinds}"
 }
 
-define-command lsp-goto-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-goto-previous-symbol [<symbol-kind>]: Goto the previous document symbol of type <symbol-kind>. If <symbol-kind> is not given, it means _any_ symbol" %{
-    lsp-did-change-and-then "lsp-goto-previous-symbol-request %arg{@}"
+define-command lsp-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-previous-symbol [<symbol-kind>]: Goto the previous document symbol of type <symbol-kind>. If <symbol-kind> is not given, it means _any_ symbol" %{
+    lsp-did-change-and-then "lsp-previous-symbol-request %arg{@}"
 }
 
-define-command -hidden lsp-goto-previous-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-goto-previous-symbol-request [<symbol-kind>]: Goto to the previous symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
+define-command -hidden lsp-previous-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-previous-symbol-request [<symbol-kind>]: Goto to the previous symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -278,13 +278,13 @@ searchNext = false
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-goto-next-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-goto-next-symbol [<symbol-kind>]: Goto to the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
-    lsp-did-change-and-then "lsp-goto-next-symbol-request %arg{@}"
+define-command lsp-next-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-next-symbol [<symbol-kind>]: Goto to the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
+    lsp-did-change-and-then "lsp-next-symbol-request %arg{@}"
 }
 
-define-command -hidden lsp-goto-next-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-goto-next-symbol-request [<symbol-kind>]: Goto to the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
+define-command -hidden lsp-next-symbol-request -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-next-symbol-request [<symbol-kind>]: Goto to the next symbol of type <symbol-kind> in the document. If <symbol-kind> is not given, it means _any_ symbol" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -301,27 +301,27 @@ searchNext = true
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-next-function \
-    -docstring "lsp-goto-next-function: Goto to the next function in the document" %{
-    lsp-goto-next-symbol Function
+define-command lsp-next-function \
+    -docstring "lsp-next-function: Goto to the next function in the document" %{
+    lsp-next-symbol Function
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-previous-function \
-    -docstring "lsp-goto-previous-function: Goto to the previous function in the document" %{
-    lsp-goto-previous-symbol Function
+define-command lsp-previous-function \
+    -docstring "lsp-previous-function: Goto to the previous function in the document" %{
+    lsp-previous-symbol Function
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-next-method \
-    -docstring "lsp-goto-next-method: Goto to the next method in the document" %{
-    lsp-goto-next-symbol Method
+define-command lsp-next-method \
+    -docstring "lsp-next-method: Goto to the next method in the document" %{
+    lsp-next-symbol Method
 }
 
 # Frequently used, provided for convenience
-define-command lsp-goto-previous-method \
-    -docstring "lsp-goto-previous-method: Goto to the previous method in the document" %{
-    lsp-goto-previous-symbol Method
+define-command lsp-previous-method \
+    -docstring "lsp-previous-method: Goto to the previous method in the document" %{
+    lsp-previous-symbol Method
 }
 
 define-command lsp-hover-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
@@ -1564,12 +1564,12 @@ map global lsp q '<esc>: lsp-exit<ret>'                   -docstring 'exit sessi
 map global lsp y '<esc>: lsp-type-definition<ret>'        -docstring 'go to type definition'
 map global lsp <[> '<esc>: lsp-hover-previous-symbol<ret>'   -docstring 'show hover for previous symbol'
 map global lsp <]> '<esc>: lsp-hover-next-symbol<ret>'       -docstring 'show hover for next symbol'
-map global lsp <{> '<esc>: lsp-goto-previous-symbol<ret>'    -docstring 'goto previous symbol'
-map global lsp <}> '<esc>: lsp-goto-next-symbol<ret>'        -docstring 'goto next symbol'
+map global lsp <{> '<esc>: lsp-previous-symbol<ret>'    -docstring 'goto previous symbol'
+map global lsp <}> '<esc>: lsp-next-symbol<ret>'        -docstring 'goto next symbol'
 map global lsp <9> '<esc>: lsp-hover-previous-function<ret>' -docstring 'show hover for previous function'
 map global lsp <0> '<esc>: lsp-hover-next-function<ret>'     -docstring 'show hover for next function'
-map global lsp <(> '<esc>: lsp-goto-previous-function<ret>'  -docstring 'goto previous function'
-map global lsp <)> '<esc>: lsp-goto-next-function<ret>'      -docstring 'goto next function'
+map global lsp <(> '<esc>: lsp-previous-function<ret>'  -docstring 'goto previous function'
+map global lsp <)> '<esc>: lsp-next-function<ret>'      -docstring 'goto next function'
 map global lsp <&> '<esc>: lsp-highlight-references<ret>'    -docstring 'lsp-highlight-references'
 map global lsp = '<esc>: lsp-range-formatting<ret>'          -docstring 'format selections'
 
