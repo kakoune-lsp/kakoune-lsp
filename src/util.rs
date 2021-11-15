@@ -99,14 +99,14 @@ pub fn format_document_symbol(
             );
             let description = format!("{:?} {}", symbol.kind, symbol.name);
             format!(
-                "{}:{}:{}:{}",
+                "{}:{}:{}:{}\n",
                 short_file_path(&meta.buffile, &ctx.root_path),
                 position.line,
                 position.column,
                 description
-            )
+            ) + &format_document_symbol(symbol.children.unwrap_or(vec![]), meta, ctx)
         })
-        .join("\n")
+        .join("")
 }
 
 /// Escape Kakoune string wrapped into single quote
