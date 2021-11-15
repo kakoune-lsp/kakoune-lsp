@@ -3,7 +3,6 @@ use crate::position::*;
 use crate::types::*;
 use itertools::Itertools;
 use lsp_types::*;
-use std::convert::TryInto;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
@@ -180,75 +179,4 @@ pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
         .ok()
         .and_then(|p| p.to_str())
         .unwrap_or(target)
-}
-
-/// Given a starting Location, try to find `name` in a file and report its Position
-///
-/// If `treat_name_as_symbol` is true, then we're not doing a pure text search but
-/// treating name as a symbol. We apply a crude heuristic to ensure we have found
-/// the `name` symbol instead of `name` as part of a larger string.
-///
-/// If `treat_name_as_symbol` is false then this a pure search for a string in filename.
-pub fn find_name_in_file(
-    filename: &str,
-    ctx: &Context,
-    start_from: Position,
-    name: &str,
-    treat_name_as_symbol: bool,
-) -> Option<Position> {
-    if name.is_empty() {
-        return Some(start_from);
-    }
-    let contents = get_file_contents(filename, ctx).unwrap();
-    let line_offset: usize = contents.line_to_char(start_from.line.try_into().unwrap());
-    let within_line_offset: usize = start_from.character.try_into().unwrap();
-    let char_offset = line_offset + within_line_offset;
-    let mut it = name.chars();
-    let mut maybe_found = None;
-    for (num, c) in contents.chars_at(char_offset).enumerate() {
-        match it.next() {
-            Some(itc) => {
-                if itc != c {
-                    it = name.chars();
-                    let itc2 = it.next().unwrap();
-                    if itc2 != c {
-                        it = name.chars();
-                    }
-                }
-            }
-            None => {
-                // Example. Take the python expression `[f.name for f in fields]`
-                // Let us say we get -------------------------------^
-                // i.e. We get char 8 starting position when searching for variable `f`.
-                // Now `for` starts with `f` also so we will wrongly return 8 when we
-                // should return 12.
-                //
-                // A simple heuristic will be that if the next character is alphanumeric then
-                // we have _not_ found our symbol and we have to continue our search.
-                // This heuristic may not work in all cases but is "good enough".
-                if treat_name_as_symbol && c.is_alphanumeric() {
-                    it = name.chars();
-                    let itc = it.next().unwrap();
-                    if itc != c {
-                        it = name.chars();
-                    }
-                } else {
-                    maybe_found = Some(num - 1);
-                    // We're done!
-                    break;
-                }
-            }
-        }
-    }
-
-    if let Some(found) = maybe_found {
-        let line = contents.char_to_line(char_offset + found);
-        let character = char_offset + found - contents.line_to_char(line);
-        Some(Position {
-            line: line.try_into().unwrap(),
-            character: character.try_into().unwrap(),
-        })
-    } else {
-        None
-    }
 }
