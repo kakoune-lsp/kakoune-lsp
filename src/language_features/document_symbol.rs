@@ -228,10 +228,8 @@ fn exceeds(
         return false;
     }
 
-    // If searching forwards, the first element that has a greater line/column
-    // combination
-    // If searching backwards, the first element that has a smaller line/column
-    // combination
+    // If searching forwards, the first element that has a greater line/column combination
+    // If searching backwards, the first element that has a smaller line/column combination
     if search_next {
         symbol_position > cur_position
     } else {
