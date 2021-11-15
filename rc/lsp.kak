@@ -253,12 +253,10 @@ declare-option -hidden str lsp_symbol_kind_completion %{
     TypeParameter
     "
 
-    for symbol_kind in ${symbol_kinds}; do
-        printf '%s\n' "${symbol_kind}"
-    done
+    printf '%s\n' $symbol_kinds
 }
 
-declare-option -hidden str lsp_symbol_kind_completion_advanced %{
+declare-option -hidden str lsp_symbol_kind_completion_advanced %sh{
     if [ $# -eq 1 ]; then
         symbol_kinds="
         Any File Module Namespace Package Class Method Property Field Constructor Enum Interface Function
@@ -266,9 +264,7 @@ declare-option -hidden str lsp_symbol_kind_completion_advanced %{
         TypeParameter
         "
 
-        for symbol_kind in ${symbol_kinds}; do
-            printf '%s\n' "${symbol_kind}"
-        done
+        printf '%s\n' $symbol_kinds
     elif [ $# -eq 2 ]; then
         # search forward/backward
         printf 'previous\nnext\n'
