@@ -251,16 +251,6 @@ fn process_name<'a>(ctx: &Context, name: &'a str) -> &'a str {
     }
 }
 
-fn special_case_position(ctx: &Context, pos: Position) -> Option<Position> {
-    // In Elixir we don't need to search forward.
-    // The returned position is basically the selection range start.
-    if ctx.language_id == "elixir" {
-        Some(pos)
-    } else {
-        None
-    }
-}
-
 /// Gets (filename, kakoune position, name) of the next/previous
 /// SymbolInformation symbol in the document
 fn get_next_or_prev_symbol_information_details(
@@ -307,11 +297,6 @@ fn get_symbol_hover_pos(
     location: &Location,
     name: &String,
 ) -> KakounePosition {
-    // We need to handle some language servers specially
-    if let Some(pos) = special_case_position(ctx, location.range.start) {
-        return get_kakoune_position_with_fallback(filename, pos, ctx);
-    }
-
     if let Some(lsp_pos) = find_name_in_file(
         filename,
         ctx,
