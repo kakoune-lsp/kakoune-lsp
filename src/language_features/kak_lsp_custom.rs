@@ -162,7 +162,7 @@ fn next_or_prev_response(
     }
 }
 
-/// Does the currently being inspected symbol's location "exceed" the
+/// Does the current symbol's location "exceed" the
 /// current cursor location?
 fn exceeds(
     symbol_position: KakounePosition,
