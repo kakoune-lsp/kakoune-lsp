@@ -253,7 +253,9 @@ declare-option -hidden str lsp_symbol_kind_completion %{
     TypeParameter
     "
 
-    printf '%s\n' "${symbol_kinds}"
+    for symbol_kind in ${symbol_kinds}; do
+        printf '%s\n' "${symbol_kind}"
+    done
 }
 
 define-command lsp-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
