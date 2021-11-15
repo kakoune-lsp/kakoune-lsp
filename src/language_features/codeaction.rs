@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
@@ -94,6 +95,7 @@ pub fn editor_code_actions(
         })
         .join(" ");
 
+    #[allow(clippy::collapsible_else_if)]
     let command = if params.perform_code_action {
         if result.is_empty() {
             "lsp-show-error 'no actions available'".to_string()

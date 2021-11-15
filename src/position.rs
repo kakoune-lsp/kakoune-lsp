@@ -25,6 +25,7 @@
 //!   (i.e. pyls, clangd with offsetEncoding: utf-8).
 //!   And just works when `offset_encoding: utf-8` is provided in the config.
 use crate::types::*;
+use crate::{context::Context, util::read_document};
 use lsp_types::*;
 use ropey::{Rope, RopeSlice};
 use std::cmp::min;
@@ -65,6 +66,56 @@ pub fn kakoune_position_to_lsp(
         OffsetEncoding::Utf8 => kakoune_position_to_lsp_utf_8_code_units(position),
         // Not a proper UTF-16 code units handling, but works within BMP
         OffsetEncoding::Utf16 => kakoune_position_to_lsp_utf_8_code_points(position, text),
+    }
+}
+
+/// Wrapper for kakoune_position_to_lsp which uses context to get buffer content and offset encoding.
+pub fn get_lsp_position(
+    filename: &str,
+    position: &KakounePosition,
+    ctx: &Context,
+) -> Option<Position> {
+    ctx.documents
+        .get(filename)
+        .map(|document| kakoune_position_to_lsp(position, &document.text, ctx.offset_encoding))
+}
+
+/// Wrapper for lsp_position_to_kakoune which uses context to get buffer content and offset encoding.
+/// Reads the file directly if it is not present in context (is not open in editor).
+pub fn get_kakoune_position(
+    filename: &str,
+    position: &Position,
+    ctx: &Context,
+) -> Option<KakounePosition> {
+    get_file_contents(filename, ctx)
+        .map(|text| lsp_position_to_kakoune(position, &text, ctx.offset_encoding))
+}
+
+/// Like get_kakoune_position but default to an approximate position if something goes wrong.
+pub fn get_kakoune_position_with_fallback(
+    filename_str: &str,
+    position: Position,
+    ctx: &Context,
+) -> KakounePosition {
+    get_kakoune_position(filename_str, &position, ctx).unwrap_or_else(|| KakounePosition {
+        line: position.line + 1,
+        column: position.character + 1,
+    })
+}
+
+/// Get the contents of a file.
+/// Searches ctx.documents first and falls back to reading the file directly.
+pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
+    if let Some(doc) = ctx.documents.get(filename) {
+        return Some(doc.text.clone());
+    }
+
+    match read_document(filename) {
+        Ok(text) => Some(Rope::from_str(&text)),
+        Err(err) => {
+            error!("Failed to read file {}: {}", filename, err);
+            None
+        }
     }
 }
 

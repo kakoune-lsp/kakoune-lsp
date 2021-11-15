@@ -1,6 +1,7 @@
 use crate::context::*;
+use crate::position::*;
 use crate::types::*;
-use crate::util::*;
+
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;

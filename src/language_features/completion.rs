@@ -1,8 +1,9 @@
 use crate::context::*;
 use crate::markup::*;
-use crate::position::lsp_range_to_kakoune;
+use crate::position::*;
 use crate::types::*;
 use crate::util::*;
+use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -172,8 +173,9 @@ pub fn editor_completion(
                     .map(|x| x.as_str())
                     .unwrap_or(&snippet);
 
-                let command = format!(
-                    "{}\nlsp-snippets-insert-completion {} {}",
+                let command = formatdoc!(
+                    "{}
+                     lsp-snippets-insert-completion {} {}",
                     doc,
                     editor_quote(&regex::escape(insert_text)),
                     editor_quote(&snippet)

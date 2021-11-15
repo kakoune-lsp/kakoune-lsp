@@ -48,6 +48,8 @@ str lsp_hover_insert_mode_trigger %{execute-keys '<a-f>(s\A[^)]+[)]?\z<ret>'}
 declare-option -docstring "Prefer spaces over tabs" bool lsp_insert_spaces true
 # Set to true to automatically highlight references with Reference face.
 declare-option -docstring "Automatically highlight references with Reference face" bool lsp_auto_highlight_references false
+# Set to true to highlight when code actions are available.
+declare-option -docstring "Show available code actions (default: a 💡 in the modeline)" bool lsp_auto_show_code_actions false
 # Set it to a positive number to limit the size of the lsp-hover output.
 # (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
@@ -98,7 +100,7 @@ Capture groups must be:
     2: line number
     3: optional column
     4: optional message
-} regex lsp_location_format ^\h*([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
+} regex lsp_location_format ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
 
 # Callback functions. Override these to tune kak-lsp's behavior.
 
@@ -179,7 +181,7 @@ method   = "textDocument/didChange"
 draft    = """
 %s"""
 ' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval ${kak_opt_lsp_cmd} --request
-printf %s "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
+printf %s\\n "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
 ) > /dev/null 2>&1 < /dev/null & }
         execute-keys -draft '%<a-|><ret>'
     }
@@ -916,6 +918,29 @@ cat ${pipe} | tee /tmp/pipe
 rm -rf ${tmp}
 }}
 
+define-command lsp-incoming-calls -docstring "Open buffer with calls to the function at the main cursor position" %{
+    lsp-call-hierarchy-request true
+}
+
+define-command lsp-outgoing-calls -docstring "Open buffer with calls by the function at the main cursor position" %{
+    lsp-call-hierarchy-request false
+}
+
+define-command -hidden lsp-call-hierarchy-request -params 1 %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/prepareCallHierarchy"
+[params]
+position.line = %d
+position.column = %d
+incomingOrOutgoing = %s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_cursor_line}" "${kak_cursor_column}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+}
+
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
@@ -1163,26 +1188,31 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
     }
 }
 
-define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
+define-command -hidden lsp-show-goto-buffer -params 3 %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch *goto*
+        edit! -scratch %arg{1}
         set-option buffer filetype lsp-goto
         set-option buffer grep_current_line 0
-        set-option buffer lsp_project_root "%arg{1}/"
-        set-register '"' %arg{2}
+        set-option buffer lsp_project_root "%arg{2}/"
+        set-register '"' %arg{3}
         execute-keys Pgg
     }
 }
 
+define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
+    lsp-show-goto-buffer *goto* %arg{@}
+}
+
 define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
-    evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch *symbols*
-        set-option buffer filetype lsp-goto
-        set-option buffer grep_current_line 0
-        set-option buffer lsp_project_root "%arg{1}/"
-        set-register '"' %arg{2}
-        execute-keys Pgg
-    }
+    lsp-show-goto-buffer *goto* %arg{@}
+}
+
+define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render callers" %{
+    lsp-show-goto-buffer *callers* %arg{@}
+}
+
+define-command -hidden lsp-show-outgoing-calls -params 2 -docstring "Render callees" %{
+    lsp-show-goto-buffer *callees* %arg{@}
 }
 
 define-command lsp-next-location -params 1 -docstring %{
@@ -1521,6 +1551,8 @@ map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list proje
 map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buffer'
 map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
 map global lsp i '<esc>: lsp-implementation<ret>'         -docstring 'go to implementation'
+map global lsp j '<esc>: lsp-outgoing-calls<ret>'         -docstring 'list outgoing call for function at cursor'
+map global lsp k '<esc>: lsp-incoming-calls<ret>'         -docstring 'list incoming call for function at cursor'
 map global lsp r '<esc>: lsp-references<ret>'             -docstring 'list symbol references'
 map global lsp R '<esc>: lsp-rename-prompt<ret>'          -docstring 'rename symbol'
 map global lsp s '<esc>: lsp-signature-help<ret>'         -docstring 'show function signature help'
@@ -1572,8 +1604,11 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
     hook -group lsp global NormalIdle .* %{
-        lsp-did-change-and-then 'lsp-code-actions-request false'
-        %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
+        lsp-did-change
+        evaluate-commands %sh{
+            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
+        }
     }
 
     lsp-did-change-config
@@ -1623,8 +1658,11 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp window InsertIdle .* lsp-completion
     hook -group lsp window NormalIdle .* %{
-        lsp-did-change-and-then 'lsp-code-actions-request false'
-        %sh{if $kak_opt_lsp_auto_highlight_references; then echo "lsp-highlight-references"; else echo "nop"; fi}
+        lsp-did-change
+        evaluate-commands %sh{
+            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
+        }
     }
 
     lsp-did-open
@@ -1877,11 +1915,13 @@ define-command -hidden lsp-make-register-relative-to-root %{
 define-command -hidden lsp-jump %{ # from grep.kak
     evaluate-commands -save-regs abc %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
-            execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
-            set-register a "%reg{1}"
-            set-register b "%reg{2}"
-            set-register c "%reg{3}"
-            lsp-make-register-relative-to-root
+            evaluate-commands -draft %{
+                execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+                set-register a "%reg{1}"
+                set-register b "%reg{2}"
+                set-register c "%reg{3}"
+                lsp-make-register-relative-to-root
+            }
             set-option buffer grep_current_line %val{cursor_line}
             evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{a} %reg{b} %reg{c}
             try %{ focus %opt{jumpclient} }
@@ -1891,12 +1931,14 @@ define-command -hidden lsp-jump %{ # from grep.kak
 
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
     evaluate-commands -save-regs abcd %{
-        execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
-        set-register a "%reg{1}"
-        set-register b "%reg{2}"
-        set-register c "%reg{3}"
-        set-register d "%reg{4}"
-        lsp-make-register-relative-to-root
+        evaluate-commands -draft %{
+            execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+            set-register a "%reg{1}"
+            set-register b "%reg{2}"
+            set-register c "%reg{3}"
+            set-register d "%reg{4}"
+            lsp-make-register-relative-to-root
+        }
         set-option buffer grep_current_line %val{cursor_line}
         lsp-diagnostics-open-error %reg{a} "%reg{b}" "%reg{c}" "%reg{d}"
     }

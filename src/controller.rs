@@ -223,6 +223,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         notification::DidChangeConfiguration::METHOD => {
             workspace::did_change_configuration(meta, params, &mut ctx);
         }
+        request::CallHierarchyPrepare::METHOD => {
+            call_hierarchy::call_hierarchy_prepare(meta, params, &mut ctx);
+        }
         request::Completion::METHOD => {
             completion::text_document_completion(meta, params, &mut ctx);
         }

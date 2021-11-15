@@ -1,7 +1,7 @@
 ## Unreleased
 
 Additions:
- - Show lightbulb in modeline when code actions are available (#538).
+ - Show lightbulb in modeline when code actions are available and `lsp_auto_show_code_actions` is set (#538).
  - Sequences of text edits (like from `lsp-code-actions` or `lsp-formatting`) will create just one undo entry (#533).
  - Fix go-to-defintion for files containing invalid UTF-8 (#535).
 

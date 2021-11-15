@@ -1,7 +1,7 @@
 use crate::context::Context;
-use crate::position::lsp_range_to_kakoune;
+use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, PositionParams};
-use crate::util::{editor_quote, get_file_contents, get_lsp_position, short_file_path};
+use crate::util::{editor_quote, short_file_path};
 use itertools::Itertools;
 use lsp_types::request::{GotoDefinition, GotoImplementation, GotoTypeDefinition, References};
 use lsp_types::*;

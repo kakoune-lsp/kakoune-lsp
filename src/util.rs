@@ -3,7 +3,6 @@ use crate::position::*;
 use crate::types::*;
 use itertools::Itertools;
 use lsp_types::*;
-use ropey::Rope;
 use std::convert::TryInto;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
@@ -84,17 +83,6 @@ pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -
         .join("\n")
 }
 
-pub fn get_kakoune_position_with_fallback(
-    filename_str: &str,
-    position: Position,
-    ctx: &Context,
-) -> KakounePosition {
-    get_kakoune_position(filename_str, &position, ctx).unwrap_or_else(|| KakounePosition {
-        line: position.line + 1,
-        column: position.character + 1,
-    })
-}
-
 /// Represent list of document symbol as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
 pub fn format_document_symbol(
@@ -105,11 +93,12 @@ pub fn format_document_symbol(
     items
         .into_iter()
         .map(|symbol| {
-            let DocumentSymbol {
-                range, name, kind, ..
-            } = symbol;
-            let position = get_kakoune_position_with_fallback(&meta.buffile, range.start, ctx);
-            let description = format!("{:?} {}", kind, name);
+            let position = get_kakoune_position_with_fallback(
+                &meta.buffile,
+                symbol.selection_range.start,
+                ctx,
+            );
+            let description = format!("{:?} {}", symbol.kind, symbol.name);
             format!(
                 "{}:{}:{}:{}",
                 short_file_path(&meta.buffile, &ctx.root_path),
@@ -177,44 +166,6 @@ pub fn filetype_to_language_id_map(config: &Config) -> HashMap<String, String> {
         }
     }
     filetypes
-}
-
-/// Wrapper for kakoune_position_to_lsp which uses context to get buffer content and offset encoding.
-pub fn get_lsp_position(
-    filename: &str,
-    position: &KakounePosition,
-    ctx: &Context,
-) -> Option<Position> {
-    ctx.documents
-        .get(filename)
-        .map(|document| kakoune_position_to_lsp(position, &document.text, ctx.offset_encoding))
-}
-
-/// Wrapper for lsp_position_to_kakoune which uses context to get buffer content and offset encoding.
-/// Reads the file directly if it is not present in context (is not open in editor).
-pub fn get_kakoune_position(
-    filename: &str,
-    position: &Position,
-    ctx: &Context,
-) -> Option<KakounePosition> {
-    get_file_contents(filename, ctx)
-        .map(|text| lsp_position_to_kakoune(position, &text, ctx.offset_encoding))
-}
-
-/// Get the contents of a file.
-/// Searches ctx.documents first and falls back to reading the file directly.
-pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
-    if let Some(doc) = ctx.documents.get(filename) {
-        return Some(doc.text.clone());
-    }
-
-    match read_document(filename) {
-        Ok(text) => Some(Rope::from_str(&text)),
-        Err(err) => {
-            error!("Failed to read file {}: {}", filename, err);
-            None
-        }
-    }
 }
 
 pub fn read_document(filename: &str) -> io::Result<String> {

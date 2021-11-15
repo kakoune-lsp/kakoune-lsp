@@ -1,5 +1,10 @@
 use crate::{
-    context::*, language_features::hover::editor_hover, markup::escape_brace, types::*, util::*,
+    context::*,
+    language_features::hover::editor_hover,
+    markup::escape_kakoune_markup,
+    position::{get_kakoune_position_with_fallback, get_lsp_position},
+    types::*,
+    util::*,
 };
 use lsp_types::{request::*, *};
 use serde::Deserialize;
@@ -109,7 +114,7 @@ fn next_or_prev_response(
             // This context is shown at the top of the modal
             let context = format!(
                                 "line {}:{}:{{+b@KindAndName}}{:?} {}{{KindAndName}} (Press 'g' to goto this position. Press any other key to continue)",
-                                symbol_position.line, symbol_position.column, kind, escape_brace(&name)
+                                symbol_position.line, symbol_position.column, kind, escape_kakoune_markup(&name)
                             );
 
             // This kak script is appended after the kakoune `lsp-show-hover`

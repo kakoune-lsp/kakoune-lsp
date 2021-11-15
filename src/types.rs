@@ -156,6 +156,13 @@ pub struct PositionParams {
     pub position: KakounePosition,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallHierarchyParams {
+    pub position: KakounePosition,
+    pub incoming_or_outgoing: bool,
+}
+
 #[derive(Clone, Copy, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeActionsParams {

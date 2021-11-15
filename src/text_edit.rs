@@ -2,6 +2,9 @@ use crate::context::*;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
+use indoc::formatdoc;
+#[cfg(test)]
+use indoc::indoc;
 use itertools::Itertools;
 use lsp_types::*;
 use ropey::{Rope, RopeSlice};
@@ -9,6 +12,8 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::os::unix::io::FromRawFd;
+#[cfg(test)]
+use unindent::unindent;
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
 /// buffer or by editing file directly when it's not open in editor.
@@ -296,8 +301,9 @@ pub fn apply_text_edits_to_buffer(
                 } else {
                     editor_quote(new_text)
                 };
-                let command = format!(
-                    "exec \"z{}<space>\"\n{} {}",
+                let command = formatdoc!(
+                    "exec \"z{}<space>\"
+                     {} {}",
                     if selection_index > 0 {
                         format!("{})", selection_index)
                     } else {
@@ -319,13 +325,20 @@ pub fn apply_text_edits_to_buffer(
         .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
 
     if !selection_descs.is_empty() {
-        apply_edits = format!(
-            "select {}\nexec -save-regs \"\" Z\n{}",
-            selection_descs, apply_edits
+        apply_edits = formatdoc!(
+            "select {}
+             exec -save-regs \"\" Z
+             {}",
+            selection_descs,
+            apply_edits
         );
 
         if cleanup_sentinel {
-            apply_edits = format!("{}\nexec <percent>s\\u00E000<ret>d", apply_edits);
+            apply_edits = formatdoc!(
+                "{}
+                 exec <percent>s\\u00E000<ret>d",
+                apply_edits
+            );
         }
     }
 
@@ -351,8 +364,9 @@ pub fn apply_text_edits_to_buffer(
     // Go to the target file, in case it's not active.
     let apply_edits = maybe_buffile
         .map(|buffile| {
-            format!(
-                "edit -existing -- {}\n{}",
+            formatdoc!(
+                "edit -existing -- {}
+                 {}",
                 editor_quote(&buffile),
                 &apply_edits
             )
@@ -444,19 +458,21 @@ mod tests {
         let buffer = Rope::from_str("use std::ffi::CString;");
         let result =
             apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
-        let expected = r#"eval -draft -save-regs ^ 'select 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
-exec -save-regs "" Z
-exec "z<space>"
-lsp-replace-selection ''''
-exec "z<space>"
-lsp-replace-selection ''''
-exec "z1)<space>"
-lsp-replace-selection ''ffi''
-exec "z1)<space>"
-lsp-insert-before-selection ''::''
-exec "z1)<space>"
-lsp-insert-before-selection ''{CStr, CString}'''"#
-            .to_string();
+        let expected = indoc!(
+            r#"eval -draft -save-regs ^ 'select 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
+               exec -save-regs "" Z
+               exec "z<space>"
+               lsp-replace-selection ''''
+               exec "z<space>"
+               lsp-replace-selection ''''
+               exec "z1)<space>"
+               lsp-replace-selection ''ffi''
+               exec "z1)<space>"
+               lsp-insert-before-selection ''::''
+               exec "z1)<space>"
+               lsp-insert-before-selection ''{CStr, CString}'''"#
+        )
+        .to_string();
         assert_eq!(result, Some(expected));
     }
 
@@ -466,13 +482,15 @@ lsp-insert-before-selection ''{CStr, CString}'''"#
         let buffer = Rope::from_str("0123");
         let result =
             apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
-        let expected = r#"eval -draft -save-regs ^ 'select 1.2,1.2 1.3,1.3
-exec -save-regs "" Z
-exec "z<space>"
-lsp-insert-before-selection ''inserted''
-exec "z1)<space>"
-lsp-replace-selection ''replaced'''"#
-            .to_string();
+        let expected = indoc!(
+            r#"eval -draft -save-regs ^ 'select 1.2,1.2 1.3,1.3
+               exec -save-regs "" Z
+               exec "z<space>"
+               lsp-insert-before-selection ''inserted''
+               exec "z1)<space>"
+               lsp-replace-selection ''replaced'''"#
+        )
+        .to_string();
         assert_eq!(result, Some(expected));
     }
 
@@ -499,30 +517,31 @@ lsp-replace-selection ''replaced'''"#
         );
         let result =
             apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
-        let expected =
+        let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 1.14,1.14 2.9,2.12 2.13,2.14
-exec -save-regs "" Z
-exec "z<space>"
-lsp-replace-selection ''if''
-exec "z1)<space>"
-lsp-replace-selection ''let''
-exec "z1)<space>"
-lsp-insert-before-selection '' ''
-exec "z1)<space>"
-lsp-insert-before-selection ''Test::Foo''
-exec "z1)<space>"
-lsp-insert-before-selection '' ''
-exec "z1)<space>"
-lsp-insert-before-selection ''=''
-exec "z1)<space>"
-lsp-insert-before-selection '' ''
-exec "z1)<space>"
-lsp-insert-before-selection ''foo''
-exec "z2)<space>"
-lsp-replace-selection ''println''
-exec "z2)<space>"
-lsp-replace-selection '''''"#
-                .to_string();
+               exec -save-regs "" Z
+               exec "z<space>"
+               lsp-replace-selection ''if''
+               exec "z1)<space>"
+               lsp-replace-selection ''let''
+               exec "z1)<space>"
+               lsp-insert-before-selection '' ''
+               exec "z1)<space>"
+               lsp-insert-before-selection ''Test::Foo''
+               exec "z1)<space>"
+               lsp-insert-before-selection '' ''
+               exec "z1)<space>"
+               lsp-insert-before-selection ''=''
+               exec "z1)<space>"
+               lsp-insert-before-selection '' ''
+               exec "z1)<space>"
+               lsp-insert-before-selection ''foo''
+               exec "z2)<space>"
+               lsp-replace-selection ''println''
+               exec "z2)<space>"
+               lsp-replace-selection '''''"#
+        )
+        .to_string();
         assert_eq!(result, Some(expected));
     }
 
@@ -536,17 +555,19 @@ lsp-replace-selection '''''"#
         let buffer = Rope::from_str("1\n23");
         let result =
             apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
-        let expected = r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
-exec -save-regs "" Z
-exec "z<space>"
-lsp-replace-selection ''"#
-            .to_owned()
-            + "\u{00E000}"
-            + r#"
-x''
-exec "z<space>"
-lsp-insert-before-selection ''e''
-exec <percent>s\u00E000<ret>d'"#;
+        let expected = unindent(
+            &(r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
+               exec -save-regs "" Z
+               exec "z<space>"
+               lsp-replace-selection ''"#
+                .to_owned()
+                + "\u{00E000}"
+                + r#"
+               x''
+               exec "z<space>"
+               lsp-insert-before-selection ''e''
+               exec <percent>s\u00E000<ret>d'"#),
+        );
         assert_eq!(result, Some(expected));
     }
 }

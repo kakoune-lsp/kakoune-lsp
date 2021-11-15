@@ -3,6 +3,7 @@ use crate::controller;
 use crate::settings::request_initialization_options_from_kakoune;
 use crate::types::*;
 use crate::util::*;
+use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::notification::*;
 use lsp_types::request::*;
@@ -160,7 +161,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 document_symbol: Some(DocumentSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: None,
-                    hierarchical_document_symbol_support: None,
+                    hierarchical_document_symbol_support: Some(true),
                     tag_support: None,
                 }),
                 formatting: Some(DynamicRegistrationClientCapabilities {
@@ -267,7 +268,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     multiline_token_support: None,
                 }),
                 linked_editing_range: None,
-                call_hierarchy: None,
+                call_hierarchy: Some(CallHierarchyClientCapabilities {
+                    dynamic_registration: Some(false),
+                }),
                 moniker: None,
             }),
             window: Some(WindowClientCapabilities {
@@ -421,8 +424,10 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         ));
     }
 
-    let command = format!(
-        "info 'kak-lsp commands supported by {} language server:\n\n{}'",
+    let command = formatdoc!(
+        "info 'kak-lsp commands supported by {} language server:
+
+         {}'",
         ctx.language_id,
         editor_escape(&features.join("\n"))
     );

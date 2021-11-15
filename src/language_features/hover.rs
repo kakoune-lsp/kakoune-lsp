@@ -1,7 +1,7 @@
 use crate::context::*;
 use crate::markup::*;
+use crate::position::*;
 use crate::types::*;
-use crate::util::*;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -71,7 +71,7 @@ pub fn editor_hover(
                         Some(format!(
                             "• {{{}}}{}{{{}}}",
                             face,
-                            escape_brace(x.message.trim())
+                            escape_kakoune_markup(x.message.trim())
                                 // Indent line breaks to the same level as the bullet point
                                 .replace("\n", "\n  "),
                             FACE_INFO_DEFAULT,

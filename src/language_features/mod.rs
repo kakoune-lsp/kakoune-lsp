@@ -1,3 +1,4 @@
+pub mod call_hierarchy;
 pub mod ccls;
 pub mod clangd;
 pub mod codeaction;
