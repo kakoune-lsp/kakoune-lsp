@@ -256,7 +256,7 @@ declare-option -hidden str lsp_symbol_kind_completion %{
 }
 
 define-command lsp-goto-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-goto-previous-symbol [<symbol-kind>]: Goto to previous document symbol of type <symbol-kind>. If <symbol-kind> is not given, it means _any_ symbol" %{
+    -docstring "lsp-goto-previous-symbol [<symbol-kind>]: Goto the previous document symbol of type <symbol-kind>. If <symbol-kind> is not given, it means _any_ symbol" %{
     lsp-did-change-and-then "lsp-goto-previous-symbol-request %arg{@}"
 }
 
