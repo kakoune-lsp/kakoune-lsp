@@ -148,7 +148,7 @@ fn next_or_prev_response(
                 symbol_position.line,
                 symbol_position.column
             );
-            let command = format!("edit! -existing {}", location);
+            let command = format!("edit! -existing -- {}", location);
             ctx.exec(meta, command);
         }
     } else {
