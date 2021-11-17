@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use crate::language_features::hover::editor_hover;
 use crate::markup::escape_kakoune_markup;
 use crate::position::{get_kakoune_position_with_fallback, get_lsp_position};
@@ -7,10 +5,13 @@ use crate::types::*;
 use crate::util::*;
 use crate::{context::*, position::get_file_contents};
 use indoc::{formatdoc, indoc};
+use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
-use std::path::Path;
+use std::any::TypeId;
+use std::convert::TryInto;
+use std::path::{Path, PathBuf};
 use url::Url;
 
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
@@ -45,6 +46,63 @@ pub fn next_or_prev_symbol(meta: EditorMeta, editor_params: EditorParams, ctx: &
     );
 }
 
+pub trait Symbol<T: Symbol<T>> {
+    fn name(&self) -> &str;
+    fn kind(&self) -> SymbolKind;
+    fn uri(&self) -> Option<&Url>;
+    fn range(&self) -> Range;
+    fn children(self) -> Vec<T>;
+}
+
+fn symbol_filename<'a, T: Symbol<T>>(
+    meta: &'a EditorMeta,
+    symbol: &'a T,
+    filename_path: &'a mut PathBuf,
+) -> &'a str {
+    if let Some(filename) = symbol.uri() {
+        *filename_path = filename.to_file_path().unwrap();
+        filename_path.to_str().unwrap()
+    } else {
+        &meta.buffile
+    }
+}
+
+impl Symbol<SymbolInformation> for SymbolInformation {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn kind(&self) -> SymbolKind {
+        self.kind
+    }
+    fn uri(&self) -> Option<&Url> {
+        Some(&self.location.uri)
+    }
+    fn range(&self) -> Range {
+        self.location.range
+    }
+    fn children(self) -> Vec<SymbolInformation> {
+        vec![]
+    }
+}
+
+impl Symbol<DocumentSymbol> for DocumentSymbol {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn kind(&self) -> SymbolKind {
+        self.kind
+    }
+    fn uri(&self) -> Option<&Url> {
+        None
+    }
+    fn range(&self) -> Range {
+        self.selection_range
+    }
+    fn children(self) -> Vec<DocumentSymbol> {
+        self.children.unwrap_or_default()
+    }
+}
+
 pub fn editor_document_symbol(
     meta: EditorMeta,
     result: Option<DocumentSymbolResponse>,
@@ -55,13 +113,13 @@ pub fn editor_document_symbol(
             if result.is_empty() {
                 return;
             }
-            format_symbol_information(result, ctx)
+            format_symbol(result, &meta, ctx)
         }
         Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            format_document_symbol(result, &meta, ctx)
+            format_symbol(result, &meta, ctx)
         }
         None => {
             return;
@@ -75,6 +133,27 @@ pub fn editor_document_symbol(
     ctx.exec(meta, command);
 }
 
+/// Represent list of symbols as filetype=grep buffer content.
+/// Paths are converted into relative to project root.
+pub fn format_symbol<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
+    items
+        .into_iter()
+        .map(|symbol| {
+            let mut filename_path = PathBuf::default();
+            let filename = symbol_filename(meta, &symbol, &mut filename_path);
+            let position = get_kakoune_position_with_fallback(filename, symbol.range().start, ctx);
+            let description = format!("{:?} {}", symbol.kind(), symbol.name());
+            format!(
+                "{}:{}:{}:{}\n",
+                short_file_path(filename, &ctx.root_path),
+                position.line,
+                position.column,
+                description
+            ) + &format_symbol(symbol.children(), meta, ctx)
+        })
+        .join("")
+}
+
 fn editor_next_or_prev_symbol(
     meta: EditorMeta,
     editor_params: EditorParams,
@@ -85,20 +164,17 @@ fn editor_next_or_prev_symbol(
     let hover = params.hover;
     let maybe_details = match result {
         None => return,
-        Some(DocumentSymbolResponse::Flat(mut result)) => {
+        Some(DocumentSymbolResponse::Flat(result)) => {
             if result.is_empty() {
                 return;
             }
-            // Some language servers return symbol locations that are not sorted in ascending order.
-            // Sort the results so we can find next and previous properly.
-            result.sort_by(|a, b| a.location.range.start.cmp(&b.location.range.start));
-            next_or_prev_symbol_information_details(&result, &params, ctx)
+            next_or_prev_symbol_details(result, &params, &meta, ctx)
         }
-        Some(DocumentSymbolResponse::Nested(mut result)) => {
+        Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            next_or_prev_document_symbol_details(&mut result, &params, &meta, ctx)
+            next_or_prev_symbol_details(result, &params, &meta, ctx)
         }
     };
 
@@ -220,96 +296,60 @@ fn exceeds(
     }
 }
 
-/// Gets (filename, kakoune position, name) of the next/previous
-/// DocumentSymbol symbol in the document
-fn next_or_prev_document_symbol_details(
-    items: &mut Vec<DocumentSymbol>,
+/// Gets (filename, kakoune position, name) of the next/previous symbol in the buffer.
+fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
+    mut items: Vec<T>,
     params: &NextOrPrevSymbolParams,
     meta: &EditorMeta,
     ctx: &Context,
 ) -> Option<(String, KakounePosition, String, SymbolKind)> {
     // Some language servers return symbol locations that are not sorted in ascending order.
     // Sort the results so we can find next and previous properly.
-    items.sort_by(|a, b| a.selection_range.start.cmp(&b.selection_range.start));
+    items.sort_by(|a, b| a.range().start.cmp(&b.range().start));
 
     // Setup an iterator dependending on whether we are searching forwards or backwards
-    let it: Box<dyn Iterator<Item = &mut DocumentSymbol>> = if params.search_next {
-        Box::new(items.iter_mut())
+    let it: Box<dyn Iterator<Item = T>> = if params.search_next {
+        Box::new(items.into_iter())
     } else {
-        Box::new(items.iter_mut().rev())
+        Box::new(items.into_iter().rev())
     };
 
-    for DocumentSymbol {
-        selection_range,
-        kind,
-        name,
-        ref mut children,
-        ..
-    } in it
-    {
-        // The selection range should give us the exact extent of the symbol, excluding its
-        // surrounding data e.g. doc comments.
+    for symbol in it {
+        let kind = symbol.kind();
+        let mut filename_path = PathBuf::default();
+        let filename = symbol_filename(meta, &symbol, &mut filename_path);
+
+        let mut symbol_position = symbol.range().start;
+        if TypeId::of::<T>() == TypeId::of::<SymbolInformation>() {
+            symbol_position = find_identifier_in_file(
+                ctx,
+                filename,
+                symbol_position,
+                unadorned_name(ctx, symbol.name()),
+            )
+            .unwrap_or(symbol_position);
+        }
         let symbol_position =
-            get_kakoune_position_with_fallback(&meta.buffile, selection_range.start, ctx);
+            get_kakoune_position_with_fallback(&meta.buffile, symbol_position, ctx);
 
         if exceeds(
             symbol_position,
-            *kind,
+            kind,
             params.position,
             params.search_next,
             &params.symbol_kind,
         ) {
-            let filename = short_file_path(&meta.buffile, &ctx.root_path).to_owned();
-            return Some((filename, symbol_position, name.to_owned(), *kind));
+            return Some((
+                filename.to_string(),
+                symbol_position,
+                symbol.name().to_owned(),
+                kind,
+            ));
         }
 
-        let from_children = next_or_prev_document_symbol_details(
-            children.as_mut().unwrap_or(&mut vec![]),
-            params,
-            meta,
-            ctx,
-        );
+        let from_children = next_or_prev_symbol_details(symbol.children(), params, meta, ctx);
         if from_children.is_some() {
             return from_children;
-        }
-    }
-
-    None
-}
-
-/// Find the location and name of the next/previous SymbolInformation symbol in the buffer.
-fn next_or_prev_symbol_information_details(
-    items: &Vec<SymbolInformation>,
-    params: &NextOrPrevSymbolParams,
-    ctx: &Context,
-) -> Option<(String, KakounePosition, String, SymbolKind)> {
-    // Setup an iterator dependending on whether we are searching forwards or backwards
-    let it: Box<dyn Iterator<Item = &SymbolInformation>> = if params.search_next {
-        Box::new(items.iter())
-    } else {
-        Box::new(items.iter().rev())
-    };
-
-    for SymbolInformation {
-        location,
-        kind,
-        name,
-        ..
-    } in it
-    {
-        let filename_path = location.uri.to_file_path().unwrap();
-        let filename = filename_path.to_str().unwrap().to_owned();
-
-        let symbol_position = guess_symbol_position(ctx, &filename, location, name);
-
-        if exceeds(
-            symbol_position,
-            *kind,
-            params.position,
-            params.search_next,
-            &params.symbol_kind,
-        ) {
-            return Some((filename, symbol_position, name.to_owned(), *kind));
         }
     }
 
@@ -326,23 +366,6 @@ fn unadorned_name<'a>(ctx: &Context, name: &'a str) -> &'a str {
     } else {
         name
     }
-}
-
-fn guess_symbol_position(
-    ctx: &Context,
-    filename: &String,
-    location: &Location,
-    name: &String,
-) -> KakounePosition {
-    let position = find_identifier_in_file(
-        ctx,
-        filename,
-        location.range.start,
-        unadorned_name(ctx, name),
-    )
-    .unwrap_or(location.range.start);
-
-    get_kakoune_position_with_fallback(filename, position, ctx)
 }
 
 /// Given a file and starting position, try to find the identifier `name`.

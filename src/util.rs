@@ -1,8 +1,4 @@
-use crate::context::*;
-use crate::position::*;
 use crate::types::*;
-use itertools::Itertools;
-use lsp_types::*;
 use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
@@ -52,61 +48,6 @@ impl Drop for TempFifo {
     fn drop(&mut self) {
         let _ = std::fs::remove_file(&self.path);
     }
-}
-
-/// Represent list of symbol information as filetype=grep buffer content.
-/// Paths are converted into relative to project root.
-pub fn format_symbol_information(items: Vec<SymbolInformation>, ctx: &Context) -> String {
-    items
-        .into_iter()
-        .map(|symbol| {
-            let SymbolInformation {
-                location,
-                name,
-                kind,
-                ..
-            } = symbol;
-            let filename = location.uri.to_file_path().unwrap();
-            let filename_str = filename.to_str().unwrap();
-            let position =
-                get_kakoune_position_with_fallback(filename_str, location.range.start, ctx);
-            let description = format!("{:?} {}", kind, name);
-            format!(
-                "{}:{}:{}:{}",
-                short_file_path(filename_str, &ctx.root_path),
-                position.line,
-                position.column,
-                description
-            )
-        })
-        .join("\n")
-}
-
-/// Represent list of document symbol as filetype=grep buffer content.
-/// Paths are converted into relative to project root.
-pub fn format_document_symbol(
-    items: Vec<DocumentSymbol>,
-    meta: &EditorMeta,
-    ctx: &Context,
-) -> String {
-    items
-        .into_iter()
-        .map(|symbol| {
-            let position = get_kakoune_position_with_fallback(
-                &meta.buffile,
-                symbol.selection_range.start,
-                ctx,
-            );
-            let description = format!("{:?} {}", symbol.kind, symbol.name);
-            format!(
-                "{}:{}:{}:{}\n",
-                short_file_path(&meta.buffile, &ctx.root_path),
-                position.line,
-                position.column,
-                description
-            ) + &format_document_symbol(symbol.children.unwrap_or(vec![]), meta, ctx)
-        })
-        .join("")
 }
 
 /// Escape Kakoune string wrapped into single quote

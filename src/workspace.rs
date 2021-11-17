@@ -1,5 +1,5 @@
 use crate::context::*;
-use crate::language_features::rust_analyzer;
+use crate::language_features::{document_symbol, rust_analyzer};
 use crate::settings::*;
 use crate::text_edit::{apply_annotated_text_edits, apply_text_edits};
 use crate::types::*;
@@ -102,7 +102,7 @@ pub fn editor_workspace_symbol(
         return;
     }
     let result = result.unwrap();
-    let content = format_symbol_information(result, ctx);
+    let content = document_symbol::format_symbol(result, &meta, ctx);
     let command = format!(
         "lsp-show-workspace-symbol {} {}",
         editor_quote(&ctx.root_path),
