@@ -230,7 +230,7 @@ define-command lsp-hover -docstring "Request hover info for the main cursor posi
     lsp-did-change-and-then lsp-hover-request
 }
 
-define-command -hidden lsp-hover-request -params 0..2 -docstring "Request hover info for the main cursor position" %{
+define-command -hidden lsp-hover-request -docstring "Request hover info for the main cursor position" %{
     nop %sh{ (printf '
 session   = "%s"
 client    = "%s"
@@ -241,9 +241,7 @@ method    = "textDocument/hover"
 [params]
 position.line = %d
 position.column = %d
-style = "%s"
-context = "%s"
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" "$2" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 declare-option -hidden str lsp_symbol_kind_completion %{

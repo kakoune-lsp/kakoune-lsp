@@ -236,17 +236,10 @@ pub struct KakounePosition {
     pub column: u32, // in bytes, not chars!!!
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct HoverModal {
     pub context: String,
     pub do_after: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HoverModalParams {
-    pub hover_modal: Option<HoverModal>,
 }
 
 #[derive(Debug, PartialEq)]

@@ -11,7 +11,6 @@ use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(editor_params.clone()).unwrap();
-    let hover_modal_params = HoverModalParams::deserialize(editor_params).unwrap();
     let req_params = HoverParams {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier {
@@ -22,7 +21,7 @@ pub fn text_document_hover(meta: EditorMeta, editor_params: EditorParams, ctx: &
         work_done_progress_params: Default::default(),
     };
     ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_hover(meta, hover_modal_params.hover_modal, params, result, ctx)
+        editor_hover(meta, None, params, result, ctx)
     });
 }
 
