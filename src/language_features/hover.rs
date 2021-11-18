@@ -1,3 +1,5 @@
+use std::fs;
+
 use crate::context::*;
 use crate::markup::*;
 use crate::position::*;
@@ -9,8 +11,17 @@ use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_hover(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(editor_params.clone()).unwrap();
+pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let maybe_hover_fifo = HoverDetails::deserialize(params.clone())
+        .unwrap()
+        .hover_fifo;
+
+    let hover_type = match maybe_hover_fifo {
+        Some(fifo) => HoverType::InfoInHoverClient { fifo },
+        None => HoverType::Normal,
+    };
+
+    let params = PositionParams::deserialize(params).unwrap();
     let req_params = HoverParams {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier {
@@ -21,13 +32,13 @@ pub fn text_document_hover(meta: EditorMeta, editor_params: EditorParams, ctx: &
         work_done_progress_params: Default::default(),
     };
     ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_hover(meta, None, params, result, ctx)
+        editor_hover(meta, hover_type, params, result, ctx)
     });
 }
 
 pub fn editor_hover(
     meta: EditorMeta,
-    maybe_hover_modal: Option<HoverModal>,
+    hover_type: HoverType,
     params: PositionParams,
     result: Option<Hover>,
     ctx: &mut Context,
@@ -90,7 +101,7 @@ pub fn editor_hover(
         .get(&ctx.language_id)
         .and_then(|l| l.workaround_server_sends_plaintext_labeled_as_markdown)
         .unwrap_or(false);
-    let mut contents = match result {
+    let contents = match result {
         None => "".to_string(),
         Some(result) => match result.contents {
             HoverContents::Scalar(contents) => {
@@ -105,43 +116,112 @@ pub fn editor_hover(
                     FACE_INFO_RULE, FACE_INFO_DEFAULT
                 )),
             HoverContents::Markup(contents) => match contents.kind {
-                MarkupKind::Markdown => markdown_to_kakoune_markup(contents.value, force_plaintext),
+                MarkupKind::Markdown => {
+                    if let HoverType::InfoInHoverClient { .. } = hover_type {
+                        contents.value
+                    } else {
+                        markdown_to_kakoune_markup(contents.value, force_plaintext)
+                    }
+                }
                 MarkupKind::PlainText => contents.value,
             },
         },
     };
 
-    if contents.is_empty() && diagnostics.is_empty() && maybe_hover_modal.is_none() {
-        return;
-    }
+    match hover_type {
+        HoverType::Normal => {
+            if contents.is_empty() && diagnostics.is_empty() {
+                return;
+            }
 
-    let anchor_or_style = if let Some(hover_modal) = maybe_hover_modal.as_ref() {
-        contents = format!("{}\n---\n{}", hover_modal.context, contents);
-        "modal".to_string()
-    } else {
-        format!("{}", params.position)
+            let command = format!(
+                "lsp-show-hover {} %§{}§ %§{}§",
+                params.position,
+                contents.replace("§", "§§"),
+                diagnostics.replace("§", "§§"),
+            );
+            ctx.exec(meta, command);
+        }
+        HoverType::Modal {
+            modal_heading,
+            do_after,
+        } => {
+            show_hover_modal(meta, ctx, modal_heading, do_after, contents, diagnostics);
+        }
+        HoverType::InfoInHoverClient { fifo } => {
+            show_hover_in_hover_client(meta, ctx, fifo, contents);
+        }
     };
+}
 
-    let mut command = format!(
-        "lsp-show-hover {} %§{}§ %§{}§",
-        anchor_or_style,
+fn show_hover_modal(
+    meta: EditorMeta,
+    ctx: &Context,
+    modal_heading: String,
+    do_after: String,
+    contents: String,
+    diagnostics: String,
+) {
+    let contents = format!("{}\n---\n{}", modal_heading, contents);
+    let command = format!(
+        "lsp-show-hover modal %§{}§ %§{}§",
         contents.replace("§", "§§"),
-        diagnostics.replace("§", "§§")
+        diagnostics.replace("§", "§§"),
     );
-
-    // Wrap if we're using a HoverModal
-    if let Some(hover_modal) = maybe_hover_modal {
-        command = formatdoc!(
-            "eval %§
+    let wrapped_command = formatdoc!(
+        "eval %§
                  {}
                  {}
              §",
-            command.replace("§", "§§"),
-            hover_modal.do_after.replace("§", "§§")
-        );
+        command.replace("§", "§§"),
+        do_after.replace("§", "§§")
+    );
+    ctx.exec(meta, wrapped_command);
+}
+
+fn show_hover_in_hover_client(
+    meta: EditorMeta,
+    ctx: &Context,
+    hover_fifo: String,
+    contents: String,
+) {
+    if contents.is_empty() {
+        return;
     }
 
+    let handle = std::thread::spawn(move || {
+        // Note that we don't show diagnostics in the hover client
+        fs::write(hover_fifo, contents.as_bytes()).unwrap();
+    });
+
+    let command = formatdoc!(
+        "
+        %[
+            edit! -existing -readonly -fifo %opt[lsp_hover_fifo] *hover*
+            set buffer=*hover* filetype markdown
+        ]"
+    );
+
+    let client = meta.client.clone().unwrap_or_default();
+    let command = formatdoc!(
+        "
+        try %[
+            eval -client hoverclient {}
+        ] catch %[
+            new %[
+                rename-client hoverclient
+                eval {}
+                addhl -override window/wrap wrap
+                focus {}
+            ]
+        ]",
+        command,
+        command,
+        client
+    );
+
     ctx.exec(meta, command);
+    handle.join().unwrap();
 }
 
 trait PlainText {

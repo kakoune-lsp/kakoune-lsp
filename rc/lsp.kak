@@ -230,8 +230,18 @@ define-command lsp-hover -docstring "Request hover info for the main cursor posi
     lsp-did-change-and-then lsp-hover-request
 }
 
-define-command -hidden lsp-hover-request -docstring "Request hover info for the main cursor position" %{
-    nop %sh{ (printf '
+define-command lsp-hover-in-hover-client -docstring "Request hover info for the main cursor position in a separate client" %{
+    lsp-did-change-and-then "lsp-hover-request in_hover_client"
+}
+
+define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover info for the main cursor position" %{
+    nop %sh{
+        maybe_hover_fifo=""
+        if [ "$1" = "in_hover_client" ]; then
+            maybe_hover_fifo="hoverFifo = \"${kak_opt_lsp_hover_fifo}\""
+        fi
+
+        (printf '
 session   = "%s"
 client    = "%s"
 buffile   = "%s"
@@ -239,9 +249,10 @@ filetype  = "%s"
 version   = %d
 method    = "textDocument/hover"
 [params]
+%s
 position.line = %d
 position.column = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$maybe_hover_fifo" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 declare-option -hidden str lsp_symbol_kind_completion %{
@@ -1526,6 +1537,7 @@ map global lsp d '<esc>: lsp-definition<ret>'             -docstring 'go to defi
 map global lsp e '<esc>: lsp-diagnostics<ret>'            -docstring 'list project errors, info, hints and warnings'
 map global lsp f '<esc>: lsp-formatting<ret>'             -docstring 'format buffer'
 map global lsp h '<esc>: lsp-hover<ret>'                  -docstring 'show info for current position'
+map global lsp H '<esc>: lsp-hover-in-hover-client<ret>'   -docstring 'show info for current position in separate client'
 map global lsp i '<esc>: lsp-implementation<ret>'         -docstring 'go to implementation'
 map global lsp j '<esc>: lsp-outgoing-calls<ret>'         -docstring 'list outgoing call for function at cursor'
 map global lsp k '<esc>: lsp-incoming-calls<ret>'         -docstring 'list incoming call for function at cursor'
@@ -1943,4 +1955,13 @@ define-command lsp-goto-next-match -docstring 'DEPRECATED: use lsp-next-location
 
 define-command lsp-goto-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous goto match' %{
     lsp-previous-location '*goto*'
+}
+
+declare-option -hidden str lsp_hover_fifo
+
+set-option global lsp_hover_fifo %sh{
+    tmpdir=$(mktemp -q -d -t 'lsp-hover-client.XXXXXX' 2>/dev/null || mktemp -q -d)
+    output="$tmpdir/fifo"
+    mkfifo "$output"
+    echo "$output"
 }
