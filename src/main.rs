@@ -17,6 +17,7 @@ mod language_features;
 mod language_server_transport;
 mod markup;
 mod position;
+mod progress;
 mod project_root;
 mod session;
 mod settings;

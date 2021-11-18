@@ -274,7 +274,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 moniker: None,
             }),
             window: Some(WindowClientCapabilities {
-                work_done_progress: Some(false),
+                work_done_progress: Some(true),
                 show_message: None,
                 show_document: None,
             }),

@@ -5,6 +5,7 @@ use crate::diagnostics;
 use crate::general;
 use crate::language_features::*;
 use crate::language_server_transport;
+use crate::progress;
 use crate::text_sync::*;
 use crate::types::*;
 use crate::util::*;
@@ -253,6 +254,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         notification::Exit::METHOD => {
             general::exit(&mut ctx);
         }
+        notification::WorkDoneProgressCancel::METHOD => {
+            progress::work_done_progress_cancel(meta, params, ctx);
+        }
         request::SignatureHelpRequest::METHOD => {
             signature_help::text_document_signature_help(meta, params, &mut ctx);
         }
@@ -337,6 +341,9 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.params, ctx)
         }
+        request::WorkDoneProgressCreate::METHOD => {
+            progress::work_done_progress_create(request.params, ctx)
+        }
         request::WorkspaceConfiguration::METHOD => workspace::configuration(request.params, ctx),
         _ => {
             warn!("Unsupported method: {}", method);
@@ -356,6 +363,9 @@ fn dispatch_server_notification(
     mut ctx: &mut Context,
 ) {
     match method {
+        notification::Progress::METHOD => {
+            progress::dollar_progress(meta, params, ctx);
+        }
         notification::PublishDiagnostics::METHOD => {
             diagnostics::publish_diagnostics(params, &mut ctx);
         }
@@ -394,21 +404,6 @@ fn dispatch_server_notification(
             ctx.exec(
                 meta,
                 format!("lsp-show-message-log {}", editor_quote(&params.message)),
-            );
-        }
-        "window/progress" => {
-            let params: WindowProgress = params
-                .parse()
-                .expect("Failed to parse WindowProgress params");
-            ctx.exec(
-                meta,
-                format!(
-                    "lsp-handle-progress {} {} {} {}",
-                    editor_quote(&params.title),
-                    editor_quote(&params.message.unwrap_or_default()),
-                    editor_quote(&params.percentage.unwrap_or_default()),
-                    editor_quote(params.done.map_or("", |_| "done"))
-                ),
             );
         }
         "telemetry/event" => {
