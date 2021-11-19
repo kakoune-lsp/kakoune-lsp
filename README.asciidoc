@@ -16,12 +16,14 @@ However, if you don't need to change configuration then feel free to skip copyin
 
 ===== Homebrew
 
+[source,sh]
 ----
 brew install kak-lsp/kak-lsp/kak-lsp
 ----
 
 ===== Manual
 
+[source,sh]
 ----
 curl -O -L https://github.com/kak-lsp/kak-lsp/releases/download/v11.0.1/kak-lsp-v11.0.1-x86_64-apple-darwin.tar.gz
 tar xzvf kak-lsp-v11.0.1-x86_64-apple-darwin.tar.gz
@@ -43,6 +45,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 ===== Others
 
+[source,sh]
 ----
 wget https://github.com/kak-lsp/kak-lsp/releases/download/v11.0.1/kak-lsp-v11.0.1-x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp-v11.0.1-x86_64-unknown-linux-musl.tar.gz
@@ -58,6 +61,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 Generally, you need the latest stable version of Rust to build kak-lsp.
 
+[source,sh]
 ----
 git clone https://github.com/kak-lsp/kak-lsp
 cd kak-lsp
@@ -76,6 +80,7 @@ cp kak-lsp.toml ~/.config/kak-lsp/
 If you don't mind using a plugin manager, you can install kak-lsp
 via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
 
+[source,kak]
 ----
 plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
@@ -104,6 +109,7 @@ version you use or the README.asciidoc from the release archive.
 To enable LSP support for configured languages (see the next section) just add the following
 commands to your `kakrc`:
 
+[source,kak]
 ----
 eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with plug.kak.
 lsp-enable
@@ -112,6 +118,7 @@ lsp-enable
 A bit more involved but recommended way is to enable kak-lsp only for specific filetypes you need
 via `lsp-enable-window`, e.g.:
 
+[source,kak]
 ----
 eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with plug.kak.
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
@@ -151,6 +158,7 @@ Either way you get:
 * `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
 * `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 
+[source,kak]
 ----
 hook global WinSetOption filetype=rust %{
     hook window BufWritePre .* lsp-formatting-sync
@@ -173,6 +181,7 @@ would spin up a fresh server if it is down.
 * `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode].
   The following example mapping gives you access to the shortcuts from below table after typing `,l`.
 
+[source,kak]
 ----
 map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 ----
@@ -256,7 +265,7 @@ Many servers accept configuration options that are not part of the LSP spec.  Th
 `[language.<filetype>.settings]` holds those configuration options.  It has the same structure
 as the corresponding fragments from VSCode's `settings.json`. For example:
 
-[source=toml]
+[source,toml]
 ----
 [language.go]
 ...
@@ -287,6 +296,7 @@ kak-lsp's Kakoune integration declares the following options:
 
 For example, you can toggle an option dynamically with a command like this:
 
+[source,kak]
 ----
 set-option global lsp_config %{
     [language.go.settings.gopls]
@@ -298,6 +308,7 @@ set-option global lsp_config %{
 
 Inlay hints are a feature supported by https://github.com/rust-analyzer/rust-analyzer[rust-analyzer], which show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it in kak-lsp, add the following to your `kakrc`:
 
+[source,kak]
 ----
 hook global WinSetOption filetype=rust %{
   hook window -group rust-inlay-hints BufReload .* rust-analyzer-inlay-hints
@@ -315,6 +326,7 @@ You can change the hints' face with `set-face global InlayHint <face>`.
 
 kak-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:
 
+[source,kak]
 ----
 hook global WinSetOption filetype=<language> %{
   hook window -group semantic-tokens BufReload .* lsp-semantic-tokens
@@ -400,6 +412,7 @@ face = "variable"
 
 kak-lsp supports showing diagnostics inline after their respective line, but this behavior can be somewhat buggy and must be enabled explicitly:
 
+[source,kak]
 ----
 lsp-inlay-diagnostics-enable global
 ----
@@ -464,6 +477,7 @@ To enable Markdown highlighting, define some of the following faces in your them
 
 For convenience, here is a snippet to paste into your theme/config:
 
+[source,kak]
 ----
 face global InfoDefault               Information
 face global InfoBlock                 Information
@@ -494,6 +508,7 @@ It uses the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`
 
 To properly use snippets, you'll probably want something like this:
 
+[source,kak]
 ----
 def -hidden insert-c-n %{
  try %{
@@ -544,7 +559,7 @@ require adding `offset_encoding = "utf-8"` to the language server configuration 
 == Troubleshooting
 
 If kak-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
-
+[source,kak]
 ----
 set global lsp_cmd "kak-lsp -s %val{session} -vvv --log /tmp/kak-lsp.log"
 ----
@@ -558,6 +573,7 @@ please don't hesitate to raise an issue.
 
 Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific settings in your `~/.config/kak-lsp/kak-lsp.toml` and/or `~/.config/kak/`. Use this command to start Kakoune with kak-lsp enabled, both with pristine settings.
 
+[source,sh]
 ----
 HOME=$(mktemp -d) kak -e '
     eval %sh{kak-lsp --kakoune -s $kak_session}
