@@ -142,7 +142,7 @@ set-option global modelinefmt "%%opt{lsp_modeline}%opt{modelinefmt}"
 
 ### Requests ###
 
-define-command lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (eval ${kak_opt_lsp_cmd}) > /dev/null 2>&1 < /dev/null & } }
+define-command lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (eval "${kak_opt_lsp_cmd}") > /dev/null 2>&1 < /dev/null & } }
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
     lsp-did-change-and-then nop
@@ -180,7 +180,7 @@ method   = "textDocument/didChange"
 [params]
 draft    = """
 %s"""
-' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval ${kak_opt_lsp_cmd} --request
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval "${kak_opt_lsp_cmd} --request"
 printf %s\\n "${kak_opt_lsp_callback}" | kak -p "${kak_session}"
 ) > /dev/null 2>&1 < /dev/null & }
         execute-keys -draft '%<a-|><ret>'
@@ -223,7 +223,7 @@ line      = %d
 column    = %d
 [params.completion]
 offset    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} ${kak_opt_lsp_completion_offset} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} ${kak_opt_lsp_completion_offset} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }}
 
 define-command lsp-hover -docstring "Request hover info for the main cursor position" %{
@@ -241,7 +241,7 @@ method    = "textDocument/hover"
 [params]
 position.line = %d
 position.column = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 declare-option -hidden str lsp_symbol_kind_completion %{
@@ -306,7 +306,7 @@ position.column = %d
 symbolKind      = "%s"
 searchNext      = %s
 hover           = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$symbol_kind" "$forward" "$hover" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$symbol_kind" "$forward" "$hover" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 } -shell-script-candidates %{
     case $# in
         # Which type of symbol?
@@ -359,7 +359,7 @@ method    = "textDocument/definition"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-implementation -docstring "Go to implementation" %{
@@ -377,7 +377,7 @@ method    = "textDocument/implementation"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-type-definition -docstring "Go to type-definition" %{
@@ -395,7 +395,7 @@ method    = "textDocument/typeDefinition"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-code-actions -docstring "Perform code actions for the main cursor position" %{
@@ -414,7 +414,7 @@ method    = "textDocument/codeAction"
 position.line     = %d
 position.column   = %d
 performCodeAction = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
@@ -434,7 +434,7 @@ method    = "workspace/executeCommand"
 [params]
 command = "%s"
 arguments = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" "$2" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" "$2" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-references -docstring "Open buffer with symbol references" %{
@@ -452,7 +452,7 @@ method    = "textDocument/references"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
@@ -470,7 +470,7 @@ method    = "textDocument/documentHighlight"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-rename -params 1 -docstring "Rename symbol under the main cursor" %{
@@ -490,7 +490,7 @@ newName   = "%s"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor (prompt for a new name)" %{
@@ -524,7 +524,7 @@ method    = "textDocument/signatureHelp"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
@@ -540,7 +540,7 @@ filetype = "%s"
 version  = %d
 method   = "textDocument/diagnostics"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-document-symbol -docstring "Open buffer with document symbols" %{
@@ -556,7 +556,7 @@ filetype = "%s"
 version  = %d
 method   = "textDocument/documentSymbol"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
@@ -587,7 +587,7 @@ version  = %d
 method   = "workspace/symbol"
 [params]
 query    = "%s"
-' "${kak_session}" "${kak_client}" "${1}" "${2}" "${3}" "${4}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${1}" "${2}" "${3}" "${4}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }}
 
 define-command lsp-capabilities -docstring "List available commands for current filetype" %{
@@ -599,7 +599,7 @@ filetype = "%s"
 version  = %d
 method   = "capabilities"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-semantic-available-scopes -docstring "List available scopes for current filetype" %{
@@ -611,7 +611,7 @@ filetype = "%s"
 version  = %d
 method   = "semantic-scopes"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-did-open %{
@@ -633,7 +633,7 @@ method   = "textDocument/didOpen"
 [params]
 draft    = """
 %s"""
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${lsp_draft}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
         execute-keys -draft '%<a-|><ret>'
     }
 }
@@ -647,7 +647,7 @@ filetype = "%s"
 version  = %d
 method   = "textDocument/didClose"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-did-save %{
@@ -659,7 +659,7 @@ filetype = "%s"
 version  = %d
 method   = "textDocument/didSave"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-did-change-config %{
@@ -686,7 +686,7 @@ while [ $# -gt 0 ]; do
 
     shift
 done
-) | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+) | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
@@ -699,7 +699,7 @@ filetype = "%s"
 version  = %d
 method   = "exit"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-cancel-progress -params 1 -docstring "Cancel a cancelable progress item." %{
@@ -713,7 +713,7 @@ version  = %d
 method   = "window/workDoneProgress/cancel"
 [params]
 token    = "%s"
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-apply-workspace-edit -params 1 -hidden %{
@@ -732,7 +732,7 @@ version  = %d
 method   = "apply-workspace-edit"
 [params]
 edit     = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-apply-text-edits -params 1 -hidden %{
@@ -749,7 +749,7 @@ version  = %d
 method   = "apply-text-edits"
 [params]
 edit     = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-stop -docstring "Stop kak-lsp session" %{
@@ -762,7 +762,7 @@ filetype = "%s"
 version  = %d
 method   = "stop"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-formatting -docstring "Format document" %{
@@ -780,7 +780,7 @@ method       = "textDocument/formatting"
 [params]
 tabSize      = %d
 insertSpaces = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null }
 }
 
 define-command lsp-range-formatting -docstring "Format selections" %{
@@ -821,7 +821,7 @@ method       = "textDocument/rangeFormatting"
 tabSize      = %d
 insertSpaces = %s
 %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
 }}
 
 define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
@@ -845,7 +845,7 @@ method       = "textDocument/formatting"
 [params]
 tabSize      = %d
 insertSpaces = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
 
 cat ${pipe}
 rm -rf ${tmp}
@@ -888,7 +888,7 @@ method       = "textDocument/rangeFormatting"
 tabSize      = %d
 insertSpaces = %s
 %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
 
 cat ${pipe} | tee /tmp/pipe
 rm -rf ${tmp}
@@ -914,7 +914,7 @@ method    = "textDocument/prepareCallHierarchy"
 position.line = %d
 position.column = %d
 incomingOrOutgoing = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_cursor_line}" "${kak_cursor_column}" "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_cursor_line}" "${kak_cursor_column}" "$1" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 # CCLS Extension
@@ -936,7 +936,7 @@ direction = "%s"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command ccls-vars -docstring "ccls-vars: Find instances of symbol at point." %{
@@ -954,7 +954,7 @@ method    = "$ccls/vars"
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command ccls-inheritance -params 1..2 -docstring "ccls-inheritance <derived|base> [levels]: Find base- or derived classes of symbol at point." %{
@@ -981,7 +981,7 @@ levels    = %d
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$derived" "$levels" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$derived" "$levels" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command ccls-call -params 1 -docstring "ccls-call <caller|callee>: Find callers or callees of symbol at point." %{
@@ -1006,7 +1006,7 @@ callee    = %s
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$callee" ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$callee" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command ccls-member -params 1 -docstring "ccls-member <vars|types|functions>: Find member variables/types/functions of symbol at point." %{
@@ -1033,7 +1033,7 @@ kind     = %d
 [params.position]
 line      = %d
 column    = %d
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $kind ${kak_cursor_line} ${kak_cursor_column} | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" $kind ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 # clangd Extensions
@@ -1051,7 +1051,7 @@ filetype  = "%s"
 version   = %d
 method    = "textDocument/switchSourceHeader"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 # eclipse.jdt.ls Extension
@@ -1069,7 +1069,7 @@ filetype  = "%s"
 version   = %d
 method    = "eclipse.jdt.ls/organizeImports"
 [params]
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 # rust-analyzer extensions
@@ -1086,7 +1086,7 @@ filetype  = "%s"
 version   = %d
 method    = "rust-analyzer/inlayHints"
 [params]
-' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 # semantic tokens
@@ -1103,7 +1103,7 @@ filetype  = "%s"
 version   = %d
 method    = "textDocument/semanticTokens/full"
 [params]
-' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 ### Response handling ###
