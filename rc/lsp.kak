@@ -402,8 +402,19 @@ define-command lsp-code-actions -docstring "Perform code actions for the main cu
     lsp-did-change-and-then 'lsp-code-actions-request true'
 }
 
-define-command -hidden lsp-code-actions-request -params 1 -docstring "Request code actions for the main cursor position" %{
-    nop %sh{ (printf '
+define-command lsp-code-action -params 1 \
+    -docstring "lsp-code-action <pattern>: perform the code action that matches the given regex" %{
+    lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}'"
+}
+
+define-command -hidden lsp-code-actions-request -params 1..2 -docstring "Request code actions for the main cursor position" %{
+    nop %sh{
+        code_action_pattern=""
+        if [ $# -eq 2 ]; then
+            code_action_pattern="codeActionPattern = \"$(printf %s "$2" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
+        fi
+
+        (printf '
 session   = "%s"
 client    = "%s"
 buffile   = "%s"
@@ -414,7 +425,8 @@ method    = "textDocument/codeAction"
 position.line     = %d
 position.column   = %d
 performCodeAction = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
+%s
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" "$code_action_pattern" | eval ${kak_opt_lsp_cmd} --request) > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{

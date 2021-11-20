@@ -163,11 +163,12 @@ pub struct CallHierarchyParams {
     pub incoming_or_outgoing: bool,
 }
 
-#[derive(Clone, Copy, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeActionsParams {
     pub position: KakounePosition,
     pub perform_code_action: bool,
+    pub code_action_pattern: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
