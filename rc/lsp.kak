@@ -473,7 +473,7 @@ column    = %d
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-rename -params 1 -docstring "Rename symbol under the main cursor" %{
+define-command lsp-rename -params 1 -docstring "lsp-rename <new-name>: rename symbol under the main cursor" %{
     lsp-did-change-and-then "lsp-rename-request ""%arg{1}"""
 }
 
@@ -690,7 +690,7 @@ method   = "exit"
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-cancel-progress -params 1 -docstring "Cancel a cancelable progress item." %{
+define-command lsp-cancel-progress -params 1 -docstring "lsp-cancel-progress <token>: cancel a cancelable progress item." %{
     remove-hooks global lsp
     nop %sh{ (printf '
 session  = "%s"
@@ -1401,7 +1401,9 @@ Jump to the next or previous diagnostic error" %{
     }
 }
 
-define-command lsp-workspace-symbol -params 1 -docstring "Open buffer with a list of project-wide symbols matching the query" %{ lsp-workspace-symbol-buffer %val{buffile} %opt{filetype} %val{timestamp} %arg{1} }
+define-command lsp-workspace-symbol -params 1 -docstring "lsp-workspace-symbol <query>: open buffer with matching project-wide symbols" %{
+    lsp-workspace-symbol-buffer %val{buffile} %opt{filetype} %val{timestamp} %arg{1}
+}
 
 define-command lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
     declare-option -hidden str lsp_ws_buffile %val{buffile}
