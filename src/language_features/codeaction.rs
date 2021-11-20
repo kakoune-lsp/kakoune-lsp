@@ -63,51 +63,62 @@ pub fn editor_code_actions(
         }
     }
 
-    let titles_and_commands = result
-        .iter()
+    let actions = result
+        .into_iter()
         .map(|c| match c {
-            CodeActionOrCommand::Command(_) => c.clone(),
-            CodeActionOrCommand::CodeAction(action) => match &action.command {
-                Some(cmd) => CodeActionOrCommand::Command(cmd.clone()),
-                None => c.clone(),
+            CodeActionOrCommand::Command(_) => c,
+            CodeActionOrCommand::CodeAction(action) => match action.command {
+                Some(cmd) => CodeActionOrCommand::Command(cmd),
+                None => CodeActionOrCommand::CodeAction(action),
             },
         })
-        .map(|c| match c {
-            CodeActionOrCommand::Command(command) => {
-                let title = editor_quote(&command.title);
-                let cmd = editor_quote(&command.command);
-                // Double JSON serialization is performed to prevent parsing args as a TOML
-                // structure when they are passed back via lsp-execute-command.
-                let args = &serde_json::to_string(&command.arguments).unwrap();
-                let args = editor_quote(&serde_json::to_string(&args).unwrap());
-                let select_cmd = editor_quote(&format!("lsp-execute-command {} {}", cmd, args));
-                format!("{} {}", title, select_cmd)
-            }
-            CodeActionOrCommand::CodeAction(action) => {
-                let title = editor_quote(&action.title);
-                // Double JSON serialization is performed to prevent parsing args as a TOML
-                // structure when they are passed back via lsp-apply-workspace-edit.
-                let edit = &serde_json::to_string(&action.edit.unwrap()).unwrap();
-                let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
-                let select_cmd = editor_quote(&format!("lsp-apply-workspace-edit {}", edit));
-                format!("{} {}", title, select_cmd)
-            }
+        .collect::<Vec<_>>();
+
+    let titles_and_commands = actions
+        .iter()
+        .map(|c| {
+            let title = match c {
+                CodeActionOrCommand::Command(command) => &command.title,
+                CodeActionOrCommand::CodeAction(action) => &action.title,
+            };
+            let select_cmd = code_action_to_editor_command(c);
+            format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
         })
         .join(" ");
 
     #[allow(clippy::collapsible_else_if)]
     let command = if params.perform_code_action {
-        if result.is_empty() {
+        if actions.is_empty() {
             "lsp-show-error 'no actions available'".to_string()
         } else {
             format!("lsp-perform-code-action {}\n", titles_and_commands)
         }
     } else {
-        if result.is_empty() {
+        if actions.is_empty() {
             "lsp-hide-code-actions\n".to_string()
         } else {
             format!("lsp-show-code-actions {}\n", titles_and_commands)
         }
     };
     ctx.exec(meta, command);
+}
+
+fn code_action_to_editor_command(action: &CodeActionOrCommand) -> String {
+    match action {
+        CodeActionOrCommand::Command(command) => {
+            let cmd = editor_quote(&command.command);
+            // Double JSON serialization is performed to prevent parsing args as a TOML
+            // structure when they are passed back via lsp-execute-command.
+            let args = &serde_json::to_string(&command.arguments).unwrap();
+            let args = editor_quote(&serde_json::to_string(&args).unwrap());
+            format!("lsp-execute-command {} {}", cmd, args)
+        }
+        CodeActionOrCommand::CodeAction(action) => {
+            // Double JSON serialization is performed to prevent parsing args as a TOML
+            // structure when they are passed back via lsp-apply-workspace-edit.
+            let edit = &serde_json::to_string(&action.edit.as_ref().unwrap()).unwrap();
+            let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
+            format!("lsp-apply-workspace-edit {}", edit)
+        }
+    }
 }
