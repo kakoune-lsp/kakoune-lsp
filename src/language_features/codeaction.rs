@@ -74,6 +74,37 @@ pub fn editor_code_actions(
         })
         .collect::<Vec<_>>();
 
+    if let Some(pattern) = params.code_action_pattern.as_ref() {
+        let regex = match regex::Regex::new(pattern) {
+            Ok(regex) => regex,
+            Err(error) => {
+                let command = format!(
+                    "lsp-show-error 'invalid pattern: {}'",
+                    &editor_escape(&error.to_string())
+                );
+                ctx.exec(meta, command);
+                return;
+            }
+        };
+        let matches = actions
+            .iter()
+            .filter(|c| {
+                let title = match c {
+                    CodeActionOrCommand::Command(command) => &command.title,
+                    CodeActionOrCommand::CodeAction(action) => &action.title,
+                };
+                regex.is_match(title)
+            })
+            .collect::<Vec<_>>();
+        let command = match matches.len() {
+            0 => "lsp-show-error 'no matching action available'".to_string(),
+            1 => code_action_to_editor_command(matches[0]),
+            _ => "lsp-show-error 'multiple matching actions'".to_string(),
+        };
+        ctx.exec(meta, command);
+        return;
+    }
+
     let titles_and_commands = actions
         .iter()
         .map(|c| {
