@@ -23,7 +23,7 @@ sed -i "0,/version/ s/$old-snapshot/$new/" Cargo.toml
 sed -i "1s/Unreleased/$new - $(date --iso)/" CHANGELOG.md
 cargo check # update Cargo.lock
 git commit -am "v$new"
-git tag "v$new"
+git tag "v$new" -m "v$new"
 sed -i "0,/version/ s/$new/$new-snapshot/" Cargo.toml
 cargo check # update Cargo.lock
 sed -i 1i'## Unreleased\n' CHANGELOG.md
