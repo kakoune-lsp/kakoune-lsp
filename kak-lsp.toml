@@ -240,6 +240,12 @@ roots = ["DESCRIPTION", ".git", ".hg"]
 command = "R"
 args = ["--slave", "-e", "languageserver::run()"]
 
+[language.racket]
+filetypes = ["racket"]
+roots = ["info.rkt"]
+command = "racket"
+args = ["-l", "racket-langserver"]
+
 [language.reason]
 filetypes = ["reason"]
 roots = ["package.json", "Makefile", ".git", ".hg"]
