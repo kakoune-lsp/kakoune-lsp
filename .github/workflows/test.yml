@@ -60,6 +60,18 @@ jobs:
       id: kakoune-commit-id
       run: echo "::set-output name=id::$(git -C $GITHUB_WORKSPACE/kakoune rev-parse HEAD)"
 
+    - name: Install gcc 10 via homebrew
+      if: matrix.kakoune_version == '' && matrix.os == 'macos-latest'
+      run: brew install gcc@10
+
+    - name: Install gcc 10 via apt
+      if: matrix.kakoune_version == '' && matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends gcc-10
+      env:
+        DEBIAN_FRONTEND: noninteractive
+
     - name: Cache Kakoune
       id: cache-kakoune
       uses: actions/cache@v2
@@ -74,6 +86,9 @@ jobs:
     - name: Build Kakoune
       working-directory: ${{ github.workspace }}/kakoune/src
       run: |
+        if [ "${{ matrix.kakoune_version }}" = "" ]; then
+          export CXX=g++-10
+        fi
         if [ "${{ steps.cache-kakoune.outputs.cache-hit }}" ]; then
           # The source files created by actions/checkout are newer than the
           # output extracted from cache. So we need to touch these targets
