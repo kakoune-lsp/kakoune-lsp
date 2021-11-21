@@ -175,7 +175,8 @@ pub struct CodeActionsParams {
 #[serde(rename_all = "camelCase")]
 pub struct NextOrPrevSymbolParams {
     pub position: KakounePosition,
-    pub symbol_kind: String,
+    /// Match any of these kinds of symbols, or any symbol if empty.
+    pub symbol_kinds: Vec<String>,
     /// If true then searches forward ("next")
     /// otherwise searches backward ("previous")
     pub search_next: bool,

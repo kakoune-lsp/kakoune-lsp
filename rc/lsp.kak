@@ -271,52 +271,48 @@ position.column = %d
 
 declare-option -hidden str lsp_symbol_kind_completion %{
     symbol_kinds="\
-    Any File Module Namespace Package Class Method Property Field Constructor Enum Interface
+    File Module Namespace Package Class Method Property Field Constructor Enum Interface
     Function Variable Constant String Number Boolean Array Object Key Null EnumMember Struct
     Event Operator TypeParameter"
     printf '%s\n' ${symbol_kinds}
 }
 
-define-command lsp-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-previous-symbol [<symbol-kind>]: goto the buffer's previous symbol of type <symbol-kind>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol %arg{@} previous goto"
+define-command lsp-previous-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-previous-symbol [<symbol-kinds>...]: goto the buffer's previous symbol of a type in <symbol-kinds>, or of any type" %{
+    lsp-did-change-and-then "lsp-next-or-previous-symbol previous goto %arg{@}"
 }
 
-define-command lsp-next-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-next-symbol [<symbol-kind>]: goto the buffer's next symbol of type <symbol-kind>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol %arg{@} next goto"
+define-command lsp-next-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-next-symbol [<symbol-kinds>...]: goto the buffer's next symbol of a type in <symbol-kinds>, or of any type" %{
+    lsp-did-change-and-then "lsp-next-or-previous-symbol next goto %arg{@}"
 }
 
-define-command lsp-hover-previous-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-hover-previous-symbol [<symbol-kind>]: show hover of the buffer's current or previous symbol of type <symbol-kind>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol %arg{@} previous hover"
+define-command lsp-hover-previous-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-hover-previous-symbol [<symbol-kinds>...]: show hover of the buffer's current or previous symbol of a type in <symbol-kinds>, or of any type" %{
+    lsp-did-change-and-then "lsp-next-or-previous-symbol previous hover %arg{@}"
 }
 
-define-command lsp-hover-next-symbol -params 0..1 -shell-script-candidates %opt{lsp_symbol_kind_completion} \
-    -docstring "lsp-hover-next-symbol [<symbol-kind>]: show hover of the buffer's next symbol of type <symbol-kind>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol %arg{@} next hover"
+define-command lsp-hover-next-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-hover-next-symbol [<symbol-kinds>...]: show hover of the buffer's next symbol of a type in <symbol-kinds>, or of any type" %{
+    lsp-did-change-and-then "lsp-next-or-previous-symbol next hover %arg{@}"
 }
 
 # Requests for hover/goto next/previous symbol are funneled through this command
-define-command lsp-next-or-previous-symbol -hidden -params 0..3 %{
+define-command lsp-next-or-previous-symbol -hidden -params 2.. %{
     nop %sh{
-        symbol_kind="" # Empty string means *any* symbol
-        if [ $# -eq 3 ]; then
-            if [ "$1" != "Any" ]; then
-                symbol_kind=$1
-            fi
-            shift
-        fi
-
         forward="false"
         if [ "$1" = "next" ]; then
             forward="true"
         fi
+        shift
 
         hover="true"
-        if [ "$2" = "goto" ]; then
+        if [ "$1" = "goto" ]; then
             hover="false"
         fi
+        shift
+
+        symbol_kinds="[ $( [ $# -gt 0 ] && printf '"%s",' "$@" ) ]"
 
         (printf '
 session   = "%s"
@@ -328,45 +324,37 @@ method    = "kak-lsp/next-or-previous-symbol"
 [params]
 position.line   = %d
 position.column = %d
-symbolKind      = "%s"
+symbolKinds     = %s
 searchNext      = %s
 hover           = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$symbol_kind" "$forward" "$hover" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$symbol_kinds" "$forward" "$hover" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 } -shell-script-candidates %{
     case $# in
-        # Which type of symbol?
-        (1) eval "$kak_opt_lsp_symbol_kind_completion" ;;
         # Search forward or backward?
-        (2) printf '%s\n' previous next ;;
+        (1) printf '%s\n' previous next ;;
         # Show hover info or goto symbol?
-        (3) printf '%s\n' hover goto ;;
+        (2) printf '%s\n' hover goto ;;
+        # Which symbol types?
+        (*) eval "$kak_opt_lsp_symbol_kind_completion" ;;
     esac
 } 
 
 ## Convenience methods
 
 define-command lsp-hover-next-function -docstring "Show hover of the next function in the buffer" %{
-     lsp-hover-next-symbol Function
+     lsp-hover-next-symbol Method Function
 }
 
 define-command lsp-hover-previous-function -docstring "Show hover of the current or previous function in the buffer" %{
-     lsp-hover-previous-symbol Function
+     lsp-hover-previous-symbol Method Function
 }
 
 define-command lsp-next-function -docstring "Goto the next function in the buffer" %{
-    lsp-next-symbol Function
+    lsp-next-symbol Method Function
 }
 
 define-command lsp-previous-function -docstring "Goto the current or previous function in the buffer" %{
-    lsp-previous-symbol Function
-}
-
-define-command lsp-next-method -docstring "Goto the next method in the buffer" %{
-    lsp-next-symbol Method
-}
-
-define-command lsp-previous-method -docstring "Goto the current or previous method in the buffer" %{
-    lsp-previous-symbol Method
+    lsp-previous-symbol Method Function
 }
 
 define-command lsp-definition -docstring "Go to definition" %{

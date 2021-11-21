@@ -207,15 +207,15 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 | n | lsp-find-error
 | p | lsp-find-error --previous
 | y | lsp-type-definition
-| 9 | lsp-hover-previous-symbol Function
-| 0 | lsp-hover-next-symbol Function
+| 9 | lsp-hover-previous-function
+| 0 | lsp-hover-next-function
 | & | lsp-highlight-references
-| ( | lsp-previous-symbol Function
-| ) | lsp-next-symbol Function
-| [ | lsp-hover-previous-symbol Any
-| ] | lsp-hover-next-symbol Any
-| { | lsp-previous-symbol Any
-| } | lsp-next-symbol Any
+| ( | lsp-previous-function
+| ) | lsp-next-function
+| [ | lsp-hover-previous-symbol
+| ] | lsp-hover-next-symbol
+| { | lsp-previous-symbol
+| } | lsp-next-symbol
 |===
 
 To know which subset of kak-lsp commands is backed by the current buffer's filetype's language server use

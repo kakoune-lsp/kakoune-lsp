@@ -154,6 +154,38 @@ pub fn format_symbol<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Conte
         .join("")
 }
 
+fn symbol_kind_from_string(value: &str) -> Option<SymbolKind> {
+    match value {
+        "File" => Some(SymbolKind::FILE),
+        "Module" => Some(SymbolKind::MODULE),
+        "Namespace" => Some(SymbolKind::NAMESPACE),
+        "Package" => Some(SymbolKind::PACKAGE),
+        "Class" => Some(SymbolKind::CLASS),
+        "Method" => Some(SymbolKind::METHOD),
+        "Property" => Some(SymbolKind::PROPERTY),
+        "Field" => Some(SymbolKind::FIELD),
+        "Constructor" => Some(SymbolKind::CONSTRUCTOR),
+        "Enum" => Some(SymbolKind::ENUM),
+        "Interface" => Some(SymbolKind::INTERFACE),
+        "Function" => Some(SymbolKind::FUNCTION),
+        "Variable" => Some(SymbolKind::VARIABLE),
+        "Constant" => Some(SymbolKind::CONSTANT),
+        "String" => Some(SymbolKind::STRING),
+        "Number" => Some(SymbolKind::NUMBER),
+        "Boolean" => Some(SymbolKind::BOOLEAN),
+        "Array" => Some(SymbolKind::ARRAY),
+        "Object" => Some(SymbolKind::OBJECT),
+        "Key" => Some(SymbolKind::KEY),
+        "Null" => Some(SymbolKind::NULL),
+        "EnumMember" => Some(SymbolKind::ENUM_MEMBER),
+        "Struct" => Some(SymbolKind::STRUCT),
+        "Event" => Some(SymbolKind::EVENT),
+        "Operator" => Some(SymbolKind::OPERATOR),
+        "TypeParameter" => Some(SymbolKind::TYPE_PARAMETER),
+        _ => None,
+    }
+}
+
 fn editor_next_or_prev_symbol(
     meta: EditorMeta,
     editor_params: EditorParams,
@@ -162,19 +194,26 @@ fn editor_next_or_prev_symbol(
 ) {
     let params = NextOrPrevSymbolParams::deserialize(editor_params).unwrap();
     let hover = params.hover;
+
+    let symbol_kinds: Vec<SymbolKind> = params
+        .symbol_kinds
+        .iter()
+        .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
+        .collect::<Vec<_>>();
+
     let maybe_details = match result {
         None => return,
         Some(DocumentSymbolResponse::Flat(result)) => {
             if result.is_empty() {
                 return;
             }
-            next_or_prev_symbol_details(result, &params, &meta, ctx)
+            next_or_prev_symbol_details(result, &params, &symbol_kinds, &meta, ctx)
         }
         Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            next_or_prev_symbol_details(result, &params, &meta, ctx)
+            next_or_prev_symbol_details(result, &params, &symbol_kinds, &meta, ctx)
         }
     };
 
@@ -277,6 +316,7 @@ fn editor_next_or_prev_for_details(
 fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     mut items: Vec<T>,
     params: &NextOrPrevSymbolParams,
+    symbol_kinds: &Vec<SymbolKind>,
     meta: &EditorMeta,
     ctx: &Context,
 ) -> Option<(String, KakounePosition, String, SymbolKind)> {
@@ -313,8 +353,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
 
         let symbol_name = symbol.name().to_owned();
 
-        let want_symbol =
-            params.symbol_kind.is_empty() || format!("{:?}", kind) == params.symbol_kind;
+        let want_symbol = symbol_kinds.is_empty() || symbol_kinds.contains(&kind);
 
         // Assume that children always have a starting position higher than (or equal to)
         // their parent's starting position.  This means that when searching for the node with
@@ -326,7 +365,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
         }
 
         if let Some(from_children) =
-            next_or_prev_symbol_details(symbol.children(), params, meta, ctx)
+            next_or_prev_symbol_details(symbol.children(), params, symbol_kinds, meta, ctx)
         {
             return Some(from_children);
         }
