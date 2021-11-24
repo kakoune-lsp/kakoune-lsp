@@ -10,7 +10,7 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(editor_params.clone()).unwrap();
+    let params = PositionParams::deserialize(editor_params).unwrap();
     let req_params = HoverParams {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier {
