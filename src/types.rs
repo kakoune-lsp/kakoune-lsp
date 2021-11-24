@@ -149,6 +149,7 @@ pub struct TextDocumentDidChangeParams {
 pub struct TextDocumentCompletionParams {
     pub position: KakounePosition,
     pub completion: EditorCompletion,
+    pub have_kakoune_feature_filtertext: bool,
 }
 
 #[derive(Clone, Copy, Deserialize, Debug)]

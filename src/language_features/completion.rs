@@ -108,6 +108,26 @@ pub fn editor_completion(
                 None => x.label.clone(),
             };
 
+            let maybe_filter_text = if !params.have_kakoune_feature_filtertext {
+                None
+            } else {
+                let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
+                let specified_insert_text = x
+                    .text_edit
+                    .as_ref()
+                    .map(|cte| match cte {
+                        CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
+                        CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
+                    })
+                    .or(x.insert_text.as_ref())
+                    .unwrap_or(&x.label);
+                if specified_filter_text == specified_insert_text {
+                    None
+                } else {
+                    Some(specified_filter_text.clone())
+                }
+            };
+
             let insert_text = x
                 .text_edit
                 .and_then(|cte| {
@@ -163,6 +183,30 @@ pub fn editor_completion(
                 .or(x.insert_text)
                 .unwrap_or(x.label);
 
+            fn completion_entry(
+                insert_text: &str,
+                maybe_filter_text: &Option<String>,
+                on_select: &str,
+                menu: &str,
+            ) -> String {
+                if let Some(filter_text) = maybe_filter_text {
+                    editor_quote(&format!(
+                        "{}|{}|{}|{}",
+                        escape_tuple_element(insert_text),
+                        escape_tuple_element(filter_text),
+                        escape_tuple_element(on_select),
+                        escape_tuple_element(menu),
+                    ))
+                } else {
+                    editor_quote(&format!(
+                        "{}|{}|{}",
+                        escape_tuple_element(insert_text),
+                        escape_tuple_element(on_select),
+                        escape_tuple_element(menu),
+                    ))
+                }
+            }
+
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.
             if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::SNIPPET)
@@ -181,19 +225,9 @@ pub fn editor_completion(
                     editor_quote(&snippet)
                 );
 
-                editor_quote(&format!(
-                    "{}|{}|{}",
-                    escape_tuple_element(insert_text),
-                    escape_tuple_element(&command),
-                    escape_tuple_element(&entry),
-                ))
+                completion_entry(insert_text, &maybe_filter_text, &command, &entry)
             } else {
-                editor_quote(&format!(
-                    "{}|{}|{}",
-                    escape_tuple_element(&insert_text),
-                    escape_tuple_element(&doc),
-                    escape_tuple_element(&entry),
-                ))
+                completion_entry(&insert_text, &maybe_filter_text, &doc, &entry)
             }
         })
         .join(" ");
