@@ -317,13 +317,13 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     for symbol in it {
         let kind = symbol.kind();
         let mut filename_path = PathBuf::default();
-        let filename = symbol_filename(meta, &symbol, &mut filename_path);
+        let filename = symbol_filename(meta, &symbol, &mut filename_path).to_string();
 
         let mut symbol_position = symbol.range().start;
         if TypeId::of::<T>() == TypeId::of::<SymbolInformation>() {
             symbol_position = find_identifier_in_file(
                 ctx,
-                filename,
+                &filename,
                 symbol_position,
                 unadorned_name(ctx, symbol.name()),
             )
@@ -332,24 +332,42 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
         let symbol_position =
             get_kakoune_position_with_fallback(&meta.buffile, symbol_position, ctx);
 
-        if exceeds(
-            symbol_position,
-            kind,
-            params.position,
-            params.search_next,
-            &params.symbol_kind,
-        ) {
-            return Some((
-                filename.to_string(),
+        let symbol_name = symbol.name().to_owned();
+
+        // Order of checking the parent symbol for exceeds() matters.
+        // If we're searching forward then check if the parent symbol exceeds() the current
+        // symbol first. If we're searching backwards then check if any of children symbols
+        // exceeds() the current symbol first
+
+        // Deals with the case we're searching forwards
+        if params.search_next
+            && exceeds(
                 symbol_position,
-                symbol.name().to_owned(),
                 kind,
-            ));
+                params.position,
+                params.search_next,
+                &params.symbol_kind,
+            )
+        {
+            return Some((filename, symbol_position, symbol_name, kind));
         }
 
         let from_children = next_or_prev_symbol_details(symbol.children(), params, meta, ctx);
         if from_children.is_some() {
             return from_children;
+        }
+
+        // Deals with the case we're searching backwards
+        if !params.search_next
+            && exceeds(
+                symbol_position,
+                kind,
+                params.position,
+                params.search_next,
+                &params.symbol_kind,
+            )
+        {
+            return Some((filename, symbol_position, symbol_name, kind));
         }
     }
 
