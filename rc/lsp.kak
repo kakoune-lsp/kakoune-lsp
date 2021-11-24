@@ -45,6 +45,7 @@ hook global WinSetOption extra_word_chars=.* %{
         for char; do
             case "$char" in
                 (-) printf '\\-' ;;
+                (\<) printf '<lt>' ;;
                 (\\) printf '\\\\' ;;
                 (]) printf '\\]' ;;
                 (^) printf '\\^' ;;
