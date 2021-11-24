@@ -273,29 +273,6 @@ fn editor_next_or_prev_for_details(
     });
 }
 
-/// Does the symbol's location "exceed" the cursor location?
-fn exceeds(
-    symbol_position: KakounePosition,
-    symbol_kind: SymbolKind,
-    cursor_position: KakounePosition,
-    search_next: bool,
-    expected_kind: &str,
-) -> bool {
-    // Expected kind is the symbol for which the user is searching for, like "Function",
-    // "Constructor" etc.
-    if !expected_kind.is_empty() && format!("{:?}", symbol_kind) != expected_kind {
-        return false;
-    }
-
-    // If searching forwards, the first element that has a greater line/column combination
-    // If searching backwards, the first element that has a smaller line/column combination
-    if search_next {
-        symbol_position > cursor_position
-    } else {
-        symbol_position < cursor_position
-    }
-}
-
 /// Gets (filename, kakoune position, name) of the next/previous symbol in the buffer.
 fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     mut items: Vec<T>,
@@ -313,6 +290,8 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     } else {
         Box::new(items.into_iter().rev())
     };
+
+    let cursor = params.position;
 
     for symbol in it {
         let kind = symbol.kind();
@@ -334,39 +313,25 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
 
         let symbol_name = symbol.name().to_owned();
 
-        // Order of checking the parent symbol for exceeds() matters.
-        // If we're searching forward then check if the parent symbol exceeds() the current
-        // symbol first. If we're searching backwards then check if any of children symbols
-        // exceeds() the current symbol first
+        let want_symbol =
+            params.symbol_kind.is_empty() || format!("{:?}", kind) == params.symbol_kind;
 
-        // Deals with the case we're searching forwards
-        if params.search_next
-            && exceeds(
-                symbol_position,
-                kind,
-                params.position,
-                params.search_next,
-                &params.symbol_kind,
-            )
-        {
+        // Assume that children always have a starting position higher than (or equal to)
+        // their parent's starting position.  This means that when searching for the node with
+        // the next-higher position (anywhere in the tree) we need to check the parent first.
+        // Conversely, when looking for the node with the next-lower position, we need to check
+        // children first.
+        if params.search_next && want_symbol && symbol_position > cursor {
             return Some((filename, symbol_position, symbol_name, kind));
         }
 
-        let from_children = next_or_prev_symbol_details(symbol.children(), params, meta, ctx);
-        if from_children.is_some() {
-            return from_children;
+        if let Some(from_children) =
+            next_or_prev_symbol_details(symbol.children(), params, meta, ctx)
+        {
+            return Some(from_children);
         }
 
-        // Deals with the case we're searching backwards
-        if !params.search_next
-            && exceeds(
-                symbol_position,
-                kind,
-                params.position,
-                params.search_next,
-                &params.symbol_kind,
-            )
-        {
+        if !params.search_next && want_symbol && symbol_position < cursor {
             return Some((filename, symbol_position, symbol_name, kind));
         }
     }
