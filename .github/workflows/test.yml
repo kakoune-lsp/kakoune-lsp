@@ -97,7 +97,7 @@ jobs:
         else
           make -j$([ "${{ matrix.os }}" = "macos-latest" ] && sysctl -n hw.logicalcpu || nproc)
         fi
-        sudo make install
+        sudo --preserve-env=CXX make install
 
     - name: Install gopls
       run: |
