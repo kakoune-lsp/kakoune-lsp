@@ -316,7 +316,7 @@ fn editor_next_or_prev_for_details(
 fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     mut items: Vec<T>,
     params: &NextOrPrevSymbolParams,
-    symbol_kinds: &Vec<SymbolKind>,
+    symbol_kinds: &[SymbolKind],
     meta: &EditorMeta,
     ctx: &Context,
 ) -> Option<(String, KakounePosition, String, SymbolKind)> {
