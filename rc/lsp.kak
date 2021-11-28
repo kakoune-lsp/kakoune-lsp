@@ -1492,9 +1492,14 @@ define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-dia
     remove-highlighter "%arg{1}/lsp_diagnostics"
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
-define-command lsp-auto-hover-enable -docstring "Enable auto-requesting hover info for current position" %{
-    hook -group lsp-auto-hover global NormalIdle .* %{
-        lsp-hover
+define-command lsp-auto-hover-enable -params 0..1 -client-completion \
+    -docstring "lsp-auto-hover-enable [<client>]: enable auto-requesting hover info for current position
+
+If a client is given, show hover in a scratch buffer in that client instead of the info box" %{
+    evaluate-commands %sh{
+        hover=lsp-hover
+        [ $# -eq 1 ] && hover="lsp-hover-buffer $1"
+        printf %s "hook -group lsp-auto-hover global NormalIdle .* %{ $hover }"
     }
 }
 
@@ -1502,11 +1507,20 @@ define-command lsp-auto-hover-disable -docstring "Disable auto-requesting hover 
     remove-hooks global lsp-auto-hover
 }
 
-define-command lsp-auto-hover-insert-mode-enable -docstring "Enable auto-requesting hover info for current function in insert mode" %{
-    hook -group lsp-auto-hover-insert-mode global InsertIdle .* %{ try %{ evaluate-commands -draft %{
-        evaluate-commands %opt{lsp_hover_insert_mode_trigger}
-        lsp-hover
-    }}}
+define-command lsp-auto-hover-insert-mode-enable -params 0..1 -client-completion \
+    -docstring "lsp-auto-hover-enable [<client>]: enable auto-requesting hover info for current function in insert mode
+
+If a client is given, show hover in a scratch buffer in that client instead of the info box" %{
+    evaluate-commands %sh{
+        hover=lsp-hover
+        [ $# -eq 1 ] && hover="lsp-hover-buffer $1"
+        printf %s "hook -group lsp-auto-hover-insert-mode global InsertIdle .* %{
+            try %{ evaluate-commands -draft %{
+                evaluate-commands %opt{lsp_hover_insert_mode_trigger}
+                $hover
+            }}
+        }"
+    }
 }
 
 define-command lsp-auto-hover-insert-mode-disable -docstring "Disable auto-requesting hover info for current function in insert mode" %{
