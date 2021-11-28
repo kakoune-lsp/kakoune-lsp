@@ -704,7 +704,6 @@ method   = "exit"
 }
 
 define-command lsp-cancel-progress -params 1 -docstring "lsp-cancel-progress <token>: cancel a cancelable progress item." %{
-    remove-hooks global lsp
     nop %sh{ (printf '
 session  = "%s"
 client   = "%s"
