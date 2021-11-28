@@ -276,7 +276,7 @@ fn editor_next_or_prev_for_details(
     };
 
     let modal_heading = format!(
-        "line {}:{}:{{+b@KindAndName}}{:?} {}{{KindAndName}} \
+        "line {}:{}:{{+b@InfoHeader}}{:?} {}{{InfoHeader}} \
             (Press 'g' to goto this position. Press any other key to continue)",
         symbol_position.line,
         symbol_position.column,
