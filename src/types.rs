@@ -157,6 +157,13 @@ pub struct PositionParams {
     pub position: KakounePosition,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct HoverDetails {
+    pub hover_fifo: Option<String>,
+    pub hover_client: Option<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CallHierarchyParams {
@@ -231,10 +238,17 @@ pub struct KakounePosition {
     pub column: u32, // in bytes, not chars!!!
 }
 
-#[derive(Clone, Debug)]
-pub struct HoverModal {
-    pub context: String,
-    pub do_after: String,
+#[derive(PartialEq)]
+pub enum HoverType {
+    InfoBox,
+    Modal {
+        modal_heading: String,
+        do_after: String,
+    },
+    HoverBuffer {
+        fifo: String,
+        client: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]

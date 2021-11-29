@@ -275,8 +275,7 @@ fn editor_next_or_prev_for_details(
         work_done_progress_params: Default::default(),
     };
 
-    // This context is shown at the top of the modal.
-    let context = format!(
+    let modal_heading = format!(
         "line {}:{}:{{+b@KindAndName}}{:?} {}{{KindAndName}} \
             (Press 'g' to goto this position. Press any other key to continue)",
         symbol_position.line,
@@ -302,7 +301,10 @@ fn editor_next_or_prev_for_details(
     ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
         editor_hover(
             meta,
-            Some(HoverModal { context, do_after }),
+            HoverType::Modal {
+                modal_heading,
+                do_after,
+            },
             PositionParams {
                 position: symbol_position,
             },
