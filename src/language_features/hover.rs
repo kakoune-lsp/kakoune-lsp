@@ -268,16 +268,3 @@ fn show_hover_in_hover_client(
     ctx.exec(meta, command);
     handle.join().unwrap();
 }
-
-trait PlainText {
-    fn plaintext(self) -> String;
-}
-
-impl PlainText for MarkedString {
-    fn plaintext(self) -> String {
-        match self {
-            MarkedString::String(contents) => contents,
-            MarkedString::LanguageString(contents) => contents.value,
-        }
-    }
-}
