@@ -52,7 +52,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         .iter()
         .map(|x| {
             format!(
-                "{}|{}",
+                "'{}|{}'",
                 x.range.start.line + 1,
                 match x.severity {
                     Some(DiagnosticSeverity::ERROR) => {
