@@ -242,7 +242,8 @@ fn show_hover_in_hover_client(
 
     let command = format!(
         "%[ edit! -existing -fifo %opt[lsp_hover_fifo] *hover*; \
-             set-option buffer=*hover* filetype {} \
+             set-option buffer=*hover* filetype {}; \
+             try %[ add-highlighter buffer/lsp_wrap wrap -word ] \
          ]",
         if is_markdown { "markdown" } else { "''" },
     );
@@ -254,7 +255,6 @@ fn show_hover_in_hover_client(
              new %[
                  rename-client {}
                  evaluate-commands {}
-                 add-highlighter -override window/wrap wrap -word
                  focus {}
              ]
          ]",
