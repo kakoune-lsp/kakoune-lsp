@@ -20,3 +20,9 @@ test_tmux_kak_start main.c
 test_tmux capture-pane -p | sed 2q
 # CHECK: {{W }}void main(int argc, char** argv) {}
 # CHECK: {{ X}}syntax error
+
+test_tmux send-keys %:comment-line Enter
+test_sleep
+test_tmux capture-pane -p | sed 2q
+# CHECK: {{  }}// void main(int argc, char** argv) {}
+# CHECK: {{  }}// syntax error
