@@ -329,6 +329,14 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
             rust_analyzer::inlay_hints(meta, params, ctx);
         }
 
+        // texlab
+        texlab::Build::METHOD => {
+            texlab::build(meta, params, ctx);
+        }
+        texlab::ForwardSearch::METHOD => {
+            texlab::forward_search(meta, params, ctx);
+        }
+
         _ => {
             warn!("Unsupported method: {}", method);
         }
