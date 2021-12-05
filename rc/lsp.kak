@@ -1127,6 +1127,45 @@ method    = "rust-analyzer/inlayHints"
 ' "${kak_session}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+# texlab extensions
+
+define-command texlab-forward-search -docstring "Request SyncTeX Forward Search for current line from the texlab language server
+
+This will focus the current line in your PDF viewer, starting one if necessary.
+To configure the PDF viewer, use texlab's options 'forwardSearch.executable' and 'forwardSearch.args'." %{
+    lsp-did-change-and-then texlab-forward-search-request
+}
+
+define-command -hidden texlab-forward-search-request %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/forwardSearch"
+[params.position]
+line      = %d
+column    = %d
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command texlab-build -docstring "Ask the texlab language server to build the LaTeX document" %{
+    lsp-did-change-and-then texlab-build-request
+}
+
+define-command -hidden texlab-build-request %{
+    nop %sh{ (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/build"
+[params]
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
 # semantic tokens
 
 define-command lsp-semantic-tokens -docstring "lsp-semantic-tokens: Request semantic tokens" %{

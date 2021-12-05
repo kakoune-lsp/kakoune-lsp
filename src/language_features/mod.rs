@@ -15,3 +15,4 @@ pub mod rename;
 pub mod rust_analyzer;
 pub mod semantic_tokens;
 pub mod signature_help;
+pub mod texlab;
