@@ -560,6 +560,64 @@ define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor
     }
 }
 
+define-command lsp-selection-range -params 0..1 \
+    -docstring "lsp-selection-range [cached]: select interesting ranges around each selection
+
+If cached is given, reuse the ranges from a previous invocation." %{
+    evaluate-commands %sh{
+        if [ "$1" = cached ] && [ $kak_opt_lsp_selection_range_selected -ne 0 ]; then
+            echo "lsp-selection-range-select $kak_opt_lsp_selection_range_selected"
+            echo "lsp-selection-range-show"
+            exit
+        fi
+        (printf '
+session   = "%s"
+client    = "%s"
+buffile   = "%s"
+filetype  = "%s"
+version   = %d
+method    = "textDocument/selectionRange"
+[params]
+position.line = %d
+position.column = %d
+selections_desc = "%s"
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "${kak_selections_desc}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
+declare-option -hidden str-list lsp_selection_ranges
+declare-option -hidden int lsp_selection_range_selected
+define-command -hidden lsp-selection-range-show %{
+    evaluate-commands %sh{
+        eval set -- $kak_quoted_opt_lsp_selection_ranges
+        if [ $# -eq 1 ]; then
+            echo "info 'lsp-selection-range: no parent node'"
+        else
+            echo "enter-user-mode -lock lsp-selection-range"
+        fi
+    }
+}
+
+define-command lsp-selection-range-select -params 1 \
+    -docstring "lsp-selection-range [up|down|top|bottom|<n>]: select parent or child range
+
+A numeric argument selects by absolute index, where 1 is the innermost child" %{
+    evaluate-commands %sh{
+        arg=$1
+        eval set -- $kak_quoted_opt_lsp_selection_ranges
+        index=$kak_opt_lsp_selection_range_selected
+        case "$arg" in
+            (up) [ $index -lt $# ] && index=$(($index + 1)) ;;
+            (down) [ $index -gt 1 ] && index=$(($index - 1)) ;;
+            (top) index=$# ;; 
+            (bottom) index=1 ;;
+            (0) echo "fail lsp-selection-range-select: invalid argument" ;;
+            (*) [ $arg -lt $# ] && index=$arg || index=$# ;;
+        esac
+        echo "set-option window lsp_selection_range_selected $index"
+        eval echo select \$\{$index\}
+    }
+}
+
 define-command lsp-signature-help -docstring "Request signature help for the main cursor position" %{
     lsp-did-change-and-then lsp-signature-help-request
 }
@@ -1631,6 +1689,8 @@ map global lsp r '<esc>: lsp-references<ret>'              -docstring 'list symb
 map global lsp R '<esc>: lsp-rename-prompt<ret>'           -docstring 'rename symbol'
 map global lsp s '<esc>: lsp-signature-help<ret>'          -docstring 'show function signature help'
 map global lsp S '<esc>: lsp-document-symbol<ret>'         -docstring 'list document symbols'
+map global lsp v '<esc>: lsp-selection-range<ret>'         -docstring 'select parent nodes'
+map global lsp V '<esc>: lsp-selection-range cached<ret>'  -docstring 'select parent nodes (re-use previous call)'
 map global lsp y '<esc>: lsp-type-definition<ret>'         -docstring 'go to type definition'
 map global lsp [ '<esc>: lsp-hover-previous-symbol<ret>'   -docstring 'show hover for previous symbol'
 map global lsp ] '<esc>: lsp-hover-next-symbol<ret>'       -docstring 'show hover for next symbol'
@@ -1642,6 +1702,12 @@ map global lsp ( '<esc>: lsp-previous-function<ret>'       -docstring 'goto prev
 map global lsp ) '<esc>: lsp-next-function<ret>'           -docstring 'goto next function'
 map global lsp & '<esc>: lsp-highlight-references<ret>'    -docstring 'lsp-highlight-references'
 map global lsp = '<esc>: lsp-range-formatting<ret>'        -docstring 'format selections'
+
+declare-user-mode lsp-selection-range
+map global lsp-selection-range j '<esc>: lsp-selection-range-select down<ret>'   -docstring 'select inner node'
+map global lsp-selection-range k '<esc>: lsp-selection-range-select up<ret>'     -docstring 'select outer node'
+map global lsp-selection-range b '<esc>: lsp-selection-range-select bottom<ret>' -docstring 'select innermost node'
+map global lsp-selection-range t '<esc>: lsp-selection-range-select top<ret>'    -docstring 'select outermost node'
 
 ### Default integration ###
 

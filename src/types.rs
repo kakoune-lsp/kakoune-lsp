@@ -201,6 +201,14 @@ pub struct TextDocumentRenameParams {
     pub new_name: String,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+pub struct SelectionRangePositionParams {
+    // The cursor position.
+    pub position: KakounePosition,
+    // The ranges of all Kakoune selections.
+    pub selections_desc: String,
+}
+
 // Language Server
 
 // XXX serde(untagged) ?
@@ -251,7 +259,7 @@ pub enum HoverType {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct KakouneRange {
     pub start: KakounePosition,
     pub end: KakounePosition,
