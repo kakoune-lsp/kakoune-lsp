@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::context::*;
 use crate::diagnostics;
 use crate::general;
-use crate::language_features::*;
+use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
 use crate::progress;
 use crate::text_sync::*;
@@ -256,6 +256,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         }
         notification::WorkDoneProgressCancel::METHOD => {
             progress::work_done_progress_cancel(meta, params, ctx);
+        }
+        request::SelectionRangeRequest::METHOD => {
+            selection_range::text_document_selection_range(meta, params, &mut ctx);
         }
         request::SignatureHelpRequest::METHOD => {
             signature_help::text_document_signature_help(meta, params, &mut ctx);

@@ -237,7 +237,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     data_support: None,
                 }),
                 folding_range: None,
-                selection_range: None,
+                selection_range: Some(SelectionRangeClientCapabilities {
+                    dynamic_registration: None,
+                }),
                 semantic_tokens: Some(SemanticTokensClientCapabilities {
                     dynamic_registration: Some(false),
                     requests: SemanticTokensClientCapabilitiesRequests {
