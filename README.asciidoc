@@ -158,8 +158,6 @@ Either way you get:
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
-* `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
-* `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 
 [source,kak]
 ----
@@ -168,6 +166,8 @@ hook global WinSetOption filetype=rust %{
 }
 ----
 
+* `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
+* `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
 * If `lsp_auto_show_code_actions` is `true`, a lightbulb in the mode line whenever code actions are available at the main cursor position
 ** To customize the lightbulb, you can override `lsp-show-code-actions` and `lsp-hide-code-actions`
