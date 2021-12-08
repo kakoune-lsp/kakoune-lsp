@@ -1,4 +1,4 @@
-## Unreleased
+## 11.1.0 - 2021-12-08
 
 Additions:
 - Default configuration for Erlang (#548), R (#555) and Racket (#568).
