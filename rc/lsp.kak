@@ -2089,18 +2089,18 @@ define-command -hidden lsp-diagnostics-open-error -params 4 %{
 }
 
 # Deprecated commands.
-define-command lsp-symbols-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next symbols match' %{
+define-command -hidden lsp-symbols-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next symbols match' %{
     lsp-next-location '*symbols*'
 }
 
-define-command lsp-symbols-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous symbols match' %{
+define-command -hidden lsp-symbols-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous symbols match' %{
     lsp-previous-location '*symbols*'
 }
 
-define-command lsp-goto-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next goto match' %{
+define-command -hidden lsp-goto-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next goto match' %{
     lsp-next-location '*goto*'
 }
 
-define-command lsp-goto-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous goto match' %{
+define-command -hidden lsp-goto-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous goto match' %{
     lsp-previous-location '*goto*'
 }
