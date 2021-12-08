@@ -187,8 +187,9 @@ roots = [".git", ".hg"]
 command = "texlab"
 settings_section = "texlab"
 [language.latex.settings.texlab]
-# See https://github.com/latex-lsp/texlab/blob/master/src/options.rs
-# bibtexFormatter = "texlab"
+# See https://github.com/latex-lsp/texlab/blob/master/docs/options.md
+forwardSearch.executable = "zathura"
+forwardSearch.args = ["--synctex-forward", "%l:1:%f", "%p"]
 
 [language.lua]
 filetypes = ["lua"]
