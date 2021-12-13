@@ -81,8 +81,8 @@ try %{
         add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.settings(?:\.[^\]]*)?)\] 1:title
     }
 }
-declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
-declare-option -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
+declare-option -hidden -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
+declare-option -hidden -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in initializationOptions of Initialize messages." str-to-str-map lsp_server_initialization_options
 # Line flags for inline diagnostics.
 declare-option -docstring "Character to signal an error in the gutter" str lsp_diagnostic_line_error_sign '*'
 declare-option -docstring "Character to signal a hint in the gutter" str lsp_diagnostic_line_hint_sign '-'
