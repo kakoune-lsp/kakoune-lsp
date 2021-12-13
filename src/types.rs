@@ -152,6 +152,11 @@ pub struct TextDocumentCompletionParams {
     pub have_kakoune_feature_filtertext: bool,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CompletionItemResolveParams {
+    pub completion_item_index: isize,
+}
+
 #[derive(Clone, Copy, Deserialize, Debug)]
 pub struct PositionParams {
     pub position: KakounePosition,

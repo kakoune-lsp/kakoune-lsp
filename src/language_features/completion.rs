@@ -1,6 +1,7 @@
 use crate::context::*;
 use crate::markup::*;
 use crate::position::*;
+use crate::text_edit::apply_text_edits;
 use crate::types::*;
 use crate::util::*;
 use indoc::formatdoc;
@@ -35,14 +36,21 @@ pub fn editor_completion(
     result: Option<CompletionResponse>,
     ctx: &mut Context,
 ) {
-    if result.is_none() {
-        return;
+    let items = match result {
+        Some(CompletionResponse::Array(items)) => items,
+        Some(CompletionResponse::List(list)) => list.items,
+        None => vec![],
+    };
+
+    ctx.completion_items = items;
+    let items = &ctx.completion_items;
+    if ctx.completion_last_client != meta.client {
+        ctx.completion_last_client = meta.client.clone();
     }
 
-    let items = match result.unwrap() {
-        CompletionResponse::Array(items) => items,
-        CompletionResponse::List(list) => list.items,
-    };
+    if items.is_empty() {
+        return;
+    }
 
     // Length of the longest label in the current completion list
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
@@ -58,11 +66,12 @@ pub fn editor_completion(
         .and_then(|l| l.workaround_server_sends_plaintext_labeled_as_markdown)
         .unwrap_or(false);
     let items = items
-        .into_iter()
-        .map(|x| {
-            let doc = x.documentation.map(|doc| match doc {
+        .iter()
+        .enumerate()
+        .map(|(completion_item_index, x)| {
+            let doc = x.documentation.as_ref().map(|doc| match doc {
                 Documentation::String(s) => s,
-                Documentation::MarkupContent(content) => content.value,
+                Documentation::MarkupContent(content) => &content.value,
             });
 
             // Combine the 'detail' line and the full-text documentation into
@@ -70,8 +79,8 @@ pub fn editor_completion(
             let markdown = {
                 let mut markdown = String::new();
 
-                if let Some(detail) = x.detail {
-                    markdown.push_str(&detail);
+                if let Some(detail) = x.detail.as_ref() {
+                    markdown.push_str(detail);
 
                     if doc.is_some() {
                         markdown.push_str("\n\n---\n\n");
@@ -79,23 +88,38 @@ pub fn editor_completion(
                 }
 
                 if let Some(doc) = doc {
-                    markdown.push_str(&doc);
+                    markdown.push_str(doc);
                 }
 
                 markdown
             };
 
-            let doc = if !markdown.is_empty() {
+            let maybe_set_index = if ctx
+                .capabilities
+                .as_ref()
+                .and_then(|caps| caps.completion_provider.as_ref())
+                .and_then(|compl| compl.resolve_provider)
+                .unwrap_or(false)
+            {
+                format!(
+                    "set-option window lsp_completions_selected_item {}; ",
+                    completion_item_index
+                )
+            } else {
+                "".to_string()
+            };
+            let on_select = if !markdown.is_empty() {
                 let markup = markdown_to_kakoune_markup(markdown, force_plaintext);
                 format!(
-                    "info -markup -style menu -- %§{}§",
+                    "{}info -markup -style menu -- %§{}§",
+                    &maybe_set_index,
                     markup.replace("§", "§§")
                 )
             } else {
                 // When the user scrolls through the list of completion candidates, Kakoune
                 // does not clean up the info box. We need to do that explicitly, in this case by
                 // requesting an empty one.
-                "info -style menu ''".to_string()
+                maybe_set_index + "info -style menu ''"
             };
 
             let entry = match x.kind {
@@ -119,7 +143,7 @@ pub fn editor_completion(
                         CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
                         CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
                     })
-                    .or(x.insert_text.as_ref())
+                    .or_else(|| x.insert_text.as_ref())
                     .unwrap_or(&x.label);
                 if specified_filter_text == specified_insert_text {
                     None
@@ -128,60 +152,59 @@ pub fn editor_completion(
                 }
             };
 
-            let insert_text = x
-                .text_edit
-                .and_then(|cte| {
-                    let document = match ctx.documents.get(&meta.buffile) {
-                        Some(doc) => doc,
-                        None => {
-                            warn!("No document in context for file: {}", &meta.buffile);
-                            can_infer_offset = false;
-                            return None;
-                        }
-                    };
+            let insert_text = x.text_edit.as_ref().and_then(|cte| {
+                let document = match ctx.documents.get(&meta.buffile) {
+                    Some(doc) => doc,
+                    None => {
+                        warn!("No document in context for file: {}", &meta.buffile);
+                        can_infer_offset = false;
+                        return None;
+                    }
+                };
 
-                    match cte {
-                        CompletionTextEdit::Edit(text_edit) => {
-                            // The generic textEdit property is not supported yet (#40).  However,
-                            // we can support simple text edits that only replace the token left
-                            // of the cursor. Kakoune will do this very edit if we simply pass it
-                            // the replacement string as completion.
-                            let range = lsp_range_to_kakoune(
-                                &text_edit.range,
-                                &document.text,
-                                ctx.offset_encoding,
-                            );
+                match cte {
+                    CompletionTextEdit::Edit(text_edit) => {
+                        // The generic textEdit property is not supported yet (#40).  However,
+                        // we can support simple text edits that only replace the token left
+                        // of the cursor. Kakoune will do this very edit if we simply pass it
+                        // the replacement string as completion.
+                        let range = lsp_range_to_kakoune(
+                            &text_edit.range,
+                            &document.text,
+                            ctx.offset_encoding,
+                        );
 
-                            if can_infer_offset {
-                                match inferred_offset {
-                                    None => inferred_offset = Some(range.start.column),
-                                    Some(offset) if offset != range.start.column => {
-                                        can_infer_offset = false;
-                                        inferred_offset = None
-                                    }
-                                    _ => (),
+                        if can_infer_offset {
+                            match inferred_offset {
+                                None => inferred_offset = Some(range.start.column),
+                                Some(offset) if offset != range.start.column => {
+                                    can_infer_offset = false;
+                                    inferred_offset = None
                                 }
-                            };
+                                _ => (),
+                            }
+                        };
 
-                            if range.start.line == params.position.line
+                        if range.start.line == params.position.line
                             && range.end.line == params.position.line
                             // Not sure why this case happens, see #455
                             && (range.end.column == params.position.column
                                 || range.end.column + 1 == params.position.column)
-                            {
-                                Some(text_edit.new_text)
-                            } else {
-                                None
-                            }
-                        }
-                        CompletionTextEdit::InsertAndReplace(_) => {
-                            can_infer_offset = false;
+                        {
+                            Some(text_edit.new_text.clone())
+                        } else {
                             None
                         }
                     }
-                })
-                .or(x.insert_text)
-                .unwrap_or(x.label);
+                    CompletionTextEdit::InsertAndReplace(_) => {
+                        can_infer_offset = false;
+                        None
+                    }
+                }
+            });
+            let insert_text = insert_text
+                .or_else(|| x.insert_text.clone())
+                .unwrap_or_else(|| x.label.clone());
 
             fn completion_entry(
                 insert_text: &str,
@@ -220,14 +243,14 @@ pub fn editor_completion(
                 let command = formatdoc!(
                     "{}
                      lsp-snippets-insert-completion {} {}",
-                    doc,
+                    on_select,
                     editor_quote(&regex::escape(insert_text)),
                     editor_quote(&snippet)
                 );
 
                 completion_entry(insert_text, &maybe_filter_text, &command, &entry)
             } else {
-                completion_entry(&insert_text, &maybe_filter_text, &doc, &entry)
+                completion_entry(&insert_text, &maybe_filter_text, &on_select, &entry)
             }
         })
         .join(" ");
@@ -240,4 +263,42 @@ pub fn editor_completion(
     );
 
     ctx.exec(meta, command);
+}
+
+pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let CompletionItemResolveParams {
+        completion_item_index,
+    } = CompletionItemResolveParams::deserialize(params).unwrap();
+
+    if ctx.completion_last_client.is_none() || meta.client != ctx.completion_last_client {
+        return;
+    }
+
+    // Since we're the only user of the completion items, we can clear them.
+    let item = ctx
+        .completion_items
+        .drain(..)
+        .nth(completion_item_index as usize)
+        .unwrap();
+
+    match item.additional_text_edits {
+        Some(edits) if !edits.is_empty() => {
+            // Not sure if this case ever happens, the spec is unclear.
+            let uri = Url::from_file_path(&meta.buffile).unwrap();
+            apply_text_edits(&meta, &uri, edits, ctx);
+            return;
+        }
+        _ => (),
+    }
+
+    ctx.call::<ResolveCompletionItem, _>(meta, item, |tx: &mut Context, meta, new_item| {
+        editor_completion_item_resolve(tx, meta, new_item)
+    });
+}
+
+fn editor_completion_item_resolve(ctx: &mut Context, meta: EditorMeta, item: CompletionItem) {
+    if let Some(resolved_edits) = item.additional_text_edits {
+        let uri = Url::from_file_path(&meta.buffile).unwrap();
+        apply_text_edits(&meta, &uri, resolved_edits, ctx)
+    }
 }

@@ -101,7 +101,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                         preselect_support: Some(false),
                         tag_support: None,
                         insert_replace_support: None,
-                        resolve_support: None,
+                        resolve_support: Some(CompletionItemCapabilityResolveSupport {
+                            properties: vec!["additionalTextEdits".to_string()],
+                        }),
                         insert_text_mode_support: None,
                         label_details_support: None,
                     }),

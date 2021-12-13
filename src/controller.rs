@@ -230,6 +230,9 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
         request::Completion::METHOD => {
             completion::text_document_completion(meta, params, &mut ctx);
         }
+        request::ResolveCompletionItem::METHOD => {
+            completion::completion_item_resolve(meta, params, &mut ctx);
+        }
         request::CodeActionRequest::METHOD => {
             codeaction::text_document_codeaction(meta, params, &mut ctx);
         }

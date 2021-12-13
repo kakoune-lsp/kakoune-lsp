@@ -29,6 +29,11 @@ pub struct Context {
     pub batches:
         HashMap<BatchNumber, (BatchCount, Vec<serde_json::value::Value>, ResponsesCallback)>,
     pub capabilities: Option<ServerCapabilities>,
+    pub completion_items: Vec<CompletionItem>,
+    // We currently only track one client's completion items, to simplify cleanup (else we
+    // might need to hook into ClientClose). Track the client name, so we can check if the
+    // completions are valid.
+    pub completion_last_client: Option<String>,
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<Diagnostic>>,
     pub editor_tx: Sender<EditorResponse>,
@@ -60,6 +65,8 @@ impl Context {
             batch_counter: 0,
             batches: HashMap::default(),
             capabilities: None,
+            completion_items: vec![],
+            completion_last_client: None,
             config,
             diagnostics: HashMap::default(),
             editor_tx,
