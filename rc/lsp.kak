@@ -39,7 +39,9 @@ declare-option -docstring "Completion request is sent only when this expression 
 # By default, it tracks back to the first punctuation or whitespace.
 declare-option -docstring "Select from cursor to the start of the term being completed" str lsp_completion_fragment_start %{execute-keys "<esc><a-h>s\$?[\w%opt{lsp_extra_word_chars}]+.\z<ret>"}
 declare-option -hidden str lsp_extra_word_chars
-hook global WinSetOption extra_word_chars=.* %{
+# Update lsp_extra_word_chars whenever extra_word_chars changes.
+# We could avoid this if we are not enabled, but this doesn't trigger that often and that would complicate initialization.
+hook -group lsp-extra-word-chars global WinSetOption extra_word_chars=.* %{
     set-option window lsp_extra_word_chars %sh{
         eval set -- $kak_quoted_opt_extra_word_chars
         for char; do
