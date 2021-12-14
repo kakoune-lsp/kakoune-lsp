@@ -188,8 +188,27 @@ command = "texlab"
 settings_section = "texlab"
 [language.latex.settings.texlab]
 # See https://github.com/latex-lsp/texlab/blob/master/docs/options.md
+#
+# Preview configuration for zathura with SyncTeX search.
+# For other PDF viewers see https://github.com/latex-lsp/texlab/blob/master/docs/previewing.md
 forwardSearch.executable = "zathura"
-forwardSearch.args = ["--synctex-forward", "%l:1:%f", "%p"]
+forwardSearch.args = [
+    "%p",
+    "--synctex-forward", # Support texlab-forward-search
+    "%l:1:%f",
+    "--synctex-editor-command", # Inverse search: use Control+Left-Mouse-Button to jump to source.
+    """
+        sh -c '
+            echo "
+                evaluate-commands -client $kak_client %{
+                    evaluate-commands -try-client %opt{jumpclient} %{
+                        edit -- %{input} %{line}
+                    }
+                }
+            " | kak -p $kak_session
+        '
+    """,
+]
 
 [language.lua]
 filetypes = ["lua"]
