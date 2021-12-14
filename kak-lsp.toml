@@ -86,7 +86,6 @@ command = "erlang_ls"
 filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
 command = "gopls"
-offset_encoding = "utf-8"
 settings_section = "gopls"
 [language.go.settings.gopls]
 # See https://github.com/golang/tools/blob/master/gopls/doc/settings.md
