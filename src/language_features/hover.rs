@@ -105,13 +105,6 @@ pub fn editor_hover(
         })
         .unwrap_or_else(String::new);
 
-    let force_plaintext = ctx
-        .config
-        .language
-        .get(&ctx.language_id)
-        .and_then(|l| l.workaround_server_sends_plaintext_labeled_as_markdown)
-        .unwrap_or(false);
-
     let marked_string_to_hover = |ms: MarkedString| {
         if for_hover_buffer {
             match ms {
@@ -125,7 +118,7 @@ pub fn editor_hover(
                 ),
             }
         } else {
-            marked_string_to_kakoune_markup(ms, force_plaintext)
+            marked_string_to_kakoune_markup(ms)
         }
     };
 
@@ -151,14 +144,13 @@ pub fn editor_hover(
                     if for_hover_buffer {
                         contents.value
                     } else {
-                        markdown_to_kakoune_markup(contents.value, force_plaintext)
+                        markdown_to_kakoune_markup(contents.value)
                     },
                 ),
                 MarkupKind::PlainText => (false, contents.value),
             },
         },
     };
-    let is_markdown = is_markdown && !force_plaintext;
 
     match hover_type {
         HoverType::InfoBox => {

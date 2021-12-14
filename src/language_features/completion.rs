@@ -59,12 +59,6 @@ pub fn editor_completion(
     let mut inferred_offset: Option<u32> = None;
     let mut can_infer_offset = true;
 
-    let force_plaintext = ctx
-        .config
-        .language
-        .get(&ctx.language_id)
-        .and_then(|l| l.workaround_server_sends_plaintext_labeled_as_markdown)
-        .unwrap_or(false);
     let items = items
         .iter()
         .enumerate()
@@ -109,7 +103,7 @@ pub fn editor_completion(
                 "".to_string()
             };
             let on_select = if !markdown.is_empty() {
-                let markup = markdown_to_kakoune_markup(markdown, force_plaintext);
+                let markup = markdown_to_kakoune_markup(markdown);
                 format!(
                     "{}info -markup -style menu -- %§{}§",
                     &maybe_set_index,
