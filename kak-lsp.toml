@@ -99,7 +99,7 @@ command = "haskell-language-server-wrapper"
 args = ["--lsp"]
 settings_section = "haskell"
 [language.haskell.settings.haskell]
-# See https://github.com/latex-lsp/texlab/blob/e1ee8495b0f54b4411a1ffacf787efa621d8f826/src/options.rs
+# See https://haskell-language-server.readthedocs.io/en/latest/configuration.html
 # formattingProvider = "ormolu"
 
 [language.html]
