@@ -48,8 +48,7 @@ pub struct LanguageConfig {
     pub args: Vec<String>,
     pub settings_section: Option<String>,
     pub settings: Option<Value>,
-    #[serde(default = "default_offset_encoding")]
-    pub offset_encoding: OffsetEncoding,
+    pub offset_encoding: Option<OffsetEncoding>,
     pub workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
 }
 
@@ -65,10 +64,6 @@ impl Default for ServerConfig {
             timeout: 0,
         }
     }
-}
-
-fn default_offset_encoding() -> OffsetEncoding {
-    OffsetEncoding::Utf16
 }
 
 #[derive(Clone, Deserialize, Debug)]

@@ -46,6 +46,7 @@ pub struct Context {
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
     pub offset_encoding: OffsetEncoding,
+    pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
 }
@@ -58,7 +59,7 @@ impl Context {
         editor_tx: Sender<EditorResponse>,
         config: Config,
         root_path: String,
-        offset_encoding: OffsetEncoding,
+        offset_encoding: Option<OffsetEncoding>,
     ) -> Self {
         let session = initial_request.meta.session.clone();
         Context {
@@ -78,7 +79,8 @@ impl Context {
             root_path,
             session,
             documents: HashMap::default(),
-            offset_encoding,
+            offset_encoding: offset_encoding.unwrap_or(OffsetEncoding::Utf16),
+            preferred_offset_encoding: offset_encoding,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
         }

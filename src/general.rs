@@ -9,6 +9,7 @@ use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
 use std::collections::HashSet;
+use std::ops::Deref;
 use std::process;
 use url::Url;
 
@@ -290,10 +291,15 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 }),
                 stale_request_support: None,
             }),
-            offset_encoding: Some(vec![match ctx.offset_encoding {
-                OffsetEncoding::Utf8 => "utf-8".to_string(),
-                OffsetEncoding::Utf16 => "utf-16".to_string(),
-            }]),
+            offset_encoding: Some(
+                match ctx.preferred_offset_encoding {
+                    None | Some(OffsetEncoding::Utf8) => ["utf-8", "utf-16"],
+                    Some(OffsetEncoding::Utf16) => ["utf-16", "utf-8"],
+                }
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            ),
             experimental: None,
         },
         initialization_options,
@@ -311,6 +317,16 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
         ctx.capabilities = Some(result.capabilities);
+        if let Some(encoding) = result.offset_encoding {
+            match encoding.deref() {
+                "utf-8" => ctx.offset_encoding = OffsetEncoding::Utf8,
+                "utf-16" => ctx.offset_encoding = OffsetEncoding::Utf16,
+                _ => error!(
+                    "Language server sent unexpected offset encoding: '{}'",
+                    encoding
+                ),
+            }
+        }
         ctx.notify::<Initialized>(InitializedParams {});
         controller::dispatch_pending_editor_requests(ctx)
     });

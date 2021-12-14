@@ -559,8 +559,10 @@ are two main types of violations we met in the wild:
 1) Using UTF-8 code points, just like kak-lsp does. Those should work well with kak-lsp for
 characters outside BMP out of the box.
 
-2) Using UTF-8 code units (bytes), just like Kakoune does. Those are supported by kak-lsp but
-require adding `offset_encoding = "utf-8"` to the language server configuration in `kak-lsp.toml`.
+2) Using UTF-8 code units (bytes), just like Kakoune does. Those are supported by kak-lsp if either
+the server supports the https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol
+extension], or by adding `offset_encoding = "utf-8"` to the language server configuration in
+`kak-lsp.toml`.
 
 == Troubleshooting
 
