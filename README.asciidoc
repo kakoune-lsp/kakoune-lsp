@@ -534,7 +534,7 @@ This maps `<c-n>` to select the next placeholder if there is one, and otherwise 
 
 === Encoding
 
-kak-lsp works only with UTF-8 documents.
+kak-lsp works best with UTF-8 documents.
 
 === `Position.character` interpretation
 
