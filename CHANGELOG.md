@@ -1,5 +1,22 @@
 ## Unreleased
 
+Breaking changes:
+- [`python-lsp-server`](https://github.com/python-lsp/python-lsp-server) replaces [python-language-server](https://github.com/palantir/python-language-server) as default language server for Python.
+- `rust-analyzer` replaces `rls` as default language server for Rust (#578).
+
+Additions:
+- `lsp-handle-progress` gained a default implementation that shows an hourglass (⌛) in the modeline when a language server is busy (f8a8cf8).
+- The code action menu now provides fuzzy (subsequence) filtering but no longer provides `<c-n>`/`<c-p>` due to implementation reasons (b4ee2a3).
+- When accepting a completion, any `additionalTextEdits` are now applied. For example, rust-analyzer adds import statements this way (2637b26).
+- New command `lsp-code-action-sync` is the synchronous variant of `lsp-code-action`, suitable for use in `BufWritePre` hooks (#582).
+- The default configuration for `semantic_tokens` now uses a more condensed syntax (#587).
+- Some systems' C libraries ship old Unicode databases, but terminals often bundle newer versions. To avoid graphical glitches, emoji are only used if they are assigned display width 2 by the C library's `wcwidth(3)` (73c2d1a, c3aeb0d).
+- The [clangd protocol extension for offset encoding negotiation](https://clangd.llvm.org/extensions.html#utf-8-offsets) is now supported, which means kak-lsp now uses UTF-8 offsets if the server supports them (#485).
+
+Bug fixes:
+- `lsp-formatting-sync` now works again with `texlab` instead of blocking forever (regressed in 11.0.0) (a12831a).
+- Certain text edits (such as some code actions from `rust-analyzer`) were not applied correctly, which has been fixed (35ba8de).
+
 ## 11.1.0 - 2021-12-08
 
 Additions:
