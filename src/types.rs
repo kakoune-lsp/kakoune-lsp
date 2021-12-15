@@ -1,5 +1,6 @@
 use jsonrpc_core::{Call, Output, Params};
 use lsp_types::{DiagnosticSeverity, Position, Range, SemanticTokenModifier};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
@@ -20,7 +21,7 @@ pub struct Config {
     pub verbosity: u8,
     #[serde(default)]
     pub snippet_support: bool,
-    #[serde(default, deserialize_with = "deserialize_semantic_tokens")]
+    #[serde(default)]
     pub semantic_tokens: Vec<SemanticTokenConfig>,
 }
 
@@ -67,32 +68,77 @@ impl Default for ServerConfig {
     }
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct SemanticTokenConfig {
     pub token: String,
     pub face: String,
-    #[serde(default)]
     pub modifiers: Vec<SemanticTokenModifier>,
 }
 
-fn deserialize_semantic_tokens<'de, D>(
-    deserializer: D,
-) -> Result<Vec<SemanticTokenConfig>, D::Error>
+impl<'de> Deserialize<'de> for SemanticTokenConfig {
+    
+fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 where
     D: Deserializer<'de>,
 {
-    HashMap::<String, String>::deserialize(deserializer).map(|xs| {
-                xs.into_iter().map(|(k, face)| {
-                    let mut token_mods = k.split('+').map(String::from);
-                    let token = token_mods.next().unwrap_or_default();
-                    let modifiers = token_mods.map(SemanticTokenModifier::from).collect::<Vec<_>>();
-                    SemanticTokenConfig {
-                        token, face, modifiers
-                    }
-                }).collect()
-        }).map_err(|e| {
-        D::Error::custom(e.to_string() + "\nSee https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens\n")
-    })
+    struct SemanticTokenVisitor;
+
+    impl<'de> Visitor<'de> for SemanticTokenVisitor {
+        type Value = SemanticTokenConfig;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("A valid semantic-tokens configuration. See https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens")
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut token = None;
+            let mut face = None;
+            let mut modifiers = Vec::new();
+            while let Some(k) = map.next_key()? {
+                match k {
+                    "token" => token = Some(map.next_value()?),
+                    "face" => face = Some(map.next_value()?),
+                    "modifiers" => modifiers = map.next_value()?,
+                    _ => Err(A::Error::unknown_field(k, &["token", "face", "modifiers"]))?,
+                }
+            }
+            let token = token.ok_or(A::Error::missing_field("token"))?;
+            let face = face.ok_or(A::Error::missing_field("face"))?;
+            Ok(SemanticTokenConfig {
+                token,
+                face,
+                modifiers,
+            })
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let token_mods: String = seq
+                .next_element()?
+                .ok_or(A::Error::invalid_length(0, &self))?;
+            let face: String = seq
+                .next_element()?
+                .ok_or(A::Error::invalid_length(1, &self))?;
+            let mut token_mods = token_mods.split('+').map(String::from);
+            let token = token_mods.next().unwrap_or_default();
+            let modifiers = token_mods
+                .map(SemanticTokenModifier::from)
+                .collect::<Vec<_>>();
+            Ok(SemanticTokenConfig {
+                token,
+                face,
+                modifiers,
+            })
+        }
+    }
+
+    deserializer.deserialize_any(SemanticTokenVisitor)
+}
 }
 
 // Editor
