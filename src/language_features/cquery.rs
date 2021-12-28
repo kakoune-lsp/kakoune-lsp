@@ -201,6 +201,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
         version,
         fifo: None,
+        write_response_to_fifo: false,
     };
     ctx.exec(meta, command);
 }

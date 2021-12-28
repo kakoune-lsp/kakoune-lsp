@@ -254,6 +254,7 @@ impl Context {
             filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
             version: 0,
             fifo: None,
+            write_response_to_fifo: false,
         }
     }
 
@@ -266,6 +267,7 @@ impl Context {
             filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
             version: document.version,
             fifo: None,
+            write_response_to_fifo: false,
         })
     }
 }
