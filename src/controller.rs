@@ -15,6 +15,7 @@ use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
+use serde::Serialize;
 
 // This is an error code defined by the language server protocol, signifying that a request was
 // cancelled because the content changed before it could be fulfilled. In this case, the user
@@ -146,6 +147,10 @@ pub fn start(
                         match output {
                             Output::Success(success) => {
                                 if let Some((meta, _, batch_id)) = ctx.response_waitlist.remove(&success.id) {
+                                    if meta.write_response_to_fifo {
+                                        write_response_to_fifo(meta, &success);
+                                        continue;
+                                    }
                                     if let Some((batch_amt, mut vals, callback)) = ctx.batches.remove(&batch_id) {
                                         vals.push(success.result);
                                         if batch_amt == 1 {
@@ -162,6 +167,10 @@ pub fn start(
                                 error!("Error response from server: {:?}", failure);
                                 if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
                                     let (meta, method, _) = request;
+                                    if meta.write_response_to_fifo {
+                                        write_response_to_fifo(meta, failure);
+                                        continue;
+                                    }
                                     match failure.error.code {
                                         code if code == ErrorCode::ServerError(CONTENT_MODIFIED) || method == request::CodeActionRequest::METHOD => {
                                             // Nothing to do, but sending command back to the editor is required to handle case when
@@ -192,6 +201,12 @@ pub fn start(
             }
         }
     }
+}
+
+fn write_response_to_fifo<T: Serialize>(meta: EditorMeta, response: T) {
+    let json = serde_json::to_string_pretty(&response).unwrap();
+    let fifo = meta.fifo.expect("Need fifo to write response to");
+    std::fs::write(fifo, (json + "\n").as_bytes()).expect("Failed to write JSON response to fifo");
 }
 
 pub fn dispatch_pending_editor_requests(mut ctx: &mut Context) {
