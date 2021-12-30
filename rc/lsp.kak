@@ -918,53 +918,23 @@ insertSpaces = %s
 }}
 
 define-command lsp-range-formatting -docstring "Format selections" %{
-    lsp-did-change-and-then lsp-range-formatting-request
+    lsp-did-change-and-then 'lsp-range-formatting-request false'
 }
-
-define-command -hidden lsp-range-formatting-request -docstring "Format selections" %{
-    nop %sh{
-ranges_str="$(for range in ${kak_selections_char_desc}; do
-    start=${range%,*}
-    end=${range#*,}
-    startline=${start%.*}
-    startcolumn=${start#*.}
-    endline=${end%.*}
-    endcolumn=${end#*.}
-    printf '
-[[ranges]]
-  [ranges.start]
-  line = %d
-  character = %d
-  [ranges.end]
-  line = %d
-  character = %d
-' $((startline - 1)) $((startcolumn - 1)) $((endline - 1)) $((endcolumn - 1))
-done)"
-
-(printf '
-session      = "%s"
-client       = "%s"
-buffile      = "%s"
-filetype     = "%s"
-version      = %d
-method       = "textDocument/rangeFormatting"
-[params]
-tabSize      = %d
-insertSpaces = %s
-%s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
-}}
 
 define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
-    lsp-did-change-and-then lsp-range-formatting-sync-request
+    lsp-did-change-and-then 'lsp-range-formatting-request true'
 }
 
-define-command -hidden lsp-range-formatting-sync-request -docstring "Format selections, blocking Kakoune session until done" %{
-    evaluate-commands -no-hooks %sh{
-range=${kak_selection_desc}
-tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
-pipe=${tmp}/fifo
-mkfifo ${pipe}
+define-command -hidden lsp-range-formatting-request -params 1 %{ evaluate-commands -no-hooks %sh{
+    sync=$1
+    fifo=""
+    if "$sync"; then
+        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        pipe=${tmp}/fifo
+        mkfifo ${pipe}
+        fifo="fifo = \"${pipe}\""
+    fi
+
 ranges_str="$(for range in ${kak_selections_char_desc}; do
     start=${range%,*}
     end=${range#*,}
@@ -989,16 +959,18 @@ client       = "%s"
 buffile      = "%s"
 filetype     = "%s"
 version      = %d
-fifo         = "%s"
 method       = "textDocument/rangeFormatting"
+%s
 [params]
 tabSize      = %d
 insertSpaces = %s
 %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${fifo}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
 
-cat ${pipe} | tee /tmp/pipe
-rm -rf ${tmp}
+    if "$sync"; then
+        cat ${pipe}
+        rm -r $tmp
+    fi
 }}
 
 define-command lsp-incoming-calls -docstring "Open buffer with calls to the function at the main cursor position" %{
