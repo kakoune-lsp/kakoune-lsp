@@ -881,22 +881,41 @@ method   = "stop"
 }
 
 define-command lsp-formatting -docstring "Format document" %{
-    lsp-did-change-and-then lsp-formatting-request
+    lsp-did-change-and-then 'lsp-formatting-request false'
 }
 
-define-command -hidden lsp-formatting-request -docstring "Format document" %{
-    nop %sh{ (printf '
+define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
+    lsp-did-change-and-then 'lsp-formatting-request true'
+}
+
+define-command -hidden lsp-formatting-request -params 1 %{ evaluate-commands -no-hooks %sh{
+    sync=$1
+    fifo=""
+    if "$sync"; then
+        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        pipe=${tmp}/fifo
+        mkfifo ${pipe}
+        fifo="fifo = \"${pipe}\""
+    fi
+
+    (printf '
 session      = "%s"
 client       = "%s"
 buffile      = "%s"
 filetype     = "%s"
 version      = %d
+%s
 method       = "textDocument/formatting"
 [params]
 tabSize      = %d
 insertSpaces = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null }
-}
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${fifo}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
+
+    if "$sync"; then
+        cat ${pipe}
+        rm -r ${tmp}
+    fi
+}}
 
 define-command lsp-range-formatting -docstring "Format selections" %{
     lsp-did-change-and-then lsp-range-formatting-request
@@ -934,33 +953,6 @@ tabSize      = %d
 insertSpaces = %s
 %s
 ' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" "${ranges_str}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
-}}
-
-define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
-    lsp-did-change-and-then lsp-formatting-sync-request
-}
-
-define-command -hidden lsp-formatting-sync-request -docstring "Format document, blocking Kakoune session until done" %{
-    evaluate-commands -no-hooks %sh{
-tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
-pipe=${tmp}/fifo
-mkfifo ${pipe}
-
-(printf '
-session      = "%s"
-client       = "%s"
-buffile      = "%s"
-filetype     = "%s"
-version      = %d
-fifo         = "%s"
-method       = "textDocument/formatting"
-[params]
-tabSize      = %d
-insertSpaces = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${pipe} "${kak_opt_tabstop}" "${kak_opt_lsp_insert_spaces}" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
-
-cat ${pipe}
-rm -rf ${tmp}
 }}
 
 define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
