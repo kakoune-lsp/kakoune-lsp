@@ -174,6 +174,7 @@ hook global WinSetOption filetype=rust %{
 * `lsp-code-actions` to open a menu to choose a code action to run
 ** To customize the menu, you can override `lsp-perform-code-action`
 * `lsp-code-action` to run the code action matching the given pattern.
+* `lsp-code-action-sync` to synchronously run that code action, suitable for use in a `BufWritePre` hook.
 * `lsp_diagnostic_error_count`, `lsp_diagnostic_hint_count`, `lsp_diagnostic_info_count` and `lsp_diagnostic_warning_count` options which contain the number of diagnostics of the respective level for the current buffer. For example, you can put it into your modeline to see at a glance if there are errors in the current file
 * starting new kak-lsp session when Kakoune session begins and stopping it when Kakoune session ends
 * Comamnds starting with either of `ccls-`, `clangd-`, `ejdtls-`, `texlab-` or `rust-analyzer-`, that provide server specific features.

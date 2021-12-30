@@ -462,50 +462,87 @@ define-command lsp-code-actions -docstring "Perform code actions for the main cu
 }
 
 define-command lsp-code-action -params 1 -docstring "lsp-code-action <pattern>: perform the code action that matches the given regex" %{
-    lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}'"
+    lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}' false"
 }
 
-define-command -hidden lsp-code-actions-request -params 1..2 -docstring "Request code actions for the main cursor position" %{
-    nop %sh{
-        code_action_pattern=""
-        if [ $# -eq 2 ]; then
-            code_action_pattern="codeActionPattern = \"$(printf %s "$2" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
-        fi
+define-command lsp-code-action-sync -params 1 -docstring "lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
+    lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}' true"
+}
 
-        (printf '
+define-command -hidden lsp-code-actions-request -params 1..3 -docstring "Request code actions for the main cursor position" %{ evaluate-commands -no-hooks %sh{
+    code_action_pattern=""
+    if [ $# -ge 2 ]; then
+        code_action_pattern="codeActionPattern = \"$(printf %s "$2" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
+    fi
+    sync=${3:-false}
+    fifo=""
+    if "$sync"; then
+        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        pipe=${tmp}/fifo
+        mkfifo ${pipe}
+        fifo="fifo = \"${pipe}\""
+    fi
+
+    (printf '
 session   = "%s"
 client    = "%s"
 buffile   = "%s"
 filetype  = "%s"
 version   = %d
 method    = "textDocument/codeAction"
+%s
 [params]
 position.line     = %d
 position.column   = %d
 performCodeAction = %s
 %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" ${kak_cursor_line} ${kak_cursor_column} "$1" "$code_action_pattern" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
-}
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${fifo}" ${kak_cursor_line} ${kak_cursor_column} "$1" "$code_action_pattern" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
+
+    if "$sync"; then
+        cat ${pipe}
+        rm -r $tmp
+    fi
+}}
 
 define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
     declare-option -hidden str lsp_execute_command_command %arg{1}
     declare-option -hidden str lsp_execute_command_arguments %arg{2}
-    lsp-did-change-and-then %{lsp-execute-command-request %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
+    lsp-did-change-and-then %{lsp-execute-command-request false %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
 }
 
-define-command -hidden lsp-execute-command-request -params 2 -docstring "Execute a command" %{
-    nop %sh{ (printf '
+define-command -hidden lsp-execute-command-sync -params 2 -docstring "Execute a command, blocking Kakoune session until done" %{
+    declare-option -hidden str lsp_execute_command_command %arg{1}
+    declare-option -hidden str lsp_execute_command_arguments %arg{2}
+    lsp-did-change-and-then %{lsp-execute-command-request true %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
+} 
+define-command -hidden lsp-execute-command-request -params 3 %{ evaluate-commands %sh{
+    sync=$1
+    fifo=""
+    if "$sync"; then
+        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        pipe=${tmp}/fifo
+        mkfifo ${pipe}
+        fifo="fifo = \"${pipe}\""
+    fi
+
+    (printf '
 session   = "%s"
 client    = "%s"
 buffile   = "%s"
 filetype  = "%s"
 version   = %d
+%s
 method    = "workspace/executeCommand"
 [params]
 command = "%s"
 arguments = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" "$2" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
-}
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${fifo}" "$2" "$3" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
+
+    if "$sync"; then
+        cat ${pipe}
+        rm -r $tmp
+    fi
+}}
 
 define-command lsp-references -docstring "Open buffer with symbol references" %{
     lsp-did-change-and-then lsp-references-request
@@ -833,22 +870,41 @@ token    = "%s"
 
 define-command lsp-apply-workspace-edit -params 1 -hidden %{
     lsp-did-change-and-then %sh{
-        printf "lsp-apply-workspace-edit-request '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
+        printf "lsp-apply-workspace-edit-request false '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
     }
 }
+define-command lsp-apply-workspace-edit-sync -params 1 -hidden %{
+    lsp-did-change-and-then %sh{
+        printf "lsp-apply-workspace-edit-request true '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
+    }
+} 
+define-command lsp-apply-workspace-edit-request -params 2 -hidden %{ evaluate-commands %sh{
+    sync=$1
+    fifo=""
+    if "$sync"; then
+        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        pipe=${tmp}/fifo
+        mkfifo ${pipe}
+        fifo="fifo = \"${pipe}\""
+    fi
 
-define-command lsp-apply-workspace-edit-request -params 1 -hidden %{
-    nop %sh{ (printf '
+    (printf '
 session  = "%s"
 client   = "%s"
 buffile  = "%s"
 filetype = "%s"
 version  = %d
+%s
 method   = "apply-workspace-edit"
 [params]
 edit     = %s
-' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "$1" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
-}
+' "${kak_session}" "${kak_client}" "${kak_buffile}" "${kak_opt_filetype}" "${kak_timestamp}" "${fifo}" "$2" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
+
+    if "$sync"; then
+        cat ${pipe}
+        rm -r $tmp
+    fi
+}}
 
 define-command lsp-apply-text-edits -params 1 -hidden %{
     lsp-did-change-and-then "lsp-apply-text-edits-request '%arg{1}'"

@@ -51,10 +51,7 @@ pub fn editor_code_actions(
     ctx: &mut Context,
     params: CodeActionsParams,
 ) {
-    let result = match result {
-        Some(result) => result,
-        None => return,
-    };
+    let result = result.unwrap_or_default();
 
     for cmd in &result {
         match cmd {
@@ -96,10 +93,19 @@ pub fn editor_code_actions(
                 regex.is_match(title)
             })
             .collect::<Vec<_>>();
+        let sync = meta.fifo.is_some();
+        let fail = if sync {
+            // We might be running from a hook, so let's allow silencing errors with a "try".
+            // Also, prefix with the (presumable) function name, to reduce confusion.
+            "fail lsp-code-action:"
+        } else {
+            "lsp-show-error"
+        }
+        .to_string();
         let command = match matches.len() {
-            0 => "lsp-show-error 'no matching action available'".to_string(),
-            1 => code_action_to_editor_command(matches[0]),
-            _ => "lsp-show-error 'multiple matching actions'".to_string(),
+            0 => fail + " 'no matching action available'",
+            1 => code_action_to_editor_command(matches[0], sync),
+            _ => fail + " 'multiple matching actions'",
         };
         ctx.exec(meta, command);
         return;
@@ -112,7 +118,7 @@ pub fn editor_code_actions(
                 CodeActionOrCommand::Command(command) => &command.title,
                 CodeActionOrCommand::CodeAction(action) => &action.title,
             };
-            let select_cmd = code_action_to_editor_command(c);
+            let select_cmd = code_action_to_editor_command(c, false);
             format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
         })
         .join(" ");
@@ -134,7 +140,7 @@ pub fn editor_code_actions(
     ctx.exec(meta, command);
 }
 
-fn code_action_to_editor_command(action: &CodeActionOrCommand) -> String {
+fn code_action_to_editor_command(action: &CodeActionOrCommand, sync: bool) -> String {
     match action {
         CodeActionOrCommand::Command(command) => {
             let cmd = editor_quote(&command.command);
@@ -142,14 +148,31 @@ fn code_action_to_editor_command(action: &CodeActionOrCommand) -> String {
             // structure when they are passed back via lsp-execute-command.
             let args = &serde_json::to_string(&command.arguments).unwrap();
             let args = editor_quote(&serde_json::to_string(&args).unwrap());
-            format!("lsp-execute-command {} {}", cmd, args)
+            format!(
+                "{} {} {}",
+                if sync {
+                    "lsp-execute-command-sync"
+                } else {
+                    "lsp-execute-command"
+                },
+                cmd,
+                args
+            )
         }
         CodeActionOrCommand::CodeAction(action) => {
             // Double JSON serialization is performed to prevent parsing args as a TOML
             // structure when they are passed back via lsp-apply-workspace-edit.
             let edit = &serde_json::to_string(&action.edit.as_ref().unwrap()).unwrap();
             let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
-            format!("lsp-apply-workspace-edit {}", edit)
+            format!(
+                "{} {}",
+                if sync {
+                    "lsp-apply-workspace-edit-sync"
+                } else {
+                    "lsp-apply-workspace-edit"
+                },
+                edit
+            )
         }
     }
 }
