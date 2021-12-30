@@ -942,7 +942,7 @@ define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune
 
 define-command -hidden lsp-formatting-sync-request -docstring "Format document, blocking Kakoune session until done" %{
     evaluate-commands -no-hooks %sh{
-tmp=$(mktemp -q -d -t 'lsp-formatting.XXXXXX' 2>/dev/null || mktemp -q -d)
+tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
 pipe=${tmp}/fifo
 mkfifo ${pipe}
 
@@ -970,7 +970,7 @@ define-command lsp-range-formatting-sync -docstring "Format selections, blocking
 define-command -hidden lsp-range-formatting-sync-request -docstring "Format selections, blocking Kakoune session until done" %{
     evaluate-commands -no-hooks %sh{
 range=${kak_selection_desc}
-tmp=$(mktemp -q -d -t 'lsp-formatting.XXXXXX' 2>/dev/null || mktemp -q -d)
+tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
 pipe=${tmp}/fifo
 mkfifo ${pipe}
 ranges_str="$(for range in ${kak_selections_char_desc}; do
