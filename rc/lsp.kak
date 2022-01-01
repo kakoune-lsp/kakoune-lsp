@@ -77,10 +77,10 @@ declare-option -docstring "Dynamic TOML configuration string. Currently supports
 " str lsp_config
 # Highlight TOML keys in kakrc if they are supported by dynamic configuration.
 try %{
-    add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.settings(?:\.[^\]]*)?)\] 1:title
+    add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.settings(?:\.[^\]\n]*)?)\] 1:title
 } catch %{
     hook global -once ModuleLoaded kak %{
-        add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.settings(?:\.[^\]]*)?)\] 1:title
+        add-highlighter shared/kakrc/code/lsp_keywords regex \[(language\.[a-z_]+\.settings(?:\.[^\]\n]*)?)\] 1:title
     }
 }
 declare-option -hidden -docstring "DEPRECATED, use %opt{lsp_config}. Configuration to send in workspace/didChangeConfiguration messages" str-to-str-map lsp_server_configuration
