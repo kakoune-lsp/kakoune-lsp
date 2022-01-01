@@ -35,6 +35,7 @@ pub struct Context {
     // completions are valid.
     pub completion_last_client: Option<String>,
     pub config: Config,
+    pub dynamic_config: DynamicConfig,
     pub diagnostics: HashMap<String, Vec<Diagnostic>>,
     pub editor_tx: Sender<EditorResponse>,
     pub lang_srv_tx: Sender<ServerMessage>,
@@ -69,6 +70,7 @@ impl Context {
             completion_items: vec![],
             completion_last_client: None,
             config,
+            dynamic_config: DynamicConfig::default(),
             diagnostics: HashMap::default(),
             editor_tx,
             lang_srv_tx,

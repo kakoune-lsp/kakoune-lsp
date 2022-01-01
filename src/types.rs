@@ -24,7 +24,7 @@ pub struct Config {
     pub semantic_tokens: Vec<SemanticTokenConfig>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Default, Deserialize, Debug)]
 pub struct DynamicConfig {
     #[serde(default)]
     pub language: HashMap<String, DynamicLanguageConfig>,

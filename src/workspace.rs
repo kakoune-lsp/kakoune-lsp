@@ -32,8 +32,13 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
         })
         .unwrap_or("");
 
-    let settings = parse_dynamic_config(&meta, ctx, config)
-        .and_then(|lang| lang.settings)
+    record_dynamic_config(&meta, ctx, config);
+
+    let settings = ctx
+        .dynamic_config
+        .language
+        .get(&ctx.language_id)
+        .and_then(|lang| lang.settings.as_ref())
         .and_then(|settings| {
             ctx.config
                 .language
@@ -50,9 +55,10 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
 pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc_core::Error> {
     let params = params.parse::<ConfigurationParams>()?;
 
-    let meta = ctx.meta_for_session();
-    let dynamic_settings = request_dynamic_configuration_from_kakoune(&meta, ctx);
-    let settings = dynamic_settings
+    let settings = ctx
+        .dynamic_config
+        .language
+        .get(&ctx.language_id)
         .and_then(|cfg| cfg.settings.as_ref().cloned())
         .or_else(|| {
             ctx.config

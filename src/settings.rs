@@ -6,14 +6,15 @@ use serde_json::Value;
 pub fn request_dynamic_configuration_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
-) -> Option<DynamicLanguageConfig> {
+) -> Option<()> {
     let fifo = temp_fifo()?;
     ctx.exec(
         meta.clone(),
         format!("lsp-get-config {}", editor_quote(&fifo.path)),
     );
     let config = std::fs::read_to_string(&fifo.path).unwrap();
-    parse_dynamic_config(meta, ctx, &config)
+    record_dynamic_config(meta, ctx, &config);
+    Some(())
 }
 
 pub fn request_initialization_options_from_kakoune(
@@ -28,8 +29,12 @@ pub fn request_initialization_options_from_kakoune(
         }
     };
 
-    let settings = request_dynamic_configuration_from_kakoune(meta, ctx)
-        .and_then(|cfg| cfg.settings)
+    request_dynamic_configuration_from_kakoune(meta, ctx);
+    let settings = ctx
+        .dynamic_config
+        .language
+        .get(&ctx.language_id)
+        .and_then(|cfg| cfg.settings.as_ref())
         .and_then(|settings| settings.get(&section).cloned());
     if settings.is_some() {
         return settings;
@@ -50,14 +55,12 @@ pub fn request_initialization_options_from_kakoune(
     settings.get(section).cloned()
 }
 
-pub fn parse_dynamic_config(
-    meta: &EditorMeta,
-    ctx: &mut Context,
-    config: &str,
-) -> Option<DynamicLanguageConfig> {
+pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str) {
     debug!("lsp_config:\n{}", config);
-    let mut config: DynamicConfig = match toml::from_str(config) {
-        Ok(cfg) => cfg,
+    match toml::from_str(config) {
+        Ok(cfg) => {
+            ctx.dynamic_config = cfg;
+        }
         Err(e) => {
             let msg = format!("failed to parse %opt{{lsp_config}}: {}", e);
             ctx.exec(
@@ -67,7 +70,6 @@ pub fn parse_dynamic_config(
             panic!("{}", msg)
         }
     };
-    config.language.remove(&ctx.language_id)
 }
 
 /// User may override initialization options provided in kak-lsp.toml on per-language server basis
