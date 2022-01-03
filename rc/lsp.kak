@@ -466,6 +466,7 @@ define-command lsp-code-action -params 1 -docstring "lsp-code-action <pattern>: 
 }
 
 define-command lsp-code-action-sync -params 1 -docstring "lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
+    lsp-require-enabled lsp-code-action-sync
     lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}' true"
 }
 
@@ -941,6 +942,7 @@ define-command lsp-formatting -docstring "Format document" %{
 }
 
 define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
+    lsp-require-enabled lsp-formatting-sync
     lsp-did-change-and-then 'lsp-formatting-request true'
 }
 
@@ -978,6 +980,7 @@ define-command lsp-range-formatting -docstring "Format selections" %{
 }
 
 define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
+    lsp-require-enabled lsp-range-formatting-sync
     lsp-did-change-and-then 'lsp-range-formatting-request true'
 }
 
@@ -1764,6 +1767,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     lsp-diagnostic-lines-enable global
 
     set-option global completers option=lsp_completions %opt{completers}
+    set-option global lsp_fail_if_disabled nop
 
     map global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
     map global goto r '<esc>: lsp-references<ret>' -docstring 'references'
@@ -1798,6 +1802,7 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
+    set-option global lsp_fail_if_disabled fail
     unmap global goto d '<esc>: lsp-definition<ret>'
     unmap global goto r '<esc>: lsp-references<ret>'
     unmap global goto y '<esc>: lsp-type-definition<ret>'
@@ -1820,6 +1825,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     add-highlighter window/lsp_snippets_placeholders ranges lsp_snippets_placeholders
 
     set-option window completers option=lsp_completions %opt{completers}
+    set-option window lsp_fail_if_disabled nop
 
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
@@ -1854,6 +1860,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     remove-highlighter window/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
+    set-option window lsp_fail_if_disabled fail
     unmap window goto d '<esc>: lsp-definition<ret>'
     unmap window goto r '<esc>: lsp-references<ret>'
     unmap window goto y '<esc>: lsp-type-definition<ret>'
@@ -1862,6 +1869,11 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
     lsp-exit
+}
+
+declare-option -hidden str lsp_fail_if_disabled fail
+define-command -hidden lsp-require-enabled -params 1 %{
+    %opt{lsp_fail_if_disabled} "%arg{1}: run lsp-enable or lsp-enable-window first"
 }
 
 lsp-stop-on-exit-enable
