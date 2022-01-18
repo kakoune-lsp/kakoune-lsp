@@ -1427,7 +1427,7 @@ define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render wo
 }
 
 define-command -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
-    echo %arg{2}
+    echo -- %arg{2}
 }
 
 define-command -hidden lsp-show-message-error -params 1 -docstring %{
@@ -1472,7 +1472,7 @@ define-command -hidden lsp-insert-before-selection -params 1 -docstring %{
     It is used to apply text edits from language server.
 } %{
     declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    echo -to-file %opt{lsp_text_edit_tmp} %arg{1}
+    echo -to-file %opt{lsp_text_edit_tmp} -- %arg{1}
     execute-keys "!cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
 }
 
@@ -1481,7 +1481,7 @@ define-command -hidden lsp-replace-selection -params 1 -docstring %{
     It is used to apply text edits from language server.
 } %{
     declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    echo -to-file %opt{lsp_text_edit_tmp} %arg{1}
+    echo -to-file %opt{lsp_text_edit_tmp} -- %arg{1}
     try %{
         execute-keys -draft <a-k>\n\z<ret>
         execute-keys "|cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
@@ -1521,7 +1521,7 @@ define-command -hidden lsp-get-config -params 1 -docstring %{
     lsp-get-config <fifo>
     Format lsp_config as TOML and write to the given <fifo> path.
 } %{
-    echo -to-file %arg{@} %opt{lsp_config}
+    echo -to-file %arg{@} -- %opt{lsp_config}
 }
 
 ### Other commands ###
@@ -2112,7 +2112,7 @@ define-command -hidden lsp-jump %{ # from grep.kak
                 lsp-make-register-relative-to-root
             }
             set-option buffer grep_current_line %val{cursor_line}
-            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing %reg{a} %reg{b} %reg{c}
+            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing -- %reg{a} %reg{b} %reg{c}
             try %{ focus %opt{jumpclient} }
         }
     }
@@ -2135,7 +2135,7 @@ define-command -hidden lsp-diagnostics-jump %{ # from make.kak
 
 define-command -hidden lsp-diagnostics-open-error -params 4 %{
     evaluate-commands -try-client %opt{jumpclient} %{
-        edit -existing "%arg{1}" %arg{2} %arg{3}
+        edit -existing -- "%arg{1}" %arg{2} %arg{3}
         echo -markup "{Information}{\}%arg{4}"
         try %{ focus }
     }
