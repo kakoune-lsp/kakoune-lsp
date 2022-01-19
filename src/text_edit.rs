@@ -12,8 +12,6 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::os::unix::io::FromRawFd;
-#[cfg(test)]
-use unindent::unindent;
 
 pub trait TextEditish<T: TextEditish<T>> {
     fn text_edit(self) -> TextEdit;
@@ -370,7 +368,6 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .collect::<HashSet<_>>();
 
     let mut selection_index = 0;
-    let mut cleanup_sentinel = false;
     let mut apply_edits = edits
         .iter()
         .enumerate()
@@ -385,14 +382,6 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                     KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
                     KakouneTextEditCommand::Replace => "lsp-replace-selection",
                 };
-                // Add a temporary sentinel character from Unicode private use area to work
-                // around https://github.com/mawww/kakoune/issues/4373
-                let new_text = if new_text.starts_with('\n') {
-                    cleanup_sentinel = true;
-                    editor_quote(&("\u{00E000}".to_string() + new_text))
-                } else {
-                    editor_quote(new_text)
-                };
                 let command = formatdoc!(
                     "exec \"z{}<space>\"
                      {} {}",
@@ -402,7 +391,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                         String::new()
                     },
                     command,
-                    new_text,
+                    editor_quote(new_text)
                 );
                 if !merged_selections.contains(&i) {
                     selection_index += 1;
@@ -424,14 +413,6 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
             selection_descs,
             apply_edits
         );
-
-        if cleanup_sentinel {
-            apply_edits = formatdoc!(
-                "{}
-                 exec <percent>s\\u00E000<ret>d",
-                apply_edits
-            );
-        }
     }
 
     let client = match client {
@@ -614,30 +595,6 @@ mod tests {
         assert_eq!(result, Some(expected));
     }
 
-    // Test the case when both the selection and the new text start with a newline character.
-    #[test]
-    pub fn apply_text_edits_to_buffer_kakoune_issue_4373() {
-        let text_edits = vec![
-            edit(0, 1, 1, 1, "\nx"), //
-            edit(1, 1, 1, 1, "e"),   //
-        ];
-        let buffer = Rope::from_str("1\n23");
-        let result =
-            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
-        let expected = unindent(
-            &(r#"eval -draft -save-regs ^ 'select 1.2,2.1
-                 exec -save-regs "" Z
-                 exec "z<space>"
-                 lsp-replace-selection ''"#
-                .to_string()
-                + "\u{00E000}"
-                + r#"
-                 xe''
-                 exec <percent>s\u00E000<ret>d'"#),
-        );
-        assert_eq!(result, Some(expected));
-    }
-
     #[test]
     pub fn apply_text_edits_to_buffer_merge_imports() {
         let text_edits = vec![
@@ -697,37 +654,36 @@ mod tests {
         let result =
             apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
 
-        let expected = unindent(
-            &(r#"eval -draft -save-regs ^ 'select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
-                 exec -save-regs "" Z
-                 exec "z<space>"
-                 lsp-replace-selection ''std::{path::Path, process::Stdio}''
-                 exec "z1)<space>"
-                 lsp-replace-selection ''"#.to_string() + "\u{00E000}" + r#"
-                 fn main() {
-                     let matches = App::new("kak-lsp").get_matches();
+        let expected = indoc!(
+            r#"eval -draft -save-regs ^ 'select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
+               exec -save-regs "" Z
+               exec "z<space>"
+               lsp-replace-selection ''std::{path::Path, process::Stdio}''
+               exec "z1)<space>"
+               lsp-replace-selection ''
+               fn main() {
+                   let matches = App::new("kak-lsp").get_matches();
 
-                     if matches.is_present("kakoune") {}
-                 }''
-                 exec "z2)<space>"
-                 lsp-replace-selection ''kakoune''
-                 exec "z3)<space>"
-                 lsp-replace-selection ''script:''
-                 exec "z4)<space>"
-                 lsp-insert-before-selection ''&str ''
-                 exec "z5)<space>"
-                 lsp-replace-selection ''include_str!("../rc/lsp.kak")''
-                 exec "z6)<space>"
-                 lsp-replace-selection ''"# + "\u{00E000}" + r#"
-                     let''
-                 exec "z7)<space>"
-                 lsp-replace-selection ''args''
-                 exec "z8)<space>"
-                 lsp-replace-selection ''= env::args().skip(1);''
-                 exec "z9)<space>"
-                 lsp-replace-selection ''"# + "\u{00E000}" + r#"
-                 ''
-                 exec <percent>s\u00E000<ret>d'"#)
+                   if matches.is_present("kakoune") {}
+               }''
+               exec "z2)<space>"
+               lsp-replace-selection ''kakoune''
+               exec "z3)<space>"
+               lsp-replace-selection ''script:''
+               exec "z4)<space>"
+               lsp-insert-before-selection ''&str ''
+               exec "z5)<space>"
+               lsp-replace-selection ''include_str!("../rc/lsp.kak")''
+               exec "z6)<space>"
+               lsp-replace-selection ''
+                   let''
+               exec "z7)<space>"
+               lsp-replace-selection ''args''
+               exec "z8)<space>"
+               lsp-replace-selection ''= env::args().skip(1);''
+               exec "z9)<space>"
+               lsp-replace-selection ''
+               '''"#
         ).to_string();
         assert_eq!(result, Some(expected));
     }
