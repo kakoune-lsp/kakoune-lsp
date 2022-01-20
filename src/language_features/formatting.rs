@@ -19,11 +19,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
         meta,
         req_params,
         move |ctx: &mut Context, meta: EditorMeta, result: Option<Vec<TextEdit>>| {
-            let text_edits = result
-                .unwrap_or_else(Vec::new)
-                .into_iter()
-                .map(OneOf::Left)
-                .collect::<Vec<_>>();
+            let text_edits = result.unwrap_or_else(Vec::new);
             super::range_formatting::editor_range_formatting(meta, &text_edits, ctx)
         },
     );

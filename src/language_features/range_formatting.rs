@@ -1,5 +1,5 @@
 use crate::context::*;
-use crate::text_edit::apply_text_edits_to_buffer;
+use crate::text_edit::{apply_text_edits_to_buffer, TextEditish};
 use crate::types::*;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -29,20 +29,15 @@ pub fn text_document_range_formatting(
         meta,
         req_params,
         move |ctx: &mut Context, meta: EditorMeta, results: Vec<Option<Vec<TextEdit>>>| {
-            let text_edits = results
-                .into_iter()
-                .flatten()
-                .flatten()
-                .map(OneOf::Left)
-                .collect::<Vec<_>>();
+            let text_edits = results.into_iter().flatten().flatten().collect::<Vec<_>>();
             editor_range_formatting(meta, &text_edits, ctx)
         },
     );
 }
 
-pub fn editor_range_formatting(
+pub fn editor_range_formatting<T: TextEditish<T>>(
     meta: EditorMeta,
-    text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+    text_edits: &[T],
     ctx: &mut Context,
 ) {
     let cmd = ctx.documents.get(&meta.buffile).and_then(|document| {

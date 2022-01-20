@@ -15,19 +15,56 @@ use std::os::unix::io::FromRawFd;
 #[cfg(test)]
 use unindent::unindent;
 
+pub trait TextEditish<T: TextEditish<T>> {
+    fn text_edit(self) -> TextEdit;
+    fn as_ref(&self) -> &TextEdit;
+}
+
+impl TextEditish<TextEdit> for TextEdit {
+    fn text_edit(self) -> TextEdit {
+        self
+    }
+    fn as_ref(&self) -> &TextEdit {
+        self
+    }
+}
+
+impl TextEditish<AnnotatedTextEdit> for AnnotatedTextEdit {
+    fn text_edit(self) -> TextEdit {
+        self.text_edit
+    }
+    fn as_ref(&self) -> &TextEdit {
+        &self.text_edit
+    }
+}
+
+impl TextEditish<OneOf<TextEdit, AnnotatedTextEdit>> for OneOf<TextEdit, AnnotatedTextEdit> {
+    fn text_edit(self) -> TextEdit {
+        match self {
+            OneOf::Left(text_edit) => text_edit,
+            OneOf::Right(annotated_text_edit) => annotated_text_edit.text_edit,
+        }
+    }
+    fn as_ref(&self) -> &TextEdit {
+        match self {
+            OneOf::Left(text_edit) => text_edit,
+            OneOf::Right(annotated_text_edit) => &annotated_text_edit.text_edit,
+        }
+    }
+}
+
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
 /// buffer or by editing file directly when it's not open in editor.
 pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx: &Context) {
-    let edits = edits.into_iter().map(OneOf::Left).collect::<Vec<_>>();
     apply_annotated_text_edits(meta, uri, &edits, ctx)
 }
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
 /// buffer or by editing file directly when it's not open in editor.
-pub fn apply_annotated_text_edits(
+pub fn apply_annotated_text_edits<T: TextEditish<T>>(
     meta: &EditorMeta,
     uri: &Url,
-    edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+    edits: &[T],
     ctx: &Context,
 ) {
     if let Some(document) = uri
@@ -53,9 +90,9 @@ pub fn apply_annotated_text_edits(
     }
 }
 
-pub fn apply_text_edits_to_file(
+pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     uri: &Url,
-    text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+    text_edits: &[T],
     offset_encoding: OffsetEncoding,
 ) -> std::io::Result<()> {
     let path = uri.to_file_path().unwrap();
@@ -88,10 +125,10 @@ pub fn apply_text_edits_to_file(
         let temp_file = unsafe { File::from_raw_fd(temp_fd) };
         (temp_path, temp_file)
     };
-    fn apply_text_edits_to_file_impl(
+    fn apply_text_edits_to_file_impl<T: TextEditish<T>>(
         text: Rope,
         temp_file: File,
-        text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+        text_edits: &[T],
         offset_encoding: OffsetEncoding,
     ) -> Result<(), std::io::Error> {
         let mut output = BufWriter::new(temp_file);
@@ -109,10 +146,8 @@ pub fn apply_text_edits_to_file(
             let TextEdit {
                 range: Range { start, end },
                 new_text,
-            } = match te {
-                OneOf::Left(edit) => edit,
-                OneOf::Right(annotated_edit) => &annotated_edit.text_edit,
-            };
+            } = te.as_ref();
+
             if start.line as u64 >= text_len_lines || end.line as u64 >= text_len_lines {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -185,10 +220,10 @@ fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Op
     }
 }
 
-pub fn apply_text_edits_to_buffer(
+pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     client: &Option<String>,
     uri: Option<&Url>,
-    text_edits: &[OneOf<TextEdit, AnnotatedTextEdit>],
+    text_edits: &[T],
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> Option<String> {
@@ -212,11 +247,7 @@ pub fn apply_text_edits_to_buffer(
             // selection goes away because it was merged into the second one. This is what our
             // logic to compute merged selections will do later. It doesn't account for Kakoune
             // optimizing redundant text edits, so just drop them here.
-            let text_edit = match text_edit {
-                OneOf::Left(text_edit) => text_edit,
-                OneOf::Right(annotated) => &annotated.text_edit,
-            };
-            let range = text_edit.range;
+            let TextEdit { range, new_text } = text_edit.as_ref();
             // TODO Also drop redundant edits that span multiple lines.
             if range.start.line != range.end.line {
                 return true;
@@ -226,7 +257,7 @@ pub fn apply_text_edits_to_buffer(
             let end_byte = line.char_to_byte(range.end.character as _);
             let bytes = line.bytes_at(start_byte);
             let contents = bytes.take(end_byte - start_byte).collect::<Vec<u8>>();
-            let redundant = text_edit.new_text.as_bytes() == contents;
+            let redundant = new_text.as_bytes() == contents;
             !redundant
         })
         .map(|text_edit| lsp_text_edit_to_kakoune(text_edit, text, offset_encoding))
@@ -392,15 +423,12 @@ struct KakouneTextEdit {
     command: KakouneTextEditCommand,
 }
 
-fn lsp_text_edit_to_kakoune(
-    text_edit: &OneOf<TextEdit, AnnotatedTextEdit>,
+fn lsp_text_edit_to_kakoune<T: TextEditish<T>>(
+    text_edit: &T,
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> KakouneTextEdit {
-    let TextEdit { range, new_text } = match text_edit {
-        OneOf::Left(edit) => edit,
-        OneOf::Right(annotated_edit) => &annotated_edit.text_edit,
-    };
+    let TextEdit { range, new_text } = text_edit.as_ref();
     let Range { start, end } = range;
     let insert = start.line == end.line && start.character == end.character;
 
