@@ -133,12 +133,6 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     ) -> Result<(), std::io::Error> {
         let mut output = BufWriter::new(temp_file);
 
-        let character_to_offset = match offset_encoding {
-            OffsetEncoding::Utf8 => character_to_offset_utf_8_code_units,
-            // Not a proper UTF-16 code units handling, but works within BMP
-            OffsetEncoding::Utf16 => character_to_offset_utf_8_code_points,
-        };
-
         let text_len_lines = text.len_lines() as u64;
         let mut cursor = 0;
 
@@ -155,9 +149,16 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
                 ));
             }
 
-            let start_offset =
-                character_to_offset(text.line(start.line as _), start.character as _);
-            let end_offset = character_to_offset(text.line(end.line as _), end.character as _);
+            let start_offset = character_to_offset(
+                offset_encoding,
+                text.line(start.line as _),
+                start.character as _,
+            );
+            let end_offset = character_to_offset(
+                offset_encoding,
+                text.line(end.line as _),
+                end.character as _,
+            );
 
             if start_offset.is_none() || end_offset.is_none() {
                 return Err(std::io::Error::new(
@@ -201,6 +202,18 @@ fn cvt(t: i32) -> std::io::Result<i32> {
         Err(std::io::Error::last_os_error())
     } else {
         Ok(t)
+    }
+}
+
+fn character_to_offset(
+    offset_encoding: OffsetEncoding,
+    line: RopeSlice,
+    character: usize,
+) -> Option<usize> {
+    match offset_encoding {
+        OffsetEncoding::Utf8 => character_to_offset_utf_8_code_units(line, character),
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => character_to_offset_utf_8_code_points(line, character),
     }
 }
 
