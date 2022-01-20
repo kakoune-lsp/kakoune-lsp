@@ -8,7 +8,6 @@ use indoc::indoc;
 use itertools::Itertools;
 use lsp_types::*;
 use ropey::{Rope, RopeSlice};
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::os::unix::io::FromRawFd;
@@ -341,33 +340,6 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .dedup()
         .join(" ");
 
-    // Merged selections require one less selection cycle after the next restore
-    // to get to the next selection.
-    let merged_selections = edits
-        .windows(2)
-        .enumerate()
-        .filter_map(|(i, pair)| {
-            let first_end = &pair[0].range.end;
-            let second_start = &pair[1].range.start;
-            // Replacing adjacent selection effectively removes one.
-            let remove_adjacent = pair[0].command == KakouneTextEditCommand::Replace
-                && ((first_end.line == second_start.line
-                    && first_end.column + 1 == second_start.column)
-                    || (first_end.line + 1 == second_start.line
-                        && first_end.column == EOL_OFFSET
-                        && second_start.column == 1));
-            // Inserting in the same place doesn't produce extra selection.
-            let insert_the_same =
-                first_end.line == second_start.line && first_end.column == second_start.column;
-            if remove_adjacent || insert_the_same {
-                Some(i)
-            } else {
-                None
-            }
-        })
-        .collect::<HashSet<_>>();
-
-    let mut selection_index = 0;
     let mut apply_edits = edits
         .iter()
         .enumerate()
@@ -385,17 +357,14 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                 let command = formatdoc!(
                     "exec \"z{}<space>\"
                      {} {}",
-                    if selection_index > 0 {
-                        format!("{})", selection_index)
+                    if i > 0 {
+                        format!("{})", i)
                     } else {
                         String::new()
                     },
                     command,
                     editor_quote(new_text)
                 );
-                if !merged_selections.contains(&i) {
-                    selection_index += 1;
-                }
                 command
             },
         )
