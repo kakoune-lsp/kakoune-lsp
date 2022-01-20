@@ -263,7 +263,7 @@ fn byte_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     client: &Option<String>,
     uri: Option<&Url>,
-    text_edits: Vec<T>,
+    mut text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> Option<String> {
@@ -272,8 +272,41 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     if text_edits.is_empty() {
         return None;
     }
-    let mut edits = text_edits
-        .iter()
+
+    // Adjoin selections detection and Kakoune side editing relies on edits being ordered left to
+    // right. Language servers usually send them such, but spec doesn't say anything about the order
+    // hence we ensure it by sorting. It's important to use stable sort to handle properly cases
+    // like multiple inserts in the same place.
+    text_edits.sort_by_key(|x| {
+        let range = x.as_ref().range;
+        (range.start, range.end)
+    });
+
+    let mut offset = 0;
+
+    let mut coalesced_edits: Vec<TextEdit> = vec![];
+    for edit in text_edits {
+        let edit = edit.text_edit();
+        let Range { start, end } = edit.range;
+        let start_line = text.line(start.line as _);
+        let start_column = byte_to_offset(offset_encoding, start_line, start.character as _);
+        let start_offset = text.line_to_byte(start.line as _) + start_column.unwrap();
+        let end_line = text.line(end.line as _);
+        let end_column = byte_to_offset(offset_encoding, end_line, end.character as _);
+        let end_offset = text.line_to_byte(end.line as _) + end_column.unwrap();
+        if offset == start_offset && !coalesced_edits.is_empty() {
+            let last = coalesced_edits.last_mut().unwrap();
+            assert!(start == last.range.end);
+            last.range.end = end;
+            last.new_text += &edit.new_text;
+        } else {
+            coalesced_edits.push(edit)
+        }
+        offset = end_offset;
+    }
+
+    let edits = coalesced_edits
+        .into_iter()
         .filter(|text_edit| {
             // Drop redundant text edits because Kakoune treats them differently. Here's how
             //
@@ -301,21 +334,8 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
             let redundant = new_text.as_bytes() == contents;
             !redundant
         })
-        .map(|text_edit| lsp_text_edit_to_kakoune(text_edit, text, offset_encoding))
+        .map(|text_edit| lsp_text_edit_to_kakoune(&text_edit, text, offset_encoding))
         .collect::<Vec<_>>();
-
-    // Adjoin selections detection and Kakoune side editing relies on edits being ordered left to
-    // right. Language servers usually send them such, but spec doesn't say anything about the order
-    // hence we ensure it by sorting. It's improtant to use stable sort to handle properly cases
-    // like multiple inserts in the same place.
-    edits.sort_by_key(|x| {
-        (
-            x.range.start.line,
-            x.range.start.column,
-            x.range.end.line,
-            x.range.end.column,
-        )
-    });
 
     let selection_descs = edits
         .iter()
@@ -528,18 +548,12 @@ mod tests {
         let result =
             apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
-            r#"eval -draft -save-regs ^ 'select 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
+            r#"eval -draft -save-regs ^ 'select 1.5,1.12 1.15,1.21
                exec -save-regs "" Z
                exec "z<space>"
-               lsp-replace-selection ''''
-               exec "z<space>"
-               lsp-replace-selection ''''
+               lsp-replace-selection ''std''
                exec "z1)<space>"
-               lsp-replace-selection ''ffi''
-               exec "z1)<space>"
-               lsp-insert-before-selection ''::''
-               exec "z1)<space>"
-               lsp-insert-before-selection ''{CStr, CString}'''"#
+               lsp-replace-selection ''ffi::{CStr, CString}'''"#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -587,28 +601,14 @@ mod tests {
         let result =
             apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
-            r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 1.14,1.14 2.9,2.12 2.13,2.14
+            r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 2.9,2.14
                exec -save-regs "" Z
                exec "z<space>"
                lsp-replace-selection ''if''
                exec "z1)<space>"
-               lsp-replace-selection ''let''
-               exec "z1)<space>"
-               lsp-insert-before-selection '' ''
-               exec "z1)<space>"
-               lsp-insert-before-selection ''Test::Foo''
-               exec "z1)<space>"
-               lsp-insert-before-selection '' ''
-               exec "z1)<space>"
-               lsp-insert-before-selection ''=''
-               exec "z1)<space>"
-               lsp-insert-before-selection '' ''
-               exec "z1)<space>"
-               lsp-insert-before-selection ''foo''
+               lsp-replace-selection ''let Test::Foo = foo''
                exec "z2)<space>"
-               lsp-replace-selection ''println''
-               exec "z2)<space>"
-               lsp-replace-selection '''''"#
+               lsp-replace-selection ''println'''"#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -625,18 +625,110 @@ mod tests {
         let result =
             apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = unindent(
-            &(r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
+            &(r#"eval -draft -save-regs ^ 'select 1.2,2.1
                  exec -save-regs "" Z
                  exec "z<space>"
                  lsp-replace-selection ''"#
                 .to_string()
                 + "\u{00E000}"
                 + r#"
-                 x''
-                 exec "z<space>"
-                 lsp-insert-before-selection ''e''
+                 xe''
                  exec <percent>s\u00E000<ret>d'"#),
         );
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn apply_text_edits_to_buffer_merge_imports() {
+        let text_edits = vec![
+                edit(0, 4, 0, 7, "std"),
+                edit(0, 7, 0, 9, ""),
+                edit(0, 9, 0, 13, ""),
+                edit(0, 13, 0, 15, ""),
+                edit(0, 15, 0, 19, ""),
+                edit(0, 19, 0, 19, "::"),
+                edit(0, 19, 0, 19, "{path::Path, process::Stdio}"),
+                edit(1, 0, 1, 24, "\n"),
+                edit(1, 24, 1, 24, "fn main() {\n    let matches = App::new(\"kak-lsp\").get_matches();\n\n    if matches.is_present(\"kakoune\") {}\n}"),
+                edit(3, 3, 3, 7, "kakoune"),
+                edit(4, 8, 4, 15, "script"),
+                edit(4, 15, 4, 15, ":"),
+                edit(4, 16, 4, 16, "&str"),
+                edit(4, 16, 4, 16, " "),
+                edit(4, 18, 4, 21, "include_str"),
+                edit(4, 21, 4, 23, ""),
+                edit(4, 23, 4, 26, ""),
+                edit(4, 26, 4, 37, ""),
+                edit(4, 37, 4, 38, "!"),
+                edit(4, 38, 4, 49, "("),
+                edit(4, 49, 4, 49, "\"../rc/lsp.kak\""),
+                edit(4, 49, 4, 49, ")"),
+                edit(4, 49, 4, 51, ""),
+                edit(4, 52, 6, 4, "\n    "),
+                edit(6, 4, 6, 6, "let"),
+                edit(6, 7, 6, 14, "args"),
+                edit(6, 14, 6, 15, ""),
+                edit(6, 15, 6, 25, ""),
+                edit(6, 25, 6, 36, ""),
+                edit(6, 37, 6, 39, "="),
+                edit(6, 39, 6, 39, " "),
+                edit(6, 39, 6, 39, "env::args().skip(1)"),
+                edit(6, 39, 6, 39, ";"),
+                edit(7, 1, 9, 0, "\n"),
+                edit(9, 0, 12, 1, ""),
+                edit(12, 1, 13, 0, ""),
+        ];
+        let buffer = Rope::from_str(indoc!(
+            r#"use std::path::Path;
+               use std::process::Stdio;
+
+               fn main() {
+                   let matches = App::new("kak-lsp").get_matches();
+
+                   if matches.is_present("kakoune") {}
+               }
+
+               fn kakoune() {
+                   let script: &str = include_str!("../rc/lsp.kak");
+                   let args = env::args().skip(1);
+               }
+               "#
+        ));
+        let result =
+            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
+
+        let expected = unindent(
+            &(r#"eval -draft -save-regs ^ 'select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
+                 exec -save-regs "" Z
+                 exec "z<space>"
+                 lsp-replace-selection ''std::{path::Path, process::Stdio}''
+                 exec "z1)<space>"
+                 lsp-replace-selection ''"#.to_string() + "\u{00E000}" + r#"
+                 fn main() {
+                     let matches = App::new("kak-lsp").get_matches();
+
+                     if matches.is_present("kakoune") {}
+                 }''
+                 exec "z2)<space>"
+                 lsp-replace-selection ''kakoune''
+                 exec "z3)<space>"
+                 lsp-replace-selection ''script:''
+                 exec "z4)<space>"
+                 lsp-insert-before-selection ''&str ''
+                 exec "z5)<space>"
+                 lsp-replace-selection ''include_str!("../rc/lsp.kak")''
+                 exec "z6)<space>"
+                 lsp-replace-selection ''"# + "\u{00E000}" + r#"
+                     let''
+                 exec "z7)<space>"
+                 lsp-replace-selection ''args''
+                 exec "z8)<space>"
+                 lsp-replace-selection ''= env::args().skip(1);''
+                 exec "z9)<space>"
+                 lsp-replace-selection ''"# + "\u{00E000}" + r#"
+                 ''
+                 exec <percent>s\u00E000<ret>d'"#)
+        ).to_string();
         assert_eq!(result, Some(expected));
     }
 }
