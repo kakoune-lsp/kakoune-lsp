@@ -56,7 +56,7 @@ impl TextEditish<OneOf<TextEdit, AnnotatedTextEdit>> for OneOf<TextEdit, Annotat
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
 /// buffer or by editing file directly when it's not open in editor.
 pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx: &Context) {
-    apply_annotated_text_edits(meta, uri, &edits, ctx)
+    apply_annotated_text_edits(meta, uri, edits, ctx)
 }
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
@@ -64,7 +64,7 @@ pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx:
 pub fn apply_annotated_text_edits<T: TextEditish<T>>(
     meta: &EditorMeta,
     uri: &Url,
-    edits: &[T],
+    edits: Vec<T>,
     ctx: &Context,
 ) {
     if let Some(document) = uri
@@ -92,7 +92,7 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
 
 pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     uri: &Url,
-    text_edits: &[T],
+    text_edits: Vec<T>,
     offset_encoding: OffsetEncoding,
 ) -> std::io::Result<()> {
     let path = uri.to_file_path().unwrap();
@@ -128,7 +128,7 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     fn apply_text_edits_to_file_impl<T: TextEditish<T>>(
         text: Rope,
         temp_file: File,
-        text_edits: &[T],
+        text_edits: Vec<T>,
         offset_encoding: OffsetEncoding,
     ) -> Result<(), std::io::Error> {
         let mut output = BufWriter::new(temp_file);
@@ -263,7 +263,7 @@ fn byte_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     client: &Option<String>,
     uri: Option<&Url>,
-    text_edits: &[T],
+    text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> Option<String> {
@@ -526,7 +526,7 @@ mod tests {
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
         let result =
-            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.8,1.9 1.10,1.12 1.15,1.21 1.22,1.22
                exec -save-regs "" Z
@@ -550,7 +550,7 @@ mod tests {
         let text_edits = vec![edit(0, 1, 0, 1, "inserted"), edit(0, 2, 0, 3, "replaced")];
         let buffer = Rope::from_str("0123");
         let result =
-            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.2,1.2 1.3,1.3
                exec -save-regs "" Z
@@ -585,7 +585,7 @@ mod tests {
     }",
         );
         let result =
-            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 1.14,1.14 2.9,2.12 2.13,2.14
                exec -save-regs "" Z
@@ -623,7 +623,7 @@ mod tests {
         ];
         let buffer = Rope::from_str("1\n23");
         let result =
-            apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
+            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = unindent(
             &(r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
                  exec -save-regs "" Z

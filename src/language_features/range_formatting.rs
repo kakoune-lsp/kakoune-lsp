@@ -30,14 +30,14 @@ pub fn text_document_range_formatting(
         req_params,
         move |ctx: &mut Context, meta: EditorMeta, results: Vec<Option<Vec<TextEdit>>>| {
             let text_edits = results.into_iter().flatten().flatten().collect::<Vec<_>>();
-            editor_range_formatting(meta, &text_edits, ctx)
+            editor_range_formatting(meta, text_edits, ctx)
         },
     );
 }
 
 pub fn editor_range_formatting<T: TextEditish<T>>(
     meta: EditorMeta,
-    text_edits: &[T],
+    text_edits: Vec<T>,
     ctx: &mut Context,
 ) {
     let cmd = ctx.documents.get(&meta.buffile).and_then(|document| {

@@ -207,7 +207,7 @@ pub fn apply_edit(
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    apply_annotated_text_edits(&meta, &edit.text_document.uri, &edit.edits, ctx);
+                    apply_annotated_text_edits(&meta, &edit.text_document.uri, edit.edits, ctx);
                 }
             }
             DocumentChanges::Operations(ops) => {
@@ -217,7 +217,7 @@ pub fn apply_edit(
                             apply_annotated_text_edits(
                                 &meta,
                                 &edit.text_document.uri,
-                                &edit.edits,
+                                edit.edits,
                                 ctx,
                             );
                         }
