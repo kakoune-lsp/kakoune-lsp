@@ -171,7 +171,7 @@ hook global WinSetOption filetype=rust %{
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
 * An hourglass character (⌛) in the modeline whenever the language server indicates it's busy.
 ** To customize this behavior, override `lsp-handle-progress`.
-* If `lsp_auto_show_code_actions` is `true`, a lightbulb in the modeline whenever code actions are available at the main cursor position
+* If `lsp_auto_show_code_actions` is `true`, a lightbulb (💡) in the modeline whenever code actions are available at the main cursor position
 ** To customize the lightbulb, you can override `lsp-show-code-actions` and `lsp-hide-code-actions`
 * `lsp-code-actions` to open a menu to choose a code action to run
 ** To customize the menu, you can override `lsp-perform-code-action`
