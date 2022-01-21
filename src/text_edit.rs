@@ -369,7 +369,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                 // around https://github.com/mawww/kakoune/issues/4373
                 let new_text = if new_text.starts_with('\n') {
                     cleanup_sentinel = true;
-                    editor_quote(&("\u{00E000}".to_owned() + new_text))
+                    editor_quote(&("\u{00E000}".to_string() + new_text))
                 } else {
                     editor_quote(new_text)
                 };
@@ -483,7 +483,7 @@ fn lsp_text_edit_to_kakoune<T: TextEditish<T>>(
 
     KakouneTextEdit {
         range,
-        new_text: new_text.to_owned(),
+        new_text: new_text.to_string(),
         command,
     }
 }
@@ -629,7 +629,7 @@ mod tests {
                  exec -save-regs "" Z
                  exec "z<space>"
                  lsp-replace-selection ''"#
-                .to_owned()
+                .to_string()
                 + "\u{00E000}"
                 + r#"
                  x''

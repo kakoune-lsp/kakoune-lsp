@@ -220,7 +220,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
         .strip_suffix(&format!("{{{}}}", FACE_INFO_DEFAULT))
         .unwrap_or(&markup)
         .trim()
-        .to_owned()
+        .to_string()
 }
 
 /// Transpile the contents of an `lsp_types::MarkedString` into Kakoune markup

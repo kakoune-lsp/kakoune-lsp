@@ -287,7 +287,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 regular_expressions: None,
                 markdown: Some(MarkdownClientCapabilities {
                     parser: "kak-lsp".to_string(),
-                    version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+                    version: Some(env!("CARGO_PKG_VERSION").to_string()),
                 }),
                 stale_request_support: None,
             }),
@@ -309,8 +309,8 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
         trace: Some(TraceOption::Off),
         workspace_folders: None,
         client_info: Some(ClientInfo {
-            name: env!("CARGO_PKG_NAME").to_owned(),
-            version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+            name: env!("CARGO_PKG_NAME").to_string(),
+            version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }),
         locale: None,
     };

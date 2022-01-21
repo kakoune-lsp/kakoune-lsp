@@ -353,7 +353,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
         let symbol_position =
             get_kakoune_position_with_fallback(&meta.buffile, symbol_position, ctx);
 
-        let symbol_name = symbol.name().to_owned();
+        let symbol_name = symbol.name().to_string();
 
         let want_symbol = symbol_kinds.is_empty() || symbol_kinds.contains(&kind);
 
