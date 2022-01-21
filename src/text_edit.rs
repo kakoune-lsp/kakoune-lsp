@@ -233,6 +233,33 @@ fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Op
     }
 }
 
+fn byte_to_offset(
+    offset_encoding: OffsetEncoding,
+    line: RopeSlice,
+    character: usize,
+) -> Option<usize> {
+    match offset_encoding {
+        OffsetEncoding::Utf8 => byte_to_offset_utf_8_code_units(line, character),
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => byte_to_offset_utf_8_code_points(line, character),
+    }
+}
+
+fn byte_to_offset_utf_8_code_points(line: RopeSlice, character: usize) -> Option<usize> {
+    if character < line.len_chars() {
+        Some(line.char_to_byte(character))
+    } else {
+        None
+    }
+}
+
+fn byte_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<usize> {
+    if character <= line.len_bytes() {
+        Some(character)
+    } else {
+        None
+    }
+}
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     client: &Option<String>,
     uri: Option<&Url>,
@@ -266,8 +293,9 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                 return true;
             }
             let line = text.line(range.start.line as _);
-            let start_byte = line.char_to_byte(range.start.character as _);
-            let end_byte = line.char_to_byte(range.end.character as _);
+            let start_byte =
+                byte_to_offset(offset_encoding, line, range.start.character as _).unwrap();
+            let end_byte = byte_to_offset(offset_encoding, line, range.end.character as _).unwrap();
             let bytes = line.bytes_at(start_byte);
             let contents = bytes.take(end_byte - start_byte).collect::<Vec<u8>>();
             let redundant = new_text.as_bytes() == contents;
