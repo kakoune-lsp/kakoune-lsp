@@ -252,6 +252,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     token_types: ctx
                         .config
                         .semantic_tokens
+                        .faces
                         .iter()
                         .map(|token_config| token_config.token.clone().into())
                         // Collect into set first to remove duplicates
@@ -261,6 +262,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     token_modifiers: ctx
                         .config
                         .semantic_tokens
+                        .faces
                         .iter()
                         // Get all modifiers used in token definitions
                         .flat_map(|token_config| token_config.modifiers.clone())
