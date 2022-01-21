@@ -1,5 +1,6 @@
-The preferred way to contribute would be through github pull requests,
-but other forms (i.e. patches via email) are gladly accepted.
+You can submit feedback or patches on github, or by sending email to
+the public mailing list at ~krobelus/kakoune@lists.sr.ht (archives:
+https://lists.sr.ht/~krobelus/kakoune).
 
 By contributing you agree to release your code under the project's licensing
 model (see COPYING for details).
