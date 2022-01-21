@@ -1,5 +1,6 @@
 use jsonrpc_core::{Call, Output, Params};
 use lsp_types::{DiagnosticSeverity, Position, Range, SemanticTokenModifier};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
@@ -20,8 +21,8 @@ pub struct Config {
     pub verbosity: u8,
     #[serde(default)]
     pub snippet_support: bool,
-    #[serde(default, deserialize_with = "deserialize_semantic_tokens")]
-    pub semantic_tokens: Vec<SemanticTokenConfig>,
+    #[serde(default)]
+    pub semantic_tokens: SemanticTokenConfig,
 }
 
 #[derive(Clone, Default, Deserialize, Debug)]
@@ -67,23 +68,62 @@ impl Default for ServerConfig {
     }
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct SemanticTokenConfig {
+    pub faces: Vec<SemanticTokenFace>,
+}
+
+impl<'de> Deserialize<'de> for SemanticTokenConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SemanticTokenConfigVisitor;
+
+        impl<'de> Visitor<'de> for SemanticTokenConfigVisitor {
+            type Value = SemanticTokenConfig;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("A valid semantic-tokens configuration. See https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut faces = None;
+                while let Some(k) = map.next_key()? {
+                    match k {
+                        "faces" => faces = Some(map.next_value()?),
+                        _ => return Err(A::Error::unknown_field(k, &["faces"])),
+                    }
+                }
+                let faces = faces.ok_or_else(|| A::Error::missing_field("faces"))?;
+                Ok(SemanticTokenConfig { faces })
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut faces = vec![];
+                while let Some(face) = seq.next_element::<SemanticTokenFace>()? {
+                    faces.push(face)
+                }
+                Ok(SemanticTokenConfig { faces })
+            }
+        }
+
+        deserializer.deserialize_any(SemanticTokenConfigVisitor)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct SemanticTokenFace {
     pub token: String,
     pub face: String,
     #[serde(default)]
     pub modifiers: Vec<SemanticTokenModifier>,
-}
-
-fn deserialize_semantic_tokens<'de, D>(
-    deserializer: D,
-) -> Result<Vec<SemanticTokenConfig>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Vec::deserialize(deserializer).map_err(|e| {
-        D::Error::custom(e.to_string() + "\nSee https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens\n")
-    })
 }
 
 // Editor

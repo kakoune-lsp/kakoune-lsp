@@ -75,15 +75,20 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                     .map(|bit| &legend.token_modifiers[bit as usize])
                     .collect();
 
-                let candidates = ctx.config.semantic_tokens.iter().filter(|token_config| {
-                    token_name == token_config.token &&
+                let candidates = ctx
+                    .config
+                    .semantic_tokens
+                    .faces
+                    .iter()
+                    .filter(|token_config| {
+                        token_name == token_config.token &&
                         // All the config's modifiers must exist on the token for this
                         // config to match.
                         token_config
                         .modifiers
                         .iter()
                         .all(|modifier| token_modifiers.contains(&modifier))
-                });
+                    });
 
                 // But not all the token's modifiers must exist on the config.
                 // Therefore, we use the config that matches the most modifiers.
