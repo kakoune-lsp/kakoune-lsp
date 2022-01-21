@@ -143,9 +143,7 @@ define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on
     # prompt mode instead of menu mode, we allow fuzzy search.
     evaluate-commands %sh{
         shellquote() {
-            printf "'"
-            printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2"
-            printf "'"
+            printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
         }
         cases=
         completion=
