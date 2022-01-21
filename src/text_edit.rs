@@ -626,16 +626,16 @@ mod tests {
             apply_text_edits_to_buffer(&None, None, &text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = unindent(
             &(r#"eval -draft -save-regs ^ 'select 1.2,2.1 2.2,2.2
-               exec -save-regs "" Z
-               exec "z<space>"
-               lsp-replace-selection ''"#
+                 exec -save-regs "" Z
+                 exec "z<space>"
+                 lsp-replace-selection ''"#
                 .to_owned()
                 + "\u{00E000}"
                 + r#"
-               x''
-               exec "z<space>"
-               lsp-insert-before-selection ''e''
-               exec <percent>s\u00E000<ret>d'"#),
+                 x''
+                 exec "z<space>"
+                 lsp-insert-before-selection ''e''
+                 exec <percent>s\u00E000<ret>d'"#),
         );
         assert_eq!(result, Some(expected));
     }
