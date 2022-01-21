@@ -369,7 +369,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         .iter()
         .flat_map(|x| {
             let face = x.get_face();
-            let offset_encoding = ctx.offset_encoding.to_owned();
+            let offset_encoding = ctx.offset_encoding;
             x.ls_ranges.iter().filter_map(move |r| {
                 if face.is_empty() {
                     warn!("No face found for {:?}", x);
