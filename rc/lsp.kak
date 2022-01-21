@@ -123,8 +123,16 @@ Capture groups must be:
 # Callback functions. Override these to tune kak-lsp's behavior.
 
 define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
-    set-option buffer lsp_modeline_code_actions "💡"
+    set-option buffer lsp_modeline_code_actions %sh{
+        if $kak_opt_lsp_emoji_ok; then
+            echo "💡"
+        else
+            echo [A]
+        fi
+    }
 }
+# Workaround for terminals and libc providing inconsistent implementations of wcwidth(3).
+declare-option -hidden bool lsp_emoji_ok %sh{test "$(printf 'abc💡\b\bdef' | col -b)" = adef && echo true || echo false}
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
     set-option buffer lsp_modeline ""
@@ -1500,7 +1508,11 @@ define-command -hidden lsp-handle-progress -params 6 -docstring %{
 } %{
     set-option global lsp_modeline_progress %sh{
         if ! "$6"; then
-            echo ⌛
+            if $kak_opt_lsp_emoji_ok; then
+                echo ⌛
+            else
+                echo [P]
+            fi
             # More verbose alternative that shows what the server is working on.  Don't show this in
             # the modeline by default because the modeline is part of the terminal title; changing
             # that too quickly can be noisy.

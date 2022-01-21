@@ -27,8 +27,8 @@ EOF
 test_tmux_kak_start main.ts
 
 test_tmux send-keys /doSomething Enter
-test_sleep_until 'test_tmux capture-pane -p | grep -o 💡'
-# CHECK: 💡
+test_sleep_until 'test_tmux capture-pane -p | grep -Eo "💡|\[A\]"'
+# CHECK: {{💡|\[A\]}}
 
 test_tmux send-keys :lsp-code-actions Enter
 test_sleep_until 'test_tmux capture-pane -p | grep -o "Infer function return type"'
