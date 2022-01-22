@@ -124,15 +124,24 @@ Capture groups must be:
 
 define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
     set-option buffer lsp_modeline_code_actions %sh{
-        if $kak_opt_lsp_emoji_ok; then
+        if [ $kak_opt_lsp_emoji_lightbulb_ok = 3 ]; then
             echo "💡"
         else
             echo [A]
         fi
     }
 }
-# Workaround for terminals and libc providing inconsistent implementations of wcwidth(3).
-declare-option -hidden bool lsp_emoji_ok %sh{test "$(printf 'abc💡\b\bdef' | col -b)" = adef && echo true || echo false}
+# Work around terminals/libc using different versions of wcwidth(3).
+declare-option -hidden int lsp_emoji_lightbulb_ok
+declare-option -hidden int lsp_emoji_hourglass_ok
+evaluate-commands %{
+    edit -scratch
+    execute-keys -draft i💡<esc>
+    set-option global lsp_emoji_lightbulb_ok %val{cursor_display_column}
+    execute-keys -draft ui⌛<esc>
+    set-option global lsp_emoji_hourglass_ok %val{cursor_display_column}
+    delete-buffer
+}
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
     set-option buffer lsp_modeline ""
@@ -1538,7 +1547,7 @@ define-command -hidden lsp-handle-progress -params 6 -docstring %{
 } %{
     set-option global lsp_modeline_progress %sh{
         if ! "$6"; then
-            if $kak_opt_lsp_emoji_ok; then
+            if [ $kak_opt_lsp_emoji_hourglass_ok = 3 ]; then
                 echo ⌛
             else
                 echo [P]
