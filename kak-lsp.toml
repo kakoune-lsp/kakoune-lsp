@@ -369,15 +369,15 @@ command = "zls"
 # - Rust Analyzer: https://github.com/rust-analyzer/rust-analyzer/blob/f6da603c7fe56c19a275dc7bab1f30fe1ad39707/crates/ide/src/syntax_highlighting.rs#L42
 [semantic_tokens]
 faces = [
-    {token="comment", face="documentation", modifiers=["documentation"]},
-    {token="comment", face="comment"},
-    {token="function", face="function"},
-    {token="keyword", face="keyword"},
-    {token="namespace", face="module"},
-    {token="operator", face="operator"},
-    {token="string", face="string"},
-    {token="type", face="type"},
-    {token="variable", face="default+d", modifiers=["readonly"]},
-    {token="variable", face="default+d", modifiers=["constant"]},
-    {token="variable", face="variable"},
+    {face="documentation", token="comment", modifiers=["documentation"]},
+    {face="comment", token="comment"},
+    {face="function", token="function"},
+    {face="keyword", token="keyword"},
+    {face="module", token="namespace"},
+    {face="operator", token="operator"},
+    {face="string", token="string"},
+    {face="type", token="type"},
+    {face="default+d", token="variable", modifiers=["readonly"]},
+    {face="default+d", token="variable", modifiers=["constant"]},
+    {face="variable", token="variable"},
 ]

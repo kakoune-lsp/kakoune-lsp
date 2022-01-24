@@ -120,8 +120,8 @@ impl<'de> Deserialize<'de> for SemanticTokenConfig {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct SemanticTokenFace {
-    pub token: String,
     pub face: String,
+    pub token: String,
     #[serde(default)]
     pub modifiers: Vec<SemanticTokenModifier>,
 }
