@@ -1,4 +1,4 @@
-## Unreleased
+## 12.0.0 - 2022-01-26
 
 Breaking changes:
 - [`python-lsp-server`](https://github.com/python-lsp/python-lsp-server) replaces [python-language-server](https://github.com/palantir/python-language-server) as default language server for Python.
