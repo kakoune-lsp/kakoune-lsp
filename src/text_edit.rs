@@ -287,10 +287,10 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         let Range { start, end } = edit.range;
         let start_line = text.line(start.line as _);
         let start_column = byte_to_offset(offset_encoding, start_line, start.character as _);
-        let start_offset = text.line_to_byte(start.line as _) + start_column.unwrap();
+        let start_offset = text.line_to_byte(start.line as _) + start_column.unwrap_or(0);
         let end_line = text.line(end.line as _);
         let end_column = byte_to_offset(offset_encoding, end_line, end.character as _);
-        let end_offset = text.line_to_byte(end.line as _) + end_column.unwrap();
+        let end_offset = text.line_to_byte(end.line as _) + end_column.unwrap_or(0);
         if offset == start_offset && !coalesced_edits.is_empty() {
             let last = coalesced_edits.last_mut().unwrap();
             assert!(start == last.range.end);
