@@ -57,7 +57,7 @@ pub fn editor_escape(s: &str) -> String {
 
 /// Escape Kakoune string wrapped into double quote
 pub fn editor_escape_double_quotes(s: &str) -> String {
-    s.replace("\"", "\"\"")
+    s.replace("\"", "\"\"").replace("%", "%%")
 }
 
 /// Convert to Kakoune string by wrapping into quotes and escaping
