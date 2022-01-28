@@ -1,5 +1,9 @@
 ## Unreleased
 
+Bug fixes:
+- Fix regression in 12.0.0 where kak-lsp would panic when applying text edits that span until the buffer end, such as from `lsp-formatting` with zls (#589).
+- Diagnostics no longer break when a diagnostic's message contains `%` (#590).
+
 ## 12.0.0 - 2022-01-26
 
 Breaking changes:
