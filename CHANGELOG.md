@@ -1,4 +1,4 @@
-## Unreleased
+## 12.0.1 - 2022-01-29
 
 Bug fixes:
 - Fix regression in 12.0.0 where kak-lsp would panic when applying text edits that span until the buffer end, such as from `lsp-formatting` with zls (#589).
