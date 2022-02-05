@@ -1757,22 +1757,6 @@ define-command lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on
     alias global lsp-exit lsp-exit-editor-session
 }
 
-### lsp-* commands as subcommands of lsp command ###
-
-define-command lsp -params 1.. -shell-script-candidates %{
-    for cmd in start hover definition references signature-help diagnostics document-symbol\
-    workspace-symbol workspace-symbol-incr rename rename-prompt\
-    capabilities stop formatting formatting-sync highlight-references\
-    inline-diagnostics-enable inline-diagnostics-disable\
-    diagnostic-lines-enable diagnostic-lines-disable auto-hover-enable auto-hover-disable\
-    auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
-    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable\
-    find-error implementation;
-        do echo $cmd;
-    done
-} %{ evaluate-commands "lsp-%arg{1}" }
-
-
 ### User mode ###
 
 declare-user-mode lsp
@@ -2205,6 +2189,21 @@ define-command -hidden lsp-diagnostics-open-error -params 4 %{
 }
 
 # Deprecated commands.
+
+define-command -hidden lsp -params 1.. -shell-script-candidates %{
+    for cmd in start hover definition references signature-help diagnostics document-symbol\
+    workspace-symbol workspace-symbol-incr rename rename-prompt\
+    capabilities stop formatting formatting-sync highlight-references\
+    inline-diagnostics-enable inline-diagnostics-disable\
+    diagnostic-lines-enable diagnostic-lines-disable auto-hover-enable auto-hover-disable\
+    auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
+    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable\
+    find-error implementation;
+        do echo $cmd;
+    done
+} %{ evaluate-commands "lsp-%arg{1}" }
+
+
 define-command -hidden lsp-symbols-next-match -docstring 'DEPRECATED: use lsp-next-location. Jump to the next symbols match' %{
     lsp-next-location '*symbols*'
 }
