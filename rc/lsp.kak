@@ -144,7 +144,7 @@ evaluate-commands %{
 }
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
-    set-option buffer lsp_modeline ""
+    set-option buffer lsp_modeline_code_actions ""
 }
 
 define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on :lsp-code-actions" %{
