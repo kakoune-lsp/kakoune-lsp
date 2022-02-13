@@ -1,5 +1,19 @@
 ## Unreleased
 
+Additions:
+- New mappings for Kakoune's object mode allow to select adjacent/surrounding symbols like functions or types (#598).
+- New user mode mapping `<c-o>` spawns a menu to jump to buffer symbol (#584).
+- `lsp-formatting` used to spawn several shell processes for each modification, which caused noticable delays when formatting many lines. This has been remedied by avoiding shell calls (88f52f0c).
+- kak-lsp is now compatible with the proposed changes to P and <a-x> (see Kakoune's `breaking-cleanups` branch).
+- The documentation now communicates that kak-lsp appends to the global modeline at load time (eb54d378).
+- New experimental command `lsp-connect` allows to handle certain LSP responses messages with a custom command (#584).
+
+Bug fixes:
+- `lsp_auto_show_code_actions` has been fixed to actually hide the lightbulb when no code action is available (76cff5f2).
+- Loading kak-lsp no longer leaves around a scratch buffer (#593).
+- Code actions are now offered for the main selection's range, instead of just the cursor position. This unlocks an "extract to function" refactoring from rust-analyzer. (#594).
+- The *-sync commands now automatically restart the server instead of showing an error if the server is down (b54ec807).
+
 ## 12.0.1 - 2022-01-29
 
 Bug fixes:
