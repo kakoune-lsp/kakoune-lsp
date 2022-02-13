@@ -357,6 +357,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/hover\"
+${kak_opt_lsp_connect_fifo}\
 [params]
 $hover_buffer_args
 position.line = ${kak_cursor_line}
@@ -464,6 +465,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/definition\"
+${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
 column    = ${kak_cursor_column}
@@ -482,6 +484,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/implementation\"
+${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -500,6 +503,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/typeDefinition\"
+${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -530,7 +534,8 @@ define-command -hidden lsp-code-actions-request -params 1..3 -docstring "Request
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
         pipe=${tmp}/fifo
         mkfifo ${pipe}
-        fifo="fifo = \"${pipe}\""
+        fifo="fifo = \"${pipe}\"
+"
     fi
 
     (printf %s "
@@ -540,7 +545,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/codeAction\"
-${fifo}
+${fifo:-${kak_opt_lsp_connect_fifo}}\
 [params]
 position.line     = ${kak_cursor_line}
 position.column   = ${kak_cursor_column}
@@ -606,6 +611,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/references\"
+${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -624,6 +630,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/documentHighlight\"
+${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -683,6 +690,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/selectionRange\"
+${kak_opt_lsp_connect_fifo}\
 [params]
 position.line = ${kak_cursor_line}
 position.column = ${kak_cursor_column}
@@ -736,6 +744,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/signatureHelp\"
+${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -754,6 +763,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/diagnostics\"
+${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -770,6 +780,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp}
 method   = \"textDocument/documentSymbol\"
+${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -800,6 +811,7 @@ buffile  = \"${1}\"
 filetype = \"${2}\"
 version  = ${3}
 method   = \"workspace/symbol\"
+${kak_opt_lsp_connect_fifo}\
 [params]
 query    = \"${4}\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1414,6 +1426,58 @@ define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render call
 
 define-command -hidden lsp-show-outgoing-calls -params 2 -docstring "Render callees" %{
     lsp-show-goto-buffer *callees* %arg{@}
+}
+
+declare-option -hidden str lsp_connect_fifo
+define-command lsp-connect -params 2.. \
+    -docstring %{lsp-connect <handler> <request> <params>...: send request to language server and forward response to custom handler
+
+<handler> is called with one argument, the file containing the language server's response.
+<request> is a function that makes an LSP request. It is called with <params>.
+} %{
+    lsp-require-enabled lsp-connect
+    evaluate-commands -save-regs t %{
+        set-register p %sh{
+            tmp=$(mktemp -q -d -t 'kak-lsp-connect.XXXXXX' 2>/dev/null || mktemp -q -d)
+            pipe=${tmp}/fifo
+            mkfifo ${pipe}
+            echo ${pipe}
+        }
+        set-option global lsp_connect_fifo "write_response_to_fifo = true
+fifo = ""%reg{p}""
+"
+        evaluate-commands %sh{
+            shift
+            for arg
+            do
+                printf "'%s' " "$(printf "$arg" | sed "s/'/''/")"
+            done
+        }
+        %arg{1} %reg{p}
+        set-option global lsp_connect_fifo ""
+        evaluate-commands %sh{
+            rm ${kak_reg_p}
+            rmdir ${kak_reg_p%fifo}
+        }
+    }
+} -shell-script-candidates %{
+    [ $kak_token_to_complete -eq 1 ] || exit
+    commands="
+    lsp-capabilities
+    lsp-code-actions
+    lsp-definition
+    lsp-diagnostics
+    lsp-document-symbol
+    lsp-highlight-references
+    lsp-hover
+    lsp-implementation
+    lsp-references
+    lsp-selection-range
+    lsp-signature-help
+    lsp-type-definition
+    lsp-workspace-symbol
+    "
+    printf '%s\n' $commands
 }
 
 define-command lsp-next-location -params 1 -docstring %{
