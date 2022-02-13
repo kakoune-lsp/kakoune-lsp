@@ -203,7 +203,7 @@ pub fn start(
     }
 }
 
-fn write_response_to_fifo<T: Serialize>(meta: EditorMeta, response: T) {
+pub fn write_response_to_fifo<T: Serialize>(meta: EditorMeta, response: T) {
     let json = serde_json::to_string_pretty(&response).unwrap();
     let fifo = meta.fifo.expect("Need fifo to write response to");
     std::fs::write(fifo, (json + "\n").as_bytes()).expect("Failed to write JSON response to fifo");

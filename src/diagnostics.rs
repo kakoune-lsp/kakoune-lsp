@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::controller::write_response_to_fifo;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
@@ -182,6 +183,10 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
 }
 
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
+    if meta.write_response_to_fifo {
+        write_response_to_fifo(meta, &ctx.diagnostics);
+        return;
+    }
     let content = ctx
         .diagnostics
         .iter()
