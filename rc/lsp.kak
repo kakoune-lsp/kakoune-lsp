@@ -253,7 +253,7 @@ method   = \"textDocument/didChange\"
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
 " | eval "${kak_opt_lsp_cmd} --request"
-    }
+        }
         execute-keys -draft '%<a-|><ret>'
     }}
     evaluate-commands %arg{1}
