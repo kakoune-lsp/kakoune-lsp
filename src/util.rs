@@ -71,6 +71,11 @@ pub fn editor_quote_double_quotes(s: &str) -> String {
     format!("\"{}\"", editor_escape_double_quotes(s))
 }
 
+// Escape a sequence of printable keys so they can safely be passed to "execute-keys".
+pub fn escape_keys(s: &str) -> String {
+    return s.replace("<", "<lt>");
+}
+
 /// Escape Kakoune tuple element, as used in option types "completions", "line-specs" and
 /// "range-specs".
 pub fn escape_tuple_element(s: &str) -> String {

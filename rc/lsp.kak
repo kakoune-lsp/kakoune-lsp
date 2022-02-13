@@ -1516,31 +1516,6 @@ define-command -hidden lsp-show-message-log -params 1 -docstring %{
     echo -debug "kak-lsp: log:" %arg{1}
 }
 
-define-command -hidden lsp-insert-before-selection -params 1 -docstring %{
-    Insert content before current selections while keeping cursor intact.
-    It is used to apply text edits from language server.
-} %{
-    declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    echo -to-file %opt{lsp_text_edit_tmp} -- %arg{1}
-    execute-keys "!cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
-}
-
-define-command -hidden lsp-replace-selection -params 1 -docstring %{
-    Replace content of current selections while keeping cursor intact.
-    It is used to apply text edits from language server.
-} %{
-    declare-option -hidden str lsp_text_edit_tmp %sh{ mktemp }
-    echo -to-file %opt{lsp_text_edit_tmp} -- %arg{1}
-    try %{
-        execute-keys -draft <a-k>\n\z<ret>
-        execute-keys "|cat $kak_opt_lsp_text_edit_tmp; rm $kak_opt_lsp_text_edit_tmp<ret>"
-    } catch %{
-        # The input has no newline. Kakoune would add one to the input, but also strip it from
-        # the output. Account for that.
-        execute-keys "|cat $kak_opt_lsp_text_edit_tmp; echo; rm $kak_opt_lsp_text_edit_tmp<ret>"
-    }
-}
-
 define-command -hidden lsp-handle-progress -params 6 -docstring %{
   lsp-handle-progress <token> <title> <cancelable> <message> <percentage> <done>
   Handle progress messages sent from the language server. Override to handle this.

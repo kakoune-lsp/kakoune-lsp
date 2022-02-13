@@ -343,7 +343,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .dedup()
         .join(" ");
 
-    let mut apply_edits = edits
+    let edit_keys = edits
         .iter()
         .enumerate()
         .map(
@@ -354,24 +354,24 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                 },
             )| {
                 let command = match command {
-                    KakouneTextEditCommand::InsertBefore => "lsp-insert-before-selection",
-                    KakouneTextEditCommand::Replace => "lsp-replace-selection",
+                    KakouneTextEditCommand::InsertBefore => 'i',
+                    KakouneTextEditCommand::Replace => 'c',
                 };
                 let command = formatdoc!(
-                    "exec \"z{}<space>\"
-                     {} {}",
+                    "z{}<space>{}{}<esc>",
                     if i > 0 {
                         format!("{})", i)
                     } else {
                         String::new()
                     },
                     command,
-                    editor_quote(new_text)
+                    editor_escape_double_quotes(&escape_keys(new_text)),
                 );
                 command
             },
         )
-        .join("\n");
+        .join("");
+    let mut apply_edits = format!("exec \"{}\"", edit_keys);
 
     let maybe_buffile = uri
         .and_then(|uri| uri.to_file_path().ok())
@@ -503,10 +503,7 @@ mod tests {
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.5,1.12 1.15,1.21
                exec -save-regs "" Z
-               exec "z<space>"
-               lsp-replace-selection ''std''
-               exec "z1)<space>"
-               lsp-replace-selection ''ffi::{CStr, CString}'''"#
+               exec "z<space>cstd<esc>z1)<space>cffi::{CStr, CString}<esc>"'"#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -521,10 +518,7 @@ mod tests {
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.2,1.2 1.3,1.3
                exec -save-regs "" Z
-               exec "z<space>"
-               lsp-insert-before-selection ''inserted''
-               exec "z1)<space>"
-               lsp-replace-selection ''replaced'''"#
+               exec "z<space>iinserted<esc>z1)<space>creplaced<esc>"'"#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -556,12 +550,7 @@ mod tests {
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 2.9,2.14
                exec -save-regs "" Z
-               exec "z<space>"
-               lsp-replace-selection ''if''
-               exec "z1)<space>"
-               lsp-replace-selection ''let Test::Foo = foo''
-               exec "z2)<space>"
-               lsp-replace-selection ''println'''"#
+               exec "z<space>cif<esc>z1)<space>clet Test::Foo = foo<esc>z2)<space>cprintln<esc>"'"#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -629,33 +618,14 @@ mod tests {
         let expected = indoc!(
             r#"eval -draft -save-regs ^ 'select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
                exec -save-regs "" Z
-               exec "z<space>"
-               lsp-replace-selection ''std::{path::Path, process::Stdio}''
-               exec "z1)<space>"
-               lsp-replace-selection ''
+               exec "z<space>cstd::{path::Path, process::Stdio}<esc>z1)<space>c
                fn main() {
-                   let matches = App::new("kak-lsp").get_matches();
+                   let matches = App::new(""kak-lsp"").get_matches();
 
-                   if matches.is_present("kakoune") {}
-               }''
-               exec "z2)<space>"
-               lsp-replace-selection ''kakoune''
-               exec "z3)<space>"
-               lsp-replace-selection ''script:''
-               exec "z4)<space>"
-               lsp-insert-before-selection ''&str ''
-               exec "z5)<space>"
-               lsp-replace-selection ''include_str!("../rc/lsp.kak")''
-               exec "z6)<space>"
-               lsp-replace-selection ''
-                   let''
-               exec "z7)<space>"
-               lsp-replace-selection ''args''
-               exec "z8)<space>"
-               lsp-replace-selection ''= env::args().skip(1);''
-               exec "z9)<space>"
-               lsp-replace-selection ''
-               '''"#
+                   if matches.is_present(""kakoune"") {}
+               }<esc>z2)<space>ckakoune<esc>z3)<space>cscript:<esc>z4)<space>i&str <esc>z5)<space>cinclude_str!(""../rc/lsp.kak"")<esc>z6)<space>c
+                   let<esc>z7)<space>cargs<esc>z8)<space>c= env::args().skip(1);<esc>z9)<space>c
+               <esc>"'"#
         ).to_string();
         assert_eq!(result, Some(expected));
     }
