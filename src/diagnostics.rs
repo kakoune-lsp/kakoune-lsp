@@ -196,7 +196,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                         }
                     };
                     format!(
-                        "{}:{}:{}: {}:{}",
+                        "{}:{}:{}: {}: {}",
                         short_file_path(filename, &ctx.root_path),
                         p.line,
                         p.column,
