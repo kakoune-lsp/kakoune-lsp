@@ -1482,6 +1482,78 @@ fifo = ""%reg{p}""
     printf '%s\n' $commands
 }
 
+define-command -hidden lsp-goto-document-symbol -params 1 %{
+    evaluate-commands %sh{
+        python <"$1" -c '
+import json, os, sys
+SQ = "'\''"
+quote = lambda s: SQ + s.replace(SQ, SQ*2) + SQ
+symbols = json.load(sys.stdin)["result"]
+if not symbols:
+    print("fail", quote("no symbol found"))
+    sys.exit(0)
+menu = ["lsp-menu"]
+file = quote(os.environ["kak_buffile"])
+for symbol in symbols:
+    range = symbol["selectionRange"] if "selectionRange" in symbol else symbol["location"]["range"]
+    start = range["start"]
+    line = start["line"] + 1
+    column = start["character"] + 1
+    jump = f"edit -existing -- {file} {line} {column}"
+    menu += [quote(symbol["name"]), quote(jump)]
+print(" ".join(menu))'
+    }
+}
+
+define-command -hidden lsp-goto-reference -params 1 %{
+    evaluate-commands %sh{
+        python <"$1" -c '
+import json, os, sys
+SQ = "'\''"
+quote = lambda s: SQ + s.replace(SQ, SQ*2) + SQ
+references = json.load(sys.stdin)["result"]
+if not references:
+    print("fail", quote("no reference found"))
+    sys.exit(0)
+menu = ["lsp-menu"]
+for reference in references:
+    file = os.path.relpath(reference["uri"].removeprefix("file://"))
+    start = reference["range"]["start"]
+    line = start["line"] + 1
+    column = start["character"] + 1
+    jump = f"edit -existing -- {quote(file)} {line} {column}"
+    location = f"{file}:{line}:{column}"
+    menu += [quote(location), quote(jump)]
+print(" ".join(menu))'
+    }
+}
+
+define-command -hidden lsp-goto-diagnostic -params 1 %{
+    evaluate-commands %sh{
+        python <"$1" -c '
+import json, os, sys
+SQ = "'\''"
+quote = lambda s: SQ + s.replace(SQ, SQ*2) + SQ
+files = json.load(sys.stdin)
+if not files:
+    print("fail", quote("no diagnostic found"))
+    sys.exit(0)
+menu = ["lsp-menu"]
+for file, diagnostics in files.items():
+    file = os.path.relpath(file)
+    for diagnostic in diagnostics:
+        start = diagnostic["range"]["start"]
+        line = start["line"] + 1
+        column = start["character"] + 1
+        jump = f"edit -existing -- {quote(file)} {line} {column}"
+        severity = {1:"error", 2:"warning", 3:"information", 4:"hint"}[diagnostic["severity"]]
+        message = diagnostic["message"]
+        label = f"{file}:{line}:{column}: {severity}: {message}"
+        menu += [quote(label), quote(jump)]
+print(" ".join(menu))'
+    }
+}
+
 define-command lsp-next-location -params 1 -docstring %{
     lsp-next-location <bufname>
     Jump to next location listed in the given grep-like buffer, usually one of
@@ -1804,6 +1876,7 @@ map global lsp a '<esc>: lsp-code-actions<ret>'            -docstring 'show code
 map global lsp c '<esc>: lsp-capabilities<ret>'            -docstring 'show language server capabilities'
 map global lsp d '<esc>: lsp-definition<ret>'              -docstring 'go to definition'
 map global lsp e '<esc>: lsp-diagnostics<ret>'             -docstring 'list project errors, info, hints and warnings'
+map global lsp <c-e> '<esc>: lsp-connect lsp-goto-diagnostic lsp-diagnostics<ret>' -docstring 'jump to diagnostic'
 map global lsp f '<esc>: lsp-formatting<ret>'              -docstring 'format buffer'
 map global lsp h '<esc>: lsp-hover<ret>'                   -docstring 'show info for current position'
 map global lsp H '<esc>: lsp-hover-buffer<ret>'            -docstring 'show info for current position in a scratch buffer'
@@ -1811,10 +1884,12 @@ map global lsp i '<esc>: lsp-implementation<ret>'          -docstring 'go to imp
 map global lsp j '<esc>: lsp-outgoing-calls<ret>'          -docstring 'list outgoing call for function at cursor'
 map global lsp k '<esc>: lsp-incoming-calls<ret>'          -docstring 'list incoming call for function at cursor'
 map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'   -docstring 'search project symbols'
+map global lsp <c-o> '<esc>: lsp-connect lsp-goto-document-symbol lsp-document-symbol<ret>' -docstring 'jump to document symbol'
 map global lsp n '<esc>: lsp-find-error<ret>'              -docstring 'find next error'
 map global lsp p '<esc>: lsp-find-error --previous<ret>'   -docstring 'find previous error'
 map global lsp q '<esc>: lsp-exit<ret>'                    -docstring 'exit session'
 map global lsp r '<esc>: lsp-references<ret>'              -docstring 'list symbol references'
+map global lsp <c-r> '<esc>: lsp-connect lsp-goto-reference lsp-references<ret>' -docstring 'jump to symbol reference'
 map global lsp R '<esc>: lsp-rename-prompt<ret>'           -docstring 'rename symbol'
 map global lsp s '<esc>: lsp-signature-help<ret>'          -docstring 'show function signature help'
 map global lsp S '<esc>: lsp-document-symbol<ret>'         -docstring 'list document symbols'
