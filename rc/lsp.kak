@@ -148,8 +148,10 @@ define-command -hidden lsp-hide-code-actions -docstring "Called when no code act
 }
 
 define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on :lsp-code-actions" %{
-    # This is a really convoluted way of saying "menu %arg{@}". The difference is that by using
-    # prompt mode instead of menu mode, we allow fuzzy search.
+    lsp-menu %arg{@}
+}
+
+define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
     evaluate-commands %sh{
         shellquote() {
             printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
@@ -167,10 +169,10 @@ define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on
                 ;;"
         done
         printf "\
-        define-command -override -hidden lsp-perform-code-action-menu -params 1 %%§
+        define-command -override -hidden lsp-menu-select -params 1 %%§
             evaluate-commands %%sh¶
                 case \"\$1\" in%s
-                *) echo fail no such code action: \"\$1\" ;;
+                *) echo fail no such item: \"\$1\" ;;
                 esac
             ¶
         §" "$cases"
@@ -178,7 +180,7 @@ define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on
             printf %%s %s
             §' "$(shellquote "$completion")"
     }
-    execute-keys %{: lsp-perform-code-action-menu <tab>}
+    execute-keys %{: lsp-menu-select <tab>}
 }
 
 # Options for information exposed by kak-lsp.
