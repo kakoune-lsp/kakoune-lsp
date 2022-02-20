@@ -1490,6 +1490,29 @@ fifo = ""%reg{p}""
     printf '%s\n' $commands
 }
 
+define-command -hidden lsp-connect-goto-document-symbol -params 1 %{
+    evaluate-commands %sh{
+        python3 <"$1" -c '
+import json, os, sys
+SQ = "'\''"
+quote = lambda s: SQ + s.replace(SQ, SQ*2) + SQ
+symbols = json.load(sys.stdin)["result"]
+if not symbols:
+    print("fail", quote("no symbol found"))
+    sys.exit(0)
+menu = ["lsp-menu"]
+file = quote(os.environ["kak_buffile"])
+for symbol in symbols:
+    range = symbol["selectionRange"] if "selectionRange" in symbol else symbol["location"]["range"]
+    start = range["start"]
+    line = start["line"] + 1
+    column = start["character"] + 1
+    jump = f"edit -existing -- {file} {line} {column}"
+    menu += [quote(symbol["name"]), quote(jump)]
+print(" ".join(menu))'
+    }
+}
+
 define-command lsp-next-location -params 1 -docstring %{
     lsp-next-location <bufname>
     Jump to next location listed in the given grep-like buffer, usually one of
@@ -1819,6 +1842,7 @@ map global lsp i '<esc>: lsp-implementation<ret>'          -docstring 'go to imp
 map global lsp j '<esc>: lsp-outgoing-calls<ret>'          -docstring 'list outgoing call for function at cursor'
 map global lsp k '<esc>: lsp-incoming-calls<ret>'          -docstring 'list incoming call for function at cursor'
 map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'   -docstring 'search project symbols'
+map global lsp <c-o> '<esc>: lsp-connect lsp-connect-goto-document-symbol lsp-document-symbol<ret>' -docstring 'jump to document symbol'
 map global lsp n '<esc>: lsp-find-error<ret>'              -docstring 'find next error'
 map global lsp p '<esc>: lsp-find-error --previous<ret>'   -docstring 'find previous error'
 map global lsp q '<esc>: lsp-exit<ret>'                    -docstring 'exit session'
