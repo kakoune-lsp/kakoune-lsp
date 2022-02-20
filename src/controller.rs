@@ -199,7 +199,7 @@ impl ParserState {
         assert_eq!(self.offset, self.buf.len());
         self.buf.clear();
         self.offset = 0;
-        fs::File::open(fifos[usize::from(FIFO_INDEX.fetch_not(AcqRel))].clone())
+        fs::File::open(fifos[usize::from(FIFO_INDEX.fetch_xor(true, AcqRel))].clone())
             .unwrap()
             .read_to_end(&mut self.buf)
             .unwrap();

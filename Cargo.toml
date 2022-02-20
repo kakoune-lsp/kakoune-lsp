@@ -6,6 +6,7 @@ authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>", "Johannes Altmanninger <ac
 edition = "2018"
 license = "Unlicense/MIT"
 repository = "https://github.com/kakoune-lsp/kakoune-lsp"
+rust-version = "1.70"
 
 [dependencies]
 clap = {version = "4.5.8", features = ["cargo"] }
