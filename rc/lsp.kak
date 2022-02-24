@@ -134,13 +134,21 @@ define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when
 # Work around terminals/libc using different versions of wcwidth(3).
 declare-option -hidden int lsp_emoji_lightbulb_ok
 declare-option -hidden int lsp_emoji_hourglass_ok
-evaluate-commands %{
-    edit -scratch
-    execute-keys -draft i💡<esc>
-    set-option global lsp_emoji_lightbulb_ok %val{cursor_display_column}
-    execute-keys -draft ui⌛<esc>
-    set-option global lsp_emoji_hourglass_ok %val{cursor_display_column}
-    delete-buffer
+evaluate-commands -save-regs t %{
+    set-register t %{
+        edit -scratch *lsp-scratch*
+        execute-keys -draft i💡<esc>
+        set-option global lsp_emoji_lightbulb_ok %val{cursor_display_column}
+        execute-keys -draft ui⌛<esc>
+        set-option global lsp_emoji_hourglass_ok %val{cursor_display_column}
+        buffer *debug*
+        delete-buffer *lsp-scratch*
+    }
+    try %{
+        evaluate-commands -draft %reg{t}
+    } catch %{
+        evaluate-commands %reg{t}
+    }
 }
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
