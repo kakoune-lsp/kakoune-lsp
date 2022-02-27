@@ -208,7 +208,7 @@ pub struct CallHierarchyParams {
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeActionsParams {
-    pub position: KakounePosition,
+    pub selection_desc: String,
     pub perform_code_action: bool,
     pub code_action_pattern: Option<String>,
 }

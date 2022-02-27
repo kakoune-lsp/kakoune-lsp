@@ -11,14 +11,20 @@ use url::Url;
 pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = CodeActionsParams::deserialize(params)
         .expect("Params should follow CodeActionsParams structure");
-    let position = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
+
+    let document = ctx.documents.get(&meta.buffile).unwrap();
+    let range = kakoune_range_to_lsp(
+        &parse_kakoune_range(&params.selection_desc),
+        &document.text,
+        ctx.offset_encoding,
+    );
 
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
 
     let diagnostics: Vec<Diagnostic> = if let Some(buff_diags) = buff_diags {
         buff_diags
             .iter()
-            .filter(|d| d.range.start.line <= position.line && position.line <= d.range.end.line)
+            .filter(|d| ranges_lines_overlap(d.range, range))
             .cloned()
             .collect()
     } else {
@@ -29,10 +35,7 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        range: Range {
-            start: position,
-            end: position,
-        },
+        range,
         context: CodeActionContext {
             diagnostics,
             only: None,

@@ -557,8 +557,7 @@ version  = ${kak_timestamp}
 method   = \"textDocument/codeAction\"
 ${fifo:-${kak_opt_lsp_connect_fifo}}\
 [params]
-position.line     = ${kak_cursor_line}
-position.column   = ${kak_cursor_column}
+selectionDesc    = \"${kak_selection_desc}\"
 performCodeAction = $1
 $code_action_pattern
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &

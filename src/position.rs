@@ -57,6 +57,17 @@ pub fn lsp_position_to_kakoune(
     }
 }
 
+pub fn kakoune_range_to_lsp(
+    range: &KakouneRange,
+    text: &Rope,
+    offset_encoding: OffsetEncoding,
+) -> Range {
+    Range {
+        start: kakoune_position_to_lsp(&range.start, text, offset_encoding),
+        end: kakoune_position_to_lsp(&range.end, text, offset_encoding),
+    }
+}
+
 pub fn kakoune_position_to_lsp(
     position: &KakounePosition,
     text: &Rope,
@@ -148,6 +159,11 @@ pub fn parse_kakoune_range(range_desc: &str) -> KakouneRange {
         (cursor, anchor)
     };
     KakouneRange { start, end }
+}
+
+/// Returns true if there is a line that is included by both ranges.
+pub fn ranges_lines_overlap(a: Range, b: Range) -> bool {
+    a.start.line.max(b.start.line) <= a.end.line.min(b.end.line)
 }
 
 /// Get the byte index of a character in a Rope slice
