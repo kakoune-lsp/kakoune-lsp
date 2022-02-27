@@ -128,6 +128,28 @@ pub fn get_line(line_number: usize, text: &Rope) -> RopeSlice {
     text.line(min(line_number, text.len_lines() - 1))
 }
 
+/// Parse a range of the form <line1>.<column1>,<line2>.<column2>.
+/// The range is normalized, so the lower coordinate comes first.
+pub fn parse_kakoune_range(range_desc: &str) -> KakouneRange {
+    let mut parts = range_desc.split(',');
+    let mut convert = || {
+        let coords = parts.next().unwrap();
+        let mut coords = coords.split('.');
+        KakounePosition {
+            line: coords.next().unwrap().parse().ok().unwrap(),
+            column: coords.next().unwrap().parse().ok().unwrap(),
+        }
+    };
+    let anchor = convert();
+    let cursor = convert();
+    let (start, end) = if anchor < cursor {
+        (anchor, cursor)
+    } else {
+        (cursor, anchor)
+    };
+    KakouneRange { start, end }
+}
+
 /// Get the byte index of a character in a Rope slice
 ///
 /// If the char number is out-of-bounds, this will return one past

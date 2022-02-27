@@ -15,30 +15,7 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
         .selections_desc
         .split_ascii_whitespace()
         .into_iter()
-        .map(|desc| {
-            let mut parts = desc.split(',');
-            let mut convert = || {
-                let coords = parts.next().unwrap();
-                let mut coords = coords.split('.');
-                KakounePosition {
-                    line: coords.next().unwrap().parse().ok().unwrap(),
-                    column: coords.next().unwrap().parse().ok().unwrap(),
-                }
-            };
-            let anchor = convert();
-            let cursor = convert();
-            if anchor < cursor {
-                KakouneRange {
-                    start: anchor,
-                    end: cursor,
-                }
-            } else {
-                KakouneRange {
-                    start: cursor,
-                    end: anchor,
-                }
-            }
-        })
+        .map(parse_kakoune_range)
         .collect();
 
     let is_cursor_left_of_anchor = params.position == selections[0].start;
