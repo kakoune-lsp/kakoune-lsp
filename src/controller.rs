@@ -209,15 +209,15 @@ pub fn write_response_to_fifo<T: Serialize>(meta: EditorMeta, response: T) {
     std::fs::write(fifo, (json + "\n").as_bytes()).expect("Failed to write JSON response to fifo");
 }
 
-pub fn dispatch_pending_editor_requests(mut ctx: &mut Context) {
+pub fn dispatch_pending_editor_requests(ctx: &mut Context) {
     let mut requests = std::mem::take(&mut ctx.pending_requests);
 
     for msg in requests.drain(..) {
-        dispatch_editor_request(msg, &mut ctx);
+        dispatch_editor_request(msg, ctx);
     }
 }
 
-fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
+fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
     ensure_did_open(&request, ctx);
     let meta = request.meta;
     let params = request.params;
@@ -225,91 +225,91 @@ fn dispatch_editor_request(request: EditorRequest, mut ctx: &mut Context) {
     let ranges: Option<Vec<Range>> = request.ranges;
     match method {
         notification::DidOpenTextDocument::METHOD => {
-            text_document_did_open(meta, params, &mut ctx);
+            text_document_did_open(meta, params, ctx);
         }
         notification::DidChangeTextDocument::METHOD => {
-            text_document_did_change(meta, params, &mut ctx);
+            text_document_did_change(meta, params, ctx);
         }
         notification::DidCloseTextDocument::METHOD => {
-            text_document_did_close(meta, &mut ctx);
+            text_document_did_close(meta, ctx);
         }
         notification::DidSaveTextDocument::METHOD => {
-            text_document_did_save(meta, &mut ctx);
+            text_document_did_save(meta, ctx);
         }
         notification::DidChangeConfiguration::METHOD => {
-            workspace::did_change_configuration(meta, params, &mut ctx);
+            workspace::did_change_configuration(meta, params, ctx);
         }
         request::CallHierarchyPrepare::METHOD => {
-            call_hierarchy::call_hierarchy_prepare(meta, params, &mut ctx);
+            call_hierarchy::call_hierarchy_prepare(meta, params, ctx);
         }
         request::Completion::METHOD => {
-            completion::text_document_completion(meta, params, &mut ctx);
+            completion::text_document_completion(meta, params, ctx);
         }
         request::ResolveCompletionItem::METHOD => {
-            completion::completion_item_resolve(meta, params, &mut ctx);
+            completion::completion_item_resolve(meta, params, ctx);
         }
         request::CodeActionRequest::METHOD => {
-            codeaction::text_document_codeaction(meta, params, &mut ctx);
+            codeaction::text_document_codeaction(meta, params, ctx);
         }
         request::ExecuteCommand::METHOD => {
-            workspace::execute_command(meta, params, &mut ctx);
+            workspace::execute_command(meta, params, ctx);
         }
         request::HoverRequest::METHOD => {
-            hover::text_document_hover(meta, params, &mut ctx);
+            hover::text_document_hover(meta, params, ctx);
         }
         request::GotoDefinition::METHOD => {
-            goto::text_document_definition(meta, params, &mut ctx);
+            goto::text_document_definition(meta, params, ctx);
         }
         request::GotoImplementation::METHOD => {
-            goto::text_document_implementation(meta, params, &mut ctx);
+            goto::text_document_implementation(meta, params, ctx);
         }
         request::GotoTypeDefinition::METHOD => {
-            goto::text_document_type_definition(meta, params, &mut ctx);
+            goto::text_document_type_definition(meta, params, ctx);
         }
         request::References::METHOD => {
-            goto::text_document_references(meta, params, &mut ctx);
+            goto::text_document_references(meta, params, ctx);
         }
         notification::Exit::METHOD => {
-            general::exit(&mut ctx);
+            general::exit(ctx);
         }
         notification::WorkDoneProgressCancel::METHOD => {
             progress::work_done_progress_cancel(meta, params, ctx);
         }
         request::SelectionRangeRequest::METHOD => {
-            selection_range::text_document_selection_range(meta, params, &mut ctx);
+            selection_range::text_document_selection_range(meta, params, ctx);
         }
         request::SignatureHelpRequest::METHOD => {
-            signature_help::text_document_signature_help(meta, params, &mut ctx);
+            signature_help::text_document_signature_help(meta, params, ctx);
         }
         request::DocumentHighlightRequest::METHOD => {
-            highlights::text_document_highlights(meta, params, &mut ctx);
+            highlights::text_document_highlights(meta, params, ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
-            document_symbol::text_document_document_symbol(meta, &mut ctx);
+            document_symbol::text_document_document_symbol(meta, ctx);
         }
         "kak-lsp/next-or-previous-symbol" => {
-            document_symbol::next_or_prev_symbol(meta, params, &mut ctx);
+            document_symbol::next_or_prev_symbol(meta, params, ctx);
         }
         request::Formatting::METHOD => {
-            formatting::text_document_formatting(meta, params, &mut ctx);
+            formatting::text_document_formatting(meta, params, ctx);
         }
         request::RangeFormatting::METHOD => match ranges {
             Some(range) => {
-                range_formatting::text_document_range_formatting(meta, params, range, &mut ctx)
+                range_formatting::text_document_range_formatting(meta, params, range, ctx)
             }
             None => warn!("No range provided to {}", method),
         },
         request::WorkspaceSymbol::METHOD => {
-            workspace::workspace_symbol(meta, params, &mut ctx);
+            workspace::workspace_symbol(meta, params, ctx);
         }
         request::Rename::METHOD => {
-            rename::text_document_rename(meta, params, &mut ctx);
+            rename::text_document_rename(meta, params, ctx);
         }
         "textDocument/diagnostics" => {
-            diagnostics::editor_diagnostics(meta, &mut ctx);
+            diagnostics::editor_diagnostics(meta, ctx);
         }
         "capabilities" => {
-            general::capabilities(meta, &mut ctx);
+            general::capabilities(meta, ctx);
         }
         "apply-workspace-edit" => {
             workspace::apply_edit_from_editor(meta, params, ctx);
@@ -385,24 +385,19 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
     ctx.reply(request.id, result);
 }
 
-fn dispatch_server_notification(
-    meta: EditorMeta,
-    method: &str,
-    params: Params,
-    mut ctx: &mut Context,
-) {
+fn dispatch_server_notification(meta: EditorMeta, method: &str, params: Params, ctx: &mut Context) {
     match method {
         notification::Progress::METHOD => {
             progress::dollar_progress(meta, params, ctx);
         }
         notification::PublishDiagnostics::METHOD => {
-            diagnostics::publish_diagnostics(params, &mut ctx);
+            diagnostics::publish_diagnostics(params, ctx);
         }
         "$cquery/publishSemanticHighlighting" => {
-            cquery::publish_semantic_highlighting(params, &mut ctx);
+            cquery::publish_semantic_highlighting(params, ctx);
         }
         "$ccls/publishSemanticHighlight" => {
-            ccls::publish_semantic_highlighting(params, &mut ctx);
+            ccls::publish_semantic_highlighting(params, ctx);
         }
         notification::Exit::METHOD => {
             debug!("Language server exited");
@@ -456,19 +451,19 @@ fn dispatch_server_notification(
 ///
 /// In a normal situation, such extra request is not required, and `ensure_did_open` short-circuits
 /// most of the time in `if buffile.is_empty() || ctx.documents.contains_key(buffile)` condition.
-fn ensure_did_open(request: &EditorRequest, mut ctx: &mut Context) {
+fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
     let buffile = &request.meta.buffile;
     if buffile.is_empty() || ctx.documents.contains_key(buffile) {
         return;
     };
     if request.method == notification::DidChangeTextDocument::METHOD {
-        return text_document_did_open(request.meta.clone(), request.params.clone(), &mut ctx);
+        return text_document_did_open(request.meta.clone(), request.params.clone(), ctx);
     }
     match read_document(buffile) {
         Ok(draft) => {
             let mut params = toml::value::Table::default();
             params.insert("draft".to_string(), toml::Value::String(draft));
-            text_document_did_open(request.meta.clone(), toml::Value::Table(params), &mut ctx);
+            text_document_did_open(request.meta.clone(), toml::Value::Table(params), ctx);
         }
         Err(err) => error!(
             "Failed to read file {} to simulate textDocument/didOpen: {}",

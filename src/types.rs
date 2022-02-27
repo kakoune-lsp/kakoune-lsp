@@ -31,7 +31,7 @@ pub struct DynamicConfig {
     pub language: HashMap<String, DynamicLanguageConfig>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Default, Deserialize, Debug)]
 pub struct ServerConfig {
     #[serde(default)]
     pub session: String,
@@ -57,15 +57,6 @@ pub struct LanguageConfig {
 #[derive(Clone, Deserialize, Debug)]
 pub struct DynamicLanguageConfig {
     pub settings: Option<Value>,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        ServerConfig {
-            session: String::new(),
-            timeout: 0,
-        }
-    }
 }
 
 #[derive(Clone, Default, Debug)]
