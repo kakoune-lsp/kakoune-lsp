@@ -1,6 +1,10 @@
 name: Test kak-lsp
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "**", "!changelog" ]
+  pull_request:
+    branches: [ "**", "!changelog" ]
 
 env:
   CARGO_INCREMENTAL: 0
