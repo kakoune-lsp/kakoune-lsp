@@ -249,7 +249,7 @@ printf %s "
 session  = \"${kak_session}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/didChange\"
 [params]
 draft    = \"\"\"
@@ -295,7 +295,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/completion\"
 [params.position]
 line     = ${kak_cursor_line}
@@ -322,7 +322,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"completionItem/resolve\"
 [params]
 completion_item_index = ${1}
@@ -365,7 +365,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/hover\"
 ${kak_opt_lsp_connect_fifo}\
 [params]
@@ -425,7 +425,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/next-or-previous-symbol\"
 [params]
 position.line   = ${kak_cursor_line}
@@ -473,7 +473,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
@@ -492,7 +492,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/implementation\"
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
@@ -511,7 +511,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/typeDefinition\"
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
@@ -553,7 +553,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/codeAction\"
 ${fifo:-${kak_opt_lsp_connect_fifo}}\
 [params]
@@ -594,7 +594,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"workspace/executeCommand\"
 [params]
@@ -618,7 +618,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/references\"
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
@@ -637,7 +637,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentHighlight\"
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
@@ -656,7 +656,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/rename\"
 [params]
 newName  = \"$1\"
@@ -697,7 +697,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/selectionRange\"
 ${kak_opt_lsp_connect_fifo}\
 [params]
@@ -751,7 +751,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/signatureHelp\"
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
@@ -770,7 +770,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/diagnostics\"
 ${kak_opt_lsp_connect_fifo}\
 [params]
@@ -787,7 +787,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentSymbol\"
 ${kak_opt_lsp_connect_fifo}\
 [params]
@@ -832,7 +832,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"capabilities\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -852,7 +852,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/didOpen\"
 [params]
 draft    = \"\"\"
@@ -868,7 +868,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/didClose\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -880,7 +880,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/didSave\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -893,7 +893,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"workspace/didChangeConfiguration\"
 [params.settings]
 lsp_config = \"\"\"$(printf %s "${kak_opt_lsp_config}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')\"\"\"
@@ -919,7 +919,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"exit\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -931,7 +931,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"window/workDoneProgress/cancel\"
 [params]
 token    = \"$1\"
@@ -963,7 +963,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"apply-workspace-edit\"
 [params]
@@ -986,7 +986,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"apply-text-edits\"
 [params]
 edit     = $1
@@ -1000,7 +1000,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"stop\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1030,7 +1030,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"textDocument/formatting\"
 [params]
@@ -1086,7 +1086,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/rangeFormatting\"
 ${fifo}
 [params]
@@ -1115,7 +1115,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/prepareCallHierarchy\"
 [params]
 position.line = ${kak_cursor_line}
@@ -1136,7 +1136,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"\$ccls/navigate\"
 [params]
 direction = \"$1\"
@@ -1156,7 +1156,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"\$ccls/vars\"
 [params.position]
 line     = ${kak_cursor_line}
@@ -1180,7 +1180,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"\$ccls/inheritance\"
 [params]
 derived  = $derived
@@ -1206,7 +1206,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"\$ccls/call\"
 [params]
 callee   = $callee
@@ -1233,7 +1233,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"\$ccls/member\"
 [params]
 kind     = $kind
@@ -1255,7 +1255,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/switchSourceHeader\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1273,7 +1273,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"eclipse.jdt.ls/organizeImports\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1290,7 +1290,7 @@ define-command -hidden rust-analyzer-inlay-hints-request %{
 session  = \"${kak_session}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"rust-analyzer/inlayHints\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1311,7 +1311,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/forwardSearch\"
 [params.position]
 line     = ${kak_cursor_line}
@@ -1329,7 +1329,7 @@ session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/build\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1346,7 +1346,7 @@ define-command -hidden lsp-semantic-tokens-request %{
 session  = \"${kak_session}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp}
+version  = ${kak_timestamp:-0}
 method   = \"textDocument/semanticTokens/full\"
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
