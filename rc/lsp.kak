@@ -1920,6 +1920,7 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
+    try %{ set-option -remove global completers option=lsp_completions }
     set-option global lsp_fail_if_disabled fail
     unmap global goto d '<esc>: lsp-definition<ret>'
     unmap global goto r '<esc>: lsp-references<ret>'
@@ -1978,6 +1979,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     remove-highlighter window/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
+    try %{ set-option -remove window completers option=lsp_completions }
     set-option window lsp_fail_if_disabled fail
     unmap window goto d '<esc>: lsp-definition<ret>'
     unmap window goto r '<esc>: lsp-references<ret>'
