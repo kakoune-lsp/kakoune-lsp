@@ -2046,7 +2046,7 @@ def lsp-snippets-insert -hidden -params 1 %[
         # align everything with the current line
         eval -draft -itersel -save-regs '"' %{
             try %{
-                exec -draft -save-regs '/' '<a-s>)<space><a-x>s^\s+<ret>y'
+                exec -draft -save-regs '/' '<a-s>)<space><semicolon>xs^\s+<ret>y'
                 exec -draft '<a-s>)<a-space>P'
             }
         }
@@ -2225,7 +2225,7 @@ define-command -hidden lsp-jump %{ # from grep.kak
     evaluate-commands -save-regs abc %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
             evaluate-commands -draft %{
-                execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+                execute-keys "<semicolon>xs%opt{lsp_location_format}<ret>"
                 set-register a "%reg{1}"
                 set-register b "%reg{2}"
                 set-register c "%reg{3}"
@@ -2241,7 +2241,7 @@ define-command -hidden lsp-jump %{ # from grep.kak
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
     evaluate-commands -save-regs abcd %{
         evaluate-commands -draft %{
-            execute-keys "<a-x>s%opt{lsp_location_format}<ret>"
+            execute-keys "<semicolon>xs%opt{lsp_location_format}<ret>"
             set-register a "%reg{1}"
             set-register b "%reg{2}"
             set-register c "%reg{3}"
