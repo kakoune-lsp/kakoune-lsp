@@ -229,6 +229,15 @@ pub struct NextOrPrevSymbolParams {
     pub hover: bool,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+pub struct ObjectParams {
+    pub count: u32,
+    pub mode: String,
+    pub position: KakounePosition,
+    pub selections_desc: String,
+    pub symbol_kinds: Vec<String>,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TextDocumentRenameParams {
