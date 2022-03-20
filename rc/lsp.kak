@@ -1462,7 +1462,17 @@ fifo = ""%reg{p}""
                 printf "'%s' " "$(printf "$arg" | sed "s/'/''/")"
             done
         }
-        %arg{1} %reg{p}
+        try %{
+            evaluate-commands %sh{
+                response=$(cat "$kak_reg_p")
+                if expr match "$response" ^lsp-show-error >/dev/null; then
+                    printf %s\\n "$response" fail
+                else
+                    ( printf %s "$response" >"$kak_reg_p" 2>/dev/null & ) >/dev/null 2>&1 </dev/null
+                fi
+            }
+            %arg{1} %reg{p}
+        }
         set-option global lsp_connect_fifo ""
         evaluate-commands %sh{
             rm ${kak_reg_p}
