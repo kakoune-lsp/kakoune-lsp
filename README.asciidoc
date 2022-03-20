@@ -167,6 +167,10 @@ hook global WinSetOption filetype=rust %{
 }
 ----
 
+* `lsp-object` command and its [object mode](https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#object-mode) mappings to select adjacent or surrounding symbols. The predefined object types are:
+** `e` to select functions and methods
+** `k` to select classes and structs
+** `a` or `<a-a>` to select any symbol
 * `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
 * `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.

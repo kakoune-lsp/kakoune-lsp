@@ -463,6 +463,30 @@ define-command lsp-previous-function -docstring "Goto the current or previous fu
     lsp-previous-symbol Method Function
 }
 
+declare-option -hidden str lsp_object_mode
+define-command lsp-object -params .. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
+    -docstring "lsp-object [<symbol-kinds>...]: select adjacent or surrounding symbol of a type in <symbol-kinds>, or of any type
+
+The value of the lsp_object_mode option controls the direction. It must be one of <a-a> <a-i> [ ] { }" %{
+    lsp-require-enabled lsp-object
+    nop %sh{
+        (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"kak-lsp/object\"
+[params]
+count           = $kak_count
+mode            = \"$kak_opt_lsp_object_mode\"
+position.line = ${kak_cursor_line}
+position.column = ${kak_cursor_column}
+selections_desc = \"${kak_selections_desc}\"
+symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-definition -docstring "Go to definition" %{
     lsp-did-change-and-then lsp-definition-request
 }
@@ -1849,6 +1873,13 @@ define-command lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on
     alias global lsp-exit lsp-exit-editor-session
 }
 
+### Object mode ###
+
+map global object a '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
+map global object <a-a> '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
+map global object e '<a-semicolon> lsp-object Function Method<ret>' -docstring 'LSP function or method'
+map global object k '<a-semicolon> lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
+
 ### User mode ###
 
 declare-user-mode lsp
@@ -1930,6 +1961,9 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
             if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
         }
     }
+    hook -group lsp global NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
+        set-option window lsp_object_mode %val{hook_param}
+    }
 
     lsp-did-change-config
 }
@@ -1987,6 +2021,9 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
             if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
             if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
         }
+    }
+    hook -group lsp global NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
+        set-option window lsp_object_mode %val{hook_param}
     }
 
     lsp-did-open
@@ -2314,3 +2351,4 @@ define-command -hidden lsp-goto-next-match -docstring 'DEPRECATED: use lsp-next-
 define-command -hidden lsp-goto-previous-match -docstring 'DEPRECATED: use lsp-previous-location. Jump to the previous goto match' %{
     lsp-previous-location '*goto*'
 }
+

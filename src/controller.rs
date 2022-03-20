@@ -292,6 +292,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         "kak-lsp/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params, ctx);
         }
+        "kak-lsp/object" => {
+            document_symbol::object(meta, params, ctx);
+        }
         request::Formatting::METHOD => {
             formatting::text_document_formatting(meta, params, ctx);
         }

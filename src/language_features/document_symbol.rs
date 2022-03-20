@@ -1,6 +1,8 @@
 use crate::language_features::hover::editor_hover;
 use crate::markup::escape_kakoune_markup;
-use crate::position::{get_kakoune_position_with_fallback, get_lsp_position};
+use crate::position::{
+    get_kakoune_position_with_fallback, get_lsp_position, lsp_range_to_kakoune, parse_kakoune_range,
+};
 use crate::types::*;
 use crate::util::*;
 use crate::{context::*, position::get_file_contents};
@@ -462,4 +464,194 @@ fn find_identifier_in_file(
             character: character.try_into().unwrap(),
         }
     })
+}
+
+pub fn object(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+    let req_params = DocumentSymbolParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
+        },
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
+    };
+    ctx.call::<DocumentSymbolRequest, _>(
+        meta,
+        req_params,
+        move |ctx: &mut Context, meta, result| editor_object(meta, editor_params, result, ctx),
+    );
+}
+
+fn editor_object(
+    meta: EditorMeta,
+    editor_params: EditorParams,
+    result: Option<DocumentSymbolResponse>,
+    ctx: &mut Context,
+) {
+    let params = ObjectParams::deserialize(editor_params).unwrap();
+
+    let selections: Vec<(KakouneRange, KakounePosition)> = params
+        .selections_desc
+        .split_ascii_whitespace()
+        .into_iter()
+        .map(parse_kakoune_range)
+        .collect();
+
+    let symbol_kinds_query: Vec<SymbolKind> = params
+        .symbol_kinds
+        .iter()
+        .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
+        .collect::<Vec<_>>();
+
+    let mut ranges = match result {
+        None => return,
+        Some(DocumentSymbolResponse::Flat(symbols)) => {
+            flat_symbol_ranges(&meta, ctx, symbols, symbol_kinds_query)
+        }
+        Some(DocumentSymbolResponse::Nested(symbols)) => {
+            flat_symbol_ranges(&meta, ctx, symbols, symbol_kinds_query)
+        }
+    };
+
+    if ranges.is_empty() {
+        ctx.exec(
+            meta,
+            "lsp-show-error 'lsp-text-object: no matching symbol found'",
+        );
+        return;
+    }
+
+    let mode = params.mode;
+    let forward = !["[", "{"].contains(&mode.as_str());
+    let surround = ["<a-i>", "<a-a>"].contains(&mode.as_str());
+
+    ranges.sort_by_key(|range| {
+        let start = range.1;
+        let start = (i64::from(start.line), i64::from(start.column));
+        if forward && !surround {
+            start
+        } else {
+            (-start.0, -start.1)
+        }
+    });
+
+    let mut new_selections = vec![];
+    for (selection, cursor) in selections {
+        let mut ranges = ranges.clone();
+        if surround {
+            ranges = ranges
+                .into_iter()
+                .filter(|r| r.0.start <= cursor && cursor < r.0.end)
+                .collect::<Vec<_>>();
+            if ranges.is_empty() {
+                continue;
+            }
+        }
+
+        let mut count = params.count.max(1);
+        let mut cur = cursor;
+        let mut i = 0;
+        let sym_range = loop {
+            let (range, matched_pos) = ranges[i];
+            let start = range.start;
+            let end = range.end;
+            let is_start = matched_pos == start;
+            assert!(is_start || matched_pos == end);
+            if surround {
+                assert!(start <= cur && cur < end);
+                count -= 1;
+            } else if forward && cur < matched_pos {
+                count -= 1;
+                cur = end;
+            } else if !forward && cur > matched_pos {
+                count -= 1;
+                cur = start;
+            }
+            if count == 0 {
+                break range;
+            }
+            i += 1;
+            if i == ranges.len() {
+                if surround {
+                    break range;
+                }
+                cur = if forward {
+                    KakounePosition { line: 0, column: 0 }
+                } else {
+                    KakounePosition {
+                        line: u32::MAX,
+                        column: u32::MAX,
+                    }
+                };
+                i = 0
+            }
+        };
+
+        let sel_max = selection.start.max(selection.end);
+        let sel_min = selection.start.min(selection.end);
+        let sym_start = sym_range.start;
+        let sym_end = sym_range.end;
+        let (start, end) = match mode.as_str() {
+            "<a-i>" | "<a-a>" => (sym_start, sym_end),
+            "[" => (cursor.min(sym_end), sym_start),
+            "]" => (cursor.max(sym_start), sym_end),
+            "{" => (sel_max, sym_start),
+            "}" => (sel_min, sym_end),
+            _ => {
+                ctx.exec(meta, "lsp-show-error 'lsp-text-object: invalid mode'");
+                return;
+            }
+        };
+        new_selections.push(KakouneRange { start, end })
+    }
+    if new_selections.is_empty() {
+        ctx.exec(
+            meta,
+            "lsp-show-error 'lsp-text-object: no selections remaining'",
+        );
+        return;
+    }
+    ctx.exec(
+        meta,
+        format!(
+            "select {}",
+            new_selections
+                .into_iter()
+                .map(|range| format!("{}", range))
+                .join(" ")
+        ),
+    );
+}
+
+fn flat_symbol_ranges<T: Symbol<T>>(
+    meta: &EditorMeta,
+    ctx: &Context,
+    symbols: Vec<T>,
+    symbol_kinds_query: Vec<SymbolKind>,
+) -> Vec<(KakouneRange, KakounePosition)> {
+    fn walk<T, F>(
+        result: &mut Vec<(KakouneRange, KakounePosition)>,
+        symbol_kinds_query: &[SymbolKind],
+        convert: &F,
+        s: T,
+    ) where
+        T: Symbol<T>,
+        F: Fn(Range) -> KakouneRange,
+    {
+        let want_symbol = symbol_kinds_query.is_empty() || symbol_kinds_query.contains(&s.kind());
+        if want_symbol {
+            let range = convert(s.range());
+            result.push((range, range.start));
+            result.push((range, range.end));
+        }
+        for child in s.children() {
+            walk(result, symbol_kinds_query, convert, child);
+        }
+    }
+    let mut result = vec![];
+    let document = ctx.documents.get(&meta.buffile).unwrap();
+    let convert = |range| lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
+    for s in symbols {
+        walk(&mut result, &symbol_kinds_query, &convert, s);
+    }
+    result
 }
