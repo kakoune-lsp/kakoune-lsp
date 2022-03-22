@@ -12,7 +12,7 @@ import "os"
 func main() {}
 EOF
 
-test_tmux_kak_start main.go
+test_tmux_kak_start 'edit main.go'
 
 test_tmux send-keys ':lsp-code-action-sync Organize.Imports' Enter
 test_sleep

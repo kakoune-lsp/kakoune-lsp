@@ -13,7 +13,7 @@ func format_me() {
 }
 EOF
 
-test_tmux_kak_start main.go
+test_tmux_kak_start 'edit main.go'
 
 test_tmux send-keys h,lf # lsp-formatting
 test_sleep

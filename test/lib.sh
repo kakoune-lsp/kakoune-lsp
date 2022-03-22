@@ -52,7 +52,15 @@ test_tmux_kak_start() {
 	# If we directly run kak, then "lsp-stop" will not send the exit notification.
 	test_tmux new-session -d -x 80 -y 7 /bin/sh
 	test_tmux resize-window -x 80 -y 7 ||: # Workaround for macOS.
-	test_tmux send-keys "kak -s $test_kak_session $@" Enter
+	autoload='
+		find -L "$kak_runtime/autoload" -type f -name "*\.kak" |
+		sed "s/.*/try %{ source & } catch %{ echo -debug Autoload: could not load & }/"
+	'
+	load_default_config="
+		evaluate-commands %sh{$autoload}
+		source \"%val{config}/kakrc\"
+	"
+	test_tmux send-keys "kak -s $test_kak_session -n -e '$load_default_config; $@'" Enter
 	test_sleep
 }
 

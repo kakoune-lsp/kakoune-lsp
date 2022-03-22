@@ -43,7 +43,7 @@ define-command -override -hidden lsp-hide-code-actions %{
 }
 EOF
 
-test_tmux_kak_start main.rs
+test_tmux_kak_start 'edit main.rs'
 test_tmux send-keys j/foo Enter vtj
 test_sleep_until 'test_tmux capture-pane -p | grep 💡'
 # CHECK:      match foo { 💡

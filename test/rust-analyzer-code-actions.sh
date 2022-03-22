@@ -29,7 +29,7 @@ fn main() {
 }
 EOF
 
-test_tmux_kak_start main.rs
+test_tmux_kak_start 'edit main.rs'
 
 test_tmux send-keys j/foo Enter vtj
 test_sleep_until 'test_tmux capture-pane -p | grep -E "💡|\[A\]"'

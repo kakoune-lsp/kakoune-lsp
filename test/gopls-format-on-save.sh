@@ -19,7 +19,7 @@ import "os"
 	func main (){}
 EOF
 
-test_tmux_kak_start main.go
+test_tmux_kak_start 'edit main.go'
 
 test_tmux send-keys ':w' Enter
 test_sleep

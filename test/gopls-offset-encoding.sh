@@ -21,7 +21,7 @@ func /*🐣🐣🐣🐣🐣*/ BeyondBMP() {
 }
 EOF
 
-test_tmux_kak_start main.go
+test_tmux_kak_start 'edit main.go'
 
 # This is kak-lsp uses Unicode code points, while gopls uses UTF-16.
 

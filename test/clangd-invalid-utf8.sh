@@ -15,7 +15,7 @@ void callee() {}
  */
 EOF
 
-test_tmux_kak_start main.c
+test_tmux_kak_start 'edit main.c'
 test_tmux send-keys / callee Enter gd
 test_sleep
 test_tmux send-keys 'i%()' Escape

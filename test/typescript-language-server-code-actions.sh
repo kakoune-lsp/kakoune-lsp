@@ -24,7 +24,7 @@ class MyClass {
 }
 EOF
 
-test_tmux_kak_start main.ts
+test_tmux_kak_start 'edit main.ts'
 
 test_tmux send-keys /doSomething Enter
 test_sleep_until 'test_tmux capture-pane -p | grep -Eo "💡|\[A\]"'

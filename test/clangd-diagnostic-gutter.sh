@@ -16,7 +16,7 @@ void main(int argc, char** argv) {}
 syntax error
 EOF
 
-test_tmux_kak_start main.c
+test_tmux_kak_start 'edit main.c'
 test_tmux capture-pane -p | sed 2q
 # CHECK: {{W }}void main(int argc, char** argv) {}
 # CHECK: {{ X}}syntax error

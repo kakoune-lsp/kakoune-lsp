@@ -11,7 +11,7 @@ func foo() {}
 func bar() { foo(); }
 EOF
 
-test_tmux_kak_start main.go
+test_tmux_kak_start 'edit main.go'
 test_tmux send-keys gj / foo Enter gd
 test_sleep
 test_tmux send-keys 'i%()' Escape
