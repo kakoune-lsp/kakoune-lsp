@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
-    let session = ctx.session.clone();
     let client = None;
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
@@ -170,15 +169,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         editor_quote(buffile),
         command.replace("§", "§§")
     );
-    let meta = EditorMeta {
-        session,
-        client,
-        buffile: buffile.to_string(),
-        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
-        version,
-        fifo: None,
-        write_response_to_fifo: false,
-    };
+    let meta = ctx.meta_for_buffer_version(client, buffile, version);
     ctx.exec(meta, command);
 }
 

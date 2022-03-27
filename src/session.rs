@@ -165,15 +165,7 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
 /// Shut down all language servers and exit.
 fn stop_session(controllers: &mut Controllers) {
     let request = EditorRequest {
-        meta: EditorMeta {
-            session: "".to_string(),
-            buffile: "".to_string(),
-            filetype: "".to_string(),
-            client: None,
-            version: 0,
-            fifo: None,
-            write_response_to_fifo: false,
-        },
+        meta: EditorMeta::default(),
         method: notification::Exit::METHOD.to_string(),
         params: toml::Value::Table(toml::value::Table::default()),
         ranges: None,

@@ -119,7 +119,7 @@ pub struct SemanticTokenFace {
 
 // Editor
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub struct EditorMeta {
     pub session: String,
     pub client: Option<String>,

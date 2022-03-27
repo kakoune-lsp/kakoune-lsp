@@ -1,6 +1,5 @@
 use crate::context::*;
 use crate::position::*;
-use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
@@ -158,7 +157,6 @@ pub struct PublishSemanticHighlightingParams {
 pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
-    let session = ctx.session.clone();
     let client = None;
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
@@ -194,14 +192,6 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         editor_quote(buffile),
         command
     );
-    let meta = EditorMeta {
-        session,
-        client,
-        buffile: buffile.to_string(),
-        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
-        version,
-        fifo: None,
-        write_response_to_fifo: false,
-    };
+    let meta = ctx.meta_for_buffer_version(client, buffile, version);
     ctx.exec(meta, command);
 }

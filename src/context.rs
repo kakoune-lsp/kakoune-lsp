@@ -246,10 +246,10 @@ impl Context {
         id
     }
 
-    pub fn meta_for_session(&self) -> EditorMeta {
+    pub fn meta_for_session(&self, client: Option<String>) -> EditorMeta {
         EditorMeta {
             session: self.session.clone(),
-            client: None,
+            client,
             buffile: "".to_string(),
             filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
             version: 0,
@@ -258,16 +258,23 @@ impl Context {
         }
     }
 
-    pub fn meta_for_buffer(&self, buffile: &str) -> Option<EditorMeta> {
+    pub fn meta_for_buffer(&self, client: Option<String>, buffile: &str) -> Option<EditorMeta> {
         let document = self.documents.get(buffile)?;
-        Some(EditorMeta {
-            session: self.session.clone(),
-            client: None,
-            buffile: buffile.to_string(),
-            filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
-            version: document.version,
-            fifo: None,
-            write_response_to_fifo: false,
-        })
+        let mut meta = self.meta_for_session(client);
+        meta.buffile = buffile.to_string();
+        meta.version = document.version;
+        Some(meta)
+    }
+
+    pub fn meta_for_buffer_version(
+        &self,
+        client: Option<String>,
+        buffile: &str,
+        version: i32,
+    ) -> EditorMeta {
+        let mut meta = self.meta_for_session(client);
+        meta.buffile = buffile.to_string();
+        meta.version = version;
+        meta
     }
 }

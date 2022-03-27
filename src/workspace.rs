@@ -265,7 +265,7 @@ pub fn apply_edit_from_server(
     ctx: &mut Context,
 ) -> Result<Value, jsonrpc_core::Error> {
     let params: ApplyWorkspaceEditParams = params.parse()?;
-    let meta = ctx.meta_for_session();
+    let meta = ctx.meta_for_session(None);
     let response = apply_edit(meta, params.edit, ctx);
     Ok(serde_json::to_value(response).unwrap())
 }
