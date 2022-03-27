@@ -195,7 +195,7 @@ fn editor_next_or_prev_symbol(
     let params = NextOrPrevSymbolParams::deserialize(editor_params).unwrap();
     let hover = params.hover;
 
-    let symbol_kinds: Vec<SymbolKind> = params
+    let symbol_kinds_query: Vec<SymbolKind> = params
         .symbol_kinds
         .iter()
         .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
@@ -207,13 +207,13 @@ fn editor_next_or_prev_symbol(
             if result.is_empty() {
                 return;
             }
-            next_or_prev_symbol_details(result, &params, &symbol_kinds, &meta, ctx)
+            next_or_prev_symbol_details(result, &params, &symbol_kinds_query, &meta, ctx)
         }
         Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            next_or_prev_symbol_details(result, &params, &symbol_kinds, &meta, ctx)
+            next_or_prev_symbol_details(result, &params, &symbol_kinds_query, &meta, ctx)
         }
     };
 
@@ -318,7 +318,7 @@ fn editor_next_or_prev_for_details(
 fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     mut items: Vec<T>,
     params: &NextOrPrevSymbolParams,
-    symbol_kinds: &[SymbolKind],
+    symbol_kinds_query: &[SymbolKind],
     meta: &EditorMeta,
     ctx: &Context,
 ) -> Option<(String, KakounePosition, String, SymbolKind)> {
@@ -355,7 +355,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
 
         let symbol_name = symbol.name().to_string();
 
-        let want_symbol = symbol_kinds.is_empty() || symbol_kinds.contains(&kind);
+        let want_symbol = symbol_kinds_query.is_empty() || symbol_kinds_query.contains(&kind);
 
         // Assume that children always have a starting position higher than (or equal to)
         // their parent's starting position.  This means that when searching for the node with
@@ -367,7 +367,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
         }
 
         if let Some(from_children) =
-            next_or_prev_symbol_details(symbol.children(), params, symbol_kinds, meta, ctx)
+            next_or_prev_symbol_details(symbol.children(), params, symbol_kinds_query, meta, ctx)
         {
             return Some(from_children);
         }
