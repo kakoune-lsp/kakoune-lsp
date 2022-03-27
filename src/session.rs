@@ -96,12 +96,12 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 use std::collections::hash_map::Entry;
                 match controllers.entry(route.clone()) {
                     Entry::Occupied(controller_entry) => {
-                        if controller_entry.get().worker.sender().send(request.clone()).is_err()  {
+                        if let Err(err) = controller_entry.get().worker.sender().send(request.clone())  {
                             if let Some(fifo) = request.meta.fifo {
                                 cancel_blocking_request(fifo);
                             }
                             controller_entry.remove();
-                            error!("Failed to send message to controller");
+                            error!("Failed to send message to controller: {}", err);
                             continue 'event_loop;
                         }
                     }
