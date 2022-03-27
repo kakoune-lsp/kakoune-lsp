@@ -51,6 +51,7 @@ pub trait Symbol<T: Symbol<T>> {
     fn kind(&self) -> SymbolKind;
     fn uri(&self) -> Option<&Url>;
     fn range(&self) -> Range;
+    fn selection_range(&self) -> Range;
     fn children(self) -> Vec<T>;
 }
 
@@ -80,6 +81,9 @@ impl Symbol<SymbolInformation> for SymbolInformation {
     fn range(&self) -> Range {
         self.location.range
     }
+    fn selection_range(&self) -> Range {
+        self.range()
+    }
     fn children(self) -> Vec<SymbolInformation> {
         vec![]
     }
@@ -96,6 +100,9 @@ impl Symbol<DocumentSymbol> for DocumentSymbol {
         None
     }
     fn range(&self) -> Range {
+        self.range
+    }
+    fn selection_range(&self) -> Range {
         self.selection_range
     }
     fn children(self) -> Vec<DocumentSymbol> {
@@ -141,7 +148,8 @@ pub fn format_symbol<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Conte
         .map(|symbol| {
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, &symbol, &mut filename_path);
-            let position = get_kakoune_position_with_fallback(filename, symbol.range().start, ctx);
+            let position =
+                get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
             let description = format!("{:?} {}", symbol.kind(), symbol.name());
             format!(
                 "{}:{}:{}:{}\n",
@@ -324,7 +332,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
 ) -> Option<(String, KakounePosition, String, SymbolKind)> {
     // Some language servers return symbol locations that are not sorted in ascending order.
     // Sort the results so we can find next and previous properly.
-    items.sort_by(|a, b| a.range().start.cmp(&b.range().start));
+    items.sort_by(|a, b| a.selection_range().start.cmp(&b.selection_range().start));
 
     // Setup an iterator dependending on whether we are searching forwards or backwards
     let it: Box<dyn Iterator<Item = T>> = if params.search_next {
@@ -340,7 +348,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
         let mut filename_path = PathBuf::default();
         let filename = symbol_filename(meta, &symbol, &mut filename_path).to_string();
 
-        let mut symbol_position = symbol.range().start;
+        let mut symbol_position = symbol.selection_range().start;
         if TypeId::of::<T>() == TypeId::of::<SymbolInformation>() {
             symbol_position = find_identifier_in_file(
                 ctx,
