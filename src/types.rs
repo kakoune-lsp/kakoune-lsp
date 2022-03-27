@@ -127,6 +127,7 @@ pub struct EditorMeta {
     pub filetype: String,
     pub version: i32,
     pub fifo: Option<String>,
+    pub command_fifo: Option<String>,
     #[serde(default)]
     pub write_response_to_fifo: bool,
 }

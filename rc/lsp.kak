@@ -544,7 +544,9 @@ define-command -hidden lsp-code-actions-request -params 1..3 -docstring "Request
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
         pipe=${tmp}/fifo
         mkfifo ${pipe}
-        fifo="fifo = \"${pipe}\"
+        fifo="\
+fifo         = \"${pipe}\"
+command_fifo = \"$kak_command_fifo\"
 "
     fi
 
@@ -586,7 +588,9 @@ define-command -hidden lsp-execute-command-request -params 3 %{ evaluate-command
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
         pipe=${tmp}/fifo
         mkfifo ${pipe}
-        fifo="fifo = \"${pipe}\""
+        fifo="\
+fifo         = \"${pipe}\"
+command_fifo = \"$kak_command_fifo\""
     fi
 
     (printf %s "
@@ -955,7 +959,9 @@ define-command lsp-apply-workspace-edit-request -params 2 -hidden %{ evaluate-co
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
         pipe=${tmp}/fifo
         mkfifo ${pipe}
-        fifo="fifo = \"${pipe}\""
+        fifo="\
+fifo         = \"${pipe}\"
+command_fifo = \"$kak_command_fifo\""
     fi
 
     (printf %s "
@@ -1022,7 +1028,9 @@ define-command -hidden lsp-formatting-request -params 1 %{ evaluate-commands -no
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
         pipe=${tmp}/fifo
         mkfifo ${pipe}
-        fifo="fifo = \"${pipe}\""
+        fifo="\
+fifo         = \"${pipe}\"
+command_fifo = \"$kak_command_fifo\""
     fi
 
     (printf %s "
@@ -1060,7 +1068,9 @@ define-command -hidden lsp-range-formatting-request -params 1 %{ evaluate-comman
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
         pipe=${tmp}/fifo
         mkfifo ${pipe}
-        fifo="fifo = \"${pipe}\""
+        fifo="\
+fifo         = \"${pipe}\"
+command_fifo = \"$kak_command_fifo\""
     fi
 
 ranges_str="$(for range in ${kak_selections_char_desc}; do

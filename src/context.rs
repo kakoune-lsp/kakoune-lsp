@@ -217,20 +217,22 @@ impl Context {
         S: Into<Cow<'static, str>>,
     {
         let command = command.into();
-        match meta.fifo.as_ref() {
-            Some(fifo) => {
-                debug!("To editor `{}`: {}", meta.session, command);
-                fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo")
-            }
-            None => {
-                if self
-                    .editor_tx
-                    .send(EditorResponse { meta, command })
-                    .is_err()
-                {
-                    error!("Failed to send command to editor");
-                }
-            }
+        if let Some((fifo, which)) = meta
+            .fifo
+            .as_ref()
+            .map(|f| (f, "fifo"))
+            .or_else(|| meta.command_fifo.as_ref().map(|f| (f, "kak_command_fifo")))
+        {
+            debug!("To editor `{}` via {}: {}", meta.session, which, command);
+            fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
+            return;
+        }
+        if self
+            .editor_tx
+            .send(EditorResponse { meta, command })
+            .is_err()
+        {
+            error!("Failed to send command to editor");
         }
     }
 
@@ -254,6 +256,7 @@ impl Context {
             filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
             version: 0,
             fifo: None,
+            command_fifo: None,
             write_response_to_fifo: false,
         }
     }
