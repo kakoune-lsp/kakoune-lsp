@@ -14,7 +14,7 @@ pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mu
 
     let document = ctx.documents.get(&meta.buffile).unwrap();
     let range = kakoune_range_to_lsp(
-        &parse_kakoune_range(&params.selection_desc),
+        &parse_kakoune_range(&params.selection_desc).0,
         &document.text,
         ctx.offset_encoding,
     );

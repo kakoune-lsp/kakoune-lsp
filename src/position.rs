@@ -141,7 +141,8 @@ pub fn get_line(line_number: usize, text: &Rope) -> RopeSlice {
 
 /// Parse a range of the form <line1>.<column1>,<line2>.<column2>.
 /// The range is normalized, so the lower coordinate comes first.
-pub fn parse_kakoune_range(range_desc: &str) -> KakouneRange {
+/// Returns the cursor position separately.
+pub fn parse_kakoune_range(range_desc: &str) -> (KakouneRange, KakounePosition) {
     let mut parts = range_desc.split(',');
     let mut convert = || {
         let coords = parts.next().unwrap();
@@ -158,7 +159,7 @@ pub fn parse_kakoune_range(range_desc: &str) -> KakouneRange {
     } else {
         (cursor, anchor)
     };
-    KakouneRange { start, end }
+    (KakouneRange { start, end }, cursor)
 }
 
 /// Returns true if there is a line that is included by both ranges.

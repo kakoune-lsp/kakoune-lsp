@@ -15,7 +15,7 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
         .selections_desc
         .split_ascii_whitespace()
         .into_iter()
-        .map(parse_kakoune_range)
+        .map(|desc| parse_kakoune_range(desc).0)
         .collect();
 
     let is_cursor_left_of_anchor = params.position == selections[0].start;
