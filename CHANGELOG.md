@@ -1,4 +1,4 @@
-## Unreleased
+## 12.1.0 - 2022-03-28
 
 Additions:
 - New mappings for Kakoune's object mode allow to select adjacent/surrounding symbols like functions or types (#598).
