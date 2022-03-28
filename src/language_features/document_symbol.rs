@@ -515,7 +515,7 @@ fn editor_object(
     if ranges.is_empty() {
         ctx.exec(
             meta,
-            "lsp-show-error 'lsp-text-object: no matching symbol found'",
+            "lsp-show-error 'lsp-object: no matching symbol found'",
         );
         return;
     }
@@ -597,17 +597,14 @@ fn editor_object(
             "{" => (sel_max, sym_start),
             "}" => (sel_min, sym_end),
             _ => {
-                ctx.exec(meta, "lsp-show-error 'lsp-text-object: invalid mode'");
+                ctx.exec(meta, "lsp-show-error 'lsp-object: invalid mode'");
                 return;
             }
         };
         new_selections.push(KakouneRange { start, end })
     }
     if new_selections.is_empty() {
-        ctx.exec(
-            meta,
-            "lsp-show-error 'lsp-text-object: no selections remaining'",
-        );
+        ctx.exec(meta, "lsp-show-error 'lsp-object: no selections remaining'");
         return;
     }
     ctx.exec(
