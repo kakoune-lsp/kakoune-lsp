@@ -81,6 +81,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 semantic_tokens: None,
                 code_lens: None,
                 file_operations: None,
+                inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
+                    refresh_support: Some(false),
+                }),
             }),
             text_document: Some(TextDocumentClientCapabilities {
                 synchronization: Some(TextDocumentSyncClientCapabilities {
@@ -279,6 +282,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     dynamic_registration: Some(false),
                 }),
                 moniker: None,
+                inlay_hint: Some(Default::default()),
             }),
             window: Some(WindowClientCapabilities {
                 work_done_progress: Some(true),
@@ -444,6 +448,16 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                 .map(SemanticTokenModifier::as_str)
                 .join(", ")
         ));
+    }
+
+    if let Some(ref provider) = server_capabilities.inlay_hint_provider {
+        let supported = match *provider {
+            OneOf::Left(bool) => bool,
+            OneOf::Right(_) => true,
+        };
+        if supported {
+            features.push("lsp-inlay-hints".to_string());
+        }
     }
 
     let command = formatdoc!(

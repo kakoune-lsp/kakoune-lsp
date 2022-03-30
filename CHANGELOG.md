@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- Support the new `textDocument/inlayHint` request from LSP v3.17, and the same protocol with the `experimental/inlayHints` request currently used by rust-analyzer.
+
 ## 12.1.0 - 2022-03-28
 
 Additions:
