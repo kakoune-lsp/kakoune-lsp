@@ -322,7 +322,7 @@ args = ["serve"]
 # See https://github.com/hashicorp/terraform-ls/blob/main/docs/SETTINGS.md
 # rootModulePaths = []
 
-[language.typescript]
+[language.tsx]
 filetypes = ["typescript"]
 roots = ["package.json", "tsconfig.json", ".git", ".hg"]
 command = "typescript-language-server"
