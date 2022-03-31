@@ -1336,6 +1336,7 @@ define-command texlab-forward-search -docstring "Request SyncTeX Forward Search 
 
 This will focus the current line in your PDF viewer, starting one if necessary.
 To configure the PDF viewer, use texlab's options 'forwardSearch.executable' and 'forwardSearch.args'." %{
+    declare-option -hidden str texlab_client %val{client}
     lsp-did-change-and-then texlab-forward-search-request
 }
 

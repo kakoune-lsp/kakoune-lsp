@@ -198,7 +198,7 @@ forwardSearch.args = [
     """
         sh -c '
             echo "
-                evaluate-commands -client $kak_client %{
+                evaluate-commands -client %opt{texlab_client} %{
                     evaluate-commands -try-client %opt{jumpclient} %{
                         edit -- %{input} %{line}
                     }
