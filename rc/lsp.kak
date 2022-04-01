@@ -1175,7 +1175,7 @@ buf_line_count = ${kak_buf_line_count}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command -hidden lsp-experimental-inlay-hints -docstring "lsp-experimental-inlay-hints: Request inlay hints with experimental prefix (lsp)" %{
+define-command -hidden lsp-experimental-inlay-hints -docstring "lsp-experimental-inlay-hints: Request inlay hints with experimental prefix" %{
   lsp-did-change-and-then lsp-experimental-inlay-hints-request
 }
 
@@ -1909,7 +1909,6 @@ define-command lsp-inlay-hints-enable -params 1 -docstring "lsp-inlay-hints-enab
 define-command lsp-inlay-hints-disable -params 1 -docstring "lsp-inlay-hints-disable <scope>: disable inlay hints for <scope>"  %{
     remove-highlighter "%arg{1}/lsp_inlay_hints"
     remove-hooks %arg{1} lsp-inlay-hints
-    
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-experimental-inlay-hints-enable -params 1 -docstring "lsp-experimental-inlay-hints-enable <scope>: enable inlay hints with experimental request for <scope>" %{
