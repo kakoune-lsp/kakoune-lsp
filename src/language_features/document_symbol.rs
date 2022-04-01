@@ -1,7 +1,8 @@
 use crate::language_features::hover::editor_hover;
 use crate::markup::escape_kakoune_markup;
 use crate::position::{
-    get_kakoune_position_with_fallback, get_lsp_position, lsp_range_to_kakoune, parse_kakoune_range,
+    get_kakoune_position_with_fallback, get_lsp_position, kakoune_position_to_lsp,
+    lsp_range_to_kakoune, parse_kakoune_range,
 };
 use crate::types::*;
 use crate::util::*;
@@ -502,13 +503,14 @@ fn editor_object(
         .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
         .collect::<Vec<_>>();
 
+    let document = ctx.documents.get(&meta.buffile).unwrap();
     let mut ranges = match result {
         None => return,
         Some(DocumentSymbolResponse::Flat(symbols)) => {
-            flat_symbol_ranges(&meta, ctx, symbols, symbol_kinds_query)
+            flat_symbol_ranges(ctx, document, symbols, symbol_kinds_query)
         }
         Some(DocumentSymbolResponse::Nested(symbols)) => {
-            flat_symbol_ranges(&meta, ctx, symbols, symbol_kinds_query)
+            flat_symbol_ranges(ctx, document, symbols, symbol_kinds_query)
         }
     };
 
@@ -559,7 +561,15 @@ fn editor_object(
             if surround {
                 assert!(start <= cur && cur < end);
                 count -= 1;
-            } else if forward && cur < matched_pos {
+            } else if forward
+                && cur < matched_pos
+                && (cur.line < matched_pos.line || {
+                    let matched_lsp_pos =
+                        kakoune_position_to_lsp(&matched_pos, &document.text, ctx.offset_encoding);
+                    let line = document.text.line(matched_lsp_pos.line as usize);
+                    (matched_lsp_pos.character as usize) < line.len_chars()
+                })
+            {
                 count -= 1;
                 cur = end;
             } else if !forward && cur > matched_pos {
@@ -620,8 +630,8 @@ fn editor_object(
 }
 
 fn flat_symbol_ranges<T: Symbol<T>>(
-    meta: &EditorMeta,
     ctx: &Context,
+    document: &Document,
     symbols: Vec<T>,
     symbol_kinds_query: Vec<SymbolKind>,
 ) -> Vec<(KakouneRange, KakounePosition)> {
@@ -645,7 +655,6 @@ fn flat_symbol_ranges<T: Symbol<T>>(
         }
     }
     let mut result = vec![];
-    let document = ctx.documents.get(&meta.buffile).unwrap();
     let convert = |range| lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
     for s in symbols {
         walk(&mut result, &symbol_kinds_query, &convert, s);
