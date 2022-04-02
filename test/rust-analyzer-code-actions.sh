@@ -41,6 +41,8 @@ test_sleep_until 'test_tmux capture-pane -p | grep Replace'
 
 test_tmux send-keys Enter
 test_sleep_until 'test_tmux capture-pane -p | grep -q if.let.Test'
+test_tmux send-keys M-/ let Enter
+test_sleep
 test_tmux capture-pane -p
 # CHECK:     let foo: Test = Test::Foo;
 # CHECK:     if let Test::Foo = foo {
@@ -48,7 +50,7 @@ test_tmux capture-pane -p
 # CHECK:     }
 # CHECK: }
 # CHECK: ~
-# CHECK: {{💡|\[A\]}} main.rs 7:27 [+] 1 sel - client0@[session]
+# CHECK: {{💡|\[A\]}} main.rs 7:10 [+] 1 sel - client0@[session]
 
 test_tmux send-keys ,la # lsp-code-actions
 test_sleep_until 'test_tmux capture-pane -p | grep Replace'
@@ -63,4 +65,4 @@ test_tmux capture-pane -p
 # CHECK:          _ => (),
 # CHECK:      }
 # CHECK: }
-# CHECK: {{💡|\[A\]}} main.rs 7:14 [+] 1 sel - client0@[session]
+# CHECK: {{💡|\[A\]}} main.rs 10:1 [+] 1 sel - client0@[session]
