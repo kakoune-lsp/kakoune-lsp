@@ -50,6 +50,10 @@ impl Drop for TempFifo {
     }
 }
 
+pub fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace("'", r"'\''"))
+}
+
 /// Escape Kakoune string wrapped into single quote
 pub fn editor_escape(s: &str) -> String {
     s.replace("'", "''")
