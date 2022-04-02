@@ -257,9 +257,8 @@ fn byte_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<
         None
     }
 }
-pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
-    client: &Option<String>,
-    uri: Option<&Url>,
+
+pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
     mut text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
@@ -373,10 +372,6 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .join("");
     let mut apply_edits = format!("exec \"{}\"", edit_keys);
 
-    let maybe_buffile = uri
-        .and_then(|uri| uri.to_file_path().ok())
-        .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
-
     if !selections_desc.is_empty() {
         apply_edits = formatdoc!(
             "select {}
@@ -386,6 +381,22 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
             apply_edits
         );
     }
+
+    Some(apply_edits)
+}
+
+pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
+    client: &Option<String>,
+    uri: Option<&Url>,
+    text_edits: Vec<T>,
+    text: &Rope,
+    offset_encoding: OffsetEncoding,
+) -> Option<String> {
+    let apply_edits = lsp_text_edits_to_kakoune(text_edits, text, offset_encoding)?;
+
+    let maybe_buffile = uri
+        .and_then(|uri| uri.to_file_path().ok())
+        .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
 
     let client = match client {
         None => {
@@ -488,7 +499,7 @@ mod tests {
     }
 
     #[test]
-    pub fn apply_text_edits_to_buffer_issue_521() {
+    pub fn lsp_text_edits_to_kakoune_issue_521() {
         let text_edits = vec![
             edit(0, 4, 0, 7, "std"),
             edit(0, 7, 0, 9, ""),
@@ -498,34 +509,32 @@ mod tests {
             edit(0, 21, 0, 21, "{CStr, CString}"),
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
-        let result =
-            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
-            r#"eval -draft -save-regs ^ 'select 1.5,1.12 1.15,1.21
+            r#"select 1.5,1.12 1.15,1.21
                exec -save-regs "" Z
-               exec "z<space>cstd<esc>z1)<space>cffi::{CStr, CString}<esc>"'"#
+               exec "z<space>cstd<esc>z1)<space>cffi::{CStr, CString}<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
     }
 
     #[test]
-    pub fn apply_text_edits_to_buffer_insert_adjacent_to_replace() {
+    pub fn lsp_text_edits_to_kakoune_insert_adjacent_to_replace() {
         let text_edits = vec![edit(0, 1, 0, 1, "inserted"), edit(0, 2, 0, 3, "replaced")];
         let buffer = Rope::from_str("0123");
-        let result =
-            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
-            r#"eval -draft -save-regs ^ 'select 1.2,1.2 1.3,1.3
+            r#"select 1.2,1.2 1.3,1.3
                exec -save-regs "" Z
-               exec "z<space>iinserted<esc>z1)<space>creplaced<esc>"'"#
+               exec "z<space>iinserted<esc>z1)<space>creplaced<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
     }
 
     #[test]
-    pub fn apply_text_edits_to_buffer_issue_527() {
+    pub fn lsp_text_edits_to_kakoune_issue_527() {
         let text_edits = vec![
             edit(0, 4, 0, 9, "if"),
             edit(0, 10, 0, 13, "let"),
@@ -545,19 +554,18 @@ mod tests {
         _ => {}
     }",
         );
-        let result =
-            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
-            r#"eval -draft -save-regs ^ 'select 1.5,1.9 1.11,1.13 2.9,2.14
+            r#"select 1.5,1.9 1.11,1.13 2.9,2.14
                exec -save-regs "" Z
-               exec "z<space>cif<esc>z1)<space>clet Test::Foo = foo<esc>z2)<space>cprintln<esc>"'"#
+               exec "z<space>cif<esc>z1)<space>clet Test::Foo = foo<esc>z2)<space>cprintln<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
     }
 
     #[test]
-    pub fn apply_text_edits_to_buffer_merge_imports() {
+    pub fn lsp_text_edits_to_kakoune_merge_imports() {
         let text_edits = vec![
                 edit(0, 4, 0, 7, "std"),
                 edit(0, 7, 0, 9, ""),
@@ -612,11 +620,10 @@ mod tests {
                }
                "#
         ));
-        let result =
-            apply_text_edits_to_buffer(&None, None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
 
         let expected = indoc!(
-            r#"eval -draft -save-regs ^ 'select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
+            r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
                exec -save-regs "" Z
                exec "z<space>cstd::{path::Path, process::Stdio}<esc>z1)<space>c
                fn main() {
@@ -625,7 +632,7 @@ mod tests {
                    if matches.is_present(""kakoune"") {}
                }<esc>z2)<space>ckakoune<esc>z3)<space>cscript:<esc>z4)<space>i&str <esc>z5)<space>cinclude_str!(""../rc/lsp.kak"")<esc>z6)<space>c
                    let<esc>z7)<space>cargs<esc>z8)<space>c= env::args().skip(1);<esc>z9)<space>c
-               <esc>"'"#
+               <esc>""#
         ).to_string();
         assert_eq!(result, Some(expected));
     }
