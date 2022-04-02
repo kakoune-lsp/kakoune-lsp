@@ -337,7 +337,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .map(|text_edit| lsp_text_edit_to_kakoune(&text_edit, text, offset_encoding))
         .collect::<Vec<_>>();
 
-    let selection_descs = edits
+    let selections_desc = edits
         .iter()
         .map(|edit| format!("{}", edit.range))
         .dedup()
@@ -377,12 +377,12 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
 
-    if !selection_descs.is_empty() {
+    if !selections_desc.is_empty() {
         apply_edits = formatdoc!(
             "select {}
              exec -save-regs \"\" Z
              {}",
-            selection_descs,
+            selections_desc,
             apply_edits
         );
     }
