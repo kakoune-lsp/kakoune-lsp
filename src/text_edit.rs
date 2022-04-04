@@ -71,7 +71,7 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
     {
         let meta = meta.clone();
         match apply_text_edits_to_buffer(
-            &meta,
+            &meta.client,
             Some(uri),
             edits,
             &document.text,
@@ -386,45 +386,19 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
 }
 
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
-    meta: &EditorMeta,
+    client: &Option<String>,
     uri: Option<&Url>,
     text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> Option<String> {
-    let mut apply_edits = lsp_text_edits_to_kakoune(text_edits, text, offset_encoding)?;
-
-    // Apply edits via the | command to preserve cursor positions.
-    let tmpfile = temp_dir().join(format!("{}.edit", meta.session));
-    let tmpfile = tmpfile.to_str().unwrap();
-    let write_result = formatdoc!(
-        r#"set-register t %val[selections_desc]
-           execute-keys %[%"sy]
-           edit -scratch
-           execute-keys %["sRa.<esc>]
-           select %reg[t]
-           {}
-           write {}
-           delete-buffer"#,
-        apply_edits,
-        editor_escape(tmpfile)
-    );
-    apply_edits = formatdoc!(
-        r#"
-         evaluate-commands -save-regs st -no-hooks {}
-         execute-keys {}"#,
-        editor_quote(&write_result),
-        editor_quote(&format!(
-            r#"%|content=$(cat {0}); printf %s "${{content%.}}"; rm {0}<ret>"#,
-            shell_quote(tmpfile)
-        ))
-    );
+    let apply_edits = lsp_text_edits_to_kakoune(text_edits, text, offset_encoding)?;
 
     let maybe_buffile = uri
         .and_then(|uri| uri.to_file_path().ok())
         .and_then(|path| path.to_str().map(|buffile| buffile.to_string()));
 
-    let client = match &meta.client {
+    let client = match client {
         None => {
             return Some(
                 maybe_buffile

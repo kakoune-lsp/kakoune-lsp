@@ -41,7 +41,13 @@ pub fn editor_range_formatting<T: TextEditish<T>>(
     ctx: &mut Context,
 ) {
     let cmd = ctx.documents.get(&meta.buffile).and_then(|document| {
-        apply_text_edits_to_buffer(&meta, None, text_edits, &document.text, ctx.offset_encoding)
+        apply_text_edits_to_buffer(
+            &meta.client,
+            None,
+            text_edits,
+            &document.text,
+            ctx.offset_encoding,
+        )
     });
     match cmd {
         Some(cmd) => ctx.exec(meta, cmd),
