@@ -47,6 +47,8 @@ pub struct LanguageConfig {
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
+    #[serde(default)]
+    pub envs: HashMap<String, String>,
     pub settings_section: Option<String>,
     pub settings: Option<Value>,
     pub offset_encoding: Option<OffsetEncoding>,

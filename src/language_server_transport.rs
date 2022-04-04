@@ -16,10 +16,15 @@ pub struct LanguageServerTransport {
     pub errors: Worker<Void, Void>,
 }
 
-pub fn start(cmd: &str, args: &[String]) -> Result<LanguageServerTransport, String> {
+pub fn start(
+    cmd: &str,
+    args: &[String],
+    envs: &HashMap<String, String>,
+) -> Result<LanguageServerTransport, String> {
     info!("Starting Language server `{} {}`", cmd, args.join(" "));
     let mut child = match Command::new(cmd)
         .args(args)
+        .envs(envs)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

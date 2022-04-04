@@ -40,7 +40,7 @@ pub fn start(
         // should be fine to unwrap because request was already routed which means language is configured
         let lang = &config.language[&route.language];
         offset_encoding = lang.offset_encoding;
-        lang_srv = match language_server_transport::start(&lang.command, &lang.args) {
+        lang_srv = match language_server_transport::start(&lang.command, &lang.args, &lang.envs) {
             Ok(ls) => ls,
             Err(err) => {
                 // If we think that the server command is not from the default config, then we
