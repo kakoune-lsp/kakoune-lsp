@@ -167,7 +167,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let command = format!(
         "eval -buffer {} %§{}§",
         editor_quote(buffile),
-        command.replace("§", "§§")
+        command.replace('§', "§§")
     );
     let meta = ctx.meta_for_buffer_version(client, buffile, version);
     ctx.exec(meta, command);

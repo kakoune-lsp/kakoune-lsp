@@ -56,12 +56,12 @@ pub fn shell_quote(s: &str) -> String {
 
 /// Escape Kakoune string wrapped into single quote
 pub fn editor_escape(s: &str) -> String {
-    s.replace("'", "''")
+    s.replace('\'', "''")
 }
 
 /// Escape Kakoune string wrapped into double quote
 pub fn editor_escape_double_quotes(s: &str) -> String {
-    s.replace("\"", "\"\"").replace("%", "%%")
+    s.replace('"', "\"\"").replace('%', "%%")
 }
 
 /// Convert to Kakoune string by wrapping into quotes and escaping
@@ -77,13 +77,13 @@ pub fn editor_quote_double_quotes(s: &str) -> String {
 
 // Escape a sequence of printable keys so they can safely be passed to "execute-keys".
 pub fn escape_keys(s: &str) -> String {
-    s.replace("<", "<lt>")
+    s.replace('<', "<lt>")
 }
 
 /// Escape Kakoune tuple element, as used in option types "completions", "line-specs" and
 /// "range-specs".
 pub fn escape_tuple_element(s: &str) -> String {
-    s.replace("\\", "\\\\").replace("|", "\\|")
+    s.replace('\\', "\\\\").replace('|', "\\|")
 }
 
 // Cleanup and gracefully exit

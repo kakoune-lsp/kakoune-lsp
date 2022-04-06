@@ -19,7 +19,7 @@ pub const FACE_INFO_DIAGNOSTIC_WARNING: &str = "InfoDiagnosticWarning";
 
 /// Espace backslashes and opening braces for Kakoune markup strings
 pub fn escape_kakoune_markup(s: &str) -> String {
-    s.replace(r"\", r"\\").replace("{", r"\{")
+    s.replace('\\', r"\\").replace('{', r"\{")
 }
 
 /// Transpile Markdown into Kakoune's markup syntax using faces for highlighting

@@ -107,7 +107,7 @@ pub fn editor_completion(
                 format!(
                     "{}info -markup -style menu -- %§{}§",
                     &maybe_set_index,
-                    markup.replace("§", "§§")
+                    markup.replace('§', "§§")
                 )
             } else {
                 // When the user scrolls through the list of completion candidates, Kakoune
@@ -137,7 +137,7 @@ pub fn editor_completion(
                         CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
                         CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
                     })
-                    .or_else(|| x.insert_text.as_ref())
+                    .or(x.insert_text.as_ref())
                     .unwrap_or(&x.label);
                 if specified_filter_text == specified_insert_text {
                     None

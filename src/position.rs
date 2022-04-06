@@ -108,7 +108,7 @@ pub fn get_kakoune_position_with_fallback(
     position: Position,
     ctx: &Context,
 ) -> KakounePosition {
-    get_kakoune_position(filename_str, &position, ctx).unwrap_or_else(|| KakounePosition {
+    get_kakoune_position(filename_str, &position, ctx).unwrap_or(KakounePosition {
         line: position.line + 1,
         column: position.character + 1,
     })

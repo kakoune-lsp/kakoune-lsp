@@ -71,7 +71,7 @@ pub fn editor_hover(
                 .filter_map(|x| {
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
-                        return Some(format!("* {}", x.message.trim().replace("\n", "\n  ")));
+                        return Some(format!("* {}", x.message.trim().replace('\n', "\n  ")));
                     }
 
                     let face = x
@@ -94,7 +94,7 @@ pub fn editor_hover(
                             face,
                             escape_kakoune_markup(x.message.trim())
                                 // Indent line breaks to the same level as the bullet point
-                                .replace("\n", "\n  "),
+                                .replace('\n', "\n  "),
                             FACE_INFO_DEFAULT,
                         ))
                     } else {
@@ -161,8 +161,8 @@ pub fn editor_hover(
             let command = format!(
                 "lsp-show-hover {} %§{}§ %§{}§",
                 params.position,
-                contents.replace("§", "§§"),
-                diagnostics.replace("§", "§§"),
+                contents.replace('§', "§§"),
+                diagnostics.replace('§', "§§"),
             );
             ctx.exec(meta, command);
         }
@@ -193,16 +193,16 @@ fn show_hover_modal(
     let contents = format!("{}\n---\n{}", modal_heading, contents);
     let command = format!(
         "lsp-show-hover modal %§{}§ %§{}§",
-        contents.replace("§", "§§"),
-        diagnostics.replace("§", "§§"),
+        contents.replace('§', "§§"),
+        diagnostics.replace('§', "§§"),
     );
     let command = formatdoc!(
         "evaluate-commands %§
              {}
              {}
          §",
-        command.replace("§", "§§"),
-        do_after.replace("§", "§§")
+        command.replace('§', "§§"),
+        do_after.replace('§', "§§")
     );
     ctx.exec(meta, command);
 }
