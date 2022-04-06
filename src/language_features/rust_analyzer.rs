@@ -1,10 +1,9 @@
 use crate::context::Context;
-use crate::position::{lsp_position_to_kakoune, lsp_range_to_kakoune};
+use crate::position::lsp_position_to_kakoune;
 use crate::text_edit::apply_text_edits;
-use crate::types::{EditorMeta, EditorParams, KakounePosition};
-use crate::util::{editor_quote, escape_tuple_element};
+use crate::types::{EditorMeta, KakounePosition};
+use crate::util::editor_quote;
 use crate::workspace;
-use lsp_types::request::Request;
 use lsp_types::ExecuteCommandParams;
 use lsp_types::InsertTextFormat;
 use lsp_types::TextEdit;
@@ -13,90 +12,6 @@ use lsp_types::{Range, ResourceOp, TextDocumentIdentifier, TextDocumentPositionP
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use url::Url;
-
-pub enum InlayHints {}
-
-impl Request for InlayHints {
-    type Params = InlayHintsParams;
-    type Result = Vec<InlayHint>;
-    const METHOD: &'static str = "rust-analyzer/inlayHints";
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct InlayHintsParams {
-    pub text_document: TextDocumentIdentifier,
-}
-
-#[allow(clippy::enum_variant_names)] // Allow because this is the same as in upstream.
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub enum InlayKind {
-    TypeHint,
-    ParameterHint,
-    ChainingHint,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct InlayHint {
-    pub range: Range,
-    pub kind: InlayKind,
-    pub label: String,
-}
-
-pub fn inlay_hints(meta: EditorMeta, _params: EditorParams, ctx: &mut Context) {
-    let req_params = InlayHintsParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
-        },
-    };
-    ctx.call::<InlayHints, _>(meta, req_params, move |ctx, meta, response| {
-        inlay_hints_response(meta, response, ctx)
-    });
-}
-
-pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: &mut Context) {
-    let document = match ctx.documents.get(&meta.buffile) {
-        Some(document) => document,
-        None => return,
-    };
-    let ranges = inlay_hints
-        .into_iter()
-        .map(|InlayHint { range, kind, label }| {
-            let range = lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
-            let label = escape_tuple_element(&label);
-            match kind {
-                InlayKind::TypeHint => {
-                    let pos = KakounePosition {
-                        line: range.end.line,
-                        column: range.end.column + 1,
-                    };
-                    editor_quote(&format!("{}+0|{{InlayHint}}{{\\}}: {}", pos, label))
-                }
-                InlayKind::ParameterHint => {
-                    editor_quote(&format!("{}+0|{{InlayHint}}{{\\}}{}: ", range.start, label))
-                }
-                InlayKind::ChainingHint => {
-                    let pos = KakounePosition {
-                        line: range.end.line,
-                        column: range.end.column + 1,
-                    };
-                    editor_quote(&format!("{}+0|{{InlayHint}}{{\\}} {}", pos, label))
-                }
-            }
-        })
-        .collect::<Vec<String>>()
-        .join(" ");
-    let command = format!(
-        "set buffer rust_analyzer_inlay_hints {} {}",
-        meta.version, ranges
-    );
-    let command = format!(
-        "eval -buffer {} -verbatim -- {}",
-        editor_quote(&meta.buffile),
-        command
-    );
-    ctx.exec(meta, command)
-}
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]

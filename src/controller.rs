@@ -323,6 +323,14 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             semantic_tokens::tokens_request(meta, ctx);
         }
 
+        request::InlayHintRequest::METHOD => {
+            inlay_hints::inlay_hints(meta, params, ctx);
+        }
+
+        inlay_hints::ExperimentalInlayHintRequest::METHOD => {
+            inlay_hints::experimental_inlay_hints(meta, params, ctx);
+        }
+
         // CCLS
         ccls::NavigateRequest::METHOD => {
             ccls::navigate(meta, params, ctx);
@@ -348,11 +356,6 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         // eclipse.jdt.ls
         "eclipse.jdt.ls/organizeImports" => {
             eclipse_jdt_ls::organize_imports(meta, ctx);
-        }
-
-        // rust-analyzer
-        rust_analyzer::InlayHints::METHOD => {
-            rust_analyzer::inlay_hints(meta, params, ctx);
         }
 
         // texlab

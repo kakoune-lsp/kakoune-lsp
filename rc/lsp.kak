@@ -209,7 +209,7 @@ declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
 declare-option -hidden range-specs lsp_semantic_tokens
-declare-option -hidden range-specs rust_analyzer_inlay_hints
+declare-option -hidden range-specs lsp_inlay_hints
 declare-option -hidden range-specs lsp_diagnostics
 declare-option -hidden str lsp_project_root
 
@@ -1158,6 +1158,39 @@ incomingOrOutgoing = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+
+define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inlay hints" %{
+  lsp-did-change-and-then lsp-inlay-hints-request
+}
+
+define-command -hidden lsp-inlay-hints-request %{
+    nop %sh{ (printf %s "
+session  = \"${kak_session}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"textDocument/inlayHint\"
+[params]
+buf_line_count = ${kak_buf_line_count}
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command -hidden lsp-experimental-inlay-hints -docstring "lsp-experimental-inlay-hints: Request inlay hints with experimental prefix (lsp)" %{
+  lsp-did-change-and-then lsp-experimental-inlay-hints-request
+}
+
+define-command -hidden lsp-experimental-inlay-hints-request %{
+    nop %sh{ (printf %s "
+session  = \"${kak_session}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"experimental/inlayHints\"
+[params]
+buf_line_count = ${kak_buf_line_count}
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
@@ -1315,19 +1348,11 @@ method   = \"eclipse.jdt.ls/organizeImports\"
 
 # rust-analyzer extensions
 
-define-command rust-analyzer-inlay-hints -docstring "rust-analyzer-inlay-hints: Request inlay hints (rust-analyzer)" %{
-  lsp-did-change-and-then rust-analyzer-inlay-hints-request
-}
+define-command rust-analyzer-inlay-hints -docstring "rust-analyzer-inlay-hints: request inlay hints (rust-analyzer).
 
-define-command -hidden rust-analyzer-inlay-hints-request %{
-    nop %sh{ (printf %s "
-session  = \"${kak_session}\"
-buffile  = \"${kak_buffile}\"
-filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp:-0}
-method   = \"rust-analyzer/inlayHints\"
-[params]
-" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+Deprecated: Delegates to lsp-experimental-inlay-hints. Once rust-analyzer switches to the official 
+textDocument/inlayHints request, this will be removed." %{
+    lsp-experimental-inlay-hints
 }
 
 # texlab extensions
@@ -1874,6 +1899,31 @@ define-command lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on
     alias global lsp-exit lsp-exit-editor-session
 }
 
+define-command lsp-inlay-hints-enable -params 1 -docstring "lsp-inlay-hints-enable <scope>: enable inlay hints for <scope>" %{
+    add-highlighter "%arg{1}/lsp_inlay_hints" replace-ranges lsp_inlay_hints
+    hook -group lsp-inlay-hints %arg{1} BufReload .* lsp-inlay-hints
+    hook -group lsp-inlay-hints %arg{1} NormalIdle .* lsp-inlay-hints
+    hook -group lsp-inlay-hints %arg{1} InsertIdle .* lsp-inlay-hints
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
+
+define-command lsp-inlay-hints-disable -params 1 -docstring "lsp-inlay-hints-disable <scope>: disable inlay hints for <scope>"  %{
+    remove-highlighter "%arg{1}/lsp_inlay_hints"
+    remove-hooks %arg{1} lsp-inlay-hints
+    
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
+
+define-command lsp-experimental-inlay-hints-enable -params 1 -docstring "lsp-experimental-inlay-hints-enable <scope>: enable inlay hints with experimental request for <scope>" %{
+    add-highlighter "%arg{1}/lsp_inlay_hints" replace-ranges lsp_inlay_hints
+    hook -group lsp-experimental-inlay-hints %arg{1} BufReload .* lsp-experimental-inlay-hints
+    hook -group lsp-experimental-inlay-hints %arg{1} NormalIdle .* lsp-experimental-inlay-hints
+    hook -group lsp-experimental-inlay-hints %arg{1} InsertIdle .* lsp-experimental-inlay-hints
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
+
+define-command lsp-experimental-inlay-hints-disable -params 1 -docstring "lsp-experimental-inlay-hints-disable <scope>: disable inlay hints with experimental request for <scope>"  %{
+    remove-highlighter "%arg{1}/lsp_inlay_hints"
+    remove-hooks %arg{1} lsp-experimental-inlay-hints
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
+
 ### Object mode ###
 
 map global object a '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
@@ -1933,7 +1983,6 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     }
     add-highlighter global/lsp_references ranges lsp_references
     add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
-    add-highlighter global/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
     add-highlighter global/lsp_snippets_placeholders ranges lsp_snippets_placeholders
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
@@ -1973,7 +2022,6 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
     remove-highlighter global/lsp_semantic_tokens
-    remove-highlighter global/rust_analyzer_inlay_hints
     remove-highlighter global/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable global
     lsp-diagnostic-lines-disable global
@@ -1997,7 +2045,6 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     }
     add-highlighter window/lsp_references ranges lsp_references
     add-highlighter window/lsp_semantic_tokens ranges lsp_semantic_tokens
-    add-highlighter window/rust_analyzer_inlay_hints replace-ranges rust_analyzer_inlay_hints
     add-highlighter window/lsp_snippets_placeholders ranges lsp_snippets_placeholders
 
     set-option window completers option=lsp_completions %opt{completers}
@@ -2035,7 +2082,6 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     remove-highlighter window/cquery_semhl
     remove-highlighter window/lsp_references
     remove-highlighter window/lsp_semantic_tokens
-    remove-highlighter window/rust_analyzer_inlay_hints
     remove-highlighter window/lsp_snippets_placeholders
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
