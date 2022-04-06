@@ -1348,7 +1348,7 @@ method   = \"eclipse.jdt.ls/organizeImports\"
 
 # rust-analyzer extensions
 
-define-command rust-analyzer-inlay-hints -docstring "rust-analyzer-inlay-hints: request inlay hints (rust-analyzer).
+define-command -hidden rust-analyzer-inlay-hints -docstring "rust-analyzer-inlay-hints: request inlay hints (rust-analyzer).
 
 Deprecated: Delegates to lsp-experimental-inlay-hints. Once rust-analyzer switches to the official 
 textDocument/inlayHints request, this will be removed." %{
