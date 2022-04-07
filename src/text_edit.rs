@@ -15,6 +15,7 @@ use std::os::unix::io::FromRawFd;
 pub trait TextEditish<T: TextEditish<T>> {
     fn text_edit(self) -> TextEdit;
     fn as_ref(&self) -> &TextEdit;
+    fn from_text_edit(te: TextEdit) -> T;
 }
 
 impl TextEditish<TextEdit> for TextEdit {
@@ -24,6 +25,9 @@ impl TextEditish<TextEdit> for TextEdit {
     fn as_ref(&self) -> &TextEdit {
         self
     }
+    fn from_text_edit(te: TextEdit) -> TextEdit {
+        te
+    }
 }
 
 impl TextEditish<AnnotatedTextEdit> for AnnotatedTextEdit {
@@ -32,6 +36,12 @@ impl TextEditish<AnnotatedTextEdit> for AnnotatedTextEdit {
     }
     fn as_ref(&self) -> &TextEdit {
         &self.text_edit
+    }
+    fn from_text_edit(te: TextEdit) -> AnnotatedTextEdit {
+        AnnotatedTextEdit {
+            text_edit: te,
+            annotation_id: ChangeAnnotationIdentifier::default(),
+        }
     }
 }
 
@@ -47,6 +57,9 @@ impl TextEditish<OneOf<TextEdit, AnnotatedTextEdit>> for OneOf<TextEdit, Annotat
             OneOf::Left(text_edit) => text_edit,
             OneOf::Right(annotated_text_edit) => &annotated_text_edit.text_edit,
         }
+    }
+    fn from_text_edit(te: TextEdit) -> OneOf<TextEdit, AnnotatedTextEdit> {
+        OneOf::Left(te)
     }
 }
 
@@ -259,6 +272,7 @@ fn byte_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<
 }
 
 pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
+    client: &Option<String>,
     mut text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
@@ -267,6 +281,45 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
     // doesn't support empty arguments list.
     if text_edits.is_empty() {
         return None;
+    }
+
+    // If the text edit just replaces the whole buffer, compute a minimal edit sequence to
+    // maintain selections better.
+    if client.is_some() && text_edits.len() == 1 {
+        let range = text_edits[0].as_ref().range;
+
+        let text_begin = Position {
+            line: 0,
+            character: 0,
+        };
+        let last_line = text.line(text.len_lines() - 1);
+        let missing_eol = {
+            let line_len = last_line.len_chars();
+            line_len == 0 || last_line.char(line_len - 1) == '\n'
+        };
+        let text_end = if missing_eol {
+            Position {
+                line: (text.len_lines() - 1) as _,
+                character: (last_line.len_chars().saturating_sub(1)) as _,
+            }
+        } else {
+            Position {
+                line: text.len_lines() as _,
+                character: 0,
+            }
+        };
+
+        if range.start == text_begin && range.end >= text_end {
+            text_edits = minimal_edit_sequence(
+                text,
+                &Rope::from_str(&text_edits[0].as_ref().new_text),
+                if missing_eol { Some(text_end) } else { None },
+            );
+            debug!("Computed edit script to split up whole-buffer text edit");
+            for te in &text_edits {
+                debug!("{:?}", te.as_ref());
+            }
+        }
     }
 
     // Adjoin selections detection and Kakoune side editing relies on edits being ordered left to
@@ -392,7 +445,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     text: &Rope,
     offset_encoding: OffsetEncoding,
 ) -> Option<String> {
-    let apply_edits = lsp_text_edits_to_kakoune(text_edits, text, offset_encoding)?;
+    let apply_edits = lsp_text_edits_to_kakoune(client, text_edits, text, offset_encoding)?;
 
     let maybe_buffile = uri
         .and_then(|uri| uri.to_file_path().ok())
@@ -472,6 +525,79 @@ fn lsp_text_edit_to_kakoune<T: TextEditish<T>>(
     }
 }
 
+fn minimal_edit_sequence<T: TextEditish<T>>(
+    old: &Rope,
+    new: &Rope,
+    old_end: Option<Position>,
+) -> Vec<T> {
+    let oldv = old.lines().collect::<Vec<_>>();
+    let newv = new.lines().collect::<Vec<_>>();
+    struct BuildEditScript<'a, T: TextEditish<T>> {
+        old: &'a Rope,
+        new: &'a Rope,
+        old_end: Option<Position>,
+        edits: Vec<T>,
+    }
+    impl<T: TextEditish<T>> diffs::Diff for BuildEditScript<'_, T> {
+        type Error = ();
+        fn delete(&mut self, o: usize, len: usize, _n: usize) -> Result<(), ()> {
+            let start = Position {
+                line: o as _,
+                character: 0,
+            };
+            let mut end = Position {
+                line: (o + len) as _,
+                character: 0,
+            };
+            if (o + len) == self.old.len_lines() {
+                end = self.old_end.unwrap_or(end);
+            }
+            self.edits.push(T::from_text_edit(TextEdit {
+                range: Range { start, end },
+                new_text: "".to_string(),
+            }));
+            Ok(())
+        }
+        fn insert(&mut self, o: usize, n: usize, new_len: usize) -> Result<(), ()> {
+            let start = Position {
+                line: o as _,
+                character: 0,
+            };
+            self.edits.push(T::from_text_edit(TextEdit {
+                range: Range { start, end: start },
+                new_text: self.new.lines_at(n).take(new_len).join(""),
+            }));
+            Ok(())
+        }
+        fn replace(&mut self, o: usize, len: usize, n: usize, new_len: usize) -> Result<(), ()> {
+            let start = Position {
+                line: o as _,
+                character: 0,
+            };
+            let mut end = Position {
+                line: (o + len) as _,
+                character: 0,
+            };
+            if (o + len) == self.old.len_lines() {
+                end = self.old_end.unwrap_or(end);
+            }
+            self.edits.push(T::from_text_edit(TextEdit {
+                range: Range { start, end },
+                new_text: self.new.lines_at(n).take(new_len).join(""),
+            }));
+            Ok(())
+        }
+    }
+    let mut builder = BuildEditScript::<T> {
+        old,
+        new,
+        old_end,
+        edits: vec![],
+    };
+    let _result = diffs::patience::diff(&mut builder, &oldv, 0, oldv.len(), &newv, 0, newv.len());
+    builder.edits
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,7 +635,7 @@ mod tests {
             edit(0, 21, 0, 21, "{CStr, CString}"),
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
-        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"select 1.5,1.12 1.15,1.21
                exec -save-regs "" Z
@@ -523,7 +649,7 @@ mod tests {
     pub fn lsp_text_edits_to_kakoune_insert_adjacent_to_replace() {
         let text_edits = vec![edit(0, 1, 0, 1, "inserted"), edit(0, 2, 0, 3, "replaced")];
         let buffer = Rope::from_str("0123");
-        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"select 1.2,1.2 1.3,1.3
                exec -save-regs "" Z
@@ -554,7 +680,7 @@ mod tests {
         _ => {}
     }",
         );
-        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"select 1.5,1.9 1.11,1.13 2.9,2.14
                exec -save-regs "" Z
@@ -620,7 +746,7 @@ mod tests {
                }
                "#
         ));
-        let result = lsp_text_edits_to_kakoune(text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
 
         let expected = indoc!(
             r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000

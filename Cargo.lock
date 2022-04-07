@@ -147,6 +147,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "diffs"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8117b4111dc8d9e88d92ec2ee1cda48318af35c3e6b4f8599add5048189971d"
+
+[[package]]
 name = "dirs"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -413,6 +419,7 @@ dependencies = [
  "clap",
  "crossbeam-channel",
  "daemonize",
+ "diffs",
  "dirs",
  "enum_primitive",
  "glob",
