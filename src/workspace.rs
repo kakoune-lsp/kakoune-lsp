@@ -38,14 +38,8 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
         .dynamic_config
         .language
         .get(&ctx.language_id)
-        .and_then(|lang| lang.settings.as_ref())
-        .and_then(|settings| {
-            ctx.config
-                .language
-                .get(&ctx.language_id)
-                .and_then(|cfg| cfg.settings_section.as_ref())
-                .and_then(|section| settings.get(section).cloned())
-        })
+        .and_then(|lang| lang.settings.as_ref());
+    let settings = configured_section(ctx, settings)
         .unwrap_or_else(|| Value::Object(explode_string_table(raw_settings)));
 
     let params = DidChangeConfigurationParams { settings };

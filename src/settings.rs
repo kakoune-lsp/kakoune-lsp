@@ -21,21 +21,13 @@ pub fn request_initialization_options_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<Value> {
-    let section = {
-        let language = ctx.config.language.get(&ctx.language_id).unwrap();
-        match &language.settings_section {
-            Some(section) => section.clone(),
-            None => return None,
-        }
-    };
-
     request_dynamic_configuration_from_kakoune(meta, ctx);
     let settings = ctx
         .dynamic_config
         .language
         .get(&ctx.language_id)
-        .and_then(|cfg| cfg.settings.as_ref())
-        .and_then(|settings| settings.get(&section).cloned());
+        .and_then(|lang| lang.settings.as_ref());
+    let settings = configured_section(ctx, settings);
     if settings.is_some() {
         return settings;
     }
@@ -45,14 +37,18 @@ pub fn request_initialization_options_from_kakoune(
         return legacy_settings;
     }
 
-    let language = ctx.config.language.get(&ctx.language_id).unwrap();
+    let lang = ctx.config.language.get(&ctx.language_id).unwrap();
+    configured_section(ctx, lang.settings.as_ref())
+}
 
-    let settings = match &language.settings {
-        Some(settings) => settings,
-        None => return None,
-    };
-
-    settings.get(section).cloned()
+pub fn configured_section(ctx: &Context, settings: Option<&Value>) -> Option<Value> {
+    settings.and_then(|settings| {
+        ctx.config
+            .language
+            .get(&ctx.language_id)
+            .and_then(|cfg| cfg.settings_section.as_ref())
+            .and_then(|section| settings.get(section).cloned())
+    })
 }
 
 pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str) {
