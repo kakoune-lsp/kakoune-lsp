@@ -1926,13 +1926,6 @@ define-command lsp-experimental-inlay-hints-disable -params 1 -docstring "lsp-ex
     remove-hooks %arg{1} lsp-experimental-inlay-hints
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
-### Object mode ###
-
-map global object a '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
-map global object <a-a> '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
-map global object e '<a-semicolon> lsp-object Function Method<ret>' -docstring 'LSP function or method'
-map global object k '<a-semicolon> lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
-
 ### User mode ###
 
 declare-user-mode lsp
@@ -1975,6 +1968,26 @@ map global lsp-selection-range k '<esc>: lsp-selection-range-select up<ret>'    
 map global lsp-selection-range b '<esc>: lsp-selection-range-select bottom<ret>' -docstring 'select innermost node'
 map global lsp-selection-range t '<esc>: lsp-selection-range-select top<ret>'    -docstring 'select outermost node'
 
+define-command -hidden lsp-mappings-enable -params 1 -docstring "Add LSP mappings to goto and object mode" %{
+    map %arg{1} goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
+    map %arg{1} goto r '<esc>: lsp-references<ret>' -docstring 'references'
+    map %arg{1} goto y '<esc>: lsp-type-definition<ret>' -docstring 'type definition'
+    map %arg{1} object a '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
+    map %arg{1} object <a-a> '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
+    map %arg{1} object e '<a-semicolon> lsp-object Function Method<ret>' -docstring 'LSP function or method'
+    map %arg{1} object k '<a-semicolon> lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
+}
+
+define-command -hidden lsp-mappings-disable -params 1 -docstring "Remove LSP mappings from goto and object mode" %{
+    unmap %arg{1} goto d '<esc>: lsp-definition<ret>'
+    unmap %arg{1} goto r '<esc>: lsp-references<ret>'
+    unmap %arg{1} goto y '<esc>: lsp-type-definition<ret>'
+    unmap %arg{1} object a '<a-semicolon> lsp-object<ret>'
+    unmap %arg{1} object <a-a> '<a-semicolon> lsp-object<ret>'
+    unmap %arg{1} object e '<a-semicolon> lsp-object Function Method<ret>'
+    unmap %arg{1} object k '<a-semicolon> lsp-object Class Interface Struct<ret>'
+}
+
 ### Default integration ###
 
 define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
@@ -1988,13 +2001,10 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     add-highlighter global/lsp_snippets_placeholders ranges lsp_snippets_placeholders
     lsp-inline-diagnostics-enable global
     lsp-diagnostic-lines-enable global
+    lsp-mappings-enable global
 
     set-option global completers option=lsp_completions %opt{completers}
     set-option global lsp_fail_if_disabled nop
-
-    map global goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
-    map global goto r '<esc>: lsp-references<ret>' -docstring 'references'
-    map global goto y '<esc>: lsp-type-definition<ret>' -docstring 'type definition'
 
     hook -group lsp global BufCreate .* %{
         lsp-did-open
@@ -2029,9 +2039,7 @@ define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
     lsp-diagnostic-lines-disable global
     try %{ set-option -remove global completers option=lsp_completions }
     set-option global lsp_fail_if_disabled fail
-    unmap global goto d '<esc>: lsp-definition<ret>'
-    unmap global goto r '<esc>: lsp-references<ret>'
-    unmap global goto y '<esc>: lsp-type-definition<ret>'
+    lsp-mappings-disable global
     remove-hooks global lsp
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
@@ -2054,10 +2062,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
 
     lsp-inline-diagnostics-enable window
     lsp-diagnostic-lines-enable window
-
-    map window goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
-    map window goto r '<esc>: lsp-references<ret>' -docstring 'references'
-    map window goto y '<esc>: lsp-type-definition<ret>' -docstring 'type definition'
+    lsp-mappings-enable window
 
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window BufWritePost .* lsp-did-save
@@ -2089,9 +2094,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     lsp-diagnostic-lines-disable window
     try %{ set-option -remove window completers option=lsp_completions }
     set-option window lsp_fail_if_disabled fail
-    unmap window goto d '<esc>: lsp-definition<ret>'
-    unmap window goto r '<esc>: lsp-references<ret>'
-    unmap window goto y '<esc>: lsp-type-definition<ret>'
+    lsp-mappings-disable window
     remove-hooks window lsp
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
