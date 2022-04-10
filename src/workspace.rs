@@ -39,8 +39,14 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
         .language
         .get(&ctx.language_id)
         .and_then(|lang| lang.settings.as_ref());
-    let settings = configured_section(ctx, settings)
-        .unwrap_or_else(|| Value::Object(explode_string_table(raw_settings)));
+    let settings = configured_section(ctx, settings).unwrap_or_else(|| {
+        if !raw_settings.is_empty() {
+            Value::Object(explode_string_table(raw_settings))
+        } else {
+            let language = ctx.config.language.get(&ctx.language_id).unwrap();
+            configured_section(ctx, language.settings.as_ref()).unwrap_or_default()
+        }
+    });
 
     let params = DidChangeConfigurationParams { settings };
     ctx.notify::<DidChangeConfiguration>(params);
