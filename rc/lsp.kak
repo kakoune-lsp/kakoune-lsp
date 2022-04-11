@@ -180,7 +180,7 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
         define-command -override -hidden lsp-menu-select -params 1 %%§
             evaluate-commands %%sh¶
                 case \"\$1\" in%s
-                *) echo fail no such item: \"\$1\" ;;
+                *) echo fail -- no such item: \"'\$(printf %%s \"\$1\" | sed \"s/'/''/g\")'\" ;;
                 esac
             ¶
         §" "$cases"
