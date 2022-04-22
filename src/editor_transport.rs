@@ -74,7 +74,7 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
                         let command = match client.filter(|&s| !s.is_empty()) {
                             Some(client) => {
                                 let command = format!(
-                                    "eval -client {} -verbatim -- {}",
+                                    "evaluate-commands -client {} -verbatim -- {}",
                                     client, response.command
                                 );
                                 debug!("To editor `{}`: {}", response.meta.session, command);

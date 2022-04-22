@@ -151,7 +151,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
          set buffer lsp_diagnostic_info_count {}; \
          set buffer lsp_diagnostic_warning_count {}; \
          set buffer lsp_errors {} {}; \
-         eval \"set buffer lsp_error_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
+         evaluate-commands \"set buffer lsp_error_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
          set buffer lsp_diagnostics {} {}",
         error_count,
         hint_count,
@@ -165,7 +165,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         diagnostic_ranges,
     );
     let command = format!(
-        "eval -buffer {} %§{}§",
+        "evaluate-commands -buffer {} %§{}§",
         editor_quote(buffile),
         command.replace('§', "§§")
     );

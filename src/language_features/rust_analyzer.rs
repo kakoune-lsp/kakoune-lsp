@@ -119,13 +119,13 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
             },
         };
         let command = format!(
-            "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
+            "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
             editor_quote(buffile),
             position.line,
             position.column - 1
         );
         let command = format!(
-            "eval -client {} -verbatim -- {}",
+            "evaluate-commands -client {} -verbatim -- {}",
             editor_quote(client),
             command
         );

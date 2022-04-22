@@ -457,13 +457,16 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
                 maybe_buffile
                     .map(|buffile| {
                         format!(
-                            "eval -buffer {} -save-regs ^ {}",
+                            "evaluate-commands -buffer {} -save-regs ^ {}",
                             editor_quote(&buffile),
                             editor_quote(&apply_edits)
                         )
                     })
                     .unwrap_or_else(|| {
-                        format!("eval -draft -save-regs ^ {}", editor_quote(&apply_edits))
+                        format!(
+                            "evaluate-commands -draft -save-regs ^ {}",
+                            editor_quote(&apply_edits)
+                        )
                     }),
             );
         }
@@ -483,7 +486,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
         .unwrap_or(apply_edits);
 
     Some(format!(
-        "eval -client {} -draft -save-regs ^ {}",
+        "evaluate-commands -client {} -draft -save-regs ^ {}",
         client,
         &editor_quote(&apply_edits)
     ))

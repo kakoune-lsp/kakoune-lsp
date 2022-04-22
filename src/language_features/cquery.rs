@@ -188,7 +188,7 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         .join(" ");
     let command = format!("set buffer cquery_semhl {} {}", version, ranges);
     let command = format!(
-        "eval -buffer {} -verbatim -- {}",
+        "evaluate-commands -buffer {} -verbatim -- {}",
         editor_quote(buffile),
         command
     );

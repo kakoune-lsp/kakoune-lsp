@@ -245,7 +245,7 @@ fn editor_next_or_prev_for_details(
         Some((filename, symbol_position, name, kind)) => (filename, symbol_position, name, kind),
         None => {
             let no_symbol_found = indoc!(
-                "eval %[
+                "evaluate-commands %[
                      info -style modal 'Not found!\n\nPress any key to continue'
                      on-key %[info -style modal]
                  ]"
@@ -299,7 +299,7 @@ fn editor_next_or_prev_for_details(
     let do_after = formatdoc!(
         "on-key %[
              info -style modal
-             eval %sh[
+             evaluate-commands %sh[
                  if [ \"$kak_key\" = \"g\" ]; then
                      echo 'exec {}g{}lh'
                  fi

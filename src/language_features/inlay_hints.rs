@@ -97,7 +97,7 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
         .join(" ");
     let command = format!("set buffer lsp_inlay_hints {} {}", meta.version, ranges);
     let command = format!(
-        "eval -buffer {} -verbatim -- {}",
+        "evaluate-commands -buffer {} -verbatim -- {}",
         editor_quote(&meta.buffile),
         command
     );

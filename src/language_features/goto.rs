@@ -41,7 +41,7 @@ pub fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: 
     if let Some(contents) = get_file_contents(path_str, ctx) {
         let pos = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding).start;
         let command = format!(
-            "eval -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
+            "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
             editor_quote(path_str),
             pos.line,
             pos.column,
