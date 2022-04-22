@@ -327,10 +327,6 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             inlay_hints::inlay_hints(meta, params, ctx);
         }
 
-        inlay_hints::ExperimentalInlayHintRequest::METHOD => {
-            inlay_hints::experimental_inlay_hints(meta, params, ctx);
-        }
-
         // CCLS
         ccls::NavigateRequest::METHOD => {
             ccls::navigate(meta, params, ctx);
