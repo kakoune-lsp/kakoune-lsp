@@ -364,7 +364,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
             //
             // 0. Assume we have two adjacent selections "foo" "bar".
             // 1. Use "Z" to save the two selection .
-            // 2. Use "<space>" to select "foo"
+            // 2. Use "<space><esc>,<esc>" to select "foo"
             // 3. Type "|echo foo<ret>"
             // 4. Run "z" to restore the two selections. Observe that "foo" is still selected.
             //
@@ -410,7 +410,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
                     KakouneTextEditCommand::Replace => 'c',
                 };
                 let command = formatdoc!(
-                    "z{}<space>{}{}<esc>",
+                    "z{}<space><esc>,<esc>{}{}<esc>",
                     if i > 0 {
                         format!("{})", i)
                     } else {
@@ -642,7 +642,7 @@ mod tests {
         let expected = indoc!(
             r#"select 1.5,1.12 1.15,1.21
                execute-keys -save-regs "" Z
-               execute-keys "z<space>cstd<esc>z1)<space>cffi::{CStr, CString}<esc>""#
+               execute-keys "z<space><esc>,<esc>cstd<esc>z1)<space><esc>,<esc>cffi::{CStr, CString}<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -656,7 +656,7 @@ mod tests {
         let expected = indoc!(
             r#"select 1.2,1.2 1.3,1.3
                execute-keys -save-regs "" Z
-               execute-keys "z<space>iinserted<esc>z1)<space>creplaced<esc>""#
+               execute-keys "z<space><esc>,<esc>iinserted<esc>z1)<space><esc>,<esc>creplaced<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -687,7 +687,7 @@ mod tests {
         let expected = indoc!(
             r#"select 1.5,1.9 1.11,1.13 2.9,2.14
                execute-keys -save-regs "" Z
-               execute-keys "z<space>cif<esc>z1)<space>clet Test::Foo = foo<esc>z2)<space>cprintln<esc>""#
+               execute-keys "z<space><esc>,<esc>cif<esc>z1)<space><esc>,<esc>clet Test::Foo = foo<esc>z2)<space><esc>,<esc>cprintln<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -754,13 +754,13 @@ mod tests {
         let expected = indoc!(
             r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
                execute-keys -save-regs "" Z
-               execute-keys "z<space>cstd::{path::Path, process::Stdio}<esc>z1)<space>c
+               execute-keys "z<space><esc>,<esc>cstd::{path::Path, process::Stdio}<esc>z1)<space><esc>,<esc>c
                fn main() {
                    let matches = App::new(""kak-lsp"").get_matches();
 
                    if matches.is_present(""kakoune"") {}
-               }<esc>z2)<space>ckakoune<esc>z3)<space>cscript:<esc>z4)<space>i&str <esc>z5)<space>cinclude_str!(""../rc/lsp.kak"")<esc>z6)<space>c
-                   let<esc>z7)<space>cargs<esc>z8)<space>c= env::args().skip(1);<esc>z9)<space>c
+               }<esc>z2)<space><esc>,<esc>ckakoune<esc>z3)<space><esc>,<esc>cscript:<esc>z4)<space><esc>,<esc>i&str <esc>z5)<space><esc>,<esc>cinclude_str!(""../rc/lsp.kak"")<esc>z6)<space><esc>,<esc>c
+                   let<esc>z7)<space><esc>,<esc>cargs<esc>z8)<space><esc>,<esc>c= env::args().skip(1);<esc>z9)<space><esc>,<esc>c
                <esc>""#
         ).to_string();
         assert_eq!(result, Some(expected));

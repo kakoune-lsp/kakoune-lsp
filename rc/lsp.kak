@@ -698,7 +698,7 @@ define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor
     evaluate-commands -save-regs ^s %{
         execute-keys -save-regs "" Z
         try %{
-            execute-keys <space><a-i>w
+            execute-keys <space><esc>,<esc><a-i>w
             # include a leading single-quote for Rust lifetime specifiers
             execute-keys <a-semicolon>Hs'?\w+<ret><a-semicolon>
         } catch %{
@@ -2157,8 +2157,8 @@ def lsp-snippets-insert -hidden -params 1 %[
         # align everything with the current line
         eval -draft -itersel -save-regs '"' %{
             try %{
-                exec -draft -save-regs '/' '<a-s>)<space><semicolon>xs^\s+<ret>y'
-                exec -draft '<a-s>)<a-space>P'
+                exec -draft -save-regs '/' '<a-s>)<space><esc>,<esc><semicolon>xs^\s+<ret>y'
+                exec -draft '<a-s>)<a-space><esc><a-,><esc>P'
             }
         }
         try %[
