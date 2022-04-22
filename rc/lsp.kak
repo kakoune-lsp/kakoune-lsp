@@ -1176,22 +1176,6 @@ buf_line_count = ${kak_buf_line_count}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command -hidden lsp-experimental-inlay-hints -docstring "lsp-experimental-inlay-hints: Request inlay hints with experimental prefix" %{
-  lsp-did-change-and-then lsp-experimental-inlay-hints-request
-}
-
-define-command -hidden lsp-experimental-inlay-hints-request %{
-    nop %sh{ (printf %s "
-session  = \"${kak_session}\"
-buffile  = \"${kak_buffile}\"
-filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp:-0}
-method   = \"experimental/inlayHints\"
-[params]
-buf_line_count = ${kak_buf_line_count}
-" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
-}
-
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
@@ -1349,11 +1333,8 @@ method   = \"eclipse.jdt.ls/organizeImports\"
 
 # rust-analyzer extensions
 
-define-command -hidden rust-analyzer-inlay-hints -docstring "rust-analyzer-inlay-hints: request inlay hints (rust-analyzer).
-
-Deprecated: Delegates to lsp-experimental-inlay-hints. Once rust-analyzer switches to the official 
-textDocument/inlayHints request, this will be removed." %{
-    lsp-experimental-inlay-hints
+define-command -hidden rust-analyzer-inlay-hints -docstring "DEPRECATED, use lsp-inlay-hints-enable. request inlay hints" %{
+    lsp-inlay-hints
 }
 
 # texlab extensions
@@ -1911,18 +1892,6 @@ define-command lsp-inlay-hints-enable -params 1 -docstring "lsp-inlay-hints-enab
 define-command lsp-inlay-hints-disable -params 1 -docstring "lsp-inlay-hints-disable <scope>: disable inlay hints for <scope>"  %{
     remove-highlighter "%arg{1}/lsp_inlay_hints"
     remove-hooks %arg{1} lsp-inlay-hints
-} -shell-script-candidates %{ printf '%s\n' buffer global window }
-
-define-command lsp-experimental-inlay-hints-enable -params 1 -docstring "lsp-experimental-inlay-hints-enable <scope>: enable inlay hints with experimental request for <scope>" %{
-    add-highlighter "%arg{1}/lsp_inlay_hints" replace-ranges lsp_inlay_hints
-    hook -group lsp-experimental-inlay-hints %arg{1} BufReload .* lsp-experimental-inlay-hints
-    hook -group lsp-experimental-inlay-hints %arg{1} NormalIdle .* lsp-experimental-inlay-hints
-    hook -group lsp-experimental-inlay-hints %arg{1} InsertIdle .* lsp-experimental-inlay-hints
-} -shell-script-candidates %{ printf '%s\n' buffer global window }
-
-define-command lsp-experimental-inlay-hints-disable -params 1 -docstring "lsp-experimental-inlay-hints-disable <scope>: disable inlay hints with experimental request for <scope>"  %{
-    remove-highlighter "%arg{1}/lsp_inlay_hints"
-    remove-hooks %arg{1} lsp-experimental-inlay-hints
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 ### User mode ###

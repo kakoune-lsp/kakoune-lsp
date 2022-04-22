@@ -331,13 +331,6 @@ Inlay hints are a feature proposed for LSP 3.17 to show inferred types, paramete
 lsp-inlay-hints-enable global
 ----
 
-Currently https://github.com/rust-analyzer/rust-analyzer[rust-analyzer] needs a different request
-
-[source,kak]
-----
-lsp-experimental-inlay-hints-enable global
-----
-
 You can change the hints' face with `set-face global InlayHint <face>`.
 
 == Semantic Tokens

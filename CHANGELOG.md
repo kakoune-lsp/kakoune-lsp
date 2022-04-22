@@ -1,7 +1,10 @@
 ## Unreleased
 
+Deprecations:
+- `rust-analyzer-inlay-hints` is deprecated in favor of `lsp-experimental-inlay-hints-enable`. Inlay hints now requires `rust-analyzer` version >= 2022-04-18. (#602, #613).
+
 Additions:
-- Support the new `textDocument/inlayHint` request from LSP v3.17, and the same protocol with the `experimental/inlayHints` request currently used by rust-analyzer.
+- Support the new `textDocument/inlayHint` request from LSP v3.17.
 
 ## 12.1.0 - 2022-03-28
 
