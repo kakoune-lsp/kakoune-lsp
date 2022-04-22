@@ -423,12 +423,12 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
             },
         )
         .join("");
-    let mut apply_edits = format!("exec \"{}\"", edit_keys);
+    let mut apply_edits = format!("execute-keys \"{}\"", edit_keys);
 
     if !selections_desc.is_empty() {
         apply_edits = formatdoc!(
             "select {}
-             exec -save-regs \"\" Z
+             execute-keys -save-regs \"\" Z
              {}",
             selections_desc,
             apply_edits
@@ -638,8 +638,8 @@ mod tests {
         let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"select 1.5,1.12 1.15,1.21
-               exec -save-regs "" Z
-               exec "z<space>cstd<esc>z1)<space>cffi::{CStr, CString}<esc>""#
+               execute-keys -save-regs "" Z
+               execute-keys "z<space>cstd<esc>z1)<space>cffi::{CStr, CString}<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -652,8 +652,8 @@ mod tests {
         let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"select 1.2,1.2 1.3,1.3
-               exec -save-regs "" Z
-               exec "z<space>iinserted<esc>z1)<space>creplaced<esc>""#
+               execute-keys -save-regs "" Z
+               execute-keys "z<space>iinserted<esc>z1)<space>creplaced<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -683,8 +683,8 @@ mod tests {
         let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
         let expected = indoc!(
             r#"select 1.5,1.9 1.11,1.13 2.9,2.14
-               exec -save-regs "" Z
-               exec "z<space>cif<esc>z1)<space>clet Test::Foo = foo<esc>z2)<space>cprintln<esc>""#
+               execute-keys -save-regs "" Z
+               execute-keys "z<space>cif<esc>z1)<space>clet Test::Foo = foo<esc>z2)<space>cprintln<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -750,8 +750,8 @@ mod tests {
 
         let expected = indoc!(
             r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
-               exec -save-regs "" Z
-               exec "z<space>cstd::{path::Path, process::Stdio}<esc>z1)<space>c
+               execute-keys -save-regs "" Z
+               execute-keys "z<space>cstd::{path::Path, process::Stdio}<esc>z1)<space>c
                fn main() {
                    let matches = App::new(""kak-lsp"").get_matches();
 
