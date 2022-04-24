@@ -102,19 +102,12 @@ pub fn editor_completion(
             } else {
                 "".to_string()
             };
-            let on_select = if !markdown.is_empty() {
-                let markup = markdown_to_kakoune_markup(markdown);
-                format!(
-                    "{}info -markup -style menu -- %§{}§",
-                    &maybe_set_index,
-                    markup.replace('§', "§§")
-                )
-            } else {
-                // When the user scrolls through the list of completion candidates, Kakoune
-                // does not clean up the info box. We need to do that explicitly, in this case by
-                // requesting an empty one.
-                maybe_set_index + "info -style menu ''"
-            };
+            let markup = markdown_to_kakoune_markup(markdown);
+            let on_select = format!(
+                "{}info -markup -style menu -- %§{}§",
+                &maybe_set_index,
+                markup.replace('§', "§§")
+            );
 
             let entry = match x.kind {
                 Some(k) => format!(
