@@ -63,31 +63,6 @@ pub fn editor_completion(
         .iter()
         .enumerate()
         .map(|(completion_item_index, x)| {
-            let doc = x.documentation.as_ref().map(|doc| match doc {
-                Documentation::String(s) => s,
-                Documentation::MarkupContent(content) => &content.value,
-            });
-
-            // Combine the 'detail' line and the full-text documentation into
-            // a single string. If both exist, separate them with a horizontal rule.
-            let markdown = {
-                let mut markdown = String::new();
-
-                if let Some(detail) = x.detail.as_ref() {
-                    markdown.push_str(detail);
-
-                    if doc.is_some() {
-                        markdown.push_str("\n\n---\n\n");
-                    }
-                }
-
-                if let Some(doc) = doc {
-                    markdown.push_str(doc);
-                }
-
-                markdown
-            };
-
             let maybe_set_index = if ctx
                 .capabilities
                 .as_ref()
@@ -102,11 +77,10 @@ pub fn editor_completion(
             } else {
                 "".to_string()
             };
-            let markup = markdown_to_kakoune_markup(markdown);
             let on_select = format!(
                 "{}info -markup -style menu -- %§{}§",
                 &maybe_set_index,
-                markup.replace('§', "§§")
+                completion_menu_text(x).replace('§', "§§")
             );
 
             let entry = match x.kind {
@@ -250,6 +224,34 @@ pub fn editor_completion(
     );
 
     ctx.exec(meta, command);
+}
+
+fn completion_menu_text(x: &CompletionItem) -> String {
+    let doc = x.documentation.as_ref().map(|doc| match doc {
+        Documentation::String(s) => s,
+        Documentation::MarkupContent(content) => &content.value,
+    });
+    // Combine the 'detail' line and the full-text documentation into
+    // a single string. If both exist, separate them with a horizontal rule.
+    let mut markdown = String::new();
+
+    if let Some(detail) = x.detail.as_ref() {
+        markdown.push_str(detail);
+
+        if doc.is_some() {
+            markdown.push_str("\n\n---\n\n");
+        }
+    }
+
+    if let Some(doc) = doc {
+        markdown.push_str(doc);
+    }
+
+    if markdown.is_empty() {
+        markdown
+    } else {
+        markdown_to_kakoune_markup(markdown)
+    }
 }
 
 pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
