@@ -106,7 +106,11 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                         tag_support: None,
                         insert_replace_support: None,
                         resolve_support: Some(CompletionItemCapabilityResolveSupport {
-                            properties: vec!["additionalTextEdits".to_string()],
+                            properties: vec![
+                                "additionalTextEdits".to_string(),
+                                "detail".to_string(),
+                                "documentation".to_string(),
+                            ],
                         }),
                         insert_text_mode_support: None,
                         label_details_support: None,

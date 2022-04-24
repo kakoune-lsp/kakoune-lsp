@@ -187,6 +187,7 @@ pub struct TextDocumentCompletionParams {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompletionItemResolveParams {
     pub completion_item_index: isize,
+    pub pager_active: bool,
 }
 
 #[derive(Clone, Copy, Deserialize, Debug)]

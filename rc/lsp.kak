@@ -308,14 +308,15 @@ have_kakoune_feature_filtertext = ${kak_opt_lsp_have_kakoune_feature_filtertext}
 }}
 
 define-command -hidden lsp-completion-dismissed -docstring "Called when the completion pager is closed" %{
-    lsp-completion-item-resolve-request %opt{lsp_completions_selected_item}
+    lsp-completion-item-resolve-request false
     set-option window lsp_completions_selected_item -1
 }
 
 define-command -hidden lsp-completion-item-resolve-request -params 1 \
-    -docstring "Request additional edits after accepting a completion item, for example to add import statements" %{
+    -docstring "Request additional attributes for a completion item" %{
     nop %sh{
-        [ "${1}" -eq -1 ] && exit
+        index=$kak_opt_lsp_completions_selected_item
+        [ "${index}" -eq -1 ] && exit
 
         (printf %s "
 session  = \"${kak_session}\"
@@ -325,7 +326,8 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"completionItem/resolve\"
 [params]
-completion_item_index = ${1}
+completion_item_index = ${index}
+pager_active = ${1}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 

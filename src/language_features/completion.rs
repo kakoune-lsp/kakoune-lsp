@@ -71,7 +71,8 @@ pub fn editor_completion(
                 .unwrap_or(false)
             {
                 format!(
-                    "set-option window lsp_completions_selected_item {}; ",
+                    "set-option window lsp_completions_selected_item {}; \
+                        lsp-completion-item-resolve-request true; ",
                     completion_item_index
                 )
             } else {
@@ -257,36 +258,70 @@ fn completion_menu_text(x: &CompletionItem) -> String {
 pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let CompletionItemResolveParams {
         completion_item_index,
+        pager_active,
     } = CompletionItemResolveParams::deserialize(params).unwrap();
 
     if ctx.completion_last_client.is_none() || meta.client != ctx.completion_last_client {
         return;
     }
 
-    // Since we're the only user of the completion items, we can clear them.
-    let item = ctx
-        .completion_items
-        .drain(..)
-        .nth(completion_item_index as usize)
-        .unwrap();
-
-    match item.additional_text_edits {
-        Some(edits) if !edits.is_empty() => {
-            // Not sure if this case ever happens, the spec is unclear.
-            let uri = Url::from_file_path(&meta.buffile).unwrap();
-            apply_text_edits(&meta, &uri, edits, ctx);
+    let (item, detail, documentation) = if pager_active {
+        let item = &ctx.completion_items[completion_item_index as usize];
+        // Stop if there is nothing interesting to resolve.
+        if item.detail.is_some() && item.documentation.is_some() {
             return;
         }
-        _ => (),
-    }
+        (
+            item.clone(),
+            item.detail.clone(),
+            item.documentation.clone(),
+        )
+    } else {
+        // Since we're the only user of the completion items, we can clear them.
+        let item = ctx
+            .completion_items
+            .drain(..)
+            .nth(completion_item_index as usize)
+            .unwrap();
 
-    ctx.call::<ResolveCompletionItem, _>(meta, item, |tx: &mut Context, meta, new_item| {
-        editor_completion_item_resolve(tx, meta, new_item)
+        match item.additional_text_edits {
+            Some(edits) if !edits.is_empty() => {
+                // Not sure if this case ever happens, the spec is unclear.
+                let uri = Url::from_file_path(&meta.buffile).unwrap();
+                apply_text_edits(&meta, &uri, edits, ctx);
+                return;
+            }
+            _ => (),
+        }
+
+        (item, None, None)
+    };
+
+    ctx.call::<ResolveCompletionItem, _>(meta, item, move |tx: &mut Context, meta, new_item| {
+        editor_completion_item_resolve(tx, meta, pager_active, detail, documentation, new_item)
     });
 }
 
-fn editor_completion_item_resolve(ctx: &mut Context, meta: EditorMeta, item: CompletionItem) {
-    if let Some(resolved_edits) = item.additional_text_edits {
+fn editor_completion_item_resolve(
+    ctx: &mut Context,
+    meta: EditorMeta,
+    pager_active: bool,
+    old_detail: Option<String>,
+    old_documentation: Option<Documentation>,
+    new_item: CompletionItem,
+) {
+    if pager_active {
+        if new_item.detail == old_detail || new_item.documentation == old_documentation {
+            return;
+        }
+        ctx.exec(
+            meta,
+            format!(
+                "info -markup -style menu -- %§{}§",
+                completion_menu_text(&new_item).replace('§', "§§")
+            ),
+        );
+    } else if let Some(resolved_edits) = new_item.additional_text_edits {
         let uri = Url::from_file_path(&meta.buffile).unwrap();
         apply_text_edits(&meta, &uri, resolved_edits, ctx)
     }
