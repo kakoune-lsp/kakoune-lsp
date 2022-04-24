@@ -228,31 +228,28 @@ pub fn editor_completion(
 }
 
 fn completion_menu_text(x: &CompletionItem) -> String {
-    let doc = x.documentation.as_ref().map(|doc| match doc {
-        Documentation::String(s) => s,
-        Documentation::MarkupContent(content) => &content.value,
-    });
     // Combine the 'detail' line and the full-text documentation into
     // a single string. If both exist, separate them with a horizontal rule.
-    let mut markdown = String::new();
+    let mut markup = String::new();
 
     if let Some(detail) = x.detail.as_ref() {
-        markdown.push_str(detail);
+        markup.push_str(&escape_kakoune_markup(detail));
 
-        if doc.is_some() {
-            markdown.push_str("\n\n---\n\n");
+        if x.documentation.is_some() {
+            markup.push_str("\n\n---\n\n");
         }
     }
 
-    if let Some(doc) = doc {
-        markdown.push_str(doc);
+    match x.documentation.as_ref() {
+        Some(Documentation::String(s)) => markup.push_str(&escape_kakoune_markup(s)),
+        Some(Documentation::MarkupContent(content)) => match content.kind {
+            MarkupKind::PlainText => markup.push_str(&escape_kakoune_markup(&content.value)),
+            MarkupKind::Markdown => markup.push_str(&markdown_to_kakoune_markup(&content.value)),
+        },
+        _ => (),
     }
 
-    if markdown.is_empty() {
-        markdown
-    } else {
-        markdown_to_kakoune_markup(markdown)
-    }
+    markup
 }
 
 pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
