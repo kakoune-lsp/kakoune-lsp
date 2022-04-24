@@ -15,7 +15,7 @@ EOF
 
 test_tmux_kak_start 'edit main.go'
 
-test_tmux send-keys h,lf # lsp-formatting
+test_tmux send-keys h:lsp-formatting Enter
 test_sleep
 test_tmux capture-pane -p
 # CHECK: package main
@@ -33,7 +33,7 @@ set global lsp_config %{
 	"formatting.gofumpt" = true
 }' | kak -p "$test_kak_session"
 test_sleep
-test_tmux send-keys ,lf # lsp-formatting
+test_tmux send-keys :lsp-formatting Enter
 test_sleep
 test_tmux capture-pane -p
 # CHECK: package main

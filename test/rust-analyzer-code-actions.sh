@@ -35,7 +35,7 @@ test_tmux send-keys j/foo Enter vtj
 test_sleep_until 'test_tmux capture-pane -p | grep -E "💡|\[A\]"'
 # CHECK: {{💡|\[A\]}} main.rs 7:11  1 sel - client0@[session]
 
-test_tmux send-keys ,la # lsp-code-actions
+test_tmux send-keys :lsp-code-actions Enter
 test_sleep_until 'test_tmux capture-pane -p | grep Replace'
 # CHECK: {{.*}}Replace match with if let{{.*}}
 
@@ -50,7 +50,7 @@ test_tmux capture-pane -p
 # CHECK: ~
 # CHECK: {{💡|\[A\]}} main.rs 7:27 [+] 1 sel - client0@[session]
 
-test_tmux send-keys ,la # lsp-code-actions
+test_tmux send-keys :lsp-code-actions Enter
 test_sleep_until 'test_tmux capture-pane -p | grep Replace'
 # CHECK: {{.*}}Replace if let with match{{.*}}
 
