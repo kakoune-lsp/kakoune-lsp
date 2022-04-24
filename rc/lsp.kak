@@ -1593,7 +1593,7 @@ define-command lsp-next-location -params 1 -docstring %{
 } -buffer-completion %{
     evaluate-commands -try-client %opt{jumpclient} %{
         buffer %arg{1}
-        execute-keys "ge %opt{grep_current_line}g<a-l> /%opt{lsp_location_format}<ret>"
+        execute-keys ge %opt{grep_current_line}g<a-l> / %opt{lsp_location_format}<ret>
         lsp-jump
     }
     try %{
@@ -1613,7 +1613,7 @@ define-command lsp-previous-location -params 1 -docstring %{
 } -buffer-completion %{
     evaluate-commands -try-client %opt{jumpclient} %{
         buffer %arg{1}
-        execute-keys "ge %opt{grep_current_line}g<a-h> <a-/>%opt{lsp_location_format}<ret>"
+        execute-keys ge %opt{grep_current_line}g<a-h> <a-/> %opt{lsp_location_format}<ret>
         lsp-jump
     }
     try %{
