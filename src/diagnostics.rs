@@ -146,13 +146,13 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     // to make sure the column always has the right width
     // Also wrap line_flags in another eval and quotes, to make sure the %opt[] tags are expanded
     let command = format!(
-        "set buffer lsp_diagnostic_error_count {}; \
-         set buffer lsp_diagnostic_hint_count {}; \
-         set buffer lsp_diagnostic_info_count {}; \
-         set buffer lsp_diagnostic_warning_count {}; \
-         set buffer lsp_errors {} {}; \
-         evaluate-commands \"set buffer lsp_error_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
-         set buffer lsp_diagnostics {} {}",
+        "set-option buffer lsp_diagnostic_error_count {}; \
+         set-option buffer lsp_diagnostic_hint_count {}; \
+         set-option buffer lsp_diagnostic_info_count {}; \
+         set-option buffer lsp_diagnostic_warning_count {}; \
+         set-option buffer lsp_errors {} {}; \
+         evaluate-commands \"set-option buffer lsp_error_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
+         set-option buffer lsp_diagnostics {} {}",
         error_count,
         hint_count,
         info_count,

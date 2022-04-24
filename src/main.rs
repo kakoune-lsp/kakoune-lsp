@@ -195,7 +195,7 @@ fn kakoune() {
     let cmd = env::current_exe().unwrap();
     let cmd = cmd.to_str().unwrap();
     let lsp_cmd = format!(
-        "set global lsp_cmd '{} {}'",
+        "set-option global lsp_cmd '{} {}'",
         editor_escape(cmd),
         editor_escape(&args)
     );

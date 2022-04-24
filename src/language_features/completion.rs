@@ -220,7 +220,7 @@ pub fn editor_completion(
     let p = params.position;
     let offset = inferred_offset.unwrap_or(params.completion.offset);
     let command = format!(
-        "set window lsp_completions {}.{}@{} {}\n",
+        "set-option window lsp_completions {}.{}@{} {}\n",
         p.line, offset, meta.version, items
     );
 

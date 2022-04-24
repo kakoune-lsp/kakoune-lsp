@@ -106,7 +106,7 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
         .join(" ");
 
     let command = format!(
-        "set buffer lsp_semantic_tokens {} {}",
+        "set-option buffer lsp_semantic_tokens {} {}",
         meta.version, &ranges
     );
     let command = format!(
