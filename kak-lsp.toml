@@ -152,11 +152,11 @@ args = ["--stdio"]
 # # See https://github.dev/eclipse/eclipse.jdt.ls
 # # "java.format.insertSpaces" = true
 
-[language.javascript]
+[language.jsx] # works for javascript as well
 filetypes = ["javascript"]
-roots = [".flowconfig"]
-command = "flow"
-args = ["lsp"]
+roots = ["package.json", "tsconfig.json", ".git", ".hg"]
+command = "typescript-language-server"
+args = ["--stdio"]
 
 [language.json]
 filetypes = ["json"]

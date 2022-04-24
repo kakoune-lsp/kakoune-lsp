@@ -1,5 +1,8 @@
 ## Unreleased
 
+Breaking changes:
+- [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) replaces `flow` as default language server for JavaScript.
+
 Fixes:
 - `lsp-find-error` and code lenses were broken in 13.0.0, which has been fixed.
 - The server-specific configuration for the `solargraph` Ruby language server has been fixed.
