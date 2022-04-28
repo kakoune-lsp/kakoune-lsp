@@ -79,7 +79,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 workspace_folders: Some(false),
                 configuration: Some(true),
                 semantic_tokens: None,
-                code_lens: None,
+                code_lens: Some(CodeLensWorkspaceClientCapabilities {
+                    refresh_support: None,
+                }),
                 file_operations: None,
                 inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
                     refresh_support: Some(false),
@@ -450,6 +452,10 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
             CodeActionProviderCapability::Simple(false) => (),
             _ => features.push("lsp-code-actions".to_string()),
         }
+    }
+
+    if server_capabilities.code_lens_provider.is_some() {
+        features.push("lsp-code-lens".to_string())
     }
 
     if let Some(ref provider) = server_capabilities.execute_command_provider {

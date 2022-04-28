@@ -165,6 +165,8 @@ If you have followed above steps you get
 ** `\*callers*` and `\*callees*` buffers have filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
 * inline diagnostics highlighting using the `DiagnosticError`, `DiagnosticHint`, `DiagnosticInfo` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
+  * for lines with code lenses, a `>` flag which can be customized via the `lsp_code_lens_sign` option
+  * `lsp-code-lens` command to execute a code lens from the current selection
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
 
@@ -223,6 +225,7 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 | i | lsp-implementation
 | j | lsp-outgoing-calls
 | k | lsp-incoming-calls
+| l | lsp-code-lens
 | r | lsp-references
 | R | lsp-rename-prompt
 | s | lsp-signature-help

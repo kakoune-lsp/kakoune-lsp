@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::language_features::code_lens::text_document_code_lens;
 use crate::types::*;
 use lsp_types::notification::*;
 use lsp_types::*;
@@ -22,8 +23,9 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
         version: meta.version,
         text: Rope::from_str(&params.text_document.text),
     };
-    ctx.documents.insert(meta.buffile, document);
+    ctx.documents.insert(meta.buffile.clone(), document);
     ctx.notify::<DidOpenTextDocument>(params);
+    text_document_code_lens(meta, ctx);
 }
 
 pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -45,7 +47,7 @@ pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mu
     };
     ctx.documents.insert(meta.buffile.clone(), document);
     ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
-    let params = DidChangeTextDocumentParams {
+    let req_params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
             uri,
             version: meta.version,
@@ -56,7 +58,8 @@ pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mu
             text: params.draft,
         }],
     };
-    ctx.notify::<DidChangeTextDocument>(params);
+    ctx.notify::<DidChangeTextDocument>(req_params);
+    text_document_code_lens(meta, ctx);
 }
 
 pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
