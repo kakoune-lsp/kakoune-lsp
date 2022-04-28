@@ -44,42 +44,6 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         })
         .join(" ");
 
-    let mut error_count: u32 = 0;
-    let mut warning_count: u32 = 0;
-    let mut info_count: u32 = 0;
-    let mut hint_count: u32 = 0;
-    let line_flags = diagnostics
-        .iter()
-        .map(|x| {
-            format!(
-                "'{}|{}'",
-                x.range.start.line + 1,
-                match x.severity {
-                    Some(DiagnosticSeverity::ERROR) => {
-                        error_count += 1;
-                        "{LineFlagError}%opt[lsp_diagnostic_line_error_sign]"
-                    }
-                    Some(DiagnosticSeverity::HINT) => {
-                        hint_count += 1;
-                        "{LineFlagHint}%opt[lsp_diagnostic_line_hint_sign]"
-                    }
-                    Some(DiagnosticSeverity::INFORMATION) => {
-                        info_count += 1;
-                        "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
-                    }
-                    Some(DiagnosticSeverity::WARNING) | None => {
-                        warning_count += 1;
-                        "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
-                    }
-                    Some(_) => {
-                        warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
-                        ""
-                    }
-                }
-            )
-        })
-        .join(" ");
-
     // Assemble a list of diagnostics by line number
     let mut lines_with_diagnostics = HashMap::new();
     for diagnostic in diagnostics {
@@ -142,6 +106,9 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
         })
         .join(" ");
 
+    let (line_flags, error_count, hint_count, info_count, warning_count) =
+        gather_line_flags(ctx, buffile);
+
     // Always show a space on line one if no other highlighter is there,
     // to make sure the column always has the right width
     // Also wrap line_flags in another eval and quotes, to make sure the %opt[] tags are expanded
@@ -161,6 +128,54 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     );
     let meta = ctx.meta_for_buffer_version(client, buffile, version);
     ctx.exec(meta, command);
+}
+
+fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32, u32) {
+    let diagnostics = &ctx.diagnostics[buffile];
+    let mut error_count: u32 = 0;
+    let mut warning_count: u32 = 0;
+    let mut info_count: u32 = 0;
+    let mut hint_count: u32 = 0;
+
+    let line_flags = diagnostics
+        .iter()
+        .map(|x| {
+            format!(
+                "'{}|{}'",
+                x.range.start.line + 1,
+                match x.severity {
+                    Some(DiagnosticSeverity::ERROR) => {
+                        error_count += 1;
+                        "{LineFlagError}%opt[lsp_diagnostic_line_error_sign]"
+                    }
+                    Some(DiagnosticSeverity::HINT) => {
+                        hint_count += 1;
+                        "{LineFlagHint}%opt[lsp_diagnostic_line_hint_sign]"
+                    }
+                    Some(DiagnosticSeverity::INFORMATION) => {
+                        info_count += 1;
+                        "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
+                    }
+                    Some(DiagnosticSeverity::WARNING) | None => {
+                        warning_count += 1;
+                        "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
+                    }
+                    Some(_) => {
+                        warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                        ""
+                    }
+                }
+            )
+        })
+        .join(" ");
+
+    (
+        line_flags,
+        error_count,
+        hint_count,
+        info_count,
+        warning_count,
+    )
 }
 
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
