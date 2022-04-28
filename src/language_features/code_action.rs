@@ -8,7 +8,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_codeaction(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = CodeActionsParams::deserialize(params)
         .expect("Params should follow CodeActionsParams structure");
 

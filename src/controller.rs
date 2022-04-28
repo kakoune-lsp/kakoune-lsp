@@ -251,7 +251,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             completion::completion_item_resolve(meta, params, ctx);
         }
         request::CodeActionRequest::METHOD => {
-            codeaction::text_document_codeaction(meta, params, ctx);
+            code_action::text_document_code_action(meta, params, ctx);
         }
         request::ExecuteCommand::METHOD => {
             workspace::execute_command(meta, params, ctx);
