@@ -295,6 +295,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         "kak-lsp/object" => {
             document_symbol::object(meta, params, ctx);
         }
+        "kak-lsp/textDocument/codeLens" => {
+            code_lens::resolve_and_perform_code_lens(meta, params, ctx);
+        }
         request::Formatting::METHOD => {
             formatting::text_document_formatting(meta, params, ctx);
         }

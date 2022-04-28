@@ -3,6 +3,7 @@ use crate::controller::write_response_to_fifo;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
+use itertools::EitherOrBoth;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
@@ -129,16 +130,30 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     ctx.exec(meta, command);
 }
 
-fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32, u32) {
-    let diagnostics = &ctx.diagnostics[buffile];
+pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32, u32) {
+    let diagnostics = ctx.diagnostics.get(buffile);
     let mut error_count: u32 = 0;
     let mut warning_count: u32 = 0;
     let mut info_count: u32 = 0;
     let mut hint_count: u32 = 0;
 
-    let line_flags = diagnostics
+    let empty = vec![];
+    let lenses = ctx
+        .code_lenses
+        .get(buffile)
+        .unwrap_or(&empty)
         .iter()
-        .map(|x| {
+        .map(|lens| {
+            (
+                lens.range.start.line,
+                format!("'{}|%opt[lsp_code_lens_sign]'", lens.range.start.line + 1,),
+            )
+        });
+
+    let empty = vec![];
+    let diagnostics = diagnostics.unwrap_or(&empty).iter().map(|x| {
+        (
+            x.range.start.line,
             format!(
                 "'{}|{}'",
                 x.range.start.line + 1,
@@ -164,7 +179,16 @@ fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32, u3
                         ""
                     }
                 }
-            )
+            ),
+        )
+    });
+
+    let line_flags = diagnostics
+        .merge_join_by(lenses, |left, right| left.0.cmp(&right.0))
+        .map(|r| match r {
+            EitherOrBoth::Left((_, label)) => label,
+            EitherOrBoth::Right((_, label)) => label,
+            EitherOrBoth::Both((_, label1), (_, label2)) => label1 + &label2,
         })
         .join(" ");
 

@@ -90,6 +90,7 @@ declare-option -docstring "Character to signal an error in the gutter" str lsp_d
 declare-option -docstring "Character to signal a hint in the gutter" str lsp_diagnostic_line_hint_sign '-'
 declare-option -docstring "Character to signal an info in the gutter" str lsp_diagnostic_line_info_sign 'i'
 declare-option -docstring "Character to signal a warning in the gutter" str lsp_diagnostic_line_warning_sign '!'
+declare-option -docstring "Character to signal a code lens in the gutter" str lsp_code_lens_sign '>'
 # Visual settings for inlay diagnostics
 declare-option -docstring "Character to represent a single inlay diagnostic of many on a line. May not contain '|'" str lsp_inlay_diagnostic_sign '■'
 declare-option -docstring "Character(s) to separate the actual line contents from the inlay diagnostics. May not contain '|'" str lsp_inlay_diagnostic_gap '     '
@@ -159,6 +160,10 @@ define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on
     lsp-menu %arg{@}
 }
 
+define-command -hidden lsp-perform-code-lens -params 1.. -docstring "Called on :lsp-code-lens" %{
+    lsp-menu %arg{@}
+}
+
 define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
     evaluate-commands %sh{
         shellquote() {
@@ -210,6 +215,7 @@ declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
 declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs lsp_inlay_hints
+declare-option -hidden line-specs lsp_code_lenses 0 '0| '
 declare-option -hidden range-specs lsp_diagnostics
 declare-option -hidden str lsp_project_root
 
@@ -594,6 +600,19 @@ $code_action_pattern
         rm -r $tmp
     fi
 }}
+
+define-command lsp-code-lens -docstring "apply a code lens from the current selection" %{
+    nop %sh{ (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"kak-lsp/textDocument/codeLens\"
+[params]
+selectionDesc    = \"${kak_selection_desc}\"
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
 
 define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command" %{
     declare-option -hidden str lsp_execute_command_command %arg{1}
@@ -1907,6 +1926,7 @@ map global lsp H '<esc>: lsp-hover-buffer<ret>'            -docstring 'show info
 map global lsp i '<esc>: lsp-implementation<ret>'          -docstring 'go to implementation'
 map global lsp j '<esc>: lsp-outgoing-calls<ret>'          -docstring 'list outgoing call for function at cursor'
 map global lsp k '<esc>: lsp-incoming-calls<ret>'          -docstring 'list incoming call for function at cursor'
+map global lsp l '<esc>: lsp-code-lens<ret>'               -docstring 'apply a code lens from the current selection'
 map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'   -docstring 'search project symbols'
 map global lsp <c-o> '<esc>: lsp-connect lsp-connect-goto-document-symbol lsp-document-symbol<ret>' -docstring 'jump to document symbol'
 map global lsp n '<esc>: lsp-find-error<ret>'              -docstring 'find next error'

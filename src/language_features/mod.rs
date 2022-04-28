@@ -2,6 +2,7 @@ pub mod call_hierarchy;
 pub mod ccls;
 pub mod clangd;
 pub mod code_action;
+pub mod code_lens;
 pub mod completion;
 pub mod cquery;
 pub mod document_symbol;
