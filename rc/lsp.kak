@@ -119,10 +119,12 @@ info=$lsp_info \
         }
 
         info_lines = split(info, info_line, /\n/)
-        for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+1 <= max_lines); i++)
+        for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+2 <= max_lines); i++)
             print info_line[i]
-        if (r)
+        if (i < info_lines || r)
             printf "\n"
+        if (i < info_lines)
+            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full info\n"
         printf "%s", r
     }'
 }
