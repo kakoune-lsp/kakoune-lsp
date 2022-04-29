@@ -117,6 +117,10 @@ info=$lsp_info \
             diagnostics_lines = split(diagnostics, _, /\n/)
             lines += 1 + diagnostics_lines
         }
+        if (ENVIRON["kak_opt_lsp_modeline_code_actions"]) {
+            r = r "Code Actions available (shortcut a)\n"
+            lines++
+        }
 
         info_lines = split(info, info_line, /\n/)
         for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+2 <= max_lines); i++)
@@ -1443,7 +1447,7 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 } %{ evaluate-commands %sh{
     lsp_info=$2
     lsp_diagnostics=$3
-    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines
+    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_modeline_code_actions
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
 
