@@ -415,14 +415,8 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
 
     if let Some(ref code_action_provider) = server_capabilities.code_action_provider {
         match code_action_provider {
-            CodeActionProviderCapability::Simple(x) => {
-                if *x {
-                    features.push("lsp-code-actions".to_string());
-                }
-            }
-            CodeActionProviderCapability::Options(_) => {
-                features.push("lsp-code-actions".to_string())
-            }
+            CodeActionProviderCapability::Simple(false) => (),
+            _ => features.push("lsp-code-actions".to_string()),
         }
     }
 

@@ -9,6 +9,21 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let code_action_supported = ctx
+        .capabilities
+        .as_ref()
+        .map(|caps| {
+            matches!(
+                caps.code_action_provider,
+                Some(CodeActionProviderCapability::Simple(true))
+                    | Some(CodeActionProviderCapability::Options(_))
+            )
+        })
+        .unwrap_or(false);
+    if !code_action_supported && meta.fifo.is_none() {
+        return;
+    }
+
     let params = CodeActionsParams::deserialize(params)
         .expect("Params should follow CodeActionsParams structure");
 
