@@ -68,9 +68,8 @@ declare-option -docstring "Prefer spaces over tabs" bool lsp_insert_spaces true
 declare-option -docstring "Automatically highlight references with Reference face" bool lsp_auto_highlight_references false
 # Set to true to highlight when code actions are available.
 declare-option -docstring "Show available code actions (default: a 💡 in the modeline)" bool lsp_auto_show_code_actions false
-# Set it to a positive number to limit the size of the lsp-hover output.
-# (e.g. `set global lsp_hover_max_lines 40` would cut hover down to 40 lines)
-declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output" int lsp_hover_max_lines 0
+# Set it to a positive number to limit the size of the lsp-hover output. Use 0 to disable the limit.
+declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_lines 20
 
 declare-option -docstring "Dynamic TOML configuration string. Currently supports
 - [language.<filetype>.settings]
