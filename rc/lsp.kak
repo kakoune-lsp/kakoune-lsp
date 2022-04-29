@@ -1441,8 +1441,6 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
     content=$(eval "${kak_opt_lsp_show_hover_format}")
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
-    # remove trailing whitespace characters
-    content="${content%"${content##*[![:space:]]}"}"
 
     content=$(printf %s "$content" | sed s/\'/\'\'/g)
 
