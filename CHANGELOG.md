@@ -3,6 +3,7 @@
 Breaking changes:
 
 - The kak-lsp project has been renamed to kakoune-lsp. The binary name is still kak-lsp. Distributors are encouraged to update the package name.
+- `lsp_auto_show_code_actions` (which renders a lightbulb in the modeline) now defaults to true.
 
 Additions:
 - Breadcrumbs in the modeline (including terminal title) indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).

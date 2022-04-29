@@ -12,6 +12,10 @@ command = "typescript-language-server"
 args = ["--stdio"]
 EOF
 
+cat >> .config/kak/kakrc << EOF
+set-option global lsp_auto_show_code_actions false
+EOF
+
 cat > main.ts << EOF
 /**
  * Test class to format
