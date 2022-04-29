@@ -163,7 +163,7 @@ pub fn parse_kakoune_range(range_desc: &str) -> (KakouneRange, KakounePosition) 
 }
 
 /// Returns true if there is a line that is included by both ranges.
-pub fn ranges_lines_overlap(a: Range, b: Range) -> bool {
+pub fn ranges_touch_same_line(a: Range, b: Range) -> bool {
     a.start.line.max(b.start.line) <= a.end.line.min(b.end.line)
 }
 

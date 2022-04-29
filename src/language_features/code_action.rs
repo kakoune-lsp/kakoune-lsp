@@ -39,7 +39,7 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
     let diagnostics: Vec<Diagnostic> = if let Some(buff_diags) = buff_diags {
         buff_diags
             .iter()
-            .filter(|d| ranges_lines_overlap(d.range, range))
+            .filter(|d| ranges_touch_same_line(d.range, range))
             .cloned()
             .collect()
     } else {
