@@ -167,6 +167,11 @@ pub fn ranges_touch_same_line(a: Range, b: Range) -> bool {
     a.start.line.max(b.start.line) <= a.end.line.min(b.end.line)
 }
 
+/// Returns true if the intersection of two ranges is a valid range (possibly empty but not negative).
+pub fn ranges_overlap(a: Range, b: Range) -> bool {
+    a.start.max(b.start) <= a.end.min(b.end)
+}
+
 /// Get the byte index of a character in a Rope slice
 ///
 /// If the char number is out-of-bounds, this will return one past
