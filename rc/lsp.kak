@@ -596,13 +596,13 @@ $code_action_pattern
     fi
 }}
 
-define-command -hidden lsp-execute-command -params 2 -docstring "Execute a command" %{
+define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command" %{
     declare-option -hidden str lsp_execute_command_command %arg{1}
     declare-option -hidden str lsp_execute_command_arguments %arg{2}
     lsp-did-change-and-then %{lsp-execute-command-request false %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
 }
 
-define-command -hidden lsp-execute-command-sync -params 2 -docstring "Execute a command, blocking Kakoune session until done" %{
+define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command, blocking Kakoune session until done" %{
     declare-option -hidden str lsp_execute_command_command %arg{1}
     declare-option -hidden str lsp_execute_command_arguments %arg{2}
     lsp-did-change-and-then %{lsp-execute-command-request true %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
