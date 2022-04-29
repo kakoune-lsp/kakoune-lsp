@@ -105,9 +105,11 @@ declare-option -docstring "Character(s) to separate the actual line contents fro
 declare-option -docstring "Format hover info" str lsp_show_hover_format %{
 info=$lsp_info \
     diagnostics=$lsp_diagnostics \
+    code_lenses=$lsp_code_lenses \
     awk 'BEGIN {
         info = ENVIRON["info"]
         diagnostics = ENVIRON["diagnostics"];
+        code_lenses = ENVIRON["code_lenses"];
         max_lines = ENVIRON["kak_opt_lsp_hover_max_lines"];
 
         r = ""
@@ -116,6 +118,10 @@ info=$lsp_info \
             r = r "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):\n" diagnostics "\n"
             diagnostics_lines = split(diagnostics, _, /\n/)
             lines += 1 + diagnostics_lines
+        }
+        if (code_lenses) {
+            r = r "Code Lenses available (shortcut l)\n"
+            lines++
         }
         if (ENVIRON["kak_opt_lsp_modeline_code_actions"]) {
             r = r "Code Actions available (shortcut a)\n"
@@ -1441,12 +1447,13 @@ method   = \"textDocument/semanticTokens/full\"
 
 # Feel free to override these commands in your config if you need to customise response handling.
 
-define-command -hidden lsp-show-hover -params 3 -docstring %{
-    lsp-show-hover <anchor> <info> <diagnostics>
+define-command -hidden lsp-show-hover -params 4 -docstring %{
+    lsp-show-hover <anchor> <info> <diagnostics> <code_lenses>
     Render hover info.
 } %{ evaluate-commands %sh{
     lsp_info=$2
     lsp_diagnostics=$3
+    lsp_code_lenses=$4
     content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_modeline_code_actions
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"

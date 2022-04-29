@@ -94,6 +94,35 @@ pub fn editor_hover(
         })
         .unwrap_or_else(String::new);
 
+    let code_lenses = ctx
+        .code_lenses
+        .get(&meta.buffile)
+        .map(|lenses| {
+            lenses
+                .iter()
+                .filter(|lens| ranges_touch_same_line(lens.range, lsp_range))
+                .map(|lens| {
+                    lens.command
+                        .as_ref()
+                        .map(|cmd| cmd.title.as_str())
+                        .unwrap_or("(unresolved)")
+                })
+                .map(|title| {
+                    if for_hover_buffer {
+                        // We are typically creating Markdown, so use a standard Markdown enumerator.
+                        return format!("* {}", &title);
+                    }
+                    format!(
+                        "• {{{}}}{}{{{}}}",
+                        FACE_INFO_DIAGNOSTIC_HINT,
+                        escape_kakoune_markup(title),
+                        FACE_INFO_DEFAULT,
+                    )
+                })
+                .join("\n")
+        })
+        .unwrap_or_default();
+
     let marked_string_to_hover = |ms: MarkedString| {
         if for_hover_buffer {
             match ms {
@@ -143,15 +172,16 @@ pub fn editor_hover(
 
     match hover_type {
         HoverType::InfoBox => {
-            if contents.is_empty() && diagnostics.is_empty() {
+            if contents.is_empty() && diagnostics.is_empty() && code_lenses.is_empty() {
                 return;
             }
 
             let command = format!(
-                "lsp-show-hover {} %§{}§ %§{}§",
+                "lsp-show-hover {} %§{}§ %§{}§ %§{}§",
                 cursor,
                 contents.replace('§', "§§"),
                 diagnostics.replace('§', "§§"),
+                code_lenses.replace('§', "§§"),
             );
             ctx.exec(meta, command);
         }
@@ -181,7 +211,7 @@ fn show_hover_modal(
 ) {
     let contents = format!("{}\n---\n{}", modal_heading, contents);
     let command = format!(
-        "lsp-show-hover modal %§{}§ %§{}§",
+        "lsp-show-hover modal %§{}§ %§{}§ ''",
         contents.replace('§', "§§"),
         diagnostics.replace('§', "§§"),
     );
