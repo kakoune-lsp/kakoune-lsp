@@ -25,49 +25,38 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         None => HoverType::InfoBox,
     };
 
-    let params = PositionParams::deserialize(params).unwrap();
+    let params = MainSelectionParams::deserialize(params).unwrap();
+    let (range, cursor) = parse_kakoune_range(&params.selection_desc);
     let req_params = HoverParams {
         text_document_position_params: TextDocumentPositionParams {
             text_document: TextDocumentIdentifier {
                 uri: Url::from_file_path(&meta.buffile).unwrap(),
             },
-            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+            position: get_lsp_position(&meta.buffile, &cursor, ctx).unwrap(),
         },
         work_done_progress_params: Default::default(),
     };
     ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_hover(meta, hover_type, params, result, ctx)
+        editor_hover(meta, hover_type, cursor, range, result, ctx)
     });
 }
 
 pub fn editor_hover(
     meta: EditorMeta,
     hover_type: HoverType,
-    params: PositionParams,
+    cursor: KakounePosition,
+    range: KakouneRange,
     result: Option<Hover>,
     ctx: &mut Context,
 ) {
+    let doc = &ctx.documents[&meta.buffile];
+    let lsp_range = kakoune_range_to_lsp(&range, &doc.text, ctx.offset_encoding);
     let for_hover_buffer = matches!(hover_type, HoverType::HoverBuffer { .. });
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
-    let pos = get_lsp_position(&meta.buffile, &params.position, ctx).unwrap();
     let diagnostics = diagnostics
         .map(|x| {
             x.iter()
-                .filter(|x| {
-                    let start = x.range.start;
-                    let end = x.range.end;
-                    (start.line < pos.line && pos.line < end.line)
-                        || (start.line == pos.line
-                            && pos.line == end.line
-                            && start.character <= pos.character
-                            && pos.character <= end.character)
-                        || (start.line == pos.line
-                            && pos.line <= end.line
-                            && start.character <= pos.character)
-                        || (start.line <= pos.line
-                            && end.line == pos.line
-                            && pos.character <= end.character)
-                })
+                .filter(|x| ranges_touch_same_line(x.range, lsp_range))
                 .filter_map(|x| {
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
@@ -160,7 +149,7 @@ pub fn editor_hover(
 
             let command = format!(
                 "lsp-show-hover {} %§{}§ %§{}§",
-                params.position,
+                cursor,
                 contents.replace('§', "§§"),
                 diagnostics.replace('§', "§§"),
             );

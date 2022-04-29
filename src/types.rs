@@ -197,6 +197,12 @@ pub struct PositionParams {
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct MainSelectionParams {
+    pub selection_desc: String,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct HoverDetails {
     pub hover_fifo: Option<String>,
     pub hover_client: Option<String>,

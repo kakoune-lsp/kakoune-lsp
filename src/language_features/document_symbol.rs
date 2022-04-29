@@ -316,8 +316,10 @@ fn editor_next_or_prev_for_details(
                 modal_heading,
                 do_after,
             },
-            PositionParams {
-                position: symbol_position,
+            symbol_position,
+            KakouneRange {
+                start: symbol_position,
+                end: symbol_position,
             },
             result,
             ctx,

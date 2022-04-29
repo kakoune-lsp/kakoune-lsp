@@ -372,8 +372,7 @@ method   = \"textDocument/hover\"
 ${kak_opt_lsp_connect_fifo}\
 [params]
 $hover_buffer_args
-position.line = ${kak_cursor_line}
-position.column = ${kak_cursor_column}
+selectionDesc = \"${kak_selection_desc}\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
