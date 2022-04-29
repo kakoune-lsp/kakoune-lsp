@@ -39,7 +39,7 @@ jobs:
         os: [macos-latest, ubuntu-latest]
         kakoune_version:
           # Empty ref to use the repo's default branch
-          - ''
+          # - ''
           # Latest release
           - 'v2021.08.28'
     steps:
