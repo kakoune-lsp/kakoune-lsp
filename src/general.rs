@@ -354,6 +354,13 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
 
     let mut features: Vec<String> = vec![];
 
+    if let Some(ref selection_range_provider) = server_capabilities.selection_range_provider {
+        match selection_range_provider {
+            SelectionRangeProviderCapability::Simple(false) => (),
+            _ => features.push("lsp-selection-range".to_string()),
+        }
+    }
+
     match server_capabilities
         .hover_provider
         .as_ref()
@@ -367,12 +374,23 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         features.push("lsp-completion (hooked on InsertIdle)".to_string());
     }
 
+    if server_capabilities.signature_help_provider.is_some() {
+        features.push("lsp-signature-help".to_string())
+    }
+
     match server_capabilities.definition_provider {
         Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
             features.push("lsp-definition (mapped to `gd` by default)".to_string());
         }
         _ => (),
     };
+
+    if let Some(ref type_definition_provider) = server_capabilities.type_definition_provider {
+        match type_definition_provider {
+            TypeDefinitionProviderCapability::Simple(false) => (),
+            _ => features.push("lsp-type-definition".to_string()),
+        }
+    }
 
     if server_capabilities.implementation_provider.is_some() {
         features.push("lsp-implementation".to_string());
@@ -384,6 +402,20 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         }
         _ => (),
     };
+
+    match server_capabilities.document_highlight_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-highlight-references".to_string())
+        }
+        _ => (),
+    }
+
+    match server_capabilities.document_symbol_provider {
+        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
+            features.push("lsp-document-symbol".to_string())
+        }
+        _ => (),
+    }
 
     match server_capabilities.workspace_symbol_provider {
         Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
@@ -417,6 +449,20 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         match code_action_provider {
             CodeActionProviderCapability::Simple(false) => (),
             _ => features.push("lsp-code-actions".to_string()),
+        }
+    }
+
+    if let Some(ref provider) = server_capabilities.execute_command_provider {
+        features.push(format!(
+            "lsp-execute-command:  commands: [{}]",
+            provider.commands.iter().join(", ")
+        ))
+    }
+
+    if let Some(ref call_hierarchy_provider) = server_capabilities.call_hierarchy_provider {
+        match call_hierarchy_provider {
+            CallHierarchyServerCapability::Simple(false) => (),
+            _ => features.push("lsp-incoming-calls, lsp-outgoing-calls".to_string()),
         }
     }
 
