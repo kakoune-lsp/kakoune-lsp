@@ -1,6 +1,6 @@
+use super::code_action::apply_workspace_edit_editor_command;
 use crate::context::*;
 use crate::types::*;
-use crate::util::*;
 use lsp_types::request::ExecuteCommand;
 use lsp_types::*;
 
@@ -34,11 +34,7 @@ pub fn organize_imports_response(
         None => return,
     };
 
-    // Double JSON serialization is performed to prevent parsing args as a TOML
-    // structure when they are passed back via lsp-apply-workspace-edit.
-    let edit = &serde_json::to_string(&result).unwrap();
-    let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
-    let select_cmd = format!("lsp-apply-workspace-edit {}", edit);
+    let select_cmd = apply_workspace_edit_editor_command(&result, false);
 
     ctx.exec(meta, select_cmd);
 }

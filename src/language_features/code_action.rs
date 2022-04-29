@@ -160,37 +160,43 @@ pub fn editor_code_actions(
 
 fn code_action_to_editor_command(action: &CodeActionOrCommand, sync: bool) -> String {
     match action {
-        CodeActionOrCommand::Command(command) => {
-            let cmd = editor_quote(&command.command);
-            // Double JSON serialization is performed to prevent parsing args as a TOML
-            // structure when they are passed back via lsp-execute-command.
-            let args = &serde_json::to_string(&command.arguments).unwrap();
-            let args = editor_quote(&serde_json::to_string(&args).unwrap());
-            format!(
-                "{} {} {}",
-                if sync {
-                    "lsp-execute-command-sync"
-                } else {
-                    "lsp-execute-command"
-                },
-                cmd,
-                args
-            )
-        }
+        CodeActionOrCommand::Command(command) => execute_command_editor_command(command, sync),
         CodeActionOrCommand::CodeAction(action) => {
-            // Double JSON serialization is performed to prevent parsing args as a TOML
-            // structure when they are passed back via lsp-apply-workspace-edit.
-            let edit = &serde_json::to_string(&action.edit.as_ref().unwrap()).unwrap();
-            let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
-            format!(
-                "{} {}",
-                if sync {
-                    "lsp-apply-workspace-edit-sync"
-                } else {
-                    "lsp-apply-workspace-edit"
-                },
-                edit
-            )
+            apply_workspace_edit_editor_command(action.edit.as_ref().unwrap(), sync)
         }
     }
+}
+
+pub fn apply_workspace_edit_editor_command(edit: &WorkspaceEdit, sync: bool) -> String {
+    // Double JSON serialization is performed to prevent parsing args as a TOML
+    // structure when they are passed back via lsp-apply-workspace-edit.
+    let edit = &serde_json::to_string(edit).unwrap();
+    let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
+    format!(
+        "{} {}",
+        if sync {
+            "lsp-apply-workspace-edit-sync"
+        } else {
+            "lsp-apply-workspace-edit"
+        },
+        edit
+    )
+}
+
+pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
+    let cmd = editor_quote(&command.command);
+    // Double JSON serialization is performed to prevent parsing args as a TOML
+    // structure when they are passed back via lsp-execute-command.
+    let args = &serde_json::to_string(&command.arguments).unwrap();
+    let args = editor_quote(&serde_json::to_string(&args).unwrap());
+    format!(
+        "{} {} {}",
+        if sync {
+            "lsp-execute-command-sync"
+        } else {
+            "lsp-execute-command"
+        },
+        cmd,
+        args
+    )
 }
