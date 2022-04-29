@@ -103,10 +103,28 @@ declare-option -docstring "Character(s) to separate the actual line contents fro
 # The string is `eval`ed to produce the content to display, so anything sent to stdout will
 # show up in the info box.
 declare-option -docstring "Format hover info" str lsp_show_hover_format %{
-printf "%s\n\n" "${lsp_info}"
-if [ -n "${lsp_diagnostics}" ]; then
-    printf "{+b@InfoDefault}Diagnostics:{InfoDefault}\n%s" "${lsp_diagnostics}"
-fi
+info=$lsp_info \
+    diagnostics=$lsp_diagnostics \
+    awk 'BEGIN {
+        info = ENVIRON["info"]
+        diagnostics = ENVIRON["diagnostics"];
+        max_lines = ENVIRON["kak_opt_lsp_hover_max_lines"];
+
+        r = ""
+        lines = 0
+        if (diagnostics) {
+            r = r "{+b@InfoDefault}Diagnostics:{InfoDefault}\n" diagnostics
+            diagnostics_lines = split(diagnostics, _, /\n/)
+            lines += 1 + diagnostics_lines
+        }
+
+        info_lines = split(info, info_line, /\n/)
+        for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+1 <= max_lines); i++)
+            print info_line[i]
+        if (r)
+            printf "\n"
+        printf "%s", r
+    }'
 }
 # If you want to see only hover info, try
 # set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'
@@ -1423,21 +1441,7 @@ define-command -hidden lsp-show-hover -params 3 -docstring %{
 } %{ evaluate-commands %sh{
     lsp_info=$2
     lsp_diagnostics=$3
-
-    # To make sure we always show diagnostics, restrict only the info portion based
-    # on the configured maximum line count
-    if [ $kak_opt_lsp_hover_max_lines -gt 0 ]; then
-        diagnostics_count=$(printf %s "$lsp_diagnostics" | wc -l)
-        if [ $diagnostics_count -gt 0 ]; then
-            # By default, we print blank lines before diagnostics, plus the "Diagnostics:"
-            # header, so subtract 3.
-            lsp_info=$(printf %s "$lsp_info" | head -n $(($kak_opt_lsp_hover_max_lines - 3 - $diagnostics_count)))
-        else
-            lsp_info=$(printf %s "$lsp_info" | head -n $kak_opt_lsp_hover_max_lines)
-        fi
-    fi
-
-    content=$(eval "${kak_opt_lsp_show_hover_format}")
+    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
 
