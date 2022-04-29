@@ -113,7 +113,7 @@ info=$lsp_info \
         r = ""
         lines = 0
         if (diagnostics) {
-            r = r "{+b@InfoDefault}Diagnostics:{InfoDefault}\n" diagnostics
+            r = r "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):\n" diagnostics "\n"
             diagnostics_lines = split(diagnostics, _, /\n/)
             lines += 1 + diagnostics_lines
         }
