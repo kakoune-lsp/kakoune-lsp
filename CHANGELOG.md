@@ -1,16 +1,29 @@
 ## Unreleased
 
 Deprecations:
-- `rust-analyzer-inlay-hints` is deprecated in favor of `lsp-experimental-inlay-hints-enable`. Inlay hints now requires `rust-analyzer` version >= 2022-04-18. (#602, #613).
+- `rust-analyzer-inlay-hints` is deprecated in favor of `lsp-inlay-hints-enable`. Inlay hints now requires `rust-analyzer` version >= 2022-04-18. (#602, #613).
 
 Additions:
-- Support the new `textDocument/inlayHint` request from LSP v3.17.
+- Support LSP Code Lenses (#490).
+- Support the new `textDocument/inlayHint` request from LSP v3.17 (#600).
+- New command `lsp-inlay-hints-enable` simplifies inlay hints configuration (#602).
+- Completion item documentation can now be resolved lazily if required by the language server (6bee0a13).
+- `lsp-hover` now shows diagnostics from anywhere on a line touched by the main selection, instead of just diagnostics whose range contains the cursor (5461c141).
+- `lsp_hover_max_lines` now defaults to 20 which limits the size of the info box spawned by `lsp-hover` (#615).
+
+Fixes:
+- `lsp-formatting` with `pylsp` now preserves cursor positions again (regressed in 12.1.0).
+- Inlay diagnostics are now disabled in insert mode, to avoid diagnotsics jumping around while typing (#605).
+- The default config for `typescript-language-server` now supports TSX files (#211).
+- `lsp-object` (`]a` etc.) can now jump past the symbols sent by `pylsp`.
+- `texlab-forward-search`'s SyncTeX inverse search now works in more scenarios (#603).
+- Support server specific configuration servers like `pylsp` that don't use `initializationOptions` for configuration (#611).
 
 ## 12.1.0 - 2022-03-28
 
 Additions:
 - New mappings for Kakoune's object mode allow to select adjacent/surrounding symbols like functions or types (#598).
-- New user mode mapping `<c-o>` spawns a menu to jump to buffer symbol (#584).
+- New mapping for the `lsp` user mode, `<c-o>`, spawns a menu to jump to buffer symbol (#584).
 - `lsp-formatting` used to spawn several shell processes for each modification, which caused noticable delays when formatting many lines. This has been remedied by avoiding shell calls (88f52f0c).
 - kak-lsp is now compatible with the proposed changes to P and <a-x> (see Kakoune's `breaking-cleanups` branch).
 - The documentation now communicates that kak-lsp appends to the global modeline at load time (eb54d378).
