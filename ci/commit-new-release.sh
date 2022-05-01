@@ -40,25 +40,38 @@ git commit -am 'start new cycle'
 git push origin v$new
 
 # Update homebrew package.
-url=https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v$new/kakoune-lsp-v$new-x86_64-apple-darwin.tar.gz
-archive=kakoune-lsp-v$new-x86_64-apple-darwin.tar.gz
-while true
-do
-	curl -O -L "$url"
-	if file --brief --mime "$archive" | grep -q application/gzip; then
-		break
-	fi
-	sleep 60
-done
-sha=$(sha256sum "$archive")
-sha=${sha%% *}
-rm "$archive"
+
+checksum() {
+	url=$1
+	archive=${1##*/}
+	while true
+	do
+		curl -O -L "$url"
+		if file --brief --mime "$archive" | grep -q application/gzip; then
+			break
+		fi
+		sleep 60
+	done
+	sha=$(sha256sum "$archive")
+	printf %s "${sha%% *}"
+	rm "$archive"
+}
+aarch64_url=https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v$new/kakoune-lsp-v$new-aarch64-apple-darwin.tar.gz
+aarch64_sha=$(checksum "$aarch64_url")
+x86_64_url=https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v$new/kakoune-lsp-v$new-x86_64-apple-darwin.tar.gz
+x86_64_sha=$(checksum "$x86_64_url")
 (
 	cd ../homebrew-kakoune-lsp/
-	sed 4c"  url \"$url\"" -i Formula/kakoune-lsp.rb
-	sed 5c"  sha256 \"$sha\"" -i Formula/kakoune-lsp.rb
-	sed 6c"  version \"$new\"" -i Formula/kakoune-lsp.rb
-	sed '4,6s/^/  /' -i Formula/kakoune-lsp.rb
+	sed -i Formula/kakoune-lsp.rb \
+		-e 5c"    url \"$aarch64_url\"" \
+		-e 6c"    sha256 \"$aarch64_sha\"" \
+		-e 8c"    url \"$x86_64_url\"" \
+		-e 9c"    sha256 \"$x86_64_sha\"" \
+		-e 11c"  version \"$new\""
+	sed -i Formula/kakoune-lsp.rb \
+		-e '5,6s/^/    /' \
+		-e '8,9s/^/    /' \
+		-e '11s/^/  /'
 
 	git commit -am "v$new"
 	git push
