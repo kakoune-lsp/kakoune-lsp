@@ -239,9 +239,6 @@ map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
 To know which subset of kak-lsp commands is backed by the current buffer's filetype's language server use
 `lsp-capabilities` command.
 
-All commands are also represented as subcommands of the `lsp` umbrella command if you prefer this style.
-For example, you can use `lsp references` instead of `lsp-references`.
-
 == Configuration
 
 kak-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration.
