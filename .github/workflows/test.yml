@@ -2,9 +2,9 @@ name: Test kakoune-lsp
 
 on:
   push:
-    branches: [ "**", "!changelog" ]
+    branches: [ "**", "!changelog", "!docs" ]
   pull_request:
-    branches: [ "**", "!changelog" ]
+    branches: [ "**", "!changelog", "!docs" ]
 
 env:
   CARGO_INCREMENTAL: 0
