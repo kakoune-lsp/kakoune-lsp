@@ -30,7 +30,7 @@ sed -i "1s/Unreleased/$new - $(date --iso)/" CHANGELOG.md
 cargo check # update Cargo.lock
 git commit -am "v$new"
 git tag "v$new" --message="$(ci/latest-changelog.sh)"
-cargo publish
+cargo publish --dry-run
 
 sed -i "0,/version/ s/$new/$new-snapshot/" Cargo.toml
 cargo check # update Cargo.lock
@@ -65,3 +65,4 @@ rm "$archive"
 )
 
 git push origin HEAD:master
+cargo publish
