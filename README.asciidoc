@@ -87,7 +87,7 @@ plug "kak-lsp/kak-lsp" do %{
 }
 ----
 
-You can replace `cargo install` with `ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
+You can replace `cargo install` with `cargo build --release && ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
 where `~/.local/bin/` can be replaced with something in your `$PATH`.
 
 Examples of configuration with plug.kak can be found at https://github.com/kak-lsp/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
