@@ -2,7 +2,13 @@
 
 kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for http://kakoune.org[Kakoune] implemented in https://www.rust-lang.org[Rust].
 
-== Installation
+== Quick Start
+
+1. <<Install kak-lsp>>
+2. <<Install language servers for your desired languages>>
+3. <<Configure Kakoune to enable kak-lsp>>
+
+=== Install kak-lsp
 
 NOTE: `kak-lsp.toml` destination in all described installation methods is just an example.
 Also, kak-lsp doesn't read the configuration file from the current working directory or binary's dir by default.
@@ -10,18 +16,18 @@ Please consult <<Configuring kak-lsp>> to figure out where does kak-lsp expect `
 to be in your environment and how to specify a custom path to it.
 However, if you don't need to change configuration then feel free to skip copying it anywhere as the default configuration is embedded into the kak-lsp binary.
 
-=== Pre-built binaries
+==== Pre-built binaries
 
-==== MacOS
+===== MacOS
 
-===== Homebrew
+====== Homebrew
 
 [source,sh]
 ----
 brew install kak-lsp/kak-lsp/kak-lsp
 ----
 
-===== Manual
+====== Manual
 
 [source,sh]
 ----
@@ -35,15 +41,15 @@ mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
-==== Linux
+===== Linux
 
-===== Package managers
+====== Package managers
 
 * Arch Linux: `pacman -S kak-lsp` or https://aur.archlinux.org/packages/kak-lsp-git/[AUR/kak-lsp-git]
 * Void Linux: `xbps-install -S kak-lsp`
 * Fedora https://copr.fedorainfracloud.org/coprs/atim/kakoune/[Copr]: `sudo dnf copr enable atim/kakoune -y && sudo dnf install kak-lsp`
 
-===== Others
+====== Others
 
 [source,sh]
 ----
@@ -57,7 +63,7 @@ mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
-=== From source
+==== From source
 
 Generally, you need the latest stable version of Rust to build kak-lsp.
 
@@ -75,7 +81,7 @@ mkdir -p ~/.config/kak-lsp
 cp kak-lsp.toml ~/.config/kak-lsp/
 ----
 
-=== With plug.kak
+==== With plug.kak
 
 If you don't mind using a plugin manager, you can install kak-lsp
 via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
@@ -92,21 +98,16 @@ where `~/.local/bin/` can be replaced with something in your `$PATH`.
 
 Examples of configuration with plug.kak can be found at https://github.com/kak-lsp/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
 
-== Language servers
+=== Install language servers for your desired languages
 
 kak-lsp doesn't manage installation of language servers, please install them
 by yourself for the languages you plan to use kak-lsp with. Please consult the
 https://github.com/kak-lsp/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
 quick installation of language servers supported by kak-lsp out of the box.
 
-== Usage
+=== Configure Kakoune to enable kak-lsp
 
-NOTE: Contents below corresponds to the master branch HEAD and could be slightly out-of-sync
-with the version installed from pre-built binaries. The most common case is new commands being
-in a pre-release testing stage. Please refer to the README.asciidoc revision tagged with the
-version you use or the README.asciidoc from the release archive.
-
-To enable LSP support for configured languages (see the next section) just add the following
+To enable LSP support for configured languages (see <<configuration>>) just add the following
 commands to your `kakrc`:
 
 [source,kak]
@@ -126,7 +127,14 @@ hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %
 }
 ----
 
-Either way you get:
+== Usage
+
+NOTE: Contents below corresponds to the master branch HEAD and could be slightly out-of-sync
+with the version installed from pre-built binaries. The most common case is new commands being
+in a pre-release testing stage. Please refer to the README.asciidoc revision tagged with the
+version you use or the README.asciidoc from the release archive.
+
+If you have followed above steps you get
 
 * completions
 * `lsp-definition` command to go to definition, mapped to `gd` by default
