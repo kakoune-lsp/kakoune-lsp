@@ -64,4 +64,4 @@ rm "$archive"
 	git push
 )
 
-git push origin
+git push origin HEAD:master
