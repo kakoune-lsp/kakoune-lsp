@@ -1,4 +1,4 @@
-## Unreleased
+## 12.2.0 - 2022-05-03
 
 Deprecations:
 - `rust-analyzer-inlay-hints` is deprecated in favor of `lsp-inlay-hints-enable`. Inlay hints now requires `rust-analyzer` version >= 2022-04-18. (#602, #613).
