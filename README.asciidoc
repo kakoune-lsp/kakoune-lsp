@@ -76,8 +76,6 @@ cargo install --locked --force --path .
 
 # replace `~/.config` with OS-specific dir as described at https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html
 mkdir -p ~/.config/kak-lsp
-
-# or just link if you are okay with default config
 cp kak-lsp.toml ~/.config/kak-lsp/
 ----
 
