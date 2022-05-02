@@ -72,6 +72,7 @@ Generally, you need the latest stable version of Rust to build kak-lsp.
 git clone https://github.com/kak-lsp/kak-lsp
 cd kak-lsp
 
+# this installs the kak-lsp binary to ~/.cargo/bin, which must be in your `$PATH`
 cargo install --locked --force --path .
 
 # replace `~/.config` with OS-specific dir as described at https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html
@@ -88,10 +89,13 @@ via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kak
 ----
 plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
+    mkdir -p ~/.config/kak-lsp
+    cp -n kak-lsp.toml ~/.config/kak-lsp/
 }
 ----
 
-You can replace `cargo install` with `cargo build --release && ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
+`cargo install` will install the `kak-lsp` binary to `~/.cargo/bin`, which must be in your `$PATH`.
+Alternatively, you can replace `cargo install` with `cargo build --release && ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
 where `~/.local/bin/` can be replaced with something in your `$PATH`.
 
 Examples of configuration with plug.kak can be found at https://github.com/kak-lsp/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
