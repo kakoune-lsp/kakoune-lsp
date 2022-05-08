@@ -121,7 +121,11 @@ fn perform_code_lens(meta: EditorMeta, lenses: &[&CodeLens], ctx: &Context) {
             .filter(|lens| lens.command.is_some())
             .map(|lens| {
                 let command = lens.command.as_ref().unwrap();
-                execute_command_editor_command(command, false)
+                format!(
+                    "{} {}",
+                    &editor_quote(&command.title),
+                    &editor_quote(&execute_command_editor_command(command, false)),
+                )
             })
             .join(" "),
     );
