@@ -1,4 +1,4 @@
-## Unreleased
+## 12.2.1 - 2022-05-08
 
 Fixes:
 - `lsp-code-lens` failed to run code lenses which has been fixed.
