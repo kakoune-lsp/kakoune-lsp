@@ -54,7 +54,6 @@ pub fn editor_completion(
 
     // Length of the longest label in the current completion list
     let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
-    let snippet_prefix_re = Regex::new(r"^[^\[\(<\n\$]+").unwrap();
 
     let mut inferred_offset: Option<u32> = None;
     let mut can_infer_offset = true;
@@ -63,24 +62,20 @@ pub fn editor_completion(
         .iter()
         .enumerate()
         .map(|(completion_item_index, x)| {
-            let maybe_set_index = if ctx
+            let maybe_resolve = if ctx
                 .capabilities
                 .as_ref()
                 .and_then(|caps| caps.completion_provider.as_ref())
                 .and_then(|compl| compl.resolve_provider)
                 .unwrap_or(false)
             {
-                format!(
-                    "set-option window lsp_completions_selected_item {}; \
-                        lsp-completion-item-resolve-request true; ",
-                    completion_item_index
-                )
+                "lsp-completion-item-resolve\n"
             } else {
-                "".to_string()
+                ""
             };
-            let on_select = format!(
-                "{}info -markup -style menu -- %§{}§",
-                &maybe_set_index,
+            let on_select = formatdoc!(
+                "lsp-completion-item-selected {completion_item_index}
+                 {maybe_resolve}info -markup -style menu -- %§{}§",
                 completion_menu_text(x).replace('§', "§§")
             );
 
@@ -196,21 +191,23 @@ pub fn editor_completion(
             // we'll need to perform some transformations on the completion commands.
             if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::SNIPPET)
             {
+                lazy_static::lazy_static! {
+                    static ref SNIPPET_TABSTOP_RE: Regex = Regex::new(r"\$(?P<i>\d+)").unwrap();
+                    static ref SNIPPET_PLACEHOLDER_RE: Regex = Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
+                }
                 let snippet = insert_text;
-                let insert_text = snippet_prefix_re
-                    .find(&snippet)
-                    .map(|x| x.as_str())
-                    .unwrap_or(&snippet);
+                let insert_text = SNIPPET_TABSTOP_RE.replace_all(&snippet, "");
+                let insert_text = SNIPPET_PLACEHOLDER_RE.replace_all(&insert_text, "$placeholder");
+                // There's some issue with multiline insert texts, and they also don't work well in the UI, so display on one line
+                let insert_text = insert_text.replace('\n', "");
 
                 let command = formatdoc!(
-                    "{}
-                     lsp-snippets-insert-completion {} {}",
-                    on_select,
-                    editor_quote(&regex::escape(insert_text)),
+                    "{on_select}
+                     lsp-snippets-insert-completion {}",
                     editor_quote(&snippet)
                 );
 
-                completion_entry(insert_text, &maybe_filter_text, &command, &entry)
+                completion_entry(&insert_text, &maybe_filter_text, &command, &entry)
             } else {
                 completion_entry(&insert_text, &maybe_filter_text, &on_select, &entry)
             }

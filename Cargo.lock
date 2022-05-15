@@ -426,6 +426,7 @@ dependencies = [
  "indoc",
  "itertools",
  "jsonrpc-core",
+ "lazy_static",
  "libc",
  "lsp-types",
  "pulldown-cmark",

@@ -342,9 +342,40 @@ have_kakoune_feature_filtertext = ${kak_opt_lsp_have_kakoune_feature_filtertext}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }}
 
+declare-option -hidden str lsp_completion_selection ""
+
 define-command -hidden lsp-completion-dismissed -docstring "Called when the completion pager is closed" %{
+    set-option window lsp_completion_selection %val{hook_param}
+    try %{
+        evaluate-commands -draft %{
+            select %opt{lsp_completion_selection}
+        }
+    } catch %{
+        # Completion was cancelled, nothing was inserted
+        # Clear these so the following lines do nothing.
+        # This is to avoid running them in the above try block, and silencing their errors.
+        remove-hooks window lsp-completion-dismissed
+        set-option window lsp_completions_selected_item -1
+    }
     lsp-completion-item-resolve-request false
+    trigger-user-hook LSPCompletionDismissed
+    remove-hooks window lsp-completion-dismissed
     set-option window lsp_completions_selected_item -1
+    set-option window lsp_completion_selection ""
+}
+
+define-command -hidden lsp-completion-on-dismiss -params 1 -docstring %{
+    lsp-completion-on-dismiss <command>: run <command> when the completion menu is closed
+
+    The inserted range is available as %opt{lsp_completion_selection} in the format expected by "select".
+} %{
+    hook -once -group lsp-completion-dismissed window User LSPCompletionDismissed %arg{1}
+}
+
+# Is called when a completion item is selected
+define-command -hidden lsp-completion-item-selected -params 1 %{
+    set-option window lsp_completions_selected_item %arg{1}
+    remove-hooks window lsp-completion-dismissed
 }
 
 define-command -hidden lsp-completion-item-resolve-request -params 1 \
@@ -2123,18 +2154,15 @@ declare-option -hidden int-list lsp_snippets_placeholder_groups
 set-face global SnippetsNextPlaceholders black,green+F
 set-face global SnippetsOtherPlaceholders black,yellow+F
 
-# First param is the text that was inserted in the completion, which will be deleted
-# Second param is the actual snippet
-define-command -hidden lsp-snippets-insert-completion -params 2 %{ evaluate-commands -save-regs "a" %{
-    set-register 'a' "%arg{1}"
-    execute-keys -draft "<a-;><a-/><c-r>a<ret>d"
-    evaluate-commands -draft -verbatim lsp-snippets-insert %arg{2}
-    remove-hooks window lsp-post-completion
-    hook -once -group lsp-post-completion window InsertCompletionHide .* %{
-        try %{
-            lsp-snippets-select-next-placeholders
-            exec '<a-;>d'
-        }
+declare-option -hidden str lsp_snippet_to_insert ""
+define-command -hidden lsp-snippets-insert-completion -params 1 %{ evaluate-commands %{
+    set-option window lsp_snippet_to_insert %arg{1}
+    lsp-completion-on-dismiss %{
+        # Delete the inserted text.
+        select %opt{lsp_completion_selection}
+        execute-keys '<a-;>d'
+        evaluate-commands -draft -verbatim lsp-snippets-insert %opt[lsp_snippet_to_insert]
+        try lsp-snippets-select-next-placeholders
     }
 }}
 
@@ -2226,16 +2254,17 @@ print("\n");
 print("set-register dquote");
 foreach my $i (0 .. $#sel_content) {
     my $placeholder_id = $placeholder_ids[$i];
+    my $def;
     if (exists $placeholder_id_to_default{$placeholder_id}) {
-        my $def = $placeholder_id_to_default{$placeholder_id};
+        $def = $placeholder_id_to_default{$placeholder_id};
         # de-double up closing braces
         $def =~ s/\}\}/}/g;
         # double up single-quotes
         $def =~ s/'\''/'\'''\''/g;
-        print(" '\''$def'\''");
-    } else {
-        print(" '\'''\''");
     }
+    # make sure that the placeholder is non-empty so we can select it
+    if (length $def == 0) { $def = " " }
+    print(" '\''$def'\''");
 }
 print("\n");
 '
@@ -2311,6 +2340,8 @@ define-command lsp-snippets-select-next-placeholders %{
 
         printf "select %s\n" "$selections"
     }
+    # Delete the placeholder text
+    execute-keys '<a-;>d'
 }
 
 hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{ # from grep.kak
