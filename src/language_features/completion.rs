@@ -87,11 +87,11 @@ pub fn editor_completion(
             let entry = match x.kind {
                 Some(k) => format!(
                     "{}{} {{MenuInfo}}{:?}",
-                    &x.label,
+                    escape_kakoune_markup(&x.label),
                     " ".repeat(maxlen - x.label.len()),
                     k
                 ),
-                None => x.label.clone(),
+                None => escape_kakoune_markup(&x.label),
             };
 
             let maybe_filter_text = if !params.have_kakoune_feature_filtertext {
