@@ -1994,7 +1994,7 @@ define-command -hidden lsp-mappings-disable -params 1 -docstring "Remove LSP map
 
 ### Default integration ###
 
-define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" %{
+define-command lsp-enable -docstring "Default integration with kak-lsp" %{
     try %{
         add-highlighter global/cquery_semhl ranges cquery_semhl
     } catch %{
@@ -2034,7 +2034,7 @@ define-command -hidden lsp-enable -docstring "Default integration with kak-lsp" 
     lsp-did-change-config
 }
 
-define-command -hidden lsp-disable -docstring "Disable kak-lsp" %{
+define-command lsp-disable -docstring "Disable kak-lsp" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
     remove-highlighter global/lsp_semantic_tokens
