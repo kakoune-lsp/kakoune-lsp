@@ -357,7 +357,6 @@ define-command -hidden lsp-completion-dismissed -docstring "Called when the comp
         remove-hooks window lsp-completion-dismissed
         set-option window lsp_completions_selected_item -1
     }
-    lsp-completion-item-resolve-request false
     trigger-user-hook LSPCompletionDismissed
     remove-hooks window lsp-completion-dismissed
     set-option window lsp_completions_selected_item -1
@@ -376,6 +375,14 @@ define-command -hidden lsp-completion-on-dismiss -params 1 -docstring %{
 define-command -hidden lsp-completion-item-selected -params 1 %{
     set-option window lsp_completions_selected_item %arg{1}
     remove-hooks window lsp-completion-dismissed
+}
+
+# Call the resolve request for the current completion, and queue up the closing request on dismiss
+define-command -hidden lsp-completion-item-resolve %{
+    lsp-completion-item-resolve-request true
+    lsp-completion-on-dismiss %{
+        lsp-completion-item-resolve-request false
+    }
 }
 
 define-command -hidden lsp-completion-item-resolve-request -params 1 \
