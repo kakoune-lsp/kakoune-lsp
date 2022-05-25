@@ -1,5 +1,10 @@
 ## Unreleased
 
+Here are some notable changes. See the git log for a full list of changes.
+
+Breaking changes:
+- Completion snippet support is now enabled again in the default config.
+
 ## 12.2.1 - 2022-05-08
 
 Fixes:
