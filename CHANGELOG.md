@@ -6,6 +6,19 @@ Breaking changes:
 - Completion snippet support is now enabled again in the default config.
 - The default object mode mappings have been removed. Users are expected to add their preferred mappings. The README now has a section with recommended mappings.
 
+Additions:
+- Default configuration for Elvish and Clojure.
+- On macOS, the config file is now read from `$XDG_CONFIG_HOME/kak-lsp/kak-lsp.toml`. The old location (`~/Library/Preferences/kak-lsp/kak-lsp.toml`) is used as a fallback (#293).
+- Added shim support for `workspace/WorkspaceFolders`, which fixes interaction with `bash-language-server`.
+- Some errors are shown directly in the editor, unless the error was triggered by a hook.
+- `lsp-document-symbol` now indents nested symbols.
+
+Fixes:
+- Completions with snippets now interact properly with Kakoune's completion engine (#616).
+- Fixed default configuration for HTML/CSS/JSON following the upstream renaming of the binaries.
+- `lsp-enable-window` no longer adds a redundant global `NormalKey` hook (introduced in 12.1.0)
+- kak-lsp now avoids sending unsupported requests to the server.
+
 ## 12.2.1 - 2022-05-08
 
 Fixes:
