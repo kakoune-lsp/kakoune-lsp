@@ -195,7 +195,10 @@ pub fn editor_completion(
                     static ref SNIPPET_TABSTOP_RE: Regex = Regex::new(r"\$(?P<i>\d+)").unwrap();
                     static ref SNIPPET_PLACEHOLDER_RE: Regex = Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
                 }
-                let snippet = insert_text;
+                let mut snippet = insert_text;
+                if !snippet.contains("$0") {
+                    snippet += "$0";
+                }
                 let insert_text = SNIPPET_TABSTOP_RE.replace_all(&snippet, "");
                 let insert_text = SNIPPET_PLACEHOLDER_RE.replace_all(&insert_text, "$placeholder");
                 // There's some issue with multiline insert texts, and they also don't work well in the UI, so display on one line
