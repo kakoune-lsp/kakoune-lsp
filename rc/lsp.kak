@@ -479,7 +479,7 @@ hover           = $hover
         # Which symbol types?
         (*) eval "$kak_opt_lsp_symbol_kind_completion" ;;
     esac
-} 
+}
 
 ## Convenience methods
 
@@ -653,7 +653,7 @@ define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execut
     declare-option -hidden str lsp_execute_command_command %arg{1}
     declare-option -hidden str lsp_execute_command_arguments %arg{2}
     lsp-did-change-and-then %{lsp-execute-command-request true %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
-} 
+}
 define-command -hidden lsp-execute-command-request -params 3 %{ evaluate-commands %sh{
     sync=$1
     fifo=""
@@ -808,7 +808,7 @@ A numeric argument selects by absolute index, where 1 is the innermost child" %{
         case "$arg" in
             (up) [ $index -lt $# ] && index=$(($index + 1)) ;;
             (down) [ $index -gt 1 ] && index=$(($index - 1)) ;;
-            (top) index=$# ;; 
+            (top) index=$# ;;
             (bottom) index=1 ;;
             (0) echo "fail lsp-selection-range-select: invalid argument" ;;
             (*) [ $arg -lt $# ] && index=$arg || index=$# ;;
@@ -1024,7 +1024,7 @@ define-command lsp-apply-workspace-edit-sync -params 1 -hidden %{
     lsp-did-change-and-then %sh{
         printf "lsp-apply-workspace-edit-request true '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
     }
-} 
+}
 define-command lsp-apply-workspace-edit-request -params 2 -hidden %{ evaluate-commands %sh{
     sync=$1
     fifo=""
