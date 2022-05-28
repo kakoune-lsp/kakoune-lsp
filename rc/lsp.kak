@@ -2261,7 +2261,7 @@ print("\n");
 print("set-register dquote");
 foreach my $i (0 .. $#sel_content) {
     my $placeholder_id = $placeholder_ids[$i];
-    my $def;
+    my $def = "";
     if (exists $placeholder_id_to_default{$placeholder_id}) {
         $def = $placeholder_id_to_default{$placeholder_id};
         # de-double up closing braces
