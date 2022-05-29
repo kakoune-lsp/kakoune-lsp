@@ -342,20 +342,20 @@ have_kakoune_feature_filtertext = ${kak_opt_lsp_have_kakoune_feature_filtertext}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }}
 
-declare-option -hidden str lsp_completion_selection ""
+declare-option -hidden str lsp_completion_inserted_range ""
 
 define-command -hidden lsp-completion-accepted -docstring "Called when a completion is accepted" %{
-    set-option window lsp_completion_selection %val{hook_param}
+    set-option window lsp_completion_inserted_range %val{hook_param}
     trigger-user-hook LSPCompletionAccepted
     remove-hooks window lsp-completion-accepted
     set-option window lsp_completions_selected_item -1
-    set-option window lsp_completion_selection ""
+    set-option window lsp_completion_inserted_range ""
 }
 
 define-command -hidden lsp-completion-on-accept -params 1 -docstring %{
     lsp-completion-on-accept <command>: run <command> when the completion menu is closed
 
-    The inserted range is available as %opt{lsp_completion_selection} in the format expected by "select".
+    The inserted range is available as %opt{lsp_completion_inserted_range} in the format expected by "select".
 } %{
     hook -once -group lsp-completion-accepted window User LSPCompletionAccepted %arg{1}
 }
@@ -2157,7 +2157,7 @@ define-command -hidden lsp-snippets-insert-completion -params 1 %{ evaluate-comm
     set-option window lsp_snippet_to_insert %arg{1}
     lsp-completion-on-accept %{
         # Delete the inserted text.
-        select %opt{lsp_completion_selection}
+        select %opt{lsp_completion_inserted_range}
         execute-keys '<a-;>d'
         evaluate-commands -draft -verbatim lsp-snippets-insert %opt[lsp_snippet_to_insert]
         try lsp-snippets-select-next-placeholders
