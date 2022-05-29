@@ -236,7 +236,7 @@ declare-option -docstring "Number of warnings" int lsp_diagnostic_warning_count 
 # Internal variables.
 
 declare-option -hidden completions lsp_completions
-declare-option -hidden int lsp_completions_selected_item -1
+declare-option -hidden int lsp_completions_selected_item
 declare-option -hidden range-specs lsp_errors
 declare-option -hidden line-specs lsp_error_lines 0 '0| '
 declare-option -hidden range-specs cquery_semhl
@@ -342,14 +342,12 @@ have_kakoune_feature_filtertext = ${kak_opt_lsp_have_kakoune_feature_filtertext}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }}
 
-declare-option -hidden str lsp_completion_inserted_range ""
+declare-option -hidden str lsp_completion_inserted_range
 
 define-command -hidden lsp-completion-accepted -docstring "Called when a completion is accepted" %{
     set-option window lsp_completion_inserted_range %val{hook_param}
     trigger-user-hook LSPCompletionAccepted
     remove-hooks window lsp-completion-accepted
-    set-option window lsp_completions_selected_item -1
-    set-option window lsp_completion_inserted_range ""
 }
 
 define-command -hidden lsp-completion-on-accept -params 1 -docstring %{
