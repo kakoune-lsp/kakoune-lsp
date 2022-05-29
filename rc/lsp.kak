@@ -344,43 +344,32 @@ have_kakoune_feature_filtertext = ${kak_opt_lsp_have_kakoune_feature_filtertext}
 
 declare-option -hidden str lsp_completion_selection ""
 
-define-command -hidden lsp-completion-dismissed -docstring "Called when the completion pager is closed" %{
+define-command -hidden lsp-completion-accepted -docstring "Called when a completion is accepted" %{
     set-option window lsp_completion_selection %val{hook_param}
-    try %{
-        evaluate-commands -draft %{
-            select %opt{lsp_completion_selection}
-        }
-    } catch %{
-        # Completion was cancelled, nothing was inserted
-        # Clear these so the following lines do nothing.
-        # This is to avoid running them in the above try block, and silencing their errors.
-        remove-hooks window lsp-completion-dismissed
-        set-option window lsp_completions_selected_item -1
-    }
-    trigger-user-hook LSPCompletionDismissed
-    remove-hooks window lsp-completion-dismissed
+    trigger-user-hook LSPCompletionAccepted
+    remove-hooks window lsp-completion-accepted
     set-option window lsp_completions_selected_item -1
     set-option window lsp_completion_selection ""
 }
 
-define-command -hidden lsp-completion-on-dismiss -params 1 -docstring %{
-    lsp-completion-on-dismiss <command>: run <command> when the completion menu is closed
+define-command -hidden lsp-completion-on-accept -params 1 -docstring %{
+    lsp-completion-on-accept <command>: run <command> when the completion menu is closed
 
     The inserted range is available as %opt{lsp_completion_selection} in the format expected by "select".
 } %{
-    hook -once -group lsp-completion-dismissed window User LSPCompletionDismissed %arg{1}
+    hook -once -group lsp-completion-accepted window User LSPCompletionAccepted %arg{1}
 }
 
 # Is called when a completion item is selected
 define-command -hidden lsp-completion-item-selected -params 1 %{
     set-option window lsp_completions_selected_item %arg{1}
-    remove-hooks window lsp-completion-dismissed
+    remove-hooks window lsp-completion-accepted
 }
 
 # Call the resolve request for the current completion, and queue up the closing request on dismiss
 define-command -hidden lsp-completion-item-resolve %{
     lsp-completion-item-resolve-request true
-    lsp-completion-on-dismiss %{
+    lsp-completion-on-accept %{
         lsp-completion-item-resolve-request false
     }
 }
@@ -2057,7 +2046,8 @@ define-command lsp-enable -docstring "Default integration with kak-lsp" %{
     hook -group lsp global BufSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
-    hook -group lsp global InsertCompletionHide .* lsp-completion-dismissed
+    # A non-empty hook parameter means some completion was inserted.
+    hook -group lsp global InsertCompletionHide .+ lsp-completion-accepted
     hook -group lsp global NormalIdle .* %{
         lsp-did-change
         evaluate-commands %sh{
@@ -2111,7 +2101,8 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     hook -group lsp window WinSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp window InsertIdle .* lsp-completion
-    hook -group lsp window InsertCompletionHide .* lsp-completion-dismissed
+    # A non-empty hook parameter means some completion was inserted.
+    hook -group lsp window InsertCompletionHide .+ lsp-completion-accepted
     hook -group lsp window NormalIdle .* %{
         lsp-did-change
         evaluate-commands %sh{
@@ -2164,7 +2155,7 @@ set-face global SnippetsOtherPlaceholders black,yellow+F
 declare-option -hidden str lsp_snippet_to_insert ""
 define-command -hidden lsp-snippets-insert-completion -params 1 %{ evaluate-commands %{
     set-option window lsp_snippet_to_insert %arg{1}
-    lsp-completion-on-dismiss %{
+    lsp-completion-on-accept %{
         # Delete the inserted text.
         select %opt{lsp_completion_selection}
         execute-keys '<a-;>d'
