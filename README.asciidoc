@@ -519,22 +519,31 @@ kak-lsp has experimental support for snippets. It is enabled by setting `snippet
 
 It uses the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`, you may want to customize those.
 
-To properly use snippets, you'll probably want something like this:
+You'll probably want to add a mapping for `lsp-snippets-select-next-placeholders`, which allows
+to jump between tabstops (like function call arguments).
+
+For example, you can use `<tab>` to select a placeholder if there is one, or else execute
+`<tab>` as normal:
 
 [source,kak]
 ----
-def -hidden insert-c-n %{
- try %{
-   lsp-snippets-select-next-placeholders
-   exec '<a-;>d'
- } catch %{
-   exec -with-hooks '<c-n>'
- }
-}
-map global insert <c-n> "<a-;>: insert-c-n<ret>"
+map global normal <tab> ': try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
+map global insert <tab> '<a-;>: try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
 ----
 
-This maps `<c-n>` to select the next placeholder if there is one, and otherwise executes `<c-n>` as normal
+or `<c-n>` (while the completion menu is hidden):
+
+[source,kak]
+----
+map global normal <c-n> ': try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>c-n> }<ret>' -docstring 'Select next snippet placeholder'
+map global insert <c-n> '<a-;>: lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
+hook global InsertCompletionShow .* %{
+  unmap global insert <c-n> '<a-;>: lsp-snippets-select-next-placeholders<ret>'
+}
+hook global InsertCompletionHide .* %{
+  map global insert <c-n> '<a-;>: lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
+}
+----
 
 
 == Limitations
