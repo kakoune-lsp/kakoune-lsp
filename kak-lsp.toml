@@ -75,6 +75,12 @@ elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
 
+[language.elvish]
+filetypes = ["elvish"]
+roots = [".git", ".hg"]
+command = "elvish"
+args = ["-lsp"]
+
 [language.erlang]
 filetypes = ["erlang"]
 # See https://github.com/erlang-ls/erlang_ls.git for more information and
