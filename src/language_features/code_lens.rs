@@ -38,7 +38,7 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
 
 fn editor_code_lens(meta: EditorMeta, result: Option<Vec<CodeLens>>, ctx: &mut Context) {
     let mut lenses = result.unwrap_or_default();
-    lenses.sort_by_key(|lens| (lens.range.start));
+    lenses.sort_by_key(|lens| lens.range.start);
     ctx.code_lenses.insert(meta.buffile.clone(), lenses);
 
     let buffile = &meta.buffile;
