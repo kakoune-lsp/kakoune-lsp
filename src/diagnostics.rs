@@ -1,5 +1,6 @@
 use crate::context::*;
 use crate::controller::write_response_to_fifo;
+use crate::markup::escape_kakoune_markup;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
@@ -62,7 +63,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             .or_insert(LineDiagnostics {
                 range_end: diagnostic.range.end,
                 symbols: String::new(),
-                text: String::new(),
+                text: "",
                 text_face: "",
                 text_severity: None,
             });
@@ -74,7 +75,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             .map_or(true, |text_severity| severity < text_severity)
         {
             let first_line = diagnostic.message.split('\n').next().unwrap_or_default();
-            line_diagnostics.text = escape_tuple_element(first_line);
+            line_diagnostics.text = first_line;
             line_diagnostics.text_face = face;
             line_diagnostics.text_severity = diagnostic.severity;
         }
@@ -97,11 +98,13 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             pos.column = std::cmp::max(line_text.len_bytes() as u32, 1);
 
             format!(
-                "\"{}+0|%opt[lsp_inlay_diagnostic_gap]{} {{{}}}{{\\}}{}\"",
+                "\"{}+0|%opt[lsp_inlay_diagnostic_gap]{} {{{}}}{}\"",
                 pos,
                 line_diagnostics.symbols,
                 line_diagnostics.text_face,
-                editor_escape_double_quotes(&line_diagnostics.text)
+                editor_escape_double_quotes(&escape_tuple_element(&escape_kakoune_markup(
+                    &line_diagnostics.text
+                )))
             )
         })
         .join(" ");

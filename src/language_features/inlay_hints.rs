@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::{
     context::Context,
+    markup::escape_kakoune_markup,
     position::lsp_position_to_kakoune,
     types::{EditorMeta, EditorParams},
     util::{editor_quote, escape_tuple_element},
@@ -64,8 +65,7 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
                 } else {
                     ""
                 };
-                // Escape markup inside label
-                let label = escape_tuple_element(&label).replace('{', "\\{");
+                let label = escape_tuple_element(&escape_kakoune_markup(&label));
                 editor_quote(&format!(
                     "{position}+0|{padding_left}{{InlayHint}}{label}{padding_right}",
                 ))

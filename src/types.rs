@@ -342,10 +342,10 @@ pub enum OffsetEncoding {
 }
 
 // An intermediate representation of the diagnostics on a line, for use with inlay diagnostics
-pub struct LineDiagnostics {
+pub struct LineDiagnostics<'a> {
     pub range_end: Position,
     pub symbols: String,
-    pub text: String,
+    pub text: &'a str,
     pub text_face: &'static str,
     pub text_severity: Option<DiagnosticSeverity>,
 }
