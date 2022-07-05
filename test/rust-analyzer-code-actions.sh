@@ -32,7 +32,7 @@ EOF
 test_tmux_kak_start 'edit main.rs'
 
 test_tmux send-keys j/foo Enter vtj
-test_sleep_until 'test_tmux capture-pane -p | grep -E "💡|\[A\]"'
+test_sleep_until 'test_tmux capture-pane -p | grep -E "(💡|\[A\]) "'
 # CHECK: {{💡|\[A\]}} main.rs 7:11  1 sel - client0@[session]
 
 test_tmux send-keys :lsp-code-actions Enter
