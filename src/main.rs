@@ -44,6 +44,7 @@ use std::io::{stdin, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::panic;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 fn main() {
@@ -118,19 +119,30 @@ fn main() {
 
     let mut config = include_str!("../kak-lsp.toml").to_string();
 
+    let try_config_dir = |config_dir: Option<PathBuf>| {
+        let config_dir = match config_dir {
+            Some(c) => c,
+            None => return None,
+        };
+        let path = config_dir.join("kak-lsp/kak-lsp.toml");
+        if path.exists() {
+            Some(path)
+        } else {
+            None
+        }
+    };
+
     let config_path = matches
         .value_of("config")
         .map(|config| Path::new(&config).to_owned())
         .or_else(|| {
-            dirs::config_dir().and_then(|config_dir| {
-                let path = Path::new(&config_dir.join("kak-lsp/kak-lsp.toml")).to_owned();
-                if path.exists() {
-                    Some(path)
-                } else {
-                    None
-                }
-            })
-        });
+            try_config_dir(
+                env::var_os("XDG_CONFIG_HOME")
+                    .map(PathBuf::from)
+                    .or_else(|| dirs::home_dir().map(|h| h.join(".config"))),
+            )
+        })
+        .or_else(|| try_config_dir(dirs::config_dir()));
 
     if let Some(config_path) = config_path {
         config = fs::read_to_string(config_path).expect("Failed to read config");

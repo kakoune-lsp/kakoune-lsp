@@ -10,12 +10,6 @@ kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Serv
 
 === Install kak-lsp
 
-NOTE: `kak-lsp.toml` destination in all described installation methods is just an example.
-Also, kak-lsp doesn't read the configuration file from the current working directory or binary's dir by default.
-Please consult <<Configuring kak-lsp>> to figure out where does kak-lsp expect `kak-lsp.toml`
-to be in your environment and how to specify a custom path to it.
-However, if you don't need to change configuration then feel free to skip copying it anywhere as the default configuration is embedded into the kak-lsp binary.
-
 ==== Pre-built binaries
 
 ===== MacOS
@@ -37,6 +31,7 @@ tar xzvf kak-lsp-v12.2.1-x86_64-apple-darwin.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 
+# optional: if you want to use specific language servers
 mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
@@ -59,6 +54,7 @@ tar xzvf kak-lsp-v12.2.1-x86_64-unknown-linux-musl.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 
+# optional: if you want to use specific language servers
 mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
@@ -75,7 +71,7 @@ cd kak-lsp
 # this installs the kak-lsp binary to ~/.cargo/bin, which must be in your `$PATH`
 cargo install --locked --force --path .
 
-# replace `~/.config` with OS-specific dir as described at https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html
+# optional: if you want to use specific language servers
 mkdir -p ~/.config/kak-lsp
 cp kak-lsp.toml ~/.config/kak-lsp/
 ----
@@ -89,6 +85,7 @@ via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kak
 ----
 plug "kak-lsp/kak-lsp" do %{
     cargo install --locked --force --path .
+    # optional: if you want to use specific language servers
     mkdir -p ~/.config/kak-lsp
     cp -n kak-lsp.toml ~/.config/kak-lsp/
 }
@@ -259,9 +256,11 @@ kak-lsp itself has configuration, but it also adds configuration options to Kako
 === Configuring kak-lsp
 
 kak-lsp is configured via a configuration file in https://github.com/toml-lang/toml[TOML] format. By
-default kak-lsp tries to read `kak-lsp/kak-lsp.toml` under OS-specific config dir as described https://docs.rs/dirs/2.0.1/dirs/fn.config_dir.html[here],
-but you can override it with command-line option `--config`.  Look into the default
-link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
+default kak-lsp tries to read `$XDG_CONFIG_HOME/kak-lsp/kak-lsp.toml` (which defaults to
+`~/.config/kak-lsp/kak-lsp.toml`) but you can override it with command-line option `--config`.
+Look into the default link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
+If you don't need to change configuration then feel free to skip copying it anywhere as the
+default configuration is embedded into the kak-lsp binary.
 
 *Important*: The configuration file does *not* extend the default configuration, but rather
 overrides it. This means that if you want to customize any of the configuration, you must copy the
