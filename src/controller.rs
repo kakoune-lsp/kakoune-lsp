@@ -284,7 +284,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             signature_help::text_document_signature_help(meta, params, ctx);
         }
         request::DocumentHighlightRequest::METHOD => {
-            highlights::text_document_highlights(meta, params, ctx);
+            highlight::text_document_highlight(meta, params, ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
             document_symbol::text_document_document_symbol(meta, ctx);

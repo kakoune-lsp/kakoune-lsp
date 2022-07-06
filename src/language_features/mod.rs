@@ -9,7 +9,7 @@ pub mod document_symbol;
 pub mod eclipse_jdt_ls;
 pub mod formatting;
 pub mod goto;
-pub mod highlights;
+pub mod highlight;
 pub mod hover;
 pub mod inlay_hints;
 pub mod range_formatting;

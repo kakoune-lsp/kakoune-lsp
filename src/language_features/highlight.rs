@@ -9,7 +9,7 @@ use lsp_types::{
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_highlights(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
     let req_params = DocumentHighlightParams {
         text_document_position_params: TextDocumentPositionParams {
@@ -24,11 +24,11 @@ pub fn text_document_highlights(meta: EditorMeta, params: EditorParams, ctx: &mu
     ctx.call::<DocumentHighlightRequest, _>(
         meta,
         req_params,
-        move |ctx: &mut Context, meta, result| editor_document_highlights(meta, result, ctx),
+        move |ctx: &mut Context, meta, result| editor_document_highlight(meta, result, ctx),
     );
 }
 
-pub fn editor_document_highlights(
+pub fn editor_document_highlight(
     meta: EditorMeta,
     result: Option<Vec<DocumentHighlight>>,
     ctx: &mut Context,
