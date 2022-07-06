@@ -4,12 +4,26 @@ use crate::types::{EditorMeta, EditorParams, PositionParams};
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
-    DocumentHighlightParams, TextDocumentIdentifier, TextDocumentPositionParams,
+    DocumentHighlightParams, OneOf, TextDocumentIdentifier, TextDocumentPositionParams,
 };
 use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let highlight_supported = ctx
+        .capabilities
+        .as_ref()
+        .map(|caps| {
+            matches!(
+                caps.document_highlight_provider,
+                Some(OneOf::Left(true)) | Some(OneOf::Right(_))
+            )
+        })
+        .unwrap_or(false);
+    if !highlight_supported && meta.fifo.is_none() {
+        return;
+    }
+
     let params = PositionParams::deserialize(params).unwrap();
     let req_params = DocumentHighlightParams {
         text_document_position_params: TextDocumentPositionParams {
