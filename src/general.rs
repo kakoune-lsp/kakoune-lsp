@@ -76,7 +76,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 execute_command: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                workspace_folders: Some(false),
+                workspace_folders: Some(true),
                 configuration: Some(true),
                 semantic_tokens: None,
                 code_lens: Some(CodeLensWorkspaceClientCapabilities {
@@ -319,7 +319,10 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: Some(root_path.to_string()),
         trace: Some(TraceOption::Off),
-        workspace_folders: None,
+        workspace_folders: Some(vec![WorkspaceFolder {
+            uri: Url::from_file_path(root_path).unwrap(),
+            name: root_path.to_string(),
+        }]),
         client_info: Some(ClientInfo {
             name: env!("CARGO_PKG_NAME").to_string(),
             version: Some(env!("CARGO_PKG_VERSION").to_string()),

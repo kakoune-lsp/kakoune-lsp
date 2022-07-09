@@ -377,6 +377,14 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.params, ctx)
         }
+        request::WorkspaceFoldersRequest::METHOD => {
+            Ok(serde_json::to_value(vec![WorkspaceFolder {
+                uri: Url::from_file_path(&ctx.root_path).unwrap(),
+                name: ctx.root_path.to_string(),
+            }])
+            .ok()
+            .unwrap())
+        }
         request::WorkDoneProgressCreate::METHOD => {
             progress::work_done_progress_create(request.params, ctx)
         }
