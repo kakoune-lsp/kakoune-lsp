@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
+use crate::capabilities;
+use crate::capabilities::initialize;
 use crate::context::*;
 use crate::diagnostics;
-use crate::general;
 use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
 use crate::progress;
@@ -82,7 +83,7 @@ pub fn start(
         offset_encoding,
     );
 
-    general::initialize(&route.root, initial_request_meta.clone(), &mut ctx);
+    initialize(&route.root, initial_request_meta.clone(), &mut ctx);
 
     'event_loop: loop {
         select! {
@@ -272,7 +273,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             goto::text_document_references(meta, params, ctx);
         }
         notification::Exit::METHOD => {
-            general::exit(ctx);
+            ctx.notify::<notification::Exit>(());
         }
         notification::WorkDoneProgressCancel::METHOD => {
             progress::work_done_progress_cancel(meta, params, ctx);
@@ -317,7 +318,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             diagnostics::editor_diagnostics(meta, ctx);
         }
         "capabilities" => {
-            general::capabilities(meta, ctx);
+            capabilities::capabilities(meta, ctx);
         }
         "apply-workspace-edit" => {
             workspace::apply_edit_from_editor(meta, params, ctx);

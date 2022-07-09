@@ -347,10 +347,6 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     });
 }
 
-pub fn exit(ctx: &mut Context) {
-    ctx.notify::<Exit>(());
-}
-
 pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     // NOTE controller should park request for capabilities until they are available thus it should
     // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)

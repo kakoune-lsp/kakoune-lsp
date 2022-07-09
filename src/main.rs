@@ -8,11 +8,11 @@ extern crate slog;
 #[macro_use]
 extern crate slog_scope;
 
+mod capabilities;
 mod context;
 mod controller;
 mod diagnostics;
 mod editor_transport;
-mod general;
 mod language_features;
 mod language_server_transport;
 mod markup;
