@@ -100,7 +100,7 @@ pub fn request_legacy_initialization_options_from_kakoune(
 }
 
 fn insert_value<'a, 'b, P>(
-    target: &'b mut serde_json::map::Map<String, Value>,
+    target: &'b mut serde_json::Map<String, Value>,
     mut path: P,
     local_key: String,
     value: Value,
