@@ -377,6 +377,21 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
         request::ApplyWorkspaceEdit::METHOD => {
             workspace::apply_edit_from_server(request.params, ctx)
         }
+        request::RegisterCapability::METHOD => {
+            let params: RegistrationParams = request
+                .params
+                .parse()
+                .expect("Failed to parse RegistrationParams params");
+            for registration in params.registrations {
+                // Since we only support one root path, we are never going to send
+                // "workspace/didChangeWorkspaceFolders" anyway, so let's not issue a warning.
+                if registration.method == notification::DidChangeWorkspaceFolders::METHOD {
+                    continue;
+                }
+                warn!("Unsupported registration: {}", registration.method);
+            }
+            Ok(serde_json::Value::Null)
+        }
         request::WorkspaceFoldersRequest::METHOD => {
             Ok(serde_json::to_value(vec![WorkspaceFolder {
                 uri: Url::from_file_path(&ctx.root_path).unwrap(),
