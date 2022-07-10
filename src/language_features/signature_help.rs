@@ -1,3 +1,5 @@
+use crate::capabilities::attempt_server_capability;
+use crate::capabilities::CAPABILITY_SIGNATURE_HELP;
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
@@ -8,12 +10,7 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let signature_help_supported = ctx
-        .capabilities
-        .as_ref()
-        .map(|caps| caps.signature_help_provider.is_some())
-        .unwrap_or(false);
-    if !signature_help_supported && meta.fifo.is_none() {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_SIGNATURE_HELP) {
         return;
     }
 

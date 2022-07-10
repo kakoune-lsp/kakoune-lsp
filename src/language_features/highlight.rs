@@ -1,26 +1,17 @@
+use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::Context;
 use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, PositionParams};
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
-    DocumentHighlightParams, OneOf, TextDocumentIdentifier, TextDocumentPositionParams,
+    DocumentHighlightParams, TextDocumentIdentifier, TextDocumentPositionParams,
 };
 use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let highlight_supported = ctx
-        .capabilities
-        .as_ref()
-        .map(|caps| {
-            matches!(
-                caps.document_highlight_provider,
-                Some(OneOf::Left(true)) | Some(OneOf::Right(_))
-            )
-        })
-        .unwrap_or(false);
-    if !highlight_supported && meta.fifo.is_none() {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_DOCUMENT_HIGHLIGHT) {
         return;
     }
 

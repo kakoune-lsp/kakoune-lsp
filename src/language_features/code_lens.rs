@@ -1,4 +1,7 @@
 use super::code_action::execute_command_editor_command;
+use crate::capabilities::server_has_capability;
+use crate::capabilities::CAPABILITY_CODE_LENS;
+use crate::capabilities::CAPABILITY_EXECUTE_COMMANDS;
 use crate::context::*;
 use crate::diagnostics::gather_line_flags;
 use crate::position::*;
@@ -10,17 +13,9 @@ use lsp_types::*;
 use serde::Deserialize;
 
 pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
-    let code_lens_supported = ctx
-        .capabilities
-        .as_ref()
-        .map(|caps| caps.code_lens_provider.is_some())
-        .unwrap_or(false);
-    let execute_command_supported = ctx
-        .capabilities
-        .as_ref()
-        .map(|caps| caps.execute_command_provider.is_some())
-        .unwrap_or(false);
-    if !code_lens_supported || !execute_command_supported {
+    if !server_has_capability(ctx, CAPABILITY_CODE_LENS)
+        || !server_has_capability(ctx, CAPABILITY_EXECUTE_COMMANDS)
+    {
         return;
     }
 

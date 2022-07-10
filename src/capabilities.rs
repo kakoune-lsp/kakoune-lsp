@@ -347,115 +347,163 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     });
 }
 
+pub const CAPABILITY_CALL_HIERARCHY: &str = "lsp-incoming-calls, lsp-outgoing-calls";
+pub const CAPABILITY_CODE_ACTIONS: &str = "lsp-code-actions";
+pub const CAPABILITY_CODE_LENS: &str = "lsp-code-lens";
+pub const CAPABILITY_COMPLETION: &str = "lsp-completion (hooked on InsertIdle)";
+pub const CAPABILITY_DEFINITION: &str = "lsp-definition (mapped to `gd` by default)";
+pub const CAPABILITY_DOCUMENT_HIGHLIGHT: &str = "lsp-highlight-references";
+pub const CAPABILITY_DOCUMENT_SYMBOL: &str = "lsp-document-symbol";
+pub const CAPABILITY_EXECUTE_COMMANDS: &str = "lsp-execute-commands";
+pub const CAPABILITY_FORMATTING: &str = "lsp-formatting";
+pub const CAPABILITY_HOVER: &str = "lsp-hover";
+pub const CAPABILITY_IMPLEMENTATION: &str = "lsp-implementation";
+pub const CAPABILITY_INLAY_HINTS: &str = "lsp-inlay-hints";
+pub const CAPABILITY_RANGE_FORMATTING: &str = "lsp-range-formatting";
+pub const CAPABILITY_REFERENCES: &str = "lsp-references (mapped to `gr` by default)";
+pub const CAPABILITY_RENAME: &str = "lsp-rename";
+pub const CAPABILITY_SELECTION_RANGE: &str = "lsp-selection-range";
+pub const CAPABILITY_SEMANTIC_TOKENS: &str = "lsp-semantic-tokens";
+pub const CAPABILITY_SIGNATURE_HELP: &str = "lsp-signature-help";
+pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
+pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
+
+pub fn attempt_server_capability(ctx: &Context, feature: &'static str) -> bool {
+    if server_has_capability(ctx, feature) {
+        return true;
+    }
+
+    warn!(
+        "Server does not support {}, refusing to send request",
+        feature
+    );
+    false
+}
+
+pub fn server_has_capability(ctx: &Context, feature: &'static str) -> bool {
+    let server_capabilities = match ctx.capabilities.as_ref() {
+        Some(caps) => caps,
+        None => return false,
+    };
+
+    match feature {
+        CAPABILITY_CODE_ACTIONS => match server_capabilities.code_action_provider {
+            Some(CodeActionProviderCapability::Simple(ok)) => ok,
+            Some(_) => true,
+            None => false,
+        },
+        CAPABILITY_CODE_LENS => server_capabilities.code_lens_provider.is_some(),
+        CAPABILITY_CALL_HIERARCHY => match server_capabilities.call_hierarchy_provider {
+            Some(CallHierarchyServerCapability::Simple(ok)) => ok,
+            Some(_) => true,
+            None => false,
+        },
+        CAPABILITY_COMPLETION => server_capabilities.completion_provider.is_some(),
+        CAPABILITY_SIGNATURE_HELP => server_capabilities.signature_help_provider.is_some(),
+        CAPABILITY_DEFINITION => match server_capabilities.definition_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_DOCUMENT_HIGHLIGHT => match server_capabilities.document_highlight_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_DOCUMENT_SYMBOL => match server_capabilities.document_symbol_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_FORMATTING => match server_capabilities.document_formatting_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_HOVER => match server_capabilities.hover_provider {
+            Some(HoverProviderCapability::Simple(ok)) => ok,
+            Some(_) => true,
+            None => false,
+        },
+        CAPABILITY_IMPLEMENTATION => match server_capabilities.implementation_provider {
+            Some(ImplementationProviderCapability::Simple(ok)) => ok,
+            Some(_) => true,
+            None => false,
+        },
+        CAPABILITY_INLAY_HINTS => match server_capabilities.inlay_hint_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_RANGE_FORMATTING => match server_capabilities.document_range_formatting_provider
+        {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_REFERENCES => match server_capabilities.references_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_RENAME => match server_capabilities.rename_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        CAPABILITY_SELECTION_RANGE => match server_capabilities.selection_range_provider {
+            Some(SelectionRangeProviderCapability::Simple(ok)) => ok,
+            Some(_) => true,
+            None => false,
+        },
+        CAPABILITY_SEMANTIC_TOKENS => server_capabilities.semantic_tokens_provider.is_some(),
+        CAPABILITY_EXECUTE_COMMANDS => server_capabilities.execute_command_provider.is_some(),
+        CAPABILITY_TYPE_DEFINITION => match server_capabilities.type_definition_provider {
+            Some(TypeDefinitionProviderCapability::Simple(ok)) => ok,
+            Some(_) => true,
+            None => false,
+        },
+        CAPABILITY_WORKSPACE_SYMBOL => match server_capabilities.workspace_symbol_provider {
+            Some(OneOf::Left(ok)) => ok,
+            Some(OneOf::Right(_)) => true,
+            None => false,
+        },
+        _ => panic!("BUG: missing case"),
+    }
+}
+
 pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
-    // NOTE controller should park request for capabilities until they are available thus it should
-    // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)
-
-    let server_capabilities = ctx.capabilities.as_ref().unwrap();
-
     let mut features: Vec<String> = vec![];
 
-    if let Some(ref selection_range_provider) = server_capabilities.selection_range_provider {
-        match selection_range_provider {
-            SelectionRangeProviderCapability::Simple(false) => (),
-            _ => features.push("lsp-selection-range".to_string()),
+    fn probe_feature(ctx: &mut Context, features: &mut Vec<String>, feature: &'static str) {
+        if server_has_capability(ctx, feature) {
+            features.push(feature.to_string());
         }
     }
 
-    match server_capabilities
-        .hover_provider
-        .as_ref()
-        .unwrap_or(&HoverProviderCapability::Simple(false))
-    {
-        HoverProviderCapability::Simple(false) => (),
-        _ => features.push("lsp-hover".to_string()),
-    }
+    probe_feature(ctx, &mut features, CAPABILITY_SELECTION_RANGE);
+    probe_feature(ctx, &mut features, CAPABILITY_HOVER);
+    probe_feature(ctx, &mut features, CAPABILITY_COMPLETION);
+    probe_feature(ctx, &mut features, CAPABILITY_SIGNATURE_HELP);
+    probe_feature(ctx, &mut features, CAPABILITY_DEFINITION);
+    probe_feature(ctx, &mut features, CAPABILITY_TYPE_DEFINITION);
+    probe_feature(ctx, &mut features, CAPABILITY_IMPLEMENTATION);
+    probe_feature(ctx, &mut features, CAPABILITY_REFERENCES);
+    probe_feature(ctx, &mut features, CAPABILITY_DOCUMENT_HIGHLIGHT);
+    probe_feature(ctx, &mut features, CAPABILITY_DOCUMENT_SYMBOL);
+    probe_feature(ctx, &mut features, CAPABILITY_WORKSPACE_SYMBOL);
+    probe_feature(ctx, &mut features, CAPABILITY_FORMATTING);
+    probe_feature(ctx, &mut features, CAPABILITY_RANGE_FORMATTING);
+    probe_feature(ctx, &mut features, CAPABILITY_RENAME);
+    probe_feature(ctx, &mut features, CAPABILITY_CODE_ACTIONS);
+    probe_feature(ctx, &mut features, CAPABILITY_CODE_LENS);
+    probe_feature(ctx, &mut features, CAPABILITY_CALL_HIERARCHY);
+    features.push("lsp-diagnostics".to_string());
+    probe_feature(ctx, &mut features, CAPABILITY_INLAY_HINTS);
 
-    if server_capabilities.completion_provider.is_some() {
-        features.push("lsp-completion (hooked on InsertIdle)".to_string());
-    }
-
-    if server_capabilities.signature_help_provider.is_some() {
-        features.push("lsp-signature-help".to_string())
-    }
-
-    match server_capabilities.definition_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-definition (mapped to `gd` by default)".to_string());
-        }
-        _ => (),
-    };
-
-    if let Some(ref type_definition_provider) = server_capabilities.type_definition_provider {
-        match type_definition_provider {
-            TypeDefinitionProviderCapability::Simple(false) => (),
-            _ => features.push("lsp-type-definition".to_string()),
-        }
-    }
-
-    if server_capabilities.implementation_provider.is_some() {
-        features.push("lsp-implementation".to_string());
-    }
-
-    match server_capabilities.references_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-references (mapped to `gr` by default)".to_string());
-        }
-        _ => (),
-    };
-
-    match server_capabilities.document_highlight_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-highlight-references".to_string())
-        }
-        _ => (),
-    }
-
-    match server_capabilities.document_symbol_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-document-symbol".to_string())
-        }
-        _ => (),
-    }
-
-    match server_capabilities.workspace_symbol_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-workspace-symbol".to_string());
-        }
-        _ => (),
-    };
-
-    match server_capabilities.document_formatting_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-formatting".to_string());
-        }
-        _ => (),
-    };
-
-    match server_capabilities.document_range_formatting_provider {
-        Some(OneOf::Left(true)) | Some(OneOf::Right(_)) => {
-            features.push("lsp-range-formatting".to_string());
-        }
-        _ => (),
-    };
-
-    if let Some(ref rename_provider) = server_capabilities.rename_provider {
-        match rename_provider {
-            OneOf::Left(true) | OneOf::Right(_) => features.push("lsp-rename".to_string()),
-            _ => (),
-        }
-    }
-
-    if let Some(ref code_action_provider) = server_capabilities.code_action_provider {
-        match code_action_provider {
-            CodeActionProviderCapability::Simple(false) => (),
-            _ => features.push("lsp-code-actions".to_string()),
-        }
-    }
-
-    if server_capabilities.code_lens_provider.is_some() {
-        features.push("lsp-code-lens".to_string())
-    }
+    // NOTE controller should park request for capabilities until they are available thus it should
+    // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)
+    let server_capabilities = ctx.capabilities.as_ref().unwrap();
 
     if let Some(ref provider) = server_capabilities.execute_command_provider {
         features.push(format!(
@@ -463,15 +511,6 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
             provider.commands.iter().join(", ")
         ))
     }
-
-    if let Some(ref call_hierarchy_provider) = server_capabilities.call_hierarchy_provider {
-        match call_hierarchy_provider {
-            CallHierarchyServerCapability::Simple(false) => (),
-            _ => features.push("lsp-incoming-calls, lsp-outgoing-calls".to_string()),
-        }
-    }
-
-    features.push("lsp-diagnostics".to_string());
 
     if let Some(ref provider) = server_capabilities.semantic_tokens_provider {
         let legend = match provider {
@@ -497,16 +536,6 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                 .map(SemanticTokenModifier::as_str)
                 .join(", ")
         ));
-    }
-
-    if let Some(ref provider) = server_capabilities.inlay_hint_provider {
-        let supported = match *provider {
-            OneOf::Left(bool) => bool,
-            OneOf::Right(_) => true,
-        };
-        if supported {
-            features.push("lsp-inlay-hints".to_string());
-        }
     }
 
     let command = formatdoc!(

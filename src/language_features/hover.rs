@@ -1,5 +1,7 @@
 use std::fs;
 
+use crate::capabilities::attempt_server_capability;
+use crate::capabilities::CAPABILITY_HOVER;
 use crate::context::*;
 use crate::markup::*;
 use crate::position::*;
@@ -12,17 +14,7 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let hover_supported = ctx
-        .capabilities
-        .as_ref()
-        .map(|caps| {
-            matches!(
-                caps.hover_provider,
-                Some(HoverProviderCapability::Simple(true) | HoverProviderCapability::Options(_))
-            )
-        })
-        .unwrap_or(false);
-    if !hover_supported && meta.fifo.is_none() {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_HOVER) {
         return;
     }
 

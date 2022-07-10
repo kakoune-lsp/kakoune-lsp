@@ -1,3 +1,5 @@
+use crate::capabilities::attempt_server_capability;
+use crate::capabilities::CAPABILITY_CODE_ACTIONS;
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
@@ -9,18 +11,7 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let code_action_supported = ctx
-        .capabilities
-        .as_ref()
-        .map(|caps| {
-            matches!(
-                caps.code_action_provider,
-                Some(CodeActionProviderCapability::Simple(true))
-                    | Some(CodeActionProviderCapability::Options(_))
-            )
-        })
-        .unwrap_or(false);
-    if !code_action_supported && meta.fifo.is_none() {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_CODE_ACTIONS) {
         return;
     }
 
