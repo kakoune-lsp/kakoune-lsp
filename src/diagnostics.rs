@@ -103,7 +103,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 line_diagnostics.symbols,
                 line_diagnostics.text_face,
                 editor_escape_double_quotes(&escape_tuple_element(&escape_kakoune_markup(
-                    &line_diagnostics.text
+                    line_diagnostics.text
                 )))
             )
         })
