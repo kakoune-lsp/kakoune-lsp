@@ -1,3 +1,4 @@
+use crate::capabilities::{attempt_server_capability, CAPABILITY_SEMANTIC_TOKENS};
 use crate::context::Context;
 use crate::position::lsp_range_to_kakoune;
 use crate::types::EditorMeta;
@@ -11,6 +12,10 @@ use lsp_types::{
 use url::Url;
 
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_SEMANTIC_TOKENS) {
+        return;
+    }
+
     let req_params = SemanticTokensParams {
         partial_result_params: Default::default(),
         text_document: TextDocumentIdentifier {

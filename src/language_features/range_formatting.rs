@@ -1,3 +1,4 @@
+use crate::capabilities::{attempt_server_capability, CAPABILITY_RANGE_FORMATTING};
 use crate::context::*;
 use crate::text_edit::{apply_text_edits_to_buffer, TextEditish};
 use crate::types::*;
@@ -12,6 +13,10 @@ pub fn text_document_range_formatting(
     ranges: Vec<Range>,
     ctx: &mut Context,
 ) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_RANGE_FORMATTING) {
+        return;
+    }
+
     let params = FormattingOptions::deserialize(params)
         .expect("Params should follow FormattingOptions structure");
     let req_params = ranges

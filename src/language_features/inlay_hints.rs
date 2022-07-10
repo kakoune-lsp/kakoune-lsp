@@ -6,6 +6,7 @@ use lsp_types::{
 use serde::Deserialize;
 
 use crate::{
+    capabilities::{attempt_server_capability, CAPABILITY_INLAY_HINTS},
     context::Context,
     markup::escape_kakoune_markup,
     position::lsp_position_to_kakoune,
@@ -19,6 +20,10 @@ struct InlayHintsOptions {
 }
 
 pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_INLAY_HINTS) {
+        return;
+    }
+
     let params = InlayHintsOptions::deserialize(params).unwrap();
     let req_params = InlayHintParams {
         work_done_progress_params: Default::default(),

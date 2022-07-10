@@ -1,3 +1,4 @@
+use crate::capabilities::{attempt_server_capability, CAPABILITY_FORMATTING};
 use crate::context::*;
 use crate::types::*;
 use lsp_types::request::*;
@@ -6,6 +7,10 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_FORMATTING) {
+        return;
+    }
+
     let params = FormattingOptions::deserialize(params)
         .expect("Params should follow FormattingOptions structure");
     let req_params = DocumentFormattingParams {
