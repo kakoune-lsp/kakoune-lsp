@@ -164,6 +164,7 @@ define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when
 # Work around terminals/libc using different versions of wcwidth(3).
 declare-option -hidden int lsp_emoji_lightbulb_ok
 declare-option -hidden int lsp_emoji_hourglass_ok
+declare-option -hidden bool lsp_has_bad_emoji_wcwidth true
 evaluate-commands -save-regs t %{
     set-register t %{
         edit -scratch *lsp-scratch*
@@ -179,6 +180,14 @@ evaluate-commands -save-regs t %{
     } catch %{
         evaluate-commands %reg{t}
     }
+}
+
+set-option global lsp_has_bad_emoji_wcwidth %sh{
+    if [ $kak_opt_lsp_emoji_lightbulb_ok = 3 ]; then
+        echo "false"
+    else
+        echo "true"
+    fi
 }
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
@@ -286,6 +295,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didChange\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
@@ -332,6 +342,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/completion\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -385,6 +396,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"completionItem/resolve\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 completion_item_index = ${index}
 pager_active = ${1}
@@ -429,6 +441,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/hover\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params]
 $hover_buffer_args
@@ -488,6 +501,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/next-or-previous-symbol\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 position.line   = ${kak_cursor_line}
 position.column = ${kak_cursor_column}
@@ -538,6 +552,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/object\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 count           = $kak_count
 mode            = \"$kak_opt_lsp_object_mode\"
@@ -560,6 +575,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
@@ -579,6 +595,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/implementation\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -598,6 +615,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/typeDefinition\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -642,6 +660,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/codeAction\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${fifo:-${kak_opt_lsp_connect_fifo}}\
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
@@ -663,6 +682,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/textDocument/codeLens\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -697,6 +717,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${fifo}
 method   = \"workspace/executeCommand\"
 [params]
@@ -722,6 +743,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/references\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -741,6 +763,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentHighlight\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -760,6 +783,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rename\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 newName  = \"$1\"
 [params.position]
@@ -801,6 +825,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/selectionRange\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params]
 position.line = ${kak_cursor_line}
@@ -855,6 +880,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/signatureHelp\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -874,6 +900,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/diagnostics\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -891,6 +918,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentSymbol\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -922,6 +950,7 @@ buffile  = \"${1}\"
 filetype = \"${2}\"
 version  = ${3}
 method   = \"workspace/symbol\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${kak_opt_lsp_connect_fifo}\
 [params]
 query    = \"${4}\"
@@ -936,6 +965,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"capabilities\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -956,6 +986,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didOpen\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
@@ -972,6 +1003,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didClose\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -984,6 +1016,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didSave\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -997,6 +1030,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"workspace/didChangeConfiguration\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params.settings]
 lsp_config = \"\"\"$(printf %s "${kak_opt_lsp_config}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')\"\"\"
 "
@@ -1023,6 +1057,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"exit\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1035,6 +1070,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"window/workDoneProgress/cancel\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 token    = \"$1\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1068,6 +1104,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${fifo}
 method   = \"apply-workspace-edit\"
 [params]
@@ -1092,6 +1129,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"apply-text-edits\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 edit     = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1106,6 +1144,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"stop\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1137,6 +1176,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${fifo}
 method   = \"textDocument/formatting\"
 [params]
@@ -1196,6 +1236,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rangeFormatting\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 ${fifo}
 [params]
 tabSize      = ${kak_opt_tabstop}
@@ -1244,6 +1285,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/inlayHint\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 buf_line_count = ${kak_buf_line_count}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1263,6 +1305,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/navigate\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 direction = \"$1\"
 [params.position]
@@ -1283,6 +1326,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/vars\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1307,6 +1351,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/inheritance\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 derived  = $derived
 levels   = $levels
@@ -1333,6 +1378,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/call\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 callee   = $callee
 [params.position]
@@ -1360,6 +1406,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/member\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 kind     = $kind
 [params.position]
@@ -1382,6 +1429,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/switchSourceHeader\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1400,6 +1448,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"eclipse.jdt.ls/organizeImports\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1428,6 +1477,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/forwardSearch\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1446,6 +1496,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/build\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1463,6 +1514,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/semanticTokens/full\"
+has_bad_emoji_wcwidth = ${kak_opt_lsp_has_bad_emoji_wcwidth}
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }

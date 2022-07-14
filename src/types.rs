@@ -130,6 +130,7 @@ pub struct EditorMeta {
     pub version: i32,
     pub fifo: Option<String>,
     pub command_fifo: Option<String>,
+    pub has_bad_emoji_wcwidth: bool,
     #[serde(default)]
     pub write_response_to_fifo: bool,
 }

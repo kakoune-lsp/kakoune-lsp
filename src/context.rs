@@ -260,6 +260,7 @@ impl Context {
             fifo: None,
             command_fifo: None,
             write_response_to_fifo: false,
+            has_bad_emoji_wcwidth: true,
         }
     }
 

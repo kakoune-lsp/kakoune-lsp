@@ -1,5 +1,4 @@
 use super::code_action::execute_command_editor_command;
-use crate::capabilities::server_has_capability;
 use crate::capabilities::CAPABILITY_CODE_LENS;
 use crate::capabilities::CAPABILITY_EXECUTE_COMMANDS;
 use crate::context::*;
@@ -7,6 +6,8 @@ use crate::diagnostics::gather_line_flags;
 use crate::position::*;
 use crate::types::*;
 use crate::util::editor_quote;
+use crate::util::escape_tuple_element;
+use crate::{capabilities::server_has_capability, markup::escape_kakoune_markup};
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -27,8 +28,52 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
         partial_result_params: PartialResultParams::default(),
     };
     ctx.call::<CodeLensRequest, _>(meta, req_params, |ctx: &mut Context, meta, result| {
-        editor_code_lens(meta, result, ctx)
+        editor_code_lens(meta.clone(), result.clone(), ctx);
+        inlay_hints_from_editor_code_lens(meta, result.unwrap_or_default(), ctx)
     });
+}
+
+fn inlay_hints_from_editor_code_lens(
+    meta: EditorMeta,
+    mut lenses: Vec<CodeLens>,
+    ctx: &mut Context,
+) {
+    let document = match ctx.documents.get(&meta.buffile) {
+        Some(document) => document,
+        None => return,
+    };
+    lenses.sort_by_key(|lens| lens.range.start);
+
+    let inlay_hints_from_lenses = lenses
+        .iter()
+        .map(|lens| {
+            let label = lens.command.as_ref().map_or("", |v| &v.title);
+            let position =
+                lsp_position_to_kakoune(&lens.range.start, &document.text, ctx.offset_encoding);
+            let line = position.line;
+            let col = position.column;
+            let icon = if meta.has_bad_emoji_wcwidth {
+                "[C]"
+            } else {
+                "🔎"
+            };
+
+            editor_quote(&format!(
+                "{line}.{col}+0|{{InlayHint}}[{icon} {}] ",
+                escape_tuple_element(&escape_kakoune_markup(label))
+            ))
+        })
+        .join(" ");
+    let command = format!(
+        "set-option buffer lsp_inlay_hints {} {}",
+        meta.version, inlay_hints_from_lenses
+    );
+    let command = format!(
+        "evaluate-commands -buffer {} -verbatim -- {}",
+        editor_quote(&meta.buffile),
+        command
+    );
+    ctx.exec(meta, command);
 }
 
 fn editor_code_lens(meta: EditorMeta, result: Option<Vec<CodeLens>>, ctx: &mut Context) {
