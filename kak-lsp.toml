@@ -18,6 +18,15 @@ filetypes = ["c", "cpp"]
 roots = ["compile_commands.json", ".clangd", ".git", ".hg"]
 command = "clangd"
 
+[language.clojure]
+filetypes = ["clojure"]
+roots = ["project.clj", ".git", ".hg"]
+command = "clojure-lsp"
+settings_section = "_"
+[language.clojure.settings._]
+# See https://clojure-lsp.io/settings/#all-settings
+# source-paths-ignore-regex = ["resources.*", "target.*"]
+
 [language.crystal]
 filetypes = ["crystal"]
 roots = ["shard.yml"]
