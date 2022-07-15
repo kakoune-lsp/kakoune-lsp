@@ -146,53 +146,45 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
         .get(buffile)
         .unwrap_or(&empty)
         .iter()
-        .map(|lens| {
-            (
-                lens.range.start.line,
-                format!("'{}|%opt[lsp_code_lens_sign]'", lens.range.start.line + 1,),
-            )
-        });
+        .map(|lens| (lens.range.start.line, "%opt[lsp_code_lens_sign]"));
 
     let empty = vec![];
     let diagnostics = diagnostics.unwrap_or(&empty).iter().map(|x| {
         (
             x.range.start.line,
-            format!(
-                "'{}|{}'",
-                x.range.start.line + 1,
-                match x.severity {
-                    Some(DiagnosticSeverity::ERROR) => {
-                        error_count += 1;
-                        "{LineFlagError}%opt[lsp_diagnostic_line_error_sign]"
-                    }
-                    Some(DiagnosticSeverity::HINT) => {
-                        hint_count += 1;
-                        "{LineFlagHint}%opt[lsp_diagnostic_line_hint_sign]"
-                    }
-                    Some(DiagnosticSeverity::INFORMATION) => {
-                        info_count += 1;
-                        "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
-                    }
-                    Some(DiagnosticSeverity::WARNING) | None => {
-                        warning_count += 1;
-                        "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
-                    }
-                    Some(_) => {
-                        warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
-                        ""
-                    }
+            match x.severity {
+                Some(DiagnosticSeverity::ERROR) => {
+                    error_count += 1;
+                    "{LineFlagError}%opt[lsp_diagnostic_line_error_sign]"
                 }
-            ),
+                Some(DiagnosticSeverity::HINT) => {
+                    hint_count += 1;
+                    "{LineFlagHint}%opt[lsp_diagnostic_line_hint_sign]"
+                }
+                Some(DiagnosticSeverity::INFORMATION) => {
+                    info_count += 1;
+                    "{LineFlagInfo}%opt[lsp_diagnostic_line_info_sign]"
+                }
+                Some(DiagnosticSeverity::WARNING) | None => {
+                    warning_count += 1;
+                    "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
+                }
+                Some(_) => {
+                    warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                    ""
+                }
+            },
         )
     });
 
     let line_flags = diagnostics
         .merge_join_by(lenses, |left, right| left.0.cmp(&right.0))
         .map(|r| match r {
-            EitherOrBoth::Left((_, label)) => label,
-            EitherOrBoth::Right((_, label)) => label,
-            EitherOrBoth::Both((_, label1), (_, label2)) => label1 + &label2,
+            EitherOrBoth::Left((line, label)) => (line, label, ""),
+            EitherOrBoth::Right((line, label)) => (line, label, ""),
+            EitherOrBoth::Both((line, label1), (_, label2)) => (line, label1, label2),
         })
+        .map(|(line, left, right)| format!("'{}|{}{}'", line + 1, left, right))
         .join(" ");
 
     (
