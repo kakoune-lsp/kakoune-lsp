@@ -2108,7 +2108,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
             if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
         }
     }
-    hook -group lsp global NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
+    hook -group lsp window NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
         set-option window lsp_object_mode %val{hook_param}
     }
 
