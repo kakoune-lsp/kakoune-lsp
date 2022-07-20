@@ -158,6 +158,9 @@ pub fn apply_document_resource_op(
             if ignore_if_exists && path.exists() {
                 Ok(())
             } else {
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
                 fs::write(&path, [])
             }
         }
@@ -191,6 +194,9 @@ pub fn apply_document_resource_op(
             if ignore_if_exists && to.exists() {
                 Ok(())
             } else {
+                if let Some(parent) = to.parent() {
+                    fs::create_dir_all(parent)?;
+                }
                 fs::rename(&from, &to)
             }
         }
