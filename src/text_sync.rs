@@ -72,10 +72,24 @@ pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
 }
 
 pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
+    let text = match ctx.capabilities.as_ref().unwrap().text_document_sync {
+        Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+            save:
+                Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
+                    include_text: Some(true),
+                })),
+            ..
+        })) => ctx
+            .documents
+            .get(&meta.buffile)
+            .map(|doc| doc.text.to_string()),
+        _ => None,
+    };
+
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let params = DidSaveTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
-        text: None,
+        text,
     };
     ctx.notify::<DidSaveTextDocument>(params);
 }
