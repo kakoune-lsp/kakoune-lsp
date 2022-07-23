@@ -217,7 +217,7 @@ fn kakoune() {
     #[cfg(windows)]
     let cmd = "kak-lsp";
     let lsp_cmd = format!(
-        "set-option global lsp_cmd '{} {}'",
+        "set-option global lsp_cmd 'KAKOUNE_RUNTIME=$kak_runtime {} {}'",
         editor_escape(cmd),
         editor_escape(&args)
     );

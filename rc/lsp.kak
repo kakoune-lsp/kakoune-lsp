@@ -2,7 +2,7 @@
 
 # Feel free to update path and arguments according to your setup when sourcing lsp.kak directly.
 # Sourcing via `kak-lsp --kakoune` does it automatically.
-declare-option -docstring "Command with which lsp is run" str lsp_cmd "kak-lsp -s %val{session}"
+declare-option -docstring "Command with which lsp is run" str lsp_cmd "KAKOUNE_RUNTIME=$kak_runtime kak-lsp -s %val{session}"
 
 # Faces
 
