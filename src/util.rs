@@ -57,12 +57,13 @@ pub fn temp_fifo() -> Option<TempFifo> {
     }
     #[cfg(windows)]
     {
-        std::process::Command::new("mkfifo.exe")
-            .arg(&path)
-            .spawn()
-            .unwrap()
-            .wait()
-            .unwrap();
+        // std::process::Command::new("mkfifo.exe")
+        //     .arg(&path)
+        //     .spawn()
+        //     .unwrap()
+        //     .wait()
+        //     .unwrap();
+        return None;
     }
     Some(TempFifo { path })
 }
