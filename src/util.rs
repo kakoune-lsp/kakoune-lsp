@@ -1,10 +1,12 @@
 use crate::types::*;
 use std::io::{stderr, stdout, Write};
+#[cfg(not(windows))]
 use std::os::unix::fs::DirBuilderExt;
 use std::time::Duration;
 use std::{collections::HashMap, path::Path};
 use std::{env, fs, io, path, process, thread};
 
+#[cfg(not(windows))]
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
     path.push("kak-lsp");
@@ -23,6 +25,14 @@ pub fn temp_dir() -> path::PathBuf {
         .mode(0o700)
         .create(&path)
         .unwrap();
+    path
+}
+
+#[cfg(windows)]
+pub fn temp_dir() -> path::PathBuf {
+    let mut path = env::temp_dir();
+    path.push("kak-lsp");
+    fs::DirBuilder::new().recursive(true).create(&path).unwrap();
     path
 }
 
