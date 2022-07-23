@@ -44,25 +44,25 @@ pub fn start(
         lang_srv = match language_server_transport::start(&lang.command, &lang.args, &lang.envs) {
             Ok(ls) => ls,
             Err(err) => {
+                error!("failed to start language server: {}", err);
                 // If the server command isn't from a hook (e.g. auto-hover),
                 // then send a prominent error to the editor.
-                if initial_request.meta.hook {
-                    panic!("{}", err);
+                if !initial_request.meta.hook {
+                    let command = format!(
+                        "lsp-show-error {}",
+                        editor_quote(&format!("failed to start language server: {}", err)),
+                    );
+                    if to_editor
+                        .send(EditorResponse {
+                            meta: initial_request.meta,
+                            command: Cow::from(command),
+                        })
+                        .is_err()
+                    {
+                        error!("Failed to send command to editor");
+                    }
                 }
-                let command = format!(
-                    "lsp-show-error {}",
-                    editor_quote(&format!("failed to start language server: {}", err)),
-                );
-                if to_editor
-                    .send(EditorResponse {
-                        meta: initial_request.meta,
-                        command: Cow::from(command),
-                    })
-                    .is_err()
-                {
-                    error!("Failed to send command to editor");
-                }
-                panic!("{}", err)
+                return;
             }
         }
     }
