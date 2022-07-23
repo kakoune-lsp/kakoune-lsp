@@ -254,7 +254,7 @@ fn show_hover_in_hover_client(
                 diagnostics,
             )
         };
-        fs::write(hover_fifo, contents.as_bytes()).unwrap();
+        fs::write(hover_fifo, contents).unwrap();
     });
 
     let command = format!(

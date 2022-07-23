@@ -86,7 +86,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                             "lsp-show-error 'Language server is not configured for filetype `{}`'",
                             request.meta.filetype
                         );
-                        std::fs::write(fifo, &*command).expect("Failed to write command to fifo");
+                        std::fs::write(fifo, command).expect("Failed to write command to fifo");
                     }
                     continue 'event_loop;
                 }
