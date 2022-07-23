@@ -4,6 +4,14 @@
 # Sourcing via `kak-lsp --kakoune` does it automatically.
 declare-option -docstring "Command with which lsp is run" str lsp_cmd "KAKOUNE_RUNTIME=$kak_runtime kak-lsp -s %val{session}"
 
+declare-option -hidden str lsp_path %sh{
+    if uname | grep -q CYGWIN; then
+        echo 'cygpath -w --'
+    else
+        echo 'printf %s'
+    fi
+}
+
 # Faces
 
 # Faces used by inline diagnostics.
@@ -282,7 +290,7 @@ lsp_draft=$(printf '%s' "$lsp_draft" | sed 's/\\/\\\\/g ; s/"/\\"/g ; s/'"$(prin
 lsp_draft=${lsp_draft%.}
 printf %s "
 session  = \"${kak_session}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didChange\"
@@ -328,7 +336,7 @@ try %{
     nop %sh{ (printf "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/completion\"
@@ -381,7 +389,7 @@ define-command -hidden lsp-completion-item-resolve-request -params 1 \
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"completionItem/resolve\"
@@ -425,7 +433,7 @@ define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover 
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/hover\"
@@ -484,7 +492,7 @@ define-command lsp-next-or-previous-symbol -hidden -params 2.. %{
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/next-or-previous-symbol\"
@@ -534,7 +542,7 @@ The value of the lsp_object_mode option controls the direction. It must be one o
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/object\"
@@ -556,7 +564,7 @@ define-command -hidden lsp-definition-request -docstring "Go to definition" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
@@ -575,7 +583,7 @@ define-command -hidden lsp-implementation-request -docstring "Go to implementati
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/implementation\"
@@ -594,7 +602,7 @@ define-command -hidden lsp-type-definition-request -docstring "Go to type defini
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/typeDefinition\"
@@ -638,7 +646,7 @@ command_fifo = \"$kak_command_fifo\"
     (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/codeAction\"
@@ -659,7 +667,7 @@ define-command lsp-code-lens -docstring "apply a code lens from the current sele
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/textDocument/codeLens\"
@@ -694,7 +702,7 @@ command_fifo = \"$kak_command_fifo\""
     (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
@@ -718,7 +726,7 @@ define-command -hidden lsp-references-request -docstring "Open buffer with symbo
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/references\"
@@ -737,7 +745,7 @@ define-command -hidden lsp-highlight-references-request -docstring "Highlight sy
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentHighlight\"
@@ -756,7 +764,7 @@ define-command -hidden lsp-rename-request -params 1 -docstring "Rename symbol un
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rename\"
@@ -797,7 +805,7 @@ If cached is given, reuse the ranges from a previous invocation." %{
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/selectionRange\"
@@ -851,7 +859,7 @@ define-command -hidden lsp-signature-help-request -docstring "Request signature 
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/signatureHelp\"
@@ -870,7 +878,7 @@ define-command -hidden lsp-diagnostics-request -docstring "Open buffer with proj
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/diagnostics\"
@@ -887,7 +895,7 @@ define-command -hidden lsp-document-symbol-request -docstring "Open buffer with 
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentSymbol\"
@@ -918,7 +926,7 @@ define-command -hidden lsp-workspace-symbol-buffer-request -params 4 -docstring 
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${1}\"
+buffile  = \"$(${kak_opt_lsp_path} "${1}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${2}\"
 version  = ${3}
 method   = \"workspace/symbol\"
@@ -932,7 +940,7 @@ define-command lsp-capabilities -docstring "List available commands for current 
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"capabilities\"
@@ -952,7 +960,7 @@ lsp_draft=${lsp_draft%.}
 printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didOpen\"
@@ -968,7 +976,7 @@ define-command -hidden lsp-did-close %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didClose\"
@@ -980,7 +988,7 @@ define-command -hidden lsp-did-save %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didSave\"
@@ -993,7 +1001,7 @@ define-command -hidden lsp-did-change-config %{
     nop %sh{ ((printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"workspace/didChangeConfiguration\"
@@ -1019,7 +1027,7 @@ define-command -hidden lsp-exit-editor-session -docstring "Shutdown language ser
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"exit\"
@@ -1031,7 +1039,7 @@ define-command lsp-cancel-progress -params 1 -docstring "lsp-cancel-progress <to
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"window/workDoneProgress/cancel\"
@@ -1065,7 +1073,7 @@ command_fifo = \"$kak_command_fifo\""
     (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
@@ -1088,7 +1096,7 @@ define-command lsp-apply-text-edits-request -params 1 -hidden %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"apply-text-edits\"
@@ -1102,7 +1110,7 @@ define-command lsp-stop -docstring "Stop kak-lsp session" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"stop\"
@@ -1134,7 +1142,7 @@ command_fifo = \"$kak_command_fifo\""
     (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
@@ -1192,7 +1200,7 @@ done)"
 (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rangeFormatting\"
@@ -1221,7 +1229,7 @@ define-command -hidden lsp-call-hierarchy-request -params 1 %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/prepareCallHierarchy\"
@@ -1240,7 +1248,7 @@ define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inla
 define-command -hidden lsp-inlay-hints-request %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/inlayHint\"
@@ -1259,7 +1267,7 @@ define-command -hidden ccls-navigate-request -docstring "Navigate C/C++/Objectiv
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/navigate\"
@@ -1279,7 +1287,7 @@ define-command -hidden ccls-vars-request -docstring "ccls-vars: Find instances o
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/vars\"
@@ -1303,7 +1311,7 @@ define-command -hidden ccls-inheritance-request -params 1..2 -docstring "ccls-in
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/inheritance\"
@@ -1329,7 +1337,7 @@ define-command -hidden ccls-call-request -params 1 -docstring "ccls-call <caller
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/call\"
@@ -1356,7 +1364,7 @@ define-command -hidden ccls-member-request -params 1 -docstring "ccls-member <va
         (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/member\"
@@ -1378,7 +1386,7 @@ define-command -hidden clangd-switch-source-header-request -docstring "clangd-sw
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/switchSourceHeader\"
@@ -1396,7 +1404,7 @@ define-command -hidden ejdtls-organize-imports-request -docstring "ejdtls-organi
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"eclipse.jdt.ls/organizeImports\"
@@ -1424,7 +1432,7 @@ define-command -hidden texlab-forward-search-request %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/forwardSearch\"
@@ -1442,7 +1450,7 @@ define-command -hidden texlab-build-request %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/build\"
@@ -1459,7 +1467,7 @@ define-command lsp-semantic-tokens -docstring "lsp-semantic-tokens: Request sema
 define-command -hidden lsp-semantic-tokens-request %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
-buffile  = \"${kak_buffile}\"
+buffile  = \"$(${kak_opt_lsp_path} "${kak_buffile}" | sed 's,\\,\\\\,g; s,",\\",g')\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/semanticTokens/full\"
