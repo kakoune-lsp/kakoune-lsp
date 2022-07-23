@@ -210,8 +210,12 @@ fn kakoune() {
         .skip(1)
         .filter(|arg| arg != "--kakoune")
         .join(" ");
+    #[cfg(not(windows))]
     let cmd = env::current_exe().unwrap();
+    #[cfg(not(windows))]
     let cmd = cmd.to_str().unwrap();
+    #[cfg(windows)]
+    let cmd = "kak-lsp";
     let lsp_cmd = format!(
         "set-option global lsp_cmd '{} {}'",
         editor_escape(cmd),
