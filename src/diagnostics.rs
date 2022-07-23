@@ -9,6 +9,7 @@ use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::*;
 use std::collections::HashMap;
+use std::fmt::Write as _;
 
 pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
@@ -80,9 +81,11 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
             line_diagnostics.text_severity = diagnostic.severity;
         }
 
-        line_diagnostics
-            .symbols
-            .push_str(&format!("{{{}}}%opt[lsp_inlay_diagnostic_sign]", face))
+        let _ = write!(
+            line_diagnostics.symbols,
+            "{{{}}}%opt[lsp_inlay_diagnostic_sign]",
+            face
+        );
     }
 
     // Assemble ranges based on the lines

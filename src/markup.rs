@@ -1,5 +1,6 @@
 use lsp_types::*;
 use pulldown_cmark::{Event, Parser, Tag};
+use std::fmt::Write as _;
 
 pub const FACE_INFO_DEFAULT: &str = "InfoDefault";
 
@@ -76,21 +77,22 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 Tag::Heading(level) => {
                     face_stack.push(FACE_INFO_HEADER.into());
                     // Color as `{header}` but keep the Markdown syntax to visualize the header level
-                    markup.push_str(&format!(
+                    let _ = write!(
+                        markup,
                         "\n{{{}}}{} ",
                         FACE_INFO_HEADER,
                         "#".repeat(level as usize)
-                    ))
+                    );
                 }
                 Tag::BlockQuote => {
                     face_stack.push(FACE_INFO_BLOCK_QUOTE.into());
-                    markup.push_str(&format!("{{{}}}", FACE_INFO_BLOCK_QUOTE));
+                    let _ = write!(markup, "{{{}}}", FACE_INFO_BLOCK_QUOTE);
                     is_blockquote = true
                 }
                 Tag::CodeBlock(_) => {
                     is_codeblock = true;
                     face_stack.push(FACE_INFO_BLOCK.into());
-                    markup.push_str(&format!("\n{{{}}}", FACE_INFO_BLOCK))
+                    let _ = write!(markup, "\n{{{}}}", FACE_INFO_BLOCK);
                 }
                 Tag::List(num) => list_stack.push(num),
                 Tag::Item => {
@@ -101,29 +103,35 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     let item = list_stack.pop().expect("Tag::Item before Tag::List");
 
                     if let Some(num) = item {
-                        markup.push_str(&format!(
+                        let _ = write!(
+                            markup,
                             "\n{}{{{}}}{}. {{{}}}",
                             "  ".repeat(list_level),
                             FACE_INFO_LIST_ITEM,
                             num,
                             base_face
-                        ));
+                        );
                         // We need to keep track of the entry number ourselves.
                         list_stack.push(Some(num + 1));
                     } else {
-                        markup.push_str(&format!(
+                        let _ = write!(
+                            markup,
                             "\n{}{{{}}}- {{{}}}",
                             "  ".repeat(list_level),
                             FACE_INFO_LIST_ITEM,
                             base_face
-                        ));
+                        );
                         list_stack.push(item);
                     }
                 }
-                Tag::Emphasis => markup.push_str(&format!("{{+i@{}}}", base_face(&face_stack))),
-                Tag::Strong => markup.push_str(&format!("{{+b@{}}}", base_face(&face_stack))),
+                Tag::Emphasis => {
+                    let _ = write!(markup, "{{+i@{}}}", base_face(&face_stack));
+                }
+                Tag::Strong => {
+                    let _ = write!(markup, "{{+b@{}}}", base_face(&face_stack));
+                }
                 Tag::Strikethrough => {
-                    markup.push_str(&format!("{{+s@{}}}", base_face(&face_stack)))
+                    let _ = write!(markup, "{{+s@{}}}", base_face(&face_stack));
                 }
                 // Kakoune doesn't support clickable links and the URL might be too long to show
                 // nicely.
@@ -131,7 +139,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 // relevant resource.
                 Tag::Link(_, _, _) => {
                     face_stack.push(FACE_INFO_LINK.into());
-                    markup.push_str(&format!("{{{}}}", FACE_INFO_LINK))
+                    let _ = write!(markup, "{{{}}}", FACE_INFO_LINK);
                 }
                 Tag::Image(_, _, _) => (),
                 tag => warn!("Unsupported Markdown tag: {:?}", tag),
@@ -140,18 +148,18 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 Tag::Paragraph => markup.push('\n'),
                 Tag::Heading(_) => {
                     let base_face = pop_base_face(&mut face_stack);
-                    markup.push_str(&format!("{{{}}}\n", base_face));
+                    let _ = writeln!(markup, "{{{}}}", base_face);
                 }
                 Tag::BlockQuote => {
                     has_blockquote_text = false;
                     is_blockquote = false;
                     let base_face = pop_base_face(&mut face_stack);
-                    markup.push_str(&format!("{{{}}}", base_face));
+                    let _ = write!(markup, "{{{}}}", base_face);
                 }
                 Tag::CodeBlock(_) => {
                     is_codeblock = false;
                     let base_face = pop_base_face(&mut face_stack);
-                    markup.push_str(&format!("{{{}}}", base_face));
+                    let _ = write!(markup, "{{{}}}", base_face);
                 }
                 Tag::List(_) => {
                     // `.pop()` shouldn't fail here, unless the parser is having issues
@@ -165,7 +173,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 Tag::Item => (),
                 Tag::Emphasis | Tag::Strong | Tag::Strikethrough | Tag::Link(_, _, _) => {
                     let base_face = pop_base_face(&mut face_stack);
-                    markup.push_str(&format!("{{{}}}", base_face));
+                    let _ = write!(markup, "{{{}}}", base_face);
                 }
                 Tag::Image(_, _, _) => (),
                 tag => warn!("Unsupported Markdown tag: {:?}", tag),
@@ -185,12 +193,13 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     FACE_INFO_MONO
                 };
 
-                markup.push_str(&format!(
+                let _ = write!(
+                    markup,
                     "{{{}}}{}{{{}}}",
                     face,
                     escape_kakoune_markup(&c),
                     base_face
-                ))
+                );
             }
             Event::Html(html) => markup.push_str(&escape_kakoune_markup(&html)),
             Event::FootnoteReference(_) => warn!("Unsupported Markdown event: {:?}", e),
@@ -208,7 +217,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             // Markdown syntax.
             Event::Rule => {
                 let base_face = base_face(&face_stack);
-                markup.push_str(&format!("\n{{{}}}---{{{}}}\n", FACE_INFO_RULE, base_face));
+                let _ = write!(markup, "\n{{{}}}---{{{}}}\n", FACE_INFO_RULE, base_face);
             }
             Event::TaskListMarker(_) => warn!("Unsupported Markdown event: {:?}", e),
         }
