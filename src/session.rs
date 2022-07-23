@@ -80,14 +80,27 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                         "Language server is not configured for filetype `{}`",
                         &request.meta.filetype
                     );
+
+                    let command = format!(
+                        "lsp-show-error 'Language server is not configured for filetype `{}`'",
+                        request.meta.filetype
+                    );
+
                     // If the editor is expecting a fifo response, give it one, so it won't hang.
                     if let Some(ref fifo) = request.meta.fifo {
-                        let command = format!(
-                            "lsp-show-error 'Language server is not configured for filetype `{}`'",
-                            request.meta.filetype
-                        );
-                        std::fs::write(fifo, command).expect("Failed to write command to fifo");
+                        std::fs::write(fifo, &command).expect("Failed to write command to fifo");
                     }
+
+                    if !request.meta.hook {
+                        let response = EditorResponse {
+                            meta: request.meta.clone(),
+                            command: command.into(),
+                        };
+                        if let Err(err) = editor.to_editor.sender().send(response) {
+                            error!("Failed to send stop message to editor: {err}");
+                        };
+                    }
+
                     continue 'event_loop;
                 }
                 let language_id = language_id.unwrap();
