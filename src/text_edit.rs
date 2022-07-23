@@ -208,8 +208,11 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
 
     apply_text_edits_to_file_impl(text, temp_file, text_edits, offset_encoding)
         .and_then(|_| std::fs::rename(&temp_path, filename))
-        .map(|_| unsafe {
-            libc::chmod(path.as_ptr(), stat.st_mode);
+        .map(|_| {
+            #[cfg(not(windows))]
+            unsafe {
+                libc::chmod(path.as_ptr(), stat.st_mode);
+            };
         })
         .map_err(|e| {
             let _ = std::fs::remove_file(&temp_path);
