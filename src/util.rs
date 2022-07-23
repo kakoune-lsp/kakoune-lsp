@@ -44,12 +44,25 @@ pub fn temp_fifo() -> Option<TempFifo> {
     let mut path = temp_dir();
     path.push(format!("{:x}", rand::random::<u64>()));
     let path = path.to_str().unwrap().to_string();
-    let fifo_result = unsafe {
-        let path = std::ffi::CString::new(path.clone()).unwrap();
-        libc::mkfifo(path.as_ptr(), 0o600)
-    };
-    if fifo_result != 0 {
-        return None;
+
+    #[cfg(not(windows))]
+    {
+        let fifo_result = unsafe {
+            let path = std::ffi::CString::new(path.clone()).unwrap();
+            libc::mkfifo(path.as_ptr(), 0o600)
+        };
+        if fifo_result != 0 {
+            return None;
+        }
+    }
+    #[cfg(windows)]
+    {
+        std::process::Command::new("mkfifo.exe")
+            .arg(&path)
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap();
     }
     Some(TempFifo { path })
 }
