@@ -10,6 +10,7 @@ use lsp_types::*;
 use ropey::{Rope, RopeSlice};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
+#[cfg(not(windows))]
 use std::os::unix::io::FromRawFd;
 
 pub trait TextEditish<T: TextEditish<T>> {
@@ -124,17 +125,27 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     let file = File::open(filename)?;
     let text = Rope::from_reader(BufReader::new(file))?;
 
-    let (temp_path, temp_file) = {
-        let template = format!("{}.XXXXXX", filename);
-        let cstr = std::ffi::CString::new(template).unwrap();
-        let ptr = cstr.into_raw();
-        let temp_fd = unsafe { libc::mkstemp(ptr) };
-        let cstr = unsafe { std::ffi::CString::from_raw(ptr) };
-        let temp_fd = cvt(temp_fd)?;
-        let temp_path = cstr.into_string().unwrap();
-        let temp_file = unsafe { File::from_raw_fd(temp_fd) };
-        (temp_path, temp_file)
-    };
+    let (temp_path, temp_file);
+    #[cfg(windows)]
+    {
+        temp_path = format!("{filename}.{:x}", rand::random::<u64>());
+        temp_file = File::create(temp_path.clone())?;
+    }
+    #[cfg(not(windows))]
+    {
+        (temp_path, temp_file) = {
+            let template = format!("{}.XXXXXX", filename);
+            let cstr = std::ffi::CString::new(template).unwrap();
+            let ptr = cstr.into_raw();
+            let temp_fd = unsafe { libc::mkstemp(ptr) };
+            let cstr = unsafe { std::ffi::CString::from_raw(ptr) };
+            let temp_fd = cvt(temp_fd)?;
+            let temp_path = cstr.into_string().unwrap();
+            let temp_file = unsafe { File::from_raw_fd(temp_fd) };
+            (temp_path, temp_file)
+        };
+    }
+
     fn apply_text_edits_to_file_impl<T: TextEditish<T>>(
         text: Rope,
         temp_file: File,
@@ -206,6 +217,7 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
         })
 }
 
+#[cfg(not(windows))]
 // Adapted from std/src/sys/unix/mod.rs.
 fn cvt(t: i32) -> std::io::Result<i32> {
     if t == -1 {
