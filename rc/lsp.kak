@@ -286,6 +286,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didChange\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
@@ -332,6 +333,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/completion\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -385,6 +387,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"completionItem/resolve\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 completion_item_index = ${index}
 pager_active = ${1}
@@ -429,6 +432,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/hover\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
 $hover_buffer_args
@@ -488,6 +492,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/next-or-previous-symbol\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 position.line   = ${kak_cursor_line}
 position.column = ${kak_cursor_column}
@@ -538,6 +543,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/object\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 count           = $kak_count
 mode            = \"$kak_opt_lsp_object_mode\"
@@ -560,6 +566,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
@@ -579,6 +586,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/implementation\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -598,6 +606,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/typeDefinition\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -642,6 +651,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/codeAction\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${fifo:-${kak_opt_lsp_connect_fifo}}\
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
@@ -663,6 +673,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kak-lsp/textDocument/codeLens\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -699,6 +710,7 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"workspace/executeCommand\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 command = \"$2\"
 arguments = $3
@@ -722,6 +734,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/references\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -741,6 +754,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentHighlight\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -760,6 +774,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rename\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 newName  = \"$1\"
 [params.position]
@@ -801,6 +816,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/selectionRange\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
 position.line = ${kak_cursor_line}
@@ -855,6 +871,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/signatureHelp\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
@@ -874,6 +891,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/diagnostics\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -891,6 +909,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentSymbol\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -922,6 +941,7 @@ buffile  = \"${1}\"
 filetype = \"${2}\"
 version  = ${3}
 method   = \"workspace/symbol\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
 query    = \"${4}\"
@@ -936,6 +956,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"capabilities\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -956,6 +977,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didOpen\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
@@ -972,6 +994,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didClose\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -984,6 +1007,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didSave\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -997,6 +1021,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"workspace/didChangeConfiguration\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params.settings]
 lsp_config = \"\"\"$(printf %s "${kak_opt_lsp_config}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')\"\"\"
 "
@@ -1023,6 +1048,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"exit\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1035,6 +1061,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"window/workDoneProgress/cancel\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 token    = \"$1\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1070,6 +1097,7 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"apply-workspace-edit\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 edit     = $2
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
@@ -1092,6 +1120,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"apply-text-edits\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 edit     = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1106,6 +1135,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"stop\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1139,6 +1169,7 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"textDocument/formatting\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 tabSize      = ${kak_opt_tabstop}
 insertSpaces = ${kak_opt_lsp_insert_spaces}
@@ -1196,6 +1227,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rangeFormatting\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${fifo}
 [params]
 tabSize      = ${kak_opt_tabstop}
@@ -1225,6 +1257,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/prepareCallHierarchy\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 position.line = ${kak_cursor_line}
 position.column = ${kak_cursor_column}
@@ -1244,6 +1277,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/inlayHint\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 buf_line_count = ${kak_buf_line_count}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1263,6 +1297,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/navigate\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 direction = \"$1\"
 [params.position]
@@ -1283,6 +1318,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/vars\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1307,6 +1343,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/inheritance\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 derived  = $derived
 levels   = $levels
@@ -1333,6 +1370,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/call\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 callee   = $callee
 [params.position]
@@ -1360,6 +1398,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"\$ccls/member\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 kind     = $kind
 [params.position]
@@ -1382,6 +1421,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/switchSourceHeader\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1400,6 +1440,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"eclipse.jdt.ls/organizeImports\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1428,6 +1469,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/forwardSearch\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1446,6 +1488,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/build\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1463,6 +1506,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/semanticTokens/full\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
