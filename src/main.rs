@@ -31,6 +31,7 @@ mod workspace;
 use crate::types::*;
 use crate::util::*;
 use clap::{crate_version, App, Arg, ArgMatches};
+#[cfg(not(windows))]
 use daemonize::Daemonize;
 use itertools::Itertools;
 use sloggers::file::FileLoggerBuilder;
@@ -180,6 +181,7 @@ fn main() {
         };
         let mut pid_path = util::temp_dir();
         pid_path.push(format!("{}.pid", config.server.session));
+        #[cfg(not(windows))]
         if matches.is_present("daemonize") {
             if let Err(e) = Daemonize::new()
                 .pid_file(&pid_path)
@@ -247,6 +249,7 @@ fn spin_up_server(input: &[u8]) {
         .unwrap()
         .write_all(input)
         .expect("Failed to write initial request");
+    #[cfg(not(windows))]
     child.wait().expect("Failed to daemonize server");
 }
 

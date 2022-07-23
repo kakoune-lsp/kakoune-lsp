@@ -36,7 +36,7 @@ mkdir -p ~/.config/kak-lsp
 mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
-===== Linux
+===== Linux/Cygwin
 
 ====== Package managers
 

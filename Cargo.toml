@@ -8,7 +8,6 @@ license = "Unlicense/MIT"
 [dependencies]
 clap = "2.33.1"
 crossbeam-channel = "0.5.1"
-daemonize = "0.4.1"
 diffs = "0.4.1"
 dirs = "2.0.2"
 enum_primitive = "0.1.1"
@@ -34,6 +33,9 @@ unindent = "0.1.7"
 url = { version = "2.1.1", features = ["serde"] }
 whoami = "1.1.3"
 lazy_static = "1.4.0"
+
+[target.'cfg(not(windows))'.dependencies]
+daemonize = "0.4.1"
 
 [profile.release]
 lto = true
