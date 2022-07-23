@@ -127,8 +127,13 @@ pub fn start_unix(path: &path::Path, sender: Sender<EditorRequest>) {
                             continue;
                         }
                         debug!("From editor: {}", request);
-                        let request: EditorRequest =
-                            toml::from_str(&request).expect("Failed to parse editor request");
+                        let request: EditorRequest = match toml::from_str(&request) {
+                            Ok(req) => req,
+                            Err(err) => {
+                                error!("Failed to parse editor request: {}", err);
+                                continue;
+                            }
+                        };
                         if sender.send(request).is_err() {
                             return;
                         };
