@@ -42,11 +42,15 @@ use std::borrow::Cow;
 use std::env;
 use std::fs;
 use std::io::{stdin, Read, Write};
-use std::os::unix::net::UnixStream;
 use std::panic;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+
+#[cfg(not(windows))]
+use std::os::unix::net::UnixStream;
+#[cfg(windows)]
+use uds_windows::UnixStream;
 
 fn main() {
     let matches = App::new("kak-lsp")

@@ -37,6 +37,9 @@ lazy_static = "1.4.0"
 [target.'cfg(not(windows))'.dependencies]
 daemonize = "0.4.1"
 
+[target.'cfg(windows)'.dependencies]
+uds_windows = "1.0.2"
+
 [profile.release]
 lto = true
 

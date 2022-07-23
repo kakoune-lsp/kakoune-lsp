@@ -5,9 +5,13 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use std::borrow::Cow;
 use std::fs;
 use std::io::{Read, Write};
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::path;
 use std::process::{Command, Stdio};
+
+#[cfg(not(windows))]
+use std::os::unix::net::{UnixListener, UnixStream};
+#[cfg(windows)]
+use uds_windows::{UnixListener, UnixStream};
 
 pub struct EditorTransport {
     // Not using Worker here as listener blocks forever and joining its thread
