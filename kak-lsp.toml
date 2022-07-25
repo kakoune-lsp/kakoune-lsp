@@ -35,19 +35,19 @@ command = "scry"
 [language.css]
 filetypes = ["css"]
 roots = ["package.json", ".git", ".hg"]
-command = "css-languageserver"
+command = "vscode-css-languageserver"
 args = ["--stdio"]
 
 [language.less]
 filetypes = ["less"]
 roots = ["package.json", ".git", ".hg"]
-command = "css-languageserver"
+command = "vscode-css-languageserver"
 args = ["--stdio"]
 
 [language.scss]
 filetypes = ["scss"]
 roots = ["package.json", ".git", ".hg"]
-command = "css-languageserver"
+command = "vscode-css-languageserver"
 args = ["--stdio"]
 
 [language.d]
@@ -119,7 +119,7 @@ settings_section = "_"
 [language.html]
 filetypes = ["html"]
 roots = ["package.json"]
-command = "html-languageserver"
+command = "vscode-html-languageserver"
 args = ["--stdio"]
 
 # # Commented out by default because you still need to set the paths in the JDT
@@ -161,7 +161,7 @@ args = ["lsp"]
 [language.json]
 filetypes = ["json"]
 roots = ["package.json"]
-command = "json-languageserver"
+command = "vscode-json-languageserver"
 args = ["--stdio"]
 
 # Requires Julia package "LanguageServer"
