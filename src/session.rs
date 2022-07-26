@@ -76,30 +76,12 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
 
                 let language_id = filetypes.get(&request.meta.filetype);
                 if language_id.is_none() {
-                    debug!(
+                    let msg = format!(
                         "Language server is not configured for filetype `{}`",
                         &request.meta.filetype
                     );
-
-                    let command = format!(
-                        "lsp-show-error 'Language server is not configured for filetype `{}`'",
-                        request.meta.filetype
-                    );
-
-                    // If the editor is expecting a fifo response, give it one, so it won't hang.
-                    if let Some(ref fifo) = request.meta.fifo {
-                        std::fs::write(fifo, &command).expect("Failed to write command to fifo");
-                    }
-
-                    if !request.meta.hook {
-                        let response = EditorResponse {
-                            meta: request.meta.clone(),
-                            command: command.into(),
-                        };
-                        if let Err(err) = editor.to_editor.sender().send(response) {
-                            error!("Failed to send stop message to editor: {err}");
-                        };
-                    }
+                    debug!("{}", msg);
+                    return_request_error(editor.to_editor.sender(), &request, &msg);
 
                     continue 'event_loop;
                 }
@@ -118,11 +100,13 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 match controllers.entry(route.clone()) {
                     Entry::Occupied(controller_entry) => {
                         if let Err(err) = controller_entry.get().worker.sender().send(request.clone())  {
-                            if let Some(fifo) = request.meta.fifo {
-                                cancel_blocking_request(fifo);
-                            }
-                            controller_entry.remove();
                             error!("Failed to send message to controller: {}", err);
+                            return_request_error(
+                                editor.to_editor.sender(),
+                                &request,
+                                "Language server is no longer running"
+                            );
+                            controller_entry.remove();
                             continue 'event_loop;
                         }
                     }
@@ -149,14 +133,27 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     0
 }
 
-/// When server is not running it's better to cancel blocking request.
-/// Because server can take a long time to initialize or can fail to start.
-/// We assume that it's less annoying for user to just repeat command later
-/// than to wait, cancel, and repeat.
-fn cancel_blocking_request(fifo: String) {
-    debug!("Blocking request but LSP server is not running");
-    let command = "lsp-show-error 'language server is not running, cancelling blocking request'";
-    std::fs::write(fifo, command).expect("Failed to write command to fifo");
+/// Sends an error back to the editor.
+///
+/// This will cancel any blocking requests and also print an error if the
+/// request was not triggered by an editor hook.
+fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
+    let command = format!("lsp-show-error {}", editor_quote(msg));
+
+    // If editor is expecting a fifo response, give it one, so it won't hang.
+    if let Some(ref fifo) = request.meta.fifo {
+        std::fs::write(fifo, &command).expect("Failed to write command to fifo");
+    }
+
+    if !request.meta.hook {
+        let response = EditorResponse {
+            meta: request.meta.clone(),
+            command: command.into(),
+        };
+        if let Err(err) = to_editor.send(response) {
+            error!("Failed to send error message to editor: {err}");
+        };
+    }
 }
 
 /// Reap controllers associated with editor session.
