@@ -1,14 +1,11 @@
 use crate::context::Context;
-use crate::position::lsp_position_to_kakoune;
+use crate::position::{get_lsp_position, lsp_position_to_kakoune};
 use crate::text_edit::apply_text_edits;
-use crate::types::{EditorMeta, KakounePosition};
-use crate::util::editor_quote;
+use crate::types::{EditorMeta, EditorParams, KakounePosition, PositionParams};
+use crate::util::{editor_escape, editor_quote};
 use crate::workspace;
-use lsp_types::ExecuteCommandParams;
-use lsp_types::InsertTextFormat;
-use lsp_types::TextEdit;
-use lsp_types::VersionedTextDocumentIdentifier;
-use lsp_types::{Range, ResourceOp, TextDocumentIdentifier, TextDocumentPositionParams};
+use lsp_types::request::Request;
+use lsp_types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use url::Url;
@@ -131,4 +128,47 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
         );
         ctx.exec(meta, command);
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpandMacroParams {
+    pub text_document: TextDocumentIdentifier,
+    pub position: Position,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExpandMacroResponse {
+    pub name: String,
+    pub expansion: String,
+}
+
+pub struct ExpandMacroRequest {}
+
+impl Request for ExpandMacroRequest {
+    type Params = ExpandMacroParams;
+    type Result = ExpandMacroResponse;
+    const METHOD: &'static str = "rust-analyzer/expandMacro";
+}
+
+pub fn expand_macro(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+    let params = PositionParams::deserialize(params).unwrap();
+    let req_params = ExpandMacroParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
+        },
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
+    };
+    ctx.call::<ExpandMacroRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+        editor_expand_macro(meta, result, ctx);
+    });
+}
+
+fn editor_expand_macro(meta: EditorMeta, result: ExpandMacroResponse, ctx: &mut Context) {
+    let command = format!(
+        "info 'expansion of {}!\n\n{}'",
+        editor_escape(&result.name),
+        editor_escape(&result.expansion)
+    );
+    ctx.exec(meta, command);
 }

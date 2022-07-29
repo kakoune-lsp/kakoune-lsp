@@ -356,6 +356,11 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             eclipse_jdt_ls::organize_imports(meta, ctx);
         }
 
+        // rust-analyzer
+        rust_analyzer::ExpandMacroRequest::METHOD => {
+            rust_analyzer::expand_macro(meta, params, ctx);
+        }
+
         // texlab
         texlab::Build::METHOD => {
             texlab::build(meta, params, ctx);

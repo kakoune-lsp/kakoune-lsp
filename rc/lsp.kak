@@ -1447,6 +1447,21 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 
 # rust-analyzer extensions
 
+define-command rust-analyzer-expand-macro -docstring "Expand macro recursively" %{
+    nop %sh{ (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"rust-analyzer/expandMacro\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+[params.position]
+line     = ${kak_cursor_line}
+column   = ${kak_cursor_column}
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command -hidden rust-analyzer-inlay-hints -docstring "DEPRECATED, use lsp-inlay-hints-enable. request inlay hints" %{
     lsp-inlay-hints
 }
