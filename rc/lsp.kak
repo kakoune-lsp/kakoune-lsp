@@ -286,7 +286,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didChange\"
-$([ -z ${kak_hook_param+x} ] || echo hook = true)
+hook     = true
 [params]
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
@@ -977,7 +977,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/didOpen\"
-$([ -z ${kak_hook_param+x} ] || echo hook = true)
+hook     = true
 [params]
 draft    = \"\"\"
 ${lsp_draft}\"\"\"
