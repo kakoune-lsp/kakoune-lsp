@@ -2057,23 +2057,23 @@ map global lsp-selection-range b '<esc>: lsp-selection-range-select bottom<ret>'
 map global lsp-selection-range t '<esc>: lsp-selection-range-select top<ret>'    -docstring 'select outermost node'
 
 define-command -hidden lsp-mappings-enable -params 1 -docstring "Add LSP mappings to goto and object mode" %{
-    map %arg{1} goto d '<esc>: lsp-definition<ret>' -docstring 'definition'
-    map %arg{1} goto r '<esc>: lsp-references<ret>' -docstring 'references'
-    map %arg{1} goto y '<esc>: lsp-type-definition<ret>' -docstring 'type definition'
-    map %arg{1} object a '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
-    map %arg{1} object <a-a> '<a-semicolon> lsp-object<ret>' -docstring 'LSP any symbol'
-    map %arg{1} object e '<a-semicolon> lsp-object Function Method<ret>' -docstring 'LSP function or method'
-    map %arg{1} object k '<a-semicolon> lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
+    map %arg{1} goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
+    map %arg{1} goto r '<esc>:lsp-references<ret>' -docstring 'references'
+    map %arg{1} goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
+    map %arg{1} object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+    map %arg{1} object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+    map %arg{1} object e '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
+    map %arg{1} object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
 }
 
 define-command -hidden lsp-mappings-disable -params 1 -docstring "Remove LSP mappings from goto and object mode" %{
-    unmap %arg{1} goto d '<esc>: lsp-definition<ret>'
-    unmap %arg{1} goto r '<esc>: lsp-references<ret>'
-    unmap %arg{1} goto y '<esc>: lsp-type-definition<ret>'
-    unmap %arg{1} object a '<a-semicolon> lsp-object<ret>'
-    unmap %arg{1} object <a-a> '<a-semicolon> lsp-object<ret>'
-    unmap %arg{1} object e '<a-semicolon> lsp-object Function Method<ret>'
-    unmap %arg{1} object k '<a-semicolon> lsp-object Class Interface Struct<ret>'
+    unmap %arg{1} goto d '<esc>:lsp-definition<ret>'
+    unmap %arg{1} goto r '<esc>:lsp-references<ret>'
+    unmap %arg{1} goto y '<esc>:lsp-type-definition<ret>'
+    unmap %arg{1} object a '<a-semicolon>lsp-object<ret>'
+    unmap %arg{1} object <a-a> '<a-semicolon>lsp-object<ret>'
+    unmap %arg{1} object e '<a-semicolon>lsp-object Function Method<ret>'
+    unmap %arg{1} object k '<a-semicolon>lsp-object Class Interface Struct<ret>'
 }
 
 ### Default integration ###
