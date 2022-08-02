@@ -242,7 +242,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     honors_change_annotations: None,
                 }),
                 publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
-                    related_information: Some(false),
+                    related_information: Some(true),
                     tag_support: None,
                     version_support: None,
                     code_description_support: None,

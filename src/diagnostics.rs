@@ -219,7 +219,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                         }
                     };
                     format!(
-                        "{}:{}:{}: {}: {}",
+                        "{}:{}:{}: {}: {}{}",
                         short_file_path(filename, &ctx.root_path),
                         p.line,
                         p.column,
@@ -233,7 +233,8 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                                 "warning"
                             }
                         },
-                        x.message
+                        x.message,
+                        format_related_information(x, ctx).unwrap_or("".to_string())
                     )
                 })
                 .collect::<Vec<_>>()
@@ -245,4 +246,29 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
         editor_quote(&content),
     );
     ctx.exec(meta, command);
+}
+
+pub fn format_related_information(d: &Diagnostic, ctx: &Context) -> Option<String> {
+    d.related_information.as_ref().map(|infos| {
+        "\n".to_string()
+            + &infos
+                .iter()
+                .map(|info| {
+                    let path = info.location.uri.to_file_path().unwrap();
+                    let filename = path.to_str().unwrap();
+                    let p = get_kakoune_position_with_fallback(
+                        filename,
+                        info.location.range.start,
+                        ctx,
+                    );
+                    format!(
+                        "{}:{}:{}: {}",
+                        short_file_path(filename, &ctx.root_path),
+                        p.line,
+                        p.column,
+                        info.message
+                    )
+                })
+                .join("\n")
+    })
 }

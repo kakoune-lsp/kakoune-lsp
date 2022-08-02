@@ -3,6 +3,7 @@ use std::fs;
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_HOVER;
 use crate::context::*;
+use crate::diagnostics::format_related_information;
 use crate::markup::*;
 use crate::position::*;
 use crate::types::*;
@@ -66,7 +67,11 @@ pub fn editor_hover(
                 .filter(|x| !x.message.is_empty())
                 .map(|x| {
                     // Indent line breaks to the same level as the bullet point
-                    let message = x.message.trim().replace('\n', "\n  ");
+                    let message = (x.message.trim().to_string()
+                        + &format_related_information(x, ctx)
+                            .map(|s| "\n  ".to_string() + &s)
+                            .unwrap_or("".to_string()))
+                        .replace('\n', "\n  ");
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
                         return format!("* {}", message);
