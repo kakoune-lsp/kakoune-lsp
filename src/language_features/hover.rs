@@ -65,9 +65,11 @@ pub fn editor_hover(
                 .filter(|x| ranges_touch_same_line(x.range, lsp_range))
                 .filter(|x| !x.message.is_empty())
                 .map(|x| {
+                    // Indent line breaks to the same level as the bullet point
+                    let message = x.message.trim().replace('\n', "\n  ");
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
-                        return format!("* {}", x.message.trim().replace('\n', "\n  "));
+                        return format!("* {}", message);
                     }
 
                     let face = x
@@ -87,9 +89,7 @@ pub fn editor_hover(
                     format!(
                         "• {{{}}}{}{{{}}}",
                         face,
-                        escape_kakoune_markup(x.message.trim())
-                            // Indent line breaks to the same level as the bullet point
-                            .replace('\n', "\n  "),
+                        escape_kakoune_markup(&message),
                         FACE_INFO_DEFAULT,
                     )
                 })
