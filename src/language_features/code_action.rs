@@ -123,10 +123,13 @@ pub fn editor_code_actions(
     let titles_and_commands = actions
         .iter()
         .map(|c| {
-            let title = match c {
+            let mut title: &str = match c {
                 CodeActionOrCommand::Command(command) => &command.title,
                 CodeActionOrCommand::CodeAction(action) => &action.title,
             };
+            if let Some((head, _)) = title.split_once('\n') {
+                title = head
+            }
             let select_cmd = code_action_to_editor_command(c, false);
             format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
         })
