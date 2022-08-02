@@ -24,7 +24,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let document = document.unwrap();
     let version = document.version;
     let diagnostics = &ctx.diagnostics[buffile];
-    let ranges = diagnostics
+    let inline_diagnostics = diagnostics
         .iter()
         .sorted_unstable_by_key(|x| x.severity)
         .rev()
@@ -89,7 +89,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     }
 
     // Assemble ranges based on the lines
-    let diagnostic_ranges = lines_with_diagnostics
+    let inlay_diagnostics = lines_with_diagnostics
         .iter()
         .map(|(line_number, line_diagnostics)| {
             let line_text = get_line(*line_number as usize, &document.text);
@@ -123,9 +123,9 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
          set-option buffer lsp_diagnostic_hint_count {hint_count}; \
          set-option buffer lsp_diagnostic_info_count {info_count}; \
          set-option buffer lsp_diagnostic_warning_count {warning_count}; \
-         set-option buffer lsp_errors {version} {ranges}; \
-         evaluate-commands \"set-option buffer lsp_error_lines {version} {line_flags} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
-         set-option buffer lsp_diagnostics {version} {diagnostic_ranges}"
+         set-option buffer lsp_inline_diagnostics {version} {inline_diagnostics}; \
+         evaluate-commands \"set-option buffer lsp_diagnostic_lines {version} {line_flags} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
+         set-option buffer lsp_inlay_diagnostics {version} {inlay_diagnostics}"
     );
     let command = format!(
         "evaluate-commands -buffer {} %§{}§",
