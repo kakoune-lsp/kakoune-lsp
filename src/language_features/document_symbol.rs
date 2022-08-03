@@ -146,23 +146,35 @@ pub fn editor_document_symbol(
 /// Represent list of symbols as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
 pub fn format_symbol<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
-    items
-        .into_iter()
-        .map(|symbol| {
-            let mut filename_path = PathBuf::default();
-            let filename = symbol_filename(meta, &symbol, &mut filename_path);
-            let position =
-                get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
-            let description = format!("{:?} {}", symbol.kind(), symbol.name());
-            format!(
-                "{}:{}:{}:{}\n",
-                short_file_path(filename, &ctx.root_path),
-                position.line,
-                position.column,
-                description
-            ) + &format_symbol(symbol.children(), meta, ctx)
-        })
-        .join("")
+    fn format_symbol_at_depth<T: Symbol<T>>(
+        items: Vec<T>,
+        meta: &EditorMeta,
+        ctx: &Context,
+        depth: usize,
+    ) -> String {
+        items
+            .into_iter()
+            .map(|symbol| {
+                let mut filename_path = PathBuf::default();
+                let filename = symbol_filename(meta, &symbol, &mut filename_path);
+                let position = get_kakoune_position_with_fallback(
+                    filename,
+                    symbol.selection_range().start,
+                    ctx,
+                );
+                let description = format!("{:?} {}", symbol.kind(), symbol.name());
+                format!(
+                    "{}{}:{}:{}:{}\n",
+                    "  ".repeat(depth),
+                    short_file_path(filename, &ctx.root_path),
+                    position.line,
+                    position.column,
+                    description
+                ) + &format_symbol_at_depth(symbol.children(), meta, ctx, depth + 1)
+            })
+            .join("")
+    }
+    format_symbol_at_depth(items, meta, ctx, 0)
 }
 
 fn symbol_kind_from_string(value: &str) -> Option<SymbolKind> {
