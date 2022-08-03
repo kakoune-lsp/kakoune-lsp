@@ -234,7 +234,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             }
                         },
                         x.message,
-                        format_related_information(x, ctx).unwrap_or("".to_string())
+                        format_related_information(x, ctx).unwrap_or_default()
                     )
                 })
                 .collect::<Vec<_>>()

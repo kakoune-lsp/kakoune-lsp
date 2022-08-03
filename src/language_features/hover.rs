@@ -70,7 +70,7 @@ pub fn editor_hover(
                     let message = (x.message.trim().to_string()
                         + &format_related_information(x, ctx)
                             .map(|s| "\n  ".to_string() + &s)
-                            .unwrap_or("".to_string()))
+                            .unwrap_or_default())
                         .replace('\n', "\n  ");
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
