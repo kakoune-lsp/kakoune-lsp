@@ -196,7 +196,7 @@ pub fn editor_completion(
                     static ref SNIPPET_PLACEHOLDER_RE: Regex = Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
                 }
                 let mut snippet = insert_text;
-                if !snippet.contains("$0") {
+                if !snippet.contains("$0") && !snippet.contains("${0") {
                     snippet += "$0";
                 }
                 let insert_text = SNIPPET_TABSTOP_RE.replace_all(&snippet, "");
