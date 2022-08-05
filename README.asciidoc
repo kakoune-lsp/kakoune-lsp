@@ -526,7 +526,6 @@ For example, you can use `<tab>` to select a placeholder if there is one, or els
 
 [source,kak]
 ----
-map global normal <tab> ': try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
 map global insert <tab> '<a-;>: try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
 ----
 
@@ -534,7 +533,6 @@ or `<c-n>` (might need to hide the completion menu with Kakoune's `<c-o>` comman
 
 [source,kak]
 ----
-map global normal <c-n> ': try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>c-n> }<ret>' -docstring 'Select next snippet placeholder'
 map global insert <c-n> '<a-;>: lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
 hook global InsertCompletionShow .* %{
   unmap global insert <c-n> '<a-;>: lsp-snippets-select-next-placeholders<ret>'
