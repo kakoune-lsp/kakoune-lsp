@@ -2103,6 +2103,10 @@ define-command lsp-enable -docstring "Default integration with kak-lsp" %{
     hook -group lsp global BufSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global InsertIdle .* lsp-completion
+    hook -group lsp global ModeChange pop:insert:.* %{
+        set-option window lsp_snippets_placeholders
+        set-option window lsp_snippets_placeholder_groups
+    }
     # A non-empty hook parameter means some completion was inserted.
     hook -group lsp global InsertCompletionHide .+ lsp-completion-accepted
     hook -group lsp global NormalIdle .* %{
@@ -2158,6 +2162,10 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     hook -group lsp window WinSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp window InsertIdle .* lsp-completion
+    hook -group lsp window ModeChange pop:insert:.* %{
+        set-option window lsp_snippets_placeholders
+        set-option window lsp_snippets_placeholder_groups
+    }
     # A non-empty hook parameter means some completion was inserted.
     hook -group lsp window InsertCompletionHide .+ lsp-completion-accepted
     hook -group lsp window NormalIdle .* %{
