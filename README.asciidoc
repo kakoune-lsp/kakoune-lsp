@@ -530,7 +530,7 @@ map global normal <tab> ': try lsp-snippets-select-next-placeholders catch %{ ex
 map global insert <tab> '<a-;>: try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
 ----
 
-or `<c-n>` (while the completion menu is hidden):
+or `<c-n>` (might need to hide the completion menu with Kakoune's `<c-o>` command):
 
 [source,kak]
 ----
