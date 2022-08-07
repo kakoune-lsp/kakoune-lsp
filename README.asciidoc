@@ -7,6 +7,7 @@ kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Serv
 1. <<Install kak-lsp>>
 2. <<Install language servers for your desired languages>>
 3. <<Configure Kakoune to enable kak-lsp>>
+4. <<Configure mappings>>
 
 === Install kak-lsp
 
@@ -126,6 +127,24 @@ hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %
 }
 ----
 
+=== Configure mappings
+
+There are three default mappings in goto-mode: `gd` (`lsp-definition`), `gy`
+(`lsp-type-definition`) and `gr` (`lsp-references`).  You can override them in your kakrc after
+this plugin is loaded.
+
+Here are additional recommended mappings. See below for the meaning of each command.
+
+[source,kak]
+----
+map global user l %{:enter-user-mode lsp<ret>} -docstring "LSP mode"
+map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
+map global object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+map global object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
+map global object e '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
+map global object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
+----
+
 == Usage
 
 NOTE: Contents below corresponds to the master branch HEAD and could be slightly out-of-sync
@@ -176,10 +195,7 @@ hook global WinSetOption filetype=rust %{
 }
 ----
 
-* `lsp-object` command and its [object mode](https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#object-mode) mappings to select adjacent or surrounding symbols. The predefined object types are:
-** `e` to select functions and methods
-** `k` to select classes and structs
-** `a` or `<a-a>` to select any symbol
+* `lsp-object` command to select adjacent or surrounding syntax tree nodes in [object mode](https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#object-mode)
 * `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
 * `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
@@ -203,14 +219,7 @@ even if the Kakoune session is still up and running. Change `server.timeout` in 
 to tweak this duration, or set it to 0 to disable this behavior. In any scenario,  a new request
 would spin up a fresh server if it is down.
 
-* `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode].
-  The following example mapping gives you access to the shortcuts from below table after typing `,l`.
-
-[source,kak]
-----
-map global user l %{: enter-user-mode lsp<ret>} -docstring "LSP mode"
-----
-
+* `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode] with the following default mappings:
 
 |===
 | Binding | Command
@@ -514,22 +523,14 @@ Current limitations of this feature are:
 
 == Snippets
 
-kak-lsp has experimental support for snippets. It is enabled by setting `snippet_support = true` at the top level of the config.
+Snippets are completions that come with placeholders ("tabstops") in the places you likely want
+to insert text (for example function call arguments).  The placeholders are highlighted with
+the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`.
 
-It uses the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`, you may want to customize those.
-
-You'll probably want to add a mapping for `lsp-snippets-select-next-placeholders`, which allows
-to jump between tabstops (like function call arguments).
-
-For example, you can use `<tab>` to select a placeholder if there is one, or else execute
-`<tab>` as normal:
-
-[source,kak]
-----
-map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
-----
-
-or `<c-n>` (might need to hide the completion menu with Kakoune's `<c-o>` command):
+The `lsp-snippets-select-next-placeholders` command allows to jump to the next tabstop (like
+function call arguments). The suggested mapping uses `<tab>` (see <<Configure mappings>>). Here's
+a way to bind it to `<c-n>` instead (might need to hide the completion menu with Kakoune's
+`<c-o>` command):
 
 [source,kak]
 ----
@@ -542,6 +543,7 @@ hook global InsertCompletionHide .* %{
 }
 ----
 
+Snippet support can be disabled by setting `snippet_support = false` at the top level of the config.
 
 == Limitations
 

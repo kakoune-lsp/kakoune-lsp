@@ -4,6 +4,7 @@ Here are some notable changes. See the git log for a full list of changes.
 
 Breaking changes:
 - Completion snippet support is now enabled again in the default config.
+- The default object mode mappings have been removed. Users are expected to add their preferred mappings. The README now has a section with recommended mappings.
 
 ## 12.2.1 - 2022-05-08
 
