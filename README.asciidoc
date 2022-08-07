@@ -106,7 +106,7 @@ quick installation of language servers supported by kak-lsp out of the box.
 
 === Configure Kakoune to enable kak-lsp
 
-To enable LSP support for configured languages (see <<configuration>>) just add the following
+To enable LSP support for configured languages (see <<Configuration>>) just add the following
 commands to your `kakrc`:
 
 [source,kak]
