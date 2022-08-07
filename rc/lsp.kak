@@ -2059,10 +2059,6 @@ map global lsp-selection-range t '<esc>: lsp-selection-range-select top<ret>'   
 map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
 map global goto r '<esc>:lsp-references<ret>' -docstring 'references'
 map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
-map global object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
-map global object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
-map global object e '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
-map global object k '<a-semicolon>lsp-object Class Interface Struct<ret>' -docstring 'LSP class interface or struct'
 
 ### Default integration ###
 
