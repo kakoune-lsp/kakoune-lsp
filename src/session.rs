@@ -1,3 +1,4 @@
+use crate::context::meta_for_session;
 use crate::controller;
 use crate::editor_transport;
 use crate::project_root::find_project_root;
@@ -7,6 +8,7 @@ use crate::util::*;
 use crossbeam_channel::{after, never, select, Sender};
 use lsp_types::notification::Notification;
 use lsp_types::*;
+use regex::Regex;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -63,6 +65,18 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 // should be safe to unwrap as we just checked request for being None
                 // done this way instead of `match` to reduce nesting
                 let request = request.unwrap();
+                let request: EditorRequest = match toml::from_str(&request) {
+                    Ok(req) => req,
+                    Err(err) => {
+                        error!("Failed to parse editor request: {}", err);
+                        handle_broken_editor_request(
+                            editor.to_editor.sender(),
+                            request,
+                            &config.server.session
+                        );
+                        continue 'event_loop;
+                    }
+                };
                 // editor explicitely asked us to stop kak-lsp session
                 // (and we stop, even if other editor sessions are using this kak-lsp session)
                 if request.method == "stop" {
@@ -131,6 +145,40 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     }
     stop_session(&mut controllers);
     0
+}
+
+/// Tries to send an error to the client about a request that failed to parse.
+fn handle_broken_editor_request(
+    to_editor: &Sender<EditorResponse>,
+    request: String,
+    session: &str,
+) {
+    // Try to parse enough of the broken toml to send the error to the editor.
+    lazy_static::lazy_static! {
+        static ref CLIENT_RE: Regex = Regex::new(r#"(?m)^client *= *"([a-zA-Z0-9_-]*)""#)
+            .expect("Failed to parse client name regex");
+        static ref HOOK_RE: Regex = Regex::new(r"(?m)^hook *= *true")
+            .expect("Failed to parse hook regex");
+    }
+    if let Some(client_name) = CLIENT_RE
+        .captures(&request)
+        .and_then(|cap| cap.get(1))
+        .map(|cap| cap.as_str())
+    {
+        // We still don't want to spam the user if a hook triggered the error.
+        if !HOOK_RE.is_match(&request) {
+            let msg = "Failed to parse editor request";
+            let meta = meta_for_session(session.to_string(), Some(client_name.to_string()));
+            let command = format!("lsp-show-error {}", editor_quote(msg));
+            let response = EditorResponse {
+                meta,
+                command: command.into(),
+            };
+            if let Err(err) = to_editor.send(response) {
+                error!("Failed to send error message to editor: {err}");
+            };
+        }
+    }
 }
 
 /// Sends an error back to the editor.

@@ -250,23 +250,9 @@ impl Context {
         id
     }
 
-    pub fn meta_for_session(&self, client: Option<String>) -> EditorMeta {
-        EditorMeta {
-            session: self.session.clone(),
-            client,
-            buffile: "".to_string(),
-            filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
-            version: 0,
-            fifo: None,
-            command_fifo: None,
-            write_response_to_fifo: false,
-            hook: false,
-        }
-    }
-
     pub fn meta_for_buffer(&self, client: Option<String>, buffile: &str) -> Option<EditorMeta> {
         let document = self.documents.get(buffile)?;
-        let mut meta = self.meta_for_session(client);
+        let mut meta = meta_for_session(self.session.clone(), client);
         meta.buffile = buffile.to_string();
         meta.version = document.version;
         Some(meta)
@@ -278,9 +264,23 @@ impl Context {
         buffile: &str,
         version: i32,
     ) -> EditorMeta {
-        let mut meta = self.meta_for_session(client);
+        let mut meta = meta_for_session(self.session.clone(), client);
         meta.buffile = buffile.to_string();
         meta.version = version;
         meta
+    }
+}
+
+pub fn meta_for_session(session: String, client: Option<String>) -> EditorMeta {
+    EditorMeta {
+        session,
+        client,
+        buffile: "".to_string(),
+        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
+        version: 0,
+        fifo: None,
+        command_fifo: None,
+        write_response_to_fifo: false,
+        hook: false,
     }
 }

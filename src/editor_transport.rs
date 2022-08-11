@@ -12,7 +12,7 @@ use std::process::{Command, Stdio};
 pub struct EditorTransport {
     // Not using Worker here as listener blocks forever and joining its thread
     // would block kak-lsp from exiting.
-    pub from_editor: Receiver<EditorRequest>,
+    pub from_editor: Receiver<String>,
     pub to_editor: Worker<EditorResponse, Void>,
 }
 
@@ -39,8 +39,6 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
     }
     std::thread::spawn(move || {
         if let Some(initial_request) = initial_request {
-            let initial_request: EditorRequest =
-                toml::from_str(&initial_request).expect("Failed to parse initial request");
             if sender.send(initial_request).is_err() {
                 return;
             };
@@ -108,7 +106,7 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
     })
 }
 
-pub fn start_unix(path: &path::Path, sender: Sender<EditorRequest>) {
+pub fn start_unix(path: &path::Path, sender: Sender<String>) {
     let listener = match UnixListener::bind(&path) {
         Ok(listener) => listener,
         Err(e) => {
@@ -127,13 +125,6 @@ pub fn start_unix(path: &path::Path, sender: Sender<EditorRequest>) {
                             continue;
                         }
                         debug!("From editor: {}", request);
-                        let request: EditorRequest = match toml::from_str(&request) {
-                            Ok(req) => req,
-                            Err(err) => {
-                                error!("Failed to parse editor request: {}", err);
-                                continue;
-                            }
-                        };
                         if sender.send(request).is_err() {
                             return;
                         };
