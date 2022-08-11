@@ -144,7 +144,7 @@ If you have followed above steps you get
 ** to exclude diagnostics, use `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'`
 * `lsp-declaration` command to jump to the declaration of the symbol under the main cursor
 * `lsp-definition` command to jump to the definition of the symbol under the main cursor
-* `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor
+* `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor, mapped to `gy` by default
 * `lsp-implementation` command to find implementations for the symbol under the main cursor
 * `lsp-references` command to find references to the symbol under the main cursor, mapped to `gr` by default
 ** for the previous five commands, the `\*goto*` buffer has filetype `lsp-goto`, so you can press `<ret>` on a line or use the `lsp-jump` command
