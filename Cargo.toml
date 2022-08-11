@@ -1,6 +1,6 @@
 [package]
 name = "kak-lsp"
-version = "12.2.1-snapshot"
+version = "13.0.0"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>", "Johannes Altmanninger <aclopte@gmail.com>"]
 edition = "2018"
 license = "Unlicense/MIT"

@@ -1,4 +1,4 @@
-## Unreleased
+## 13.0.0 - 2022-08-11
 
 Here are some notable changes. See the git log for a full list of changes.
 
