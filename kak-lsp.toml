@@ -303,9 +303,10 @@ filetypes = ["ruby"]
 roots = ["Gemfile"]
 command = "solargraph"
 args = ["stdio"]
-[language.ruby.settings]
+settings_section = "_"
+[language.ruby.settings._]
 # See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
-# "solargraph.completion" = true
+# diagnostics = false
 
 # [language.rust]
 # filetypes = ["rust"]

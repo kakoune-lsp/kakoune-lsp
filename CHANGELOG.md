@@ -2,6 +2,7 @@
 
 Fixes:
 - `lsp-find-error` and code lenses were broken in 13.0.0, which has been fixed.
+- The server-specific configuration for the `solargraph` Ruby language server has been fixed.
 
 ## 13.0.0 - 2022-08-11
 
