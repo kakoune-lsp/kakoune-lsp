@@ -1,5 +1,8 @@
 ## Unreleased
 
+Fixes:
+- `lsp-find-error` and code lenses were broken in 13.0.0, which has been fixed.
+
 ## 13.0.0 - 2022-08-11
 
 Here are some notable changes. See the git log for a full list of changes.

@@ -46,7 +46,7 @@ fn editor_code_lens(meta: EditorMeta, result: Option<Vec<CodeLens>>, ctx: &mut C
     };
     let line_flags = gather_line_flags(ctx, buffile).0;
     let command = format!(
-         "evaluate-commands \"set-option buffer lsp_error_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"",
+         "evaluate-commands \"set-option buffer lsp_diagnostic_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"",
          version, line_flags,
     );
     let command = format!(
