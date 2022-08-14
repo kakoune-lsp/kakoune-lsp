@@ -57,6 +57,7 @@ pub struct LanguageConfig {
 }
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct DynamicLanguageConfig {
     pub settings: Option<Value>,
 }
