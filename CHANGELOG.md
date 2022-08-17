@@ -2,6 +2,7 @@
 
 Breaking changes:
 - [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) replaces `flow` as default language server for JavaScript.
+- [`crystalline`](https://github.com/elbywan/crystalline) replaces `scry` as default language server for Crystal.
 
 Fixes:
 - `lsp-find-error` and code lenses were broken in 13.0.0, which has been fixed.

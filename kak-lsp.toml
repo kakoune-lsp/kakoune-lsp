@@ -30,7 +30,7 @@ settings_section = "_"
 [language.crystal]
 filetypes = ["crystal"]
 roots = ["shard.yml"]
-command = "scry"
+command = "crystalline"
 
 [language.css]
 filetypes = ["css"]
