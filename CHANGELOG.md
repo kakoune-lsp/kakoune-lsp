@@ -3,6 +3,7 @@
 Breaking changes:
 - [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) replaces `flow` as default language server for JavaScript.
 - [`crystalline`](https://github.com/elbywan/crystalline) replaces `scry` as default language server for Crystal.
+- The user mode mapping for `s` now runs `lsp-goto-document-symbol` instead of `lsp-signature-help`. The old mapping (`<c-o>`) has been removed.
 
 Fixes:
 - `lsp-find-error` and code lenses were broken in 13.0.0, which has been fixed.
