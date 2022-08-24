@@ -194,35 +194,71 @@ define-command -hidden lsp-perform-code-lens -params 1.. -docstring "Called on :
 }
 
 define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
-    evaluate-commands %sh{
-        shellquote() {
-            printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+    try %{
+        evaluate-commands -draft %{prompt -menu '' ''}
+        evaluate-commands %sh{
+            shellquote() {
+                printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+            }
+            cases=
+            completion=
+            nl=$(printf '\n.'); nl=${nl%.}
+            while [ $# -gt 0 ]; do
+                title=$1; shift
+                command=$1; shift
+                completion="${completion}${title}${nl}"
+                cases="${cases}
+                $(shellquote "$title" s/¶/¶¶/g))
+                    printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
+                    ;;"
+            done
+            version=${kak_version#v}
+            version=${version%%.*}
+            printf "\
+            prompt %%{lsp-menu: } %%§
+                evaluate-commands %%sh¶
+                    case \"\$kak_text\" in%s
+                    *) echo fail -- no such item: \"'\$(printf %%s \"\$kak_text\" | sed \"s/'/''/g\")'\" ;;
+                    esac
+                ¶
+            §" "$cases"
+            printf ' -menu -shell-script-candidates %%§
+                printf %%s %s
+                §\n' "$(shellquote "$completion")"
         }
-        cases=
-        completion=
-        nl=$(printf '\n.'); nl=${nl%.}
-        while [ $# -gt 0 ]; do
-            title=$1; shift
-            command=$1; shift
-            completion="${completion}${title}${nl}"
-            cases="${cases}
-            $(shellquote "$title" s/¶/¶¶/g))
-                printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
-                ;;"
-        done
-        printf "\
-        define-command -override -hidden lsp-menu-select -params 1 %%§
-            evaluate-commands %%sh¶
-                case \"\$1\" in%s
-                *) echo fail -- no such item: \"'\$(printf %%s \"\$1\" | sed \"s/'/''/g\")'\" ;;
-                esac
-            ¶
-        §" "$cases"
-        printf ' -menu -shell-script-candidates %%§
-            printf %%s %s
-            §' "$(shellquote "$completion")"
+    } catch %{
+        evaluate-commands %sh{
+            shellquote() {
+                printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+            }
+            cases=
+            completion=
+            nl=$(printf '\n.'); nl=${nl%.}
+            while [ $# -gt 0 ]; do
+                title=$1; shift
+                command=$1; shift
+                completion="${completion}${title}${nl}"
+                cases="${cases}
+                $(shellquote "$title" s/¶/¶¶/g))
+                    printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
+                    ;;"
+            done
+            version=${kak_version#v}
+            version=${version%%.*}
+            printf "\
+            define-command -override -hidden lsp-menu-select -params 1 %%§
+                evaluate-commands %%sh¶
+                    case \"\$1\" in%s
+                    *) echo fail -- no such item: \"'\$(printf %%s \"\$1\" | sed \"s/'/''/g\")'\" ;;
+                    esac
+                ¶
+            §" "$cases"
+            printf ' -menu -shell-script-candidates %%§
+                printf %%s %s
+                §\n' "$(shellquote "$completion")"
+            echo 'execute-keys %{: lsp-menu-select <tab>}'
+        }
     }
-    execute-keys %{: lsp-menu-select <tab>}
 }
 
 # Options for information exposed by kak-lsp.
