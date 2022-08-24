@@ -236,7 +236,7 @@ would spin up a fresh server if it is down.
 | l | lsp-code-lens
 | r | lsp-references
 | R | lsp-rename-prompt
-| s | lsp-signature-help
+| s | lsp-goto-document-symbol
 | S | lsp-document-symbol
 | o | lsp-workspace-symbol-incr
 | <c-o> | lsp-goto-document-symbol
