@@ -675,3 +675,62 @@ fn flat_symbol_ranges<T: Symbol<T>>(
     }
     result
 }
+
+pub fn document_symbol_menu(meta: EditorMeta, _editor_params: EditorParams, ctx: &mut Context) {
+    let req_params = DocumentSymbolParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
+        },
+        partial_result_params: Default::default(),
+        work_done_progress_params: Default::default(),
+    };
+    ctx.call::<DocumentSymbolRequest, _>(
+        meta,
+        req_params,
+        move |ctx: &mut Context, meta, result| editor_document_symbol_menu(meta, result, ctx),
+    );
+}
+
+fn editor_document_symbol_menu(
+    meta: EditorMeta,
+    result: Option<DocumentSymbolResponse>,
+    ctx: &mut Context,
+) {
+    let choices = match result {
+        Some(DocumentSymbolResponse::Flat(result)) => {
+            if result.is_empty() {
+                return;
+            }
+            symbol_menu(result, &meta, ctx)
+        }
+        Some(DocumentSymbolResponse::Nested(result)) => {
+            if result.is_empty() {
+                return;
+            }
+            symbol_menu(result, &meta, ctx)
+        }
+        None => return,
+    };
+    let command = format!("lsp-menu {}", choices);
+    ctx.exec(meta, command);
+}
+
+fn symbol_menu<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
+    items
+        .into_iter()
+        .map(|symbol| {
+            let mut filename_path = PathBuf::default();
+            let filename = symbol_filename(meta, &symbol, &mut filename_path);
+            let KakounePosition { line, column } =
+                get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
+            let name = symbol.name();
+            let jump = format!(
+                "edit -existing -- {} {} {}",
+                editor_quote(filename),
+                line,
+                column
+            );
+            format!("{} {}", editor_quote(name), editor_quote(&jump))
+        })
+        .join(" ")
+}

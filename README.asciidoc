@@ -173,7 +173,7 @@ If you have followed above steps you get
 * `lsp-next-location` and `lsp-previous-location` to jump to the next or previous location listed in a buffer with the `lsp-goto` filetype. These also work for buffers `\*grep*`, `\*lint*` and `\*make*`
 * `lsp-highlight-references` command to highlight all references to the symbol under the main cursor in the current buffer with the `Reference` face (which is equal to the `MatchingChar` face by default)
 * `lsp-document-symbol` command to list the current buffer's symbols
-  * To pick a symbol from a menu, use the `<c-o>` mapping from the `lsp` user mode.
+* `lsp-goto-document-symbol` command to jump to one of the current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
 * `lsp-workspace-symbol-incr` command to incrementally list project-wide symbols matching the query
 ** `\*symbols*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
@@ -239,7 +239,7 @@ would spin up a fresh server if it is down.
 | s | lsp-signature-help
 | S | lsp-document-symbol
 | o | lsp-workspace-symbol-incr
-| <c-o> | lsp-connect lsp-goto-document-symbol lsp-document-symbol
+| <c-o> | lsp-goto-document-symbol
 | n | lsp-find-error
 | p | lsp-find-error --previous
 | v | lsp-selection-range
