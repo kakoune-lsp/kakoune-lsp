@@ -712,7 +712,7 @@ fn editor_document_symbol_menu(
         }
         None => return,
     };
-    let command = format!("lsp-menu{}", choices);
+    let command = format!("lsp-menu %[Jump to symbol] {}", choices);
     ctx.exec(meta, command);
 }
 
