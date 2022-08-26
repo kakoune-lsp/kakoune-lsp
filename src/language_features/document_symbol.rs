@@ -113,7 +113,7 @@ impl Symbol<DocumentSymbol> for DocumentSymbol {
     }
 }
 
-pub fn editor_document_symbol(
+fn editor_document_symbol(
     meta: EditorMeta,
     result: Option<DocumentSymbolResponse>,
     ctx: &mut Context,
