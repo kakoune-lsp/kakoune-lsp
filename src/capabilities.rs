@@ -490,7 +490,9 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     probe_feature(ctx, &mut features, CAPABILITY_IMPLEMENTATION);
     probe_feature(ctx, &mut features, CAPABILITY_REFERENCES);
     probe_feature(ctx, &mut features, CAPABILITY_DOCUMENT_HIGHLIGHT);
-    probe_feature(ctx, &mut features, CAPABILITY_DOCUMENT_SYMBOL);
+    if server_has_capability(ctx, CAPABILITY_DOCUMENT_SYMBOL) {
+        features.push("lsp-document-symbol, lsp-object, lsp-goto-document-symbol".to_string());
+    }
     probe_feature(ctx, &mut features, CAPABILITY_WORKSPACE_SYMBOL);
     probe_feature(ctx, &mut features, CAPABILITY_FORMATTING);
     probe_feature(ctx, &mut features, CAPABILITY_RANGE_FORMATTING);
