@@ -327,7 +327,7 @@ kak-lsp's Kakoune integration declares the following options:
 * `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
 * `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time the user pauses in normal mode.
 * `lsp_auto_show_code_actions` (bool): If this option is `true` then `lsp-code-actions` is executed every time the user pauses in normal mode.
-* `lsp_config` (str): This is a TOML string of the same format as `kak-lsp.toml`, except it only supports one settings:
+* `lsp_config` (str): This is a TOML string of the same format as `kak-lsp.toml`, except it currently only supports one kind of configuration value:
 ** `[language.<filetype>.settings]`: this works just like the static configuration of the same name in `kak-lsp.toml`, see the section about server-specific configuration. This will override the static configuration of the given language.
 
 For example, you can toggle an option dynamically with a command like this:
