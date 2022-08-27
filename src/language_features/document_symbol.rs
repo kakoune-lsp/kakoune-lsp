@@ -711,26 +711,38 @@ fn editor_document_symbol_menu(
         }
         None => return,
     };
-    let command = format!("lsp-menu {}", choices);
+    let command = format!("lsp-menu{}", choices);
     ctx.exec(meta, command);
 }
 
-fn symbol_menu<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
-    items
-        .into_iter()
-        .map(|symbol| {
-            let mut filename_path = PathBuf::default();
-            let filename = symbol_filename(meta, &symbol, &mut filename_path);
-            let KakounePosition { line, column } =
-                get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
-            let name = symbol.name();
-            let jump = format!(
-                "edit -existing -- {} {} {}",
-                editor_quote(filename),
-                line,
-                column
-            );
-            format!("{} {}", editor_quote(name), editor_quote(&jump))
-        })
-        .join(" ")
+fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
+    fn walk<T, F>(visit: &mut F, s: T)
+    where
+        T: Symbol<T>,
+        F: FnMut(&T),
+    {
+        visit(&s);
+        for child in s.children() {
+            walk(visit, child);
+        }
+    }
+    let mut menu_cmd = String::new();
+    let mut add_symbol = |symbol: &T| {
+        let mut filename_path = PathBuf::default();
+        let filename = symbol_filename(meta, symbol, &mut filename_path);
+        let KakounePosition { line, column } =
+            get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
+        let name = symbol.name();
+        let jump = format!(
+            "edit -existing -- {} {} {}",
+            editor_quote(filename),
+            line,
+            column
+        );
+        menu_cmd.push_str(&format!(" {} {}", editor_quote(name), editor_quote(&jump)));
+    };
+    for symbol in symbols {
+        walk(&mut add_symbol, symbol);
+    }
+    menu_cmd
 }
