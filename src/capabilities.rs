@@ -288,7 +288,10 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     dynamic_registration: Some(false),
                 }),
                 moniker: None,
-                inlay_hint: Some(Default::default()),
+                inlay_hint: Some(InlayHintClientCapabilities {
+                    dynamic_registration: Some(false),
+                    resolve_support: None,
+                }),
             }),
             window: Some(WindowClientCapabilities {
                 work_done_progress: Some(true),
