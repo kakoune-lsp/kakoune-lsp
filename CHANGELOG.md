@@ -1,5 +1,7 @@
 ## Unreleased
 
+This is a small bug fix release but it also includes updates to the default config.
+
 Breaking changes:
 - [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) replaces `flow` as default language server for JavaScript.
 - [`crystalline`](https://github.com/elbywan/crystalline) replaces `scry` as default language server for Crystal.
@@ -8,6 +10,7 @@ Breaking changes:
 Fixes:
 - `lsp-find-error` and code lenses were broken in 13.0.0, which has been fixed.
 - The server-specific configuration for the `solargraph` Ruby language server has been fixed.
+- The new command `lsp-goto-document-symbol` (which replaced the old `<c-o>` binding) can now handle nested symbols.
 
 ## 13.0.0 - 2022-08-11
 
