@@ -15,8 +15,8 @@ test_sleep_until 'test_tmux capture-pane -p | grep -F ">triple l = l ++ l"'
 
 test_tmux send-keys :lsp-code-lens Enter
 
-test_sleep_until 'test_tmux capture-pane -p | grep ": lsp-menu-select .triple :: \[a] -> \[a]."'
-# CHECK: : lsp-menu-select 'triple :: [a] -> [a]' {{.*}}
+test_sleep_until 'test_tmux capture-pane -p | grep "triple :: \[a] -> \[a]"'
+# CHECK: {{.*}}triple :: [a] -> [a]{{.*}}
 
 test_tmux send-keys Enter
 

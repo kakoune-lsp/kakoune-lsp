@@ -186,17 +186,19 @@ define-command -hidden lsp-hide-code-actions -docstring "Called when no code act
 }
 
 define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on :lsp-code-actions" %{
-    lsp-menu %arg{@}
+    lsp-menu %{Run code action} %arg{@}
 }
 
 define-command -hidden lsp-perform-code-lens -params 1.. -docstring "Called on :lsp-code-lens" %{
-    lsp-menu %arg{@}
+    lsp-menu %{Run code lens} %arg{@}
 }
 
-define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
+define-command -hidden lsp-menu -params 3.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
     try %{
         evaluate-commands -draft %{prompt -menu '' ''}
         evaluate-commands %sh{
+            prompt_str=$1
+            shift
             shellquote() {
                 printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
             }
@@ -215,13 +217,13 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
             version=${kak_version#v}
             version=${version%%.*}
             printf "\
-            prompt %%{lsp-menu: } %%§
+            prompt '%s: ' %%§
                 evaluate-commands %%sh¶
                     case \"\$kak_text\" in%s
                     *) echo fail -- no such item: \"'\$(printf %%s \"\$kak_text\" | sed \"s/'/''/g\")'\" ;;
                     esac
                 ¶
-            §" "$cases"
+            §" "$(printf %s "$prompt_str" | sed "s/'/''/g")" "$cases"
             printf ' -menu -shell-script-candidates %%§
                 printf %%s %s
                 §\n' "$(shellquote "$completion")"
