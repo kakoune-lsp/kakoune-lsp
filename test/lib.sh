@@ -36,14 +36,6 @@ evaluate-commands %sh{kak-lsp --kakoune -s $kak_session}
 map global user l %{: enter-user-mode lsp<ret>}
 # Enable logging since this is only for testing.
 set-option global lsp_cmd "%opt{lsp_cmd} -vvvv --log ./log"
-
-# If the test uses a custom kak-lsp.toml, set the location explicitly, to support macOS.
-evaluate-commands %sh{
-	if [ -f .config/kak-lsp/kak-lsp.toml ]; then
-		printf %s 'set-option global lsp_cmd "%opt{lsp_cmd} -c .config/kak-lsp/kak-lsp.toml"'
-	fi
-}
-
 lsp-enable
 
 EOF
