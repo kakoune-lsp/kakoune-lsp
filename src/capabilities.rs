@@ -15,11 +15,41 @@ use url::Url;
 
 pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     let initialization_options = request_initialization_options_from_kakoune(&meta, ctx);
+    let symbol_kind_capability = Some(SymbolKindCapability {
+        value_set: Some(vec![
+            SymbolKind::FILE,
+            SymbolKind::MODULE,
+            SymbolKind::NAMESPACE,
+            SymbolKind::PACKAGE,
+            SymbolKind::CLASS,
+            SymbolKind::METHOD,
+            SymbolKind::PROPERTY,
+            SymbolKind::FIELD,
+            SymbolKind::CONSTRUCTOR,
+            SymbolKind::ENUM,
+            SymbolKind::INTERFACE,
+            SymbolKind::FUNCTION,
+            SymbolKind::VARIABLE,
+            SymbolKind::CONSTANT,
+            SymbolKind::STRING,
+            SymbolKind::NUMBER,
+            SymbolKind::BOOLEAN,
+            SymbolKind::ARRAY,
+            SymbolKind::OBJECT,
+            SymbolKind::KEY,
+            SymbolKind::NULL,
+            SymbolKind::ENUM_MEMBER,
+            SymbolKind::STRUCT,
+            SymbolKind::EVENT,
+            SymbolKind::OPERATOR,
+            SymbolKind::TYPE_PARAMETER,
+        ]),
+    });
     #[allow(deprecated)] // for root_path
     let params = InitializeParams {
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
-                apply_edit: Some(false),
+                apply_edit: Some(true),
                 workspace_edit: Some(WorkspaceEditClientCapabilities {
                     document_changes: Some(true),
                     resource_operations: Some(vec![
@@ -41,36 +71,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 did_change_watched_files: None,
                 symbol: Some(WorkspaceSymbolClientCapabilities {
                     dynamic_registration: Some(false),
-                    symbol_kind: Some(SymbolKindCapability {
-                        value_set: Some(vec![
-                            SymbolKind::FILE,
-                            SymbolKind::MODULE,
-                            SymbolKind::NAMESPACE,
-                            SymbolKind::PACKAGE,
-                            SymbolKind::CLASS,
-                            SymbolKind::METHOD,
-                            SymbolKind::PROPERTY,
-                            SymbolKind::FIELD,
-                            SymbolKind::CONSTRUCTOR,
-                            SymbolKind::ENUM,
-                            SymbolKind::INTERFACE,
-                            SymbolKind::FUNCTION,
-                            SymbolKind::VARIABLE,
-                            SymbolKind::CONSTANT,
-                            SymbolKind::STRING,
-                            SymbolKind::NUMBER,
-                            SymbolKind::BOOLEAN,
-                            SymbolKind::ARRAY,
-                            SymbolKind::OBJECT,
-                            SymbolKind::KEY,
-                            SymbolKind::NULL,
-                            SymbolKind::ENUM_MEMBER,
-                            SymbolKind::STRUCT,
-                            SymbolKind::EVENT,
-                            SymbolKind::OPERATOR,
-                            SymbolKind::TYPE_PARAMETER,
-                        ]),
-                    }),
+                    symbol_kind: symbol_kind_capability.clone(),
                     tag_support: None,
                 }),
                 execute_command: Some(DynamicRegistrationClientCapabilities {
@@ -172,7 +173,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 }),
                 document_symbol: Some(DocumentSymbolClientCapabilities {
                     dynamic_registration: Some(false),
-                    symbol_kind: None,
+                    symbol_kind: symbol_kind_capability,
                     hierarchical_document_symbol_support: Some(true),
                     tag_support: None,
                 }),
@@ -295,11 +296,18 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
             }),
             window: Some(WindowClientCapabilities {
                 work_done_progress: Some(true),
-                show_message: None,
+                show_message: Some(ShowMessageRequestClientCapabilities {
+                    message_action_item: Some(MessageActionItemCapabilities {
+                        additional_properties_support: Some(false),
+                    }),
+                }),
                 show_document: None,
             }),
             general: Some(GeneralClientCapabilities {
-                regular_expressions: None,
+                regular_expressions: Some(RegularExpressionsClientCapabilities {
+                    engine: "Rust regex".to_string(),
+                    version: None,
+                }),
                 markdown: Some(MarkdownClientCapabilities {
                     parser: "kak-lsp".to_string(),
                     version: Some(env!("CARGO_PKG_VERSION").to_string()),
