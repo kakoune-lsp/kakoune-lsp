@@ -14,6 +14,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use std::any::TypeId;
 use std::convert::TryInto;
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use url::Url;
 
@@ -739,7 +740,13 @@ fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) 
             line,
             column
         );
-        menu_cmd.push_str(&format!(" {} {}", editor_quote(name), editor_quote(&jump)));
+        write!(
+            &mut menu_cmd,
+            " {} {}",
+            editor_quote(name),
+            editor_quote(&jump)
+        )
+        .unwrap();
     };
     for symbol in symbols {
         walk(&mut add_symbol, symbol);

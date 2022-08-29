@@ -302,7 +302,7 @@ pub struct KakounePosition {
     pub column: u32, // in bytes, not chars!!!
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum HoverType {
     InfoBox,
     Modal {
@@ -315,7 +315,7 @@ pub enum HoverType {
     },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KakouneRange {
     pub start: KakounePosition,
     pub end: KakounePosition,
