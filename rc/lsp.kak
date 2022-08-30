@@ -212,8 +212,6 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
                     printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
                     ;;"
             done
-            version=${kak_version#v}
-            version=${version%%.*}
             printf "\
             prompt %%{lsp-menu: } %%§
                 evaluate-commands %%sh¶
@@ -243,8 +241,6 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
                     printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
                     ;;"
             done
-            version=${kak_version#v}
-            version=${version%%.*}
             printf "\
             define-command -override -hidden lsp-menu-select -params 1 %%§
                 evaluate-commands %%sh¶
