@@ -1844,6 +1844,16 @@ define-command -hidden lsp-get-config -params 1 -docstring %{
 
 ### Other commands ###
 
+define-command lsp-diagnostic-object -docstring 'lsp-diagnostic-object [--include-warnings]: go to adjacent diagnostic from object mdoe' -params 0..1 %<
+    evaluate-commands %sh<
+        case "$kak_opt_lsp_object_mode" in
+            ( [ | { | '<a-[>' | '<a-{>' ) previous=--previous ;;
+            (*) previous= ;;
+        esac
+        echo lsp-find-error $previous $1
+    >
+>
+
 define-command lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
 Jump to the next or previous diagnostic error" %{
     evaluate-commands %sh{
