@@ -213,7 +213,7 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
                     ;;"
             done
             printf "\
-            prompt %%{lsp-menu: } %%§
+            prompt %%{} %%§
                 evaluate-commands %%sh¶
                     case \"\$kak_text\" in%s
                     *) echo fail -- no such item: \"'\$(printf %%s \"\$kak_text\" | sed \"s/'/''/g\")'\" ;;
