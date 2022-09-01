@@ -1765,7 +1765,7 @@ define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render wo
 }
 
 define-command -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
-    echo -- %arg{2}
+    echo -markup -- %arg{2}
 }
 
 define-command -hidden lsp-show-message-error -params 1 -docstring %{

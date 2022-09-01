@@ -1,11 +1,13 @@
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_SIGNATURE_HELP;
 use crate::context::*;
+use crate::markup::escape_kakoune_markup;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
 use lsp_types::request::*;
 use lsp_types::*;
+use ropey::Rope;
 use serde::Deserialize;
 use url::Url;
 
@@ -50,13 +52,48 @@ pub fn editor_signature_help(
         None => return,
     };
 
-    // TODO decide how to use it
-    // let active_parameter = result.active_parameter.unwrap_or(0);
-    let contents = &active_signature.label;
+    let active_parameter = active_signature
+        .active_parameter
+        .or(result.active_parameter)
+        .unwrap_or(0);
+    let parameter_range = match active_signature
+        .parameters
+        .as_ref()
+        .and_then(|p| p.get(active_parameter as usize))
+        .map(|p| &p.label)
+    {
+        Some(ParameterLabel::Simple(param)) => active_signature
+            .label
+            .find(param.as_str())
+            .map(|begin| [begin, begin + param.len()]),
+        Some(ParameterLabel::LabelOffsets(offsets)) => {
+            let label = Rope::from_str(&active_signature.label);
+            let begin = label.char_to_byte(offsets[0] as usize);
+            let end = label.char_to_byte(offsets[1] as usize);
+            Some([begin, end])
+        }
+        None => None,
+    };
+
+    let mut contents = active_signature.label.clone();
+    if let Some(range) = parameter_range {
+        if range[0] >= contents.len() || range[1] >= contents.len() {
+            warn!("invalid range for active parameter");
+        } else {
+            let (left, tail) = contents.split_at(range[0]);
+            let (param, right) = tail.split_at(range[1] - range[0]);
+            contents = escape_kakoune_markup(left)
+                + "{+b}"
+                + &escape_kakoune_markup(param)
+                + "{}"
+                + &escape_kakoune_markup(right)
+        }
+    };
+
     let command = format!(
         "lsp-show-signature-help {} {}",
         params.position,
-        editor_quote(contents)
+        editor_quote(&contents)
     );
     ctx.exec(meta, command);
 }
