@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- `lsp-auto-signature-help-enable` now shows an info box by default, and formats the active parameter in a bold font.
+
 ## 14.0.0 - 2022-08-29
 
 This is a small bug fix release but it also includes updates to the default config.

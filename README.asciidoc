@@ -181,6 +181,8 @@ If you have followed above steps you get
 ** `\*diagnostics*` buffer has filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
 * `lsp-incoming-calls` and `lsp-outgoing-calls` commands to list callers and callees of the function at the cursor.
 ** `\*callers*` and `\*callees*` buffers have filetype `lsp-goto` so you can press `<ret>` on a line or use the `lsp-jump` command
+* `lsp-signature-help` command to show signature information of the function under the main cursor
+** To automatically show signature information in insert mode, use `lsp-auto-signature-help-enable`.
 * inline diagnostics highlighting using the `DiagnosticError`, `DiagnosticHint`, `DiagnosticInfo` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
   * for lines with code lenses, a `>` flag which can be customized via the `lsp_code_lens_sign` option
