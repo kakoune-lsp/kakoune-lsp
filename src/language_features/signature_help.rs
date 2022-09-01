@@ -38,18 +38,25 @@ pub fn editor_signature_help(
     result: Option<SignatureHelp>,
     ctx: &mut Context,
 ) {
-    if let Some(result) = result {
-        let active_signature = result.active_signature.unwrap_or(0);
-        if let Some(active_signature) = result.signatures.get(active_signature as usize) {
-            // TODO decide how to use it
-            // let active_parameter = result.active_parameter.unwrap_or(0);
-            let contents = &active_signature.label;
-            let command = format!(
-                "lsp-show-signature-help {} {}",
-                params.position,
-                editor_quote(contents)
-            );
-            ctx.exec(meta, command);
-        }
-    }
+    let result = match result {
+        Some(result) => result,
+        None => return,
+    };
+
+    let active_signature = result.active_signature.unwrap_or(0);
+
+    let active_signature = match result.signatures.get(active_signature as usize) {
+        Some(active_signature) => active_signature,
+        None => return,
+    };
+
+    // TODO decide how to use it
+    // let active_parameter = result.active_parameter.unwrap_or(0);
+    let contents = &active_signature.label;
+    let command = format!(
+        "lsp-show-signature-help {} {}",
+        params.position,
+        editor_quote(contents)
+    );
+    ctx.exec(meta, command);
 }
