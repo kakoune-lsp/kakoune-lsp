@@ -8,7 +8,7 @@ use indoc::indoc;
 use itertools::Itertools;
 use lsp_types::*;
 use ropey::{Rope, RopeSlice};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Write};
 use std::os::unix::io::FromRawFd;
 
@@ -77,18 +77,22 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
     edits: Vec<T>,
     ctx: &Context,
 ) {
-    if let Some(document) = uri
-        .to_file_path()
-        .ok()
-        .and_then(|path| path.to_str().and_then(|buffile| ctx.documents.get(buffile)))
-    {
+    let path = uri.to_file_path().ok().unwrap();
+    let buffile = path.to_str().unwrap();
+    if let Some(document) = ctx.documents.get(buffile) {
         let meta = meta.clone();
+        // Write hidden buffers unless they were already dirty.
+        let write_to_disk = buffile != meta.buffile
+            && fs::read_to_string(buffile)
+                .map(|disk_contents| disk_contents == document.text)
+                .unwrap_or(false);
         match apply_text_edits_to_buffer(
             &meta.client,
             Some(uri),
             edits,
             &document.text,
             ctx.offset_encoding,
+            write_to_disk,
         ) {
             Some(cmd) => ctx.exec(meta, cmd),
             // Nothing to do, but sending command back to the editor is required to handle case when
@@ -444,8 +448,17 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,
+    write_to_disk: bool,
 ) -> Option<String> {
-    let apply_edits = lsp_text_edits_to_kakoune(client, text_edits, text, offset_encoding)?;
+    let mut apply_edits = lsp_text_edits_to_kakoune(client, text_edits, text, offset_encoding)?;
+
+    if write_to_disk {
+        apply_edits = formatdoc!(
+            "{}
+             write",
+            apply_edits
+        );
+    }
 
     let maybe_buffile = uri
         .and_then(|uri| uri.to_file_path().ok())

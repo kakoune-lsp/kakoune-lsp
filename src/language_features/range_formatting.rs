@@ -52,6 +52,7 @@ pub fn editor_range_formatting<T: TextEditish<T>>(
             text_edits,
             &document.text,
             ctx.offset_encoding,
+            false,
         )
     });
     match cmd {
