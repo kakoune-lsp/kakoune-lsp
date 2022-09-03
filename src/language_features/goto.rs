@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, PositionParams};
+use crate::types::{EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams};
 use crate::util::{editor_quote, short_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -9,7 +9,12 @@ use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
-pub fn goto(meta: EditorMeta, result: Option<GotoDefinitionResponse>, ctx: &mut Context) {
+pub fn goto(
+    meta: EditorMeta,
+    result: Option<GotoDefinitionResponse>,
+    main_cursor: KakounePosition,
+    ctx: &mut Context,
+) {
     let locations = match result {
         Some(GotoDefinitionResponse::Scalar(location)) => vec![location],
         Some(GotoDefinitionResponse::Array(locations)) => locations,
@@ -31,7 +36,7 @@ pub fn goto(meta: EditorMeta, result: Option<GotoDefinitionResponse>, ctx: &mut 
             goto_location(meta, &locations[0], ctx);
         }
         _ => {
-            goto_locations(meta, &locations, ctx);
+            goto_locations(meta, &locations, main_cursor, ctx);
         }
     }
 }
@@ -56,7 +61,13 @@ fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: &mut
     }
 }
 
-fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Context) {
+fn goto_locations(
+    meta: EditorMeta,
+    locations: &[Location],
+    main_cursor: KakounePosition,
+    ctx: &mut Context,
+) {
+    let mut ranges = vec![];
     let select_location = locations
         .iter()
         .group_by(|Location { uri, .. }| uri.to_file_path().unwrap())
@@ -69,10 +80,14 @@ fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Context) {
             };
             locations
                 .map(|Location { range, .. }| {
-                    let pos = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding).start;
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
                     }
+                    let range = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding);
+                    if path_str == meta.buffile {
+                        ranges.push(range);
+                    }
+                    let pos = range.start;
                     format!(
                         "{}:{}:{}:{}",
                         short_file_path(path_str, &ctx.root_path),
@@ -84,12 +99,42 @@ fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Context) {
                 .join("")
         })
         .join("");
+
     let command = format!(
         "lsp-show-goto-choices {} {}",
         editor_quote(&ctx.root_path),
         editor_quote(&select_location),
     );
+    let command = select_ranges_and(command, ranges, main_cursor);
     ctx.exec(meta, command);
+}
+
+pub fn select_ranges_and(
+    command: String,
+    ranges: Vec<KakouneRange>,
+    main_cursor: KakounePosition,
+) -> String {
+    let main_selection_range = match ranges
+        .iter()
+        .filter(|range| range.start <= main_cursor && main_cursor <= range.end)
+        .next()
+    {
+        Some(range) => range,
+        None => {
+            error!("main cursor lies outside ranges");
+            return command;
+        }
+    };
+    if ranges.is_empty() {
+        return command;
+    }
+    let command = format!(
+        "select {} {}\n{}",
+        main_selection_range,
+        ranges.iter().map(|range| format!("{}", range)).join(" "),
+        command
+    );
+    format!("evaluate-commands {}", editor_quote(&command))
 }
 
 pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -105,7 +150,7 @@ pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mu
         work_done_progress_params: Default::default(),
     };
     ctx.call::<GotoDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto(meta, result, ctx);
+        goto(meta, result, params.position, ctx);
     });
 }
 
@@ -122,7 +167,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
         work_done_progress_params: Default::default(),
     };
     ctx.call::<GotoImplementation, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto(meta, result, ctx);
+        goto(meta, result, params.position, ctx);
     });
 }
 
@@ -139,7 +184,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx
         work_done_progress_params: Default::default(),
     };
     ctx.call::<GotoTypeDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto(meta, result, ctx);
+        goto(meta, result, params.position, ctx);
     });
 }
 
@@ -159,6 +204,11 @@ pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mu
         work_done_progress_params: Default::default(),
     };
     ctx.call::<References, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
+        goto(
+            meta,
+            result.map(GotoDefinitionResponse::Array),
+            params.position,
+            ctx,
+        );
     });
 }

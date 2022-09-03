@@ -1,7 +1,8 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::Context;
+use crate::language_features::goto::select_ranges_and;
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, PositionParams};
+use crate::types::{EditorMeta, EditorParams, KakounePosition, PositionParams};
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
@@ -29,13 +30,16 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
     ctx.call::<DocumentHighlightRequest, _>(
         meta,
         req_params,
-        move |ctx: &mut Context, meta, result| editor_document_highlight(meta, result, ctx),
+        move |ctx: &mut Context, meta, result| {
+            editor_document_highlight(meta, result, params.position, ctx)
+        },
     );
 }
 
 fn editor_document_highlight(
     meta: EditorMeta,
     result: Option<Vec<DocumentHighlight>>,
+    main_cursor: KakounePosition,
     ctx: &mut Context,
 ) {
     let document = ctx.documents.get(&meta.buffile);
@@ -43,13 +47,17 @@ fn editor_document_highlight(
         return;
     }
     let document = document.unwrap();
-    let ranges = match result {
+    let mut ranges = vec![];
+    let range_specs = match result {
         Some(highlights) => highlights
             .into_iter()
             .map(|highlight| {
+                let range =
+                    lsp_range_to_kakoune(&highlight.range, &document.text, ctx.offset_encoding);
+                ranges.push(range);
                 format!(
                     "{}|{}",
-                    lsp_range_to_kakoune(&highlight.range, &document.text, ctx.offset_encoding),
+                    range,
                     if highlight.kind == Some(DocumentHighlightKind::WRITE) {
                         "ReferenceBind"
                     } else {
@@ -60,9 +68,12 @@ fn editor_document_highlight(
             .join(" "),
         None => "".to_string(),
     };
-    let command = format!(
+    let mut command = format!(
         "set-option window lsp_references {} {}",
-        meta.version, ranges,
+        meta.version, range_specs,
     );
+    if !meta.hook {
+        command = select_ranges_and(command, ranges, main_cursor);
+    }
     ctx.exec(meta, command);
 }
