@@ -7,7 +7,7 @@ use indoc::formatdoc;
 use indoc::indoc;
 use itertools::Itertools;
 use lsp_types::*;
-use ropey::{Rope, RopeSlice};
+use ropey::Rope;
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Write};
 use std::os::unix::io::FromRawFd;
@@ -163,15 +163,15 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
                 ));
             }
 
-            let start_offset = character_to_offset(
-                offset_encoding,
+            let start_offset = lsp_character_to_byte_offset(
                 text.line(start.line as _),
                 start.character as _,
-            );
-            let end_offset = character_to_offset(
                 offset_encoding,
+            );
+            let end_offset = lsp_character_to_byte_offset(
                 text.line(end.line as _),
                 end.character as _,
+                offset_encoding,
             );
 
             if start_offset.is_none() || end_offset.is_none() {
@@ -181,15 +181,15 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
                 ));
             }
 
-            let start_char = text.line_to_char(start.line as _) + start_offset.unwrap();
-            let end_char = text.line_to_char(end.line as _) + end_offset.unwrap();
+            let start_byte = text.line_to_byte(start.line as _) + start_offset.unwrap();
+            let end_byte = text.line_to_byte(end.line as _) + end_offset.unwrap();
 
-            for chunk in text.slice(cursor..start_char).chunks() {
+            for chunk in text.byte_slice(cursor..start_byte).chunks() {
                 output.write_all(chunk.as_bytes())?;
             }
 
             output.write_all(new_text.as_bytes())?;
-            cursor = end_char;
+            cursor = end_byte;
         }
 
         for chunk in text.slice(cursor..).chunks() {
@@ -216,34 +216,6 @@ fn cvt(t: i32) -> std::io::Result<i32> {
         Err(std::io::Error::last_os_error())
     } else {
         Ok(t)
-    }
-}
-
-fn character_to_offset(
-    offset_encoding: OffsetEncoding,
-    line: RopeSlice,
-    character: usize,
-) -> Option<usize> {
-    match offset_encoding {
-        OffsetEncoding::Utf8 => character_to_offset_utf_8_code_units(line, character),
-        // Not a proper UTF-16 code units handling, but works within BMP
-        OffsetEncoding::Utf16 => character_to_offset_utf_8_code_points(line, character),
-    }
-}
-
-fn character_to_offset_utf_8_code_points(line: RopeSlice, character: usize) -> Option<usize> {
-    if character < line.len_chars() {
-        Some(character)
-    } else {
-        None
-    }
-}
-
-fn character_to_offset_utf_8_code_units(line: RopeSlice, character: usize) -> Option<usize> {
-    if character <= line.len_bytes() {
-        Some(line.byte_to_char(character))
-    } else {
-        None
     }
 }
 
