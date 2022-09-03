@@ -2,6 +2,7 @@ use crate::context::Context;
 use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, PositionParams};
 use crate::util::{editor_quote, short_file_path};
+use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::{GotoDefinition, GotoImplementation, GotoTypeDefinition, References};
 use lsp_types::*;
@@ -39,12 +40,17 @@ pub fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: 
     let path = uri.to_file_path().unwrap();
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
-        let pos = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding).start;
-        let command = format!(
-            "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
+        let range = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding);
+        let command = formatdoc!(
+            "edit -existing {}
+             select {}
+             execute-keys <c-s>vv",
             editor_quote(path_str),
-            pos.line,
-            pos.column,
+            range,
+        );
+        let command = format!(
+            "evaluate-commands -try-client %opt{{jumpclient}} -- {}",
+            editor_quote(&command),
         );
         ctx.exec(meta, command);
     }
