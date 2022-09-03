@@ -68,8 +68,18 @@ fn editor_signature_help(
             .map(|begin| [begin, begin + param.len()]),
         Some(ParameterLabel::LabelOffsets(offsets)) => {
             let label = Rope::from_str(&active_signature.label);
-            let begin = label.char_to_byte(offsets[0] as usize);
-            let end = label.char_to_byte(offsets[1] as usize);
+            let begin = lsp_character_to_byte_offset(
+                label.slice(..),
+                offsets[0] as usize,
+                ctx.offset_encoding,
+            )
+            .unwrap();
+            let end = lsp_character_to_byte_offset(
+                label.slice(..),
+                offsets[1] as usize,
+                ctx.offset_encoding,
+            )
+            .unwrap();
             Some([begin, end])
         }
         None => None,
