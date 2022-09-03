@@ -21,6 +21,7 @@ EOF
 
 test_tmux_kak_start 'edit main.go'
 
+test_sleep
 test_tmux send-keys ':w' Enter
 test_sleep
 test_tmux capture-pane -p | sed 3q

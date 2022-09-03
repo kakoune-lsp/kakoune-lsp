@@ -14,6 +14,7 @@ EOF
 
 test_tmux_kak_start 'edit main.go'
 
+test_sleep
 test_tmux send-keys ':lsp-code-action-sync Organize.Imports' Enter
 test_sleep
 test_tmux capture-pane -p | sed 3q
