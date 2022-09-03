@@ -83,11 +83,11 @@ fn goto_locations(
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
                     }
-                    let range = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding);
+                    let kakoune_range = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding);
                     if path_str == meta.buffile {
-                        ranges.push(range);
+                        ranges.push(kakoune_range);
                     }
-                    let pos = range.start;
+                    let pos = kakoune_range.start;
                     format!(
                         "{}:{}:{}:{}",
                         short_file_path(path_str, &ctx.root_path),
