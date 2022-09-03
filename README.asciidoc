@@ -241,7 +241,6 @@ would spin up a fresh server if it is down.
 | s | lsp-goto-document-symbol
 | S | lsp-document-symbol
 | o | lsp-workspace-symbol-incr
-| <c-o> | lsp-goto-document-symbol
 | n | lsp-find-error
 | p | lsp-find-error --previous
 | v | lsp-selection-range
