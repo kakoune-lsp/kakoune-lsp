@@ -27,7 +27,7 @@ pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Co
 }
 
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
-pub fn editor_rename(meta: EditorMeta, result: Option<WorkspaceEdit>, ctx: &mut Context) {
+fn editor_rename(meta: EditorMeta, result: Option<WorkspaceEdit>, ctx: &mut Context) {
     if result.is_none() {
         return;
     }

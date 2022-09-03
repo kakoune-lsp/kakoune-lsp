@@ -99,7 +99,7 @@ pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Contex
     });
 }
 
-pub fn editor_workspace_symbol(
+fn editor_workspace_symbol(
     meta: EditorMeta,
     result: Option<Vec<SymbolInformation>>,
     ctx: &mut Context,

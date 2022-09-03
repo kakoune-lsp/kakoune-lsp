@@ -30,7 +30,7 @@ pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mu
     });
 }
 
-pub fn editor_completion(
+fn editor_completion(
     meta: EditorMeta,
     params: TextDocumentCompletionParams,
     result: Option<CompletionResponse>,

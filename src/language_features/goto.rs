@@ -36,7 +36,7 @@ pub fn goto(meta: EditorMeta, result: Option<GotoDefinitionResponse>, ctx: &mut 
     }
 }
 
-pub fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: &mut Context) {
+fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: &mut Context) {
     let path = uri.to_file_path().unwrap();
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
@@ -56,7 +56,7 @@ pub fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: 
     }
 }
 
-pub fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Context) {
+fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Context) {
     let select_location = locations
         .iter()
         .group_by(|Location { uri, .. }| uri.to_file_path().unwrap())

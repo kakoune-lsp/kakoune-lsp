@@ -34,7 +34,7 @@ pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx:
     );
 }
 
-pub fn editor_signature_help(
+fn editor_signature_help(
     meta: EditorMeta,
     params: PositionParams,
     result: Option<SignatureHelp>,

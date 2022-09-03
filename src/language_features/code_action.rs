@@ -54,7 +54,7 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
     });
 }
 
-pub fn editor_code_actions(
+fn editor_code_actions(
     meta: EditorMeta,
     result: Option<CodeActionResponse>,
     ctx: &mut Context,

@@ -33,7 +33,7 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
     );
 }
 
-pub fn editor_document_highlight(
+fn editor_document_highlight(
     meta: EditorMeta,
     result: Option<Vec<DocumentHighlight>>,
     ctx: &mut Context,
