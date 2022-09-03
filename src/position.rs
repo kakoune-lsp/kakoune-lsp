@@ -361,6 +361,40 @@ fn lsp_position_to_kakoune_utf_8_code_units(position: &Position) -> KakounePosit
     }
 }
 
+pub fn lsp_character_to_byte_offset(
+    line: RopeSlice,
+    character: usize,
+    offset_encoding: OffsetEncoding,
+) -> Option<usize> {
+    match offset_encoding {
+        OffsetEncoding::Utf8 => lsp_character_to_byte_offset_utf_8_code_units(line, character),
+        // Not a proper UTF-16 code units handling, but works within BMP
+        OffsetEncoding::Utf16 => lsp_character_to_byte_offset_utf_8_code_points(line, character),
+    }
+}
+
+fn lsp_character_to_byte_offset_utf_8_code_points(
+    line: RopeSlice,
+    character: usize,
+) -> Option<usize> {
+    if character < line.len_chars() {
+        Some(line.char_to_byte(character))
+    } else {
+        None
+    }
+}
+
+fn lsp_character_to_byte_offset_utf_8_code_units(
+    line: RopeSlice,
+    character: usize,
+) -> Option<usize> {
+    if character <= line.len_bytes() {
+        Some(character)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
