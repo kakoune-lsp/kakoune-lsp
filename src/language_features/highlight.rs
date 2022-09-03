@@ -1,8 +1,8 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::Context;
-use crate::language_features::goto::select_ranges_and;
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, KakounePosition, PositionParams};
+use crate::types::{EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams};
+use crate::util::editor_quote;
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
@@ -76,4 +76,31 @@ fn editor_document_highlight(
         command = select_ranges_and(command, ranges, main_cursor);
     }
     ctx.exec(meta, command);
+}
+
+fn select_ranges_and(
+    command: String,
+    ranges: Vec<KakouneRange>,
+    main_cursor: KakounePosition,
+) -> String {
+    let main_selection_range = match ranges
+        .iter()
+        .find(|range| range.start <= main_cursor && main_cursor <= range.end)
+    {
+        Some(range) => range,
+        None => {
+            error!("main cursor lies outside ranges");
+            return command;
+        }
+    };
+    if ranges.is_empty() {
+        return command;
+    }
+    let command = format!(
+        "select {} {}\n{}",
+        main_selection_range,
+        ranges.iter().map(|range| format!("{}", range)).join(" "),
+        command
+    );
+    format!("evaluate-commands {}", editor_quote(&command))
 }

@@ -3,7 +3,7 @@
 Additions:
 - `lsp-auto-signature-help-enable` now shows an info box by default, and formats the active parameter in a bold font.
 - `lsp-definition` and friends now select the symbol name instead of merely placing the cursor at symbol start.
-` `lsp-references` and `lsp-highlight-references` now select all references in the current buffer.
+` `lsp-highlight-references` now select all references in the current buffer.
 
 Fixes:
 - `lsp-rename` will now write modified background buffers to preserve consistency.

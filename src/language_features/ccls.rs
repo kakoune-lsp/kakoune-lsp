@@ -36,19 +36,18 @@ impl Request for NavigateRequest {
 
 pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = KakouneNavigateParams::deserialize(params).unwrap();
-    let main_cursor = params.position;
     let req_params = NavigateParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
         },
-        position: get_lsp_position(&meta.buffile, &main_cursor, ctx).unwrap(),
+        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
         direction: params.direction,
     };
     ctx.call::<NavigateRequest, _>(
         meta,
         req_params,
         move |ctx: &mut Context, meta, response| {
-            goto::goto(meta, response, main_cursor, ctx);
+            goto::goto(meta, response, ctx);
         },
     );
 }
@@ -82,12 +81,7 @@ pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
     };
     ctx.call::<VarsRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(
-            meta,
-            result.map(GotoDefinitionResponse::Array),
-            params.position,
-            ctx,
-        );
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
     });
 }
 
@@ -128,12 +122,7 @@ pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         derived: params.derived,
     };
     ctx.call::<InheritanceRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(
-            meta,
-            result.map(GotoDefinitionResponse::Array),
-            params.position,
-            ctx,
-        );
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
     });
 }
 
@@ -171,12 +160,7 @@ pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         callee: params.callee,
     };
     ctx.call::<CallRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(
-            meta,
-            result.map(GotoDefinitionResponse::Array),
-            params.position,
-            ctx,
-        );
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
     });
 }
 
@@ -214,12 +198,7 @@ pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         kind: params.kind,
     };
     ctx.call::<MemberRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(
-            meta,
-            result.map(GotoDefinitionResponse::Array),
-            params.position,
-            ctx,
-        )
+        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx)
     });
 }
 
