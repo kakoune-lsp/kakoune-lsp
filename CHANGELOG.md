@@ -2,16 +2,20 @@
 
 Additions:
 - Default language server for protobuf.
-- New `lsp-inlay-code-lenses-enable` command to render code lenses as virtual text (#623).
+- Added support for `codeAction/resolve`, which allows to use code actions sent by Deno for example.
+- The recommended mappings have been augmented by new command `lsp-diagnostic-object` to jump to next/previous diagnostics.
 - `lsp-auto-signature-help-enable` now shows an info box by default, and formats the active parameter in a bold font.
 - `lsp-definition` and friends now select the symbol name instead of merely placing the cursor at symbol start. Same for `lsp-find-error`.
-` `lsp-highlight-references` now select all references in the current buffer.
-- Added support for `codeAction/resolve`, which allows to use code actions sent by Deno for example.
-- The support for `filterText` in completions no longer depends on a proposed Kakoune feature.
+- `lsp-highlight-references` now selects all references in the current buffer.
+- New `lsp-inlay-code-lenses-enable` command allows to render code lenses as virtual text (#623).
+- The support for `filterText` in completions no longer depends on an out-of-tree Kakoune feature.
 
 Fixes:
-- `lsp-rename` will now write modified background buffers to preserve consistency.
-- When talking to servers that don't support [UTF-8 byte offsets](https://clangd.llvm.org/extensions.html#utf-8-offsets), `kak-lsp` now adheres to the LSP specification by treating column offsets as UTF-16 Code Units instead of Unicode Code Points.
+- Fix lags due to `rust-analyzer` sending a ton of progress reports.
+- `lsp-rename` will now write hidden buffers that are affected by the rename, to give the language server and other external tools a more consistent view of affected files.
+- Suppress "language server not initialized" errors that originate from hooks.
+- Fix a glitch when a line has both a code lens and an inline diagnostic.
+- When talking to servers that don't support UTF-8 byte-offsets, `kak-lsp` now adheres to the LSP specification by treating column-offsets as UTF-16 Code Units instead of Unicode Code Points.
 
 ## 14.0.0 - 2022-08-29
 
