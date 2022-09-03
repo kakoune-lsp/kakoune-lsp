@@ -1,8 +1,9 @@
+use crate::language_features::goto::edit_at_range;
 use crate::language_features::hover::editor_hover;
 use crate::markup::escape_kakoune_markup;
 use crate::position::{
-    get_kakoune_position_with_fallback, get_lsp_position, kakoune_position_to_lsp,
-    lsp_range_to_kakoune, parse_kakoune_range,
+    get_kakoune_position_with_fallback, get_kakoune_range_with_fallback, get_lsp_position,
+    kakoune_position_to_lsp, lsp_range_to_kakoune, parse_kakoune_range,
 };
 use crate::types::*;
 use crate::util::*;
@@ -731,20 +732,13 @@ fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) 
     let mut add_symbol = |symbol: &T| {
         let mut filename_path = PathBuf::default();
         let filename = symbol_filename(meta, symbol, &mut filename_path);
-        let KakounePosition { line, column } =
-            get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
+        let range = get_kakoune_range_with_fallback(filename, &symbol.selection_range(), ctx);
         let name = symbol.name();
-        let jump = format!(
-            "edit -existing -- {} {} {}",
-            editor_quote(filename),
-            line,
-            column
-        );
         write!(
             &mut menu_cmd,
             " {} {}",
             editor_quote(name),
-            editor_quote(&jump)
+            editor_quote(&edit_at_range(filename, range))
         )
         .unwrap();
     };

@@ -114,6 +114,31 @@ pub fn get_kakoune_position_with_fallback(
     })
 }
 
+/// Wrapper for lsp_range_to_kakoune which uses context to get buffer content and offset encoding.
+/// Reads the file directly if it is not present in context (is not open in editor).
+pub fn get_kakoune_range(filename: &str, range: &Range, ctx: &Context) -> Option<KakouneRange> {
+    get_file_contents(filename, ctx)
+        .map(|text| lsp_range_to_kakoune(range, &text, ctx.offset_encoding))
+}
+
+/// Like get_kakoune_range but default to an approximate range if something goes wrong.
+pub fn get_kakoune_range_with_fallback(
+    filename: &str,
+    range: &Range,
+    ctx: &Context,
+) -> KakouneRange {
+    get_kakoune_range(filename, range, ctx).unwrap_or(KakouneRange {
+        start: KakounePosition {
+            line: range.start.line + 1,
+            column: range.start.character + 1,
+        },
+        end: KakounePosition {
+            line: range.end.line + 1,
+            column: range.end.character + 1,
+        },
+    })
+}
+
 /// Get the contents of a file.
 /// Searches ctx.documents first and falls back to reading the file directly.
 pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {

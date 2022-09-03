@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, PositionParams};
+use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams};
 use crate::util::{editor_quote, short_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -36,21 +36,24 @@ pub fn goto(meta: EditorMeta, result: Option<GotoDefinitionResponse>, ctx: &mut 
     }
 }
 
+pub fn edit_at_range(buffile: &str, range: KakouneRange) -> String {
+    formatdoc!(
+        "edit -existing {}
+         select {}
+         execute-keys <c-s>vv",
+        editor_quote(buffile),
+        range,
+    )
+}
+
 fn goto_location(meta: EditorMeta, Location { uri, range }: &Location, ctx: &mut Context) {
     let path = uri.to_file_path().unwrap();
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
         let range = lsp_range_to_kakoune(range, &contents, ctx.offset_encoding);
-        let command = formatdoc!(
-            "edit -existing {}
-             select {}
-             execute-keys <c-s>vv",
-            editor_quote(path_str),
-            range,
-        );
         let command = format!(
             "evaluate-commands -try-client %opt{{jumpclient}} -- {}",
-            editor_quote(&command),
+            editor_quote(&edit_at_range(path_str, range)),
         );
         ctx.exec(meta, command);
     }
