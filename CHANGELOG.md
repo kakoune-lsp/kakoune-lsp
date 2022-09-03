@@ -7,6 +7,7 @@ Additions:
 
 Fixes:
 - `lsp-rename` will now write modified background buffers to preserve consistency.
+- When talking to servers that don't support [UTF-8 byte offsets](https://clangd.llvm.org/extensions.html#utf-8-offsets), `kak-lsp` now adheres to the LSP specification by treating column offsets as UTF-16 Code Units instead of Unicode Code Points.
 
 ## 14.0.0 - 2022-08-29
 

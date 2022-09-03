@@ -8,22 +8,15 @@
 //! to an arbitrarily large value, and Kakoune will clamp it to the end of line. The
 //! hard part is that LSP uses UTF-16 code units to count character offset, but Kakoune
 //! expects bytes. It requires analysis of the buffer content for proper translation.
-//! The hardest part is that language servers mostly don't respect the spec, and in a
+//! The hardest part is that language servers mostly don't respect the spec, and in an
 //! inconsistent way. See https://github.com/Microsoft/language-server-protocol/issues/376 and
 //! https://www.reddit.com/r/vim/comments/b3yzq4/a_lsp_client_maintainers_view_of_the_lsp_protocol/
 //! for a bit more details.
-//! Temporarily resolution for this problem in kak-lsp is as follows: treat LSP character offset as
-//! Unicode scalar value in UTF-8 encoding (and then convert it into byte offset for Kakoune) by
-//! default, and treat offset as byte one if specified in the config. It's a horrible violation of
-//! both spec and the most obvious spec alternative (UTF-8 code units aka just bytes), but it seems
-//! like a viable pragmatic solution before we start to dig deep into the proper support.
-//! Pros of this solution for UTF-8 encoded text (and kak-lsp doesn't support other encodings yet):
-//! * It's relatively easy to implement in a performant way (thanks to ropey).
-//! * It works for entire Basic Multilingual Plane when language server adheres to spec.
-//! * It just works when language server sends offset in UTF-8 scalar values (i.e. RLS).
-//! * It works for at least Basic Latin when language server sends offset in UTF-8 bytes
-//!   (i.e. pyls, clangd with offsetEncoding: utf-8).
-//!   And just works when `offset_encoding: utf-8` is provided in the config.
+//! We used to violate the spec in a pragmatic way: we used code points instead of UTF-16 code
+//! units. An update to the ropey library allowed us to handle UTF-16 code units, so now we can
+//! adhere to the spec. This might cause breakage with servers that neither adhere to the spec
+//! nor implement UTF-8 byte offsets (see https://clangd.llvm.org/extensions.html#utf-8-offsets).
+//! Hopefully there are not too many of these servers left.
 use crate::types::*;
 use crate::{context::Context, util::read_document};
 use lsp_types::*;
@@ -40,7 +33,6 @@ pub fn lsp_range_to_kakoune(
 ) -> KakouneRange {
     match offset_encoding {
         OffsetEncoding::Utf8 => lsp_range_to_kakoune_utf_8_code_units(range),
-        // Not a proper UTF-16 code units handling, but works within BMP
         OffsetEncoding::Utf16 => lsp_range_to_kakoune_utf_8_code_points(range, text),
     }
 }
@@ -52,7 +44,6 @@ pub fn lsp_position_to_kakoune(
 ) -> KakounePosition {
     match offset_encoding {
         OffsetEncoding::Utf8 => lsp_position_to_kakoune_utf_8_code_units(position),
-        // Not a proper UTF-16 code units handling, but works within BMP
         OffsetEncoding::Utf16 => lsp_position_to_kakoune_utf_8_code_points(position, text),
     }
 }
@@ -75,7 +66,6 @@ pub fn kakoune_position_to_lsp(
 ) -> Position {
     match offset_encoding {
         OffsetEncoding::Utf8 => kakoune_position_to_lsp_utf_8_code_units(position),
-        // Not a proper UTF-16 code units handling, but works within BMP
         OffsetEncoding::Utf16 => kakoune_position_to_lsp_utf_8_code_points(position, text),
     }
 }
@@ -203,7 +193,7 @@ pub fn ranges_overlap(a: Range, b: Range) -> bool {
 /// the last character. This is useful because the language
 /// server might use a large value to convey "end of file".
 fn get_byte_index(char_index: usize, text: RopeSlice) -> usize {
-    text.char_to_byte(min(char_index, text.len_chars()))
+    text.char_to_byte(text.utf16_cu_to_char(min(char_index, text.len_utf16_cu())))
 }
 
 fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> KakouneRange {
@@ -314,7 +304,7 @@ fn kakoune_position_to_lsp_utf_8_code_points(position: &KakounePosition, text: &
         };
     }
 
-    let character = line.byte_to_char(col_idx as _) as _;
+    let character = line.char_to_utf16_cu(line.byte_to_char(col_idx as _)) as _;
     Position {
         line: line_idx,
         character,
@@ -345,7 +335,7 @@ fn lsp_position_to_kakoune_utf_8_code_points(position: &Position, text: &Rope) -
         };
     }
 
-    let byte = line.char_to_byte(position.character as _) as u32;
+    let byte = line.char_to_byte(line.utf16_cu_to_char(position.character as _)) as u32;
     // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     KakounePosition {
         line: position.line + 1,
@@ -378,7 +368,7 @@ fn lsp_character_to_byte_offset_utf_8_code_points(
     character: usize,
 ) -> Option<usize> {
     if character < line.len_chars() {
-        Some(line.char_to_byte(character))
+        Some(line.char_to_byte(line.utf16_cu_to_char(character)))
     } else {
         None
     }

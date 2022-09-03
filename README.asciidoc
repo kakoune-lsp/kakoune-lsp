@@ -554,31 +554,14 @@ kak-lsp works best with UTF-8 documents.
 
 === `Position.character` interpretation
 
-Currently, kak-lsp doesn't conform to the spec regarding the interpretation of `Position.character`.
-LSP spec says that
+The LSP spec says that column offsets (`Position.character`) are to be
+interpreted as UTF-16 code units. Many servers violate the spec. Please refer to
+https://github.com/Microsoft/language-server-protocol/issues/376 for some background.
 
-____
-A position inside a document (see Position definition below) is expressed as a zero-based line and
-character offset. The offsets are based on a UTF-16 string representation. So for a string of the
-form `a𐐀b` the character offset of the character `a` is 0, the character offset of `𐐀` is
-1 and the character offset of `b` is 3 since `𐐀` is represented using two code units in UTF-16.
-____
-
-However, kak-lsp treats `Position.character` as an offset in UTF-8 code points by default.
-Fortunately, it appears to produce the same result within the Basic Multilingual Plane (BMP) which
-includes a lot of characters.
-
-Unfortunately, many language servers violate the spec as well, and in an inconsistent manner. Please
-refer https://github.com/Microsoft/language-server-protocol/issues/376 for more information. There
-are two main types of violations we met in the wild:
-
-1) Using UTF-8 code points, just like kak-lsp does. Those should work well with kak-lsp for
-characters outside BMP out of the box.
-
-2) Using UTF-8 code units (bytes), just like Kakoune does. Those are supported by kak-lsp if either
-the server supports the https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol
-extension], or by adding `offset_encoding = "utf-8"` to the language server configuration in
-`kak-lsp.toml`.
+kak-lsp adheres to the spec but will prefer UTF-8 offsets if the server advertises
+https://clangd.llvm.org/extensions.html#utf-8-offsets[support for UTF-8 offsets via the clangd
+protocol extension], or if `kak-lsp.toml` contains `offset_encoding = "utf-8"` for that language
+server.
 
 == Troubleshooting
 
