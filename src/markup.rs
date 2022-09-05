@@ -76,7 +76,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                     }
                     markup.push('\n')
                 }
-                Tag::Heading(level) => {
+                Tag::Heading(level, _, _) => {
                     face_stack.push(FACE_INFO_HEADER.into());
                     // Color as `{header}` but keep the Markdown syntax to visualize the header level
                     let _ = write!(
@@ -148,7 +148,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             },
             Event::End(t) => match t {
                 Tag::Paragraph => markup.push('\n'),
-                Tag::Heading(_) => {
+                Tag::Heading(_, _, _) => {
                     let base_face = pop_base_face(&mut face_stack);
                     let _ = writeln!(markup, "{{{}}}", base_face);
                 }
