@@ -283,6 +283,8 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     formats: vec![TokenFormat::RELATIVE],
                     overlapping_token_support: None,
                     multiline_token_support: None,
+                    augments_syntax_tokens: None,
+                    server_cancel_support: None,
                 }),
                 linked_editing_range: None,
                 call_hierarchy: Some(CallHierarchyClientCapabilities {
@@ -329,7 +331,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
         process_id: Some(process::id()),
         root_uri: Some(Url::from_file_path(root_path).unwrap()),
         root_path: Some(root_path.to_string()),
-        trace: Some(TraceOption::Off),
+        trace: Some(TraceValue::Off),
         workspace_folders: Some(vec![WorkspaceFolder {
             uri: Url::from_file_path(root_path).unwrap(),
             name: root_path.to_string(),
