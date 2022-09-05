@@ -32,8 +32,8 @@ pub fn lsp_range_to_kakoune(
     offset_encoding: OffsetEncoding,
 ) -> KakouneRange {
     match offset_encoding {
-        OffsetEncoding::Utf8 => lsp_range_to_kakoune_utf_8_code_units(range),
-        OffsetEncoding::Utf16 => lsp_range_to_kakoune_utf_8_code_points(range, text),
+        OffsetEncoding::Utf8 => lsp_range_to_kakoune_utf_8(range),
+        OffsetEncoding::Utf16 => lsp_range_to_kakoune_utf_16(range, text),
     }
 }
 
@@ -43,8 +43,8 @@ pub fn lsp_position_to_kakoune(
     offset_encoding: OffsetEncoding,
 ) -> KakounePosition {
     match offset_encoding {
-        OffsetEncoding::Utf8 => lsp_position_to_kakoune_utf_8_code_units(position),
-        OffsetEncoding::Utf16 => lsp_position_to_kakoune_utf_8_code_points(position, text),
+        OffsetEncoding::Utf8 => lsp_position_to_kakoune_utf_8(position),
+        OffsetEncoding::Utf16 => lsp_position_to_kakoune_utf_16(position, text),
     }
 }
 
@@ -65,8 +65,8 @@ pub fn kakoune_position_to_lsp(
     offset_encoding: OffsetEncoding,
 ) -> Position {
     match offset_encoding {
-        OffsetEncoding::Utf8 => kakoune_position_to_lsp_utf_8_code_units(position),
-        OffsetEncoding::Utf16 => kakoune_position_to_lsp_utf_8_code_points(position, text),
+        OffsetEncoding::Utf8 => kakoune_position_to_lsp_utf_8(position),
+        OffsetEncoding::Utf16 => kakoune_position_to_lsp_utf_16(position, text),
     }
 }
 
@@ -196,7 +196,7 @@ fn get_byte_index(char_index: usize, text: RopeSlice) -> usize {
     text.char_to_byte(text.utf16_cu_to_char(min(char_index, text.len_utf16_cu())))
 }
 
-fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> KakouneRange {
+fn lsp_range_to_kakoune_utf_16(range: &Range, text: &Rope) -> KakouneRange {
     let Range { start, end } = range;
 
     let start_line = get_line(start.line as _, text);
@@ -204,7 +204,7 @@ fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> Kakoune
     let end_line = get_line(end.line as _, text);
     let end_byte = get_byte_index(end.character as _, end_line) as u32;
 
-    lsp_range_to_kakoune_utf_8_code_units(&Range {
+    lsp_range_to_kakoune_utf_8(&Range {
         start: Position {
             line: start.line,
             character: start_byte,
@@ -216,7 +216,7 @@ fn lsp_range_to_kakoune_utf_8_code_points(range: &Range, text: &Rope) -> Kakoune
     })
 }
 
-fn lsp_range_to_kakoune_utf_8_code_units(range: &Range) -> KakouneRange {
+fn lsp_range_to_kakoune_utf_8(range: &Range) -> KakouneRange {
     let Range { start, end } = range;
     let insert = start.line == end.line && start.character == end.character;
     // Beginning of line is a very special case as we need to produce selection on the line
@@ -285,7 +285,7 @@ fn lsp_range_to_kakoune_utf_8_code_units(range: &Range) -> KakouneRange {
     }
 }
 
-fn kakoune_position_to_lsp_utf_8_code_points(position: &KakounePosition, text: &Rope) -> Position {
+fn kakoune_position_to_lsp_utf_16(position: &KakounePosition, text: &Rope) -> Position {
     // -1 because LSP & Rope ranges are 0-based, but Kakoune's are 1-based.
     let line_idx = position.line - 1;
     let col_idx = position.column - 1;
@@ -311,7 +311,7 @@ fn kakoune_position_to_lsp_utf_8_code_points(position: &KakounePosition, text: &
     }
 }
 
-fn kakoune_position_to_lsp_utf_8_code_units(position: &KakounePosition) -> Position {
+fn kakoune_position_to_lsp_utf_8(position: &KakounePosition) -> Position {
     // -1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     Position {
         line: position.line - 1,
@@ -319,7 +319,7 @@ fn kakoune_position_to_lsp_utf_8_code_units(position: &KakounePosition) -> Posit
     }
 }
 
-fn lsp_position_to_kakoune_utf_8_code_points(position: &Position, text: &Rope) -> KakounePosition {
+fn lsp_position_to_kakoune_utf_16(position: &Position, text: &Rope) -> KakounePosition {
     if position.line as usize >= text.len_lines() {
         return KakounePosition {
             line: position.line + 1,
@@ -343,7 +343,7 @@ fn lsp_position_to_kakoune_utf_8_code_points(position: &Position, text: &Rope) -
     }
 }
 
-fn lsp_position_to_kakoune_utf_8_code_units(position: &Position) -> KakounePosition {
+fn lsp_position_to_kakoune_utf_8(position: &Position) -> KakounePosition {
     // +1 because LSP ranges are 0-based, but Kakoune's are 1-based.
     KakounePosition {
         line: position.line + 1,
@@ -357,16 +357,12 @@ pub fn lsp_character_to_byte_offset(
     offset_encoding: OffsetEncoding,
 ) -> Option<usize> {
     match offset_encoding {
-        OffsetEncoding::Utf8 => lsp_character_to_byte_offset_utf_8_code_units(line, character),
-        // Not a proper UTF-16 code units handling, but works within BMP
-        OffsetEncoding::Utf16 => lsp_character_to_byte_offset_utf_8_code_points(line, character),
+        OffsetEncoding::Utf8 => lsp_character_to_byte_offset_utf_8(line, character),
+        OffsetEncoding::Utf16 => lsp_character_to_byte_offset_utf_16(line, character),
     }
 }
 
-fn lsp_character_to_byte_offset_utf_8_code_points(
-    line: RopeSlice,
-    character: usize,
-) -> Option<usize> {
+fn lsp_character_to_byte_offset_utf_16(line: RopeSlice, character: usize) -> Option<usize> {
     if character < line.len_chars() {
         Some(line.char_to_byte(line.utf16_cu_to_char(character)))
     } else {
@@ -374,10 +370,7 @@ fn lsp_character_to_byte_offset_utf_8_code_points(
     }
 }
 
-fn lsp_character_to_byte_offset_utf_8_code_units(
-    line: RopeSlice,
-    character: usize,
-) -> Option<usize> {
+fn lsp_character_to_byte_offset_utf_8(line: RopeSlice, character: usize) -> Option<usize> {
     if character <= line.len_bytes() {
         Some(character)
     } else {
@@ -390,9 +383,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lsp_range_to_kakoune_utf_8_code_units_bol_insert() {
+    fn lsp_range_to_kakoune_utf_8_bol_insert() {
         assert_eq!(
-            lsp_range_to_kakoune_utf_8_code_units(&Range {
+            lsp_range_to_kakoune_utf_8(&Range {
                 start: Position {
                     line: 10,
                     character: 0
@@ -416,9 +409,9 @@ mod tests {
     }
 
     #[test]
-    fn lsp_range_to_kakoune_utf_8_code_units_bof_insert() {
+    fn lsp_range_to_kakoune_utf_8_bof_insert() {
         assert_eq!(
-            lsp_range_to_kakoune_utf_8_code_units(&Range {
+            lsp_range_to_kakoune_utf_8(&Range {
                 start: Position {
                     line: 0,
                     character: 0
@@ -436,9 +429,9 @@ mod tests {
     }
 
     #[test]
-    fn lsp_range_to_kakoune_utf_8_code_units_eol() {
+    fn lsp_range_to_kakoune_utf_8_eol() {
         assert_eq!(
-            lsp_range_to_kakoune_utf_8_code_units(&Range {
+            lsp_range_to_kakoune_utf_8(&Range {
                 start: Position {
                     line: 10,
                     character: 0
