@@ -30,7 +30,7 @@ mod workspace;
 
 use crate::types::*;
 use crate::util::*;
-use clap::{crate_version, App, Arg, ArgMatches};
+use clap::{crate_version, App, Arg, ArgAction, ArgMatches};
 use daemonize::Daemonize;
 use itertools::Itertools;
 use sloggers::file::FileLoggerBuilder;
@@ -64,7 +64,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("config")
-                .short("c")
+                .short('c')
                 .long("config")
                 .value_name("FILE")
                 .help("Read config from FILE")
@@ -72,13 +72,13 @@ fn main() {
         )
         .arg(
             Arg::with_name("daemonize")
-                .short("d")
+                .short('d')
                 .long("daemonize")
                 .help("Daemonize kak-lsp process (server only)"),
         )
         .arg(
             Arg::with_name("session")
-                .short("s")
+                .short('s')
                 .long("session")
                 .value_name("SESSION")
                 .help("Session id to communicate via unix socket")
@@ -87,7 +87,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("timeout")
-                .short("t")
+                .short('t')
                 .long("timeout")
                 .value_name("TIMEOUT")
                 .help("Session timeout in seconds (default 1800)")
@@ -100,8 +100,8 @@ fn main() {
         )
         .arg(
             Arg::with_name("v")
-                .short("v")
-                .multiple(true)
+                .short('v')
+                .action(ArgAction::Count)
                 .help("Sets the level of verbosity (use up to 4 times)"),
         )
         .arg(
@@ -250,8 +250,8 @@ fn spin_up_server(input: &[u8]) {
     child.wait().expect("Failed to daemonize server");
 }
 
-fn setup_logger(config: &Config, matches: &clap::ArgMatches<'_>) -> slog_scope::GlobalLoggerGuard {
-    let mut verbosity = matches.occurrences_of("v") as u8;
+fn setup_logger(config: &Config, matches: &clap::ArgMatches) -> slog_scope::GlobalLoggerGuard {
+    let mut verbosity = matches.get_count("v") as u8;
 
     if verbosity == 0 {
         verbosity = config.verbosity

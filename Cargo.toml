@@ -6,7 +6,7 @@ edition = "2018"
 license = "Unlicense/MIT"
 
 [dependencies]
-clap = "2.33.1"
+clap = {version = "3.2.20", features = ["cargo"] }
 crossbeam-channel = "0.5.1"
 daemonize = "0.4.1"
 diffs = "0.4.1"
