@@ -1,3 +1,5 @@
+#[cfg(test)]
+use indoc::indoc;
 use lsp_types::*;
 use pulldown_cmark::{Event, Parser, Tag};
 use std::fmt::Write as _;
@@ -244,5 +246,26 @@ pub fn marked_string_to_kakoune_markup(contents: MarkedString) -> String {
                 FACE_INFO_DEFAULT
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_markdown_to_kakoune_markup() {
+        let markup = markdown_to_kakoune_markup(indoc!(
+            r#"# heading
+               body"#
+        ));
+        assert_eq!(
+            markup,
+            indoc!(
+                r#"{InfoHeader}# heading{InfoDefault}
+
+                   body"#
+            )
+        );
     }
 }
