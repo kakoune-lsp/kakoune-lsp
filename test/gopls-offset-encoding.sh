@@ -26,13 +26,13 @@ test_tmux_kak_start 'edit main.go'
 # Check that characters in the Basic Multilingual Plane work.
 test_tmux send-keys / BMP Enter gd
 test_sleep
-test_tmux send-keys 'i%()' Escape
-test_sleep_until 'test_tmux capture-pane -p | grep -F "%()"'
-#CHECK: func /*åååååååååå*/ %()BMP() {
+test_tmux send-keys 'i/**/' Escape
+test_sleep_until 'test_tmux capture-pane -p | grep -F "/**/"'
+#CHECK: func /*åååååååååå*/ /**/BMP() {
 
 # Check that characters outside the BMP work.
 test_tmux send-keys Escape u gk / BeyondBMP Enter gd
 test_sleep
-test_tmux send-keys 'i%()' Escape
-test_sleep_until 'test_tmux capture-pane -p | grep -F "%()"'
-#CHECK: func /*🐣🐣🐣🐣🐣*/ %()BeyondBMP() {
+test_tmux send-keys 'i/**/' Escape
+test_sleep_until 'test_tmux capture-pane -p | grep -F "/**/"'
+#CHECK: func /*🐣🐣🐣🐣🐣*/ /**/BeyondBMP() {
