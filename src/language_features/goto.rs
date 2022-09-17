@@ -18,7 +18,7 @@ pub fn goto(meta: EditorMeta, result: Option<GotoDefinitionResponse>, ctx: &mut 
             .map(
                 |LocationLink {
                      target_uri: uri,
-                     target_range: range,
+                     target_selection_range: range,
                      ..
                  }| Location { uri, range },
             )
