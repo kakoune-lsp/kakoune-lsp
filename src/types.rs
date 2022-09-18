@@ -228,6 +228,12 @@ pub struct CodeActionsParams {
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct CodeActionResolveParams {
+    pub code_action: String,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct NextOrPrevSymbolParams {
     pub position: KakounePosition,
     /// Match any of these kinds of symbols, or any symbol if empty.

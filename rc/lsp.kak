@@ -697,6 +697,22 @@ $code_action_pattern
     fi
 }}
 
+define-command -hidden lsp-code-action-resolve-request -params 1 \
+    -docstring "Request additional attributes for a code action" %{
+    nop %sh{
+        (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"codeAction/resolve\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+[params]
+codeAction = \"$(printf %s "${1}" | sed 's/\\/\\\\/g; s/"/\\"/g')\"
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
 define-command lsp-code-lens -docstring "apply a code lens from the current selection" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"

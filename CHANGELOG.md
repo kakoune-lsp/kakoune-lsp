@@ -4,6 +4,7 @@ Additions:
 - `lsp-auto-signature-help-enable` now shows an info box by default, and formats the active parameter in a bold font.
 - `lsp-definition` and friends now select the symbol name instead of merely placing the cursor at symbol start.
 ` `lsp-highlight-references` now select all references in the current buffer.
+- Added support for `codeAction/resolve`, which allows to use code actions sent by Deno for example.
 
 Fixes:
 - `lsp-rename` will now write modified background buffers to preserve consistency.

@@ -113,7 +113,7 @@ fn editor_code_actions(
         .to_string();
         let command = match matches.len() {
             0 => fail + " 'no matching action available'",
-            1 => code_action_to_editor_command(matches[0], sync),
+            1 => code_action_or_command_to_editor_command(matches[0], sync),
             _ => fail + " 'multiple matching actions'",
         };
         ctx.exec(meta, command);
@@ -130,7 +130,7 @@ fn editor_code_actions(
             if let Some((head, _)) = title.split_once('\n') {
                 title = head
             }
-            let select_cmd = code_action_to_editor_command(c, false);
+            let select_cmd = code_action_or_command_to_editor_command(c, false);
             format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
         })
         .join(" ");
@@ -152,17 +152,28 @@ fn editor_code_actions(
     ctx.exec(meta, command);
 }
 
-fn code_action_to_editor_command(action: &CodeActionOrCommand, sync: bool) -> String {
+fn code_action_or_command_to_editor_command(action: &CodeActionOrCommand, sync: bool) -> String {
     match action {
         CodeActionOrCommand::Command(command) => execute_command_editor_command(command, sync),
         CodeActionOrCommand::CodeAction(action) => {
-            let command = match &action.command {
-                Some(command) => "\n".to_string() + &execute_command_editor_command(command, sync),
-                None => "".to_string(),
-            };
-            match &action.edit {
-                Some(edit) => apply_workspace_edit_editor_command(edit, sync) + &command,
-                None => "lsp-show-error 'unresolved code action'".to_string(),
+            code_action_to_editor_command(action, sync, true)
+        }
+    }
+}
+
+fn code_action_to_editor_command(action: &CodeAction, sync: bool, may_resolve: bool) -> String {
+    let command = match &action.command {
+        Some(command) => "\n".to_string() + &execute_command_editor_command(command, sync),
+        None => "".to_string(),
+    };
+    match &action.edit {
+        Some(edit) => apply_workspace_edit_editor_command(edit, sync) + &command,
+        None => {
+            if may_resolve {
+                let args = &serde_json::to_string(&action).unwrap();
+                format!("lsp-code-action-resolve-request {}", editor_quote(args))
+            } else {
+                "lsp-show-error 'unresolved code action'".to_string()
             }
         }
     }
@@ -200,4 +211,22 @@ pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
         cmd,
         args
     )
+}
+
+pub fn text_document_code_action_resolve(
+    meta: EditorMeta,
+    params: EditorParams,
+    ctx: &mut Context,
+) {
+    let params = CodeActionResolveParams::deserialize(params)
+        .expect("Params should follow CodeActionResolveParams structure");
+
+    ctx.call::<CodeActionResolveRequest, _>(
+        meta,
+        serde_json::from_str(&params.code_action).unwrap(),
+        move |ctx: &mut Context, meta, result| {
+            let cmd = code_action_to_editor_command(&result, false, false);
+            ctx.exec(meta, cmd)
+        },
+    );
 }

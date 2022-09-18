@@ -223,7 +223,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     is_preferred_support: Some(false),
                     disabled_support: None,
                     data_support: None,
-                    resolve_support: None,
+                    resolve_support: Some(CodeActionCapabilityResolveSupport {
+                        properties: ["edit"].iter().map(|s| s.to_string()).collect(),
+                    }),
                     honors_change_annotations: None,
                 }),
                 code_lens: Some(DynamicRegistrationClientCapabilities {

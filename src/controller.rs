@@ -252,6 +252,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         request::CodeActionRequest::METHOD => {
             code_action::text_document_code_action(meta, params, ctx);
         }
+        request::CodeActionResolveRequest::METHOD => {
+            code_action::text_document_code_action_resolve(meta, params, ctx);
+        }
         request::ExecuteCommand::METHOD => {
             workspace::execute_command(meta, params, ctx);
         }
