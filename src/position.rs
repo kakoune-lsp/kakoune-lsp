@@ -363,7 +363,7 @@ pub fn lsp_character_to_byte_offset(
 }
 
 fn lsp_character_to_byte_offset_utf_16(line: RopeSlice, character: usize) -> Option<usize> {
-    if character < line.len_chars() {
+    if character <= line.len_chars() {
         Some(line.char_to_byte(line.utf16_cu_to_char(character)))
     } else {
         None
