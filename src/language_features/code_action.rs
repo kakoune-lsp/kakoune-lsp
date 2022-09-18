@@ -155,10 +155,16 @@ fn editor_code_actions(
 fn code_action_to_editor_command(action: &CodeActionOrCommand, sync: bool) -> String {
     match action {
         CodeActionOrCommand::Command(command) => execute_command_editor_command(command, sync),
-        CodeActionOrCommand::CodeAction(action) => match &action.edit {
-            Some(edit) => apply_workspace_edit_editor_command(edit, sync),
-            None => "lsp-show-error 'unresolved code action'".to_string(),
-        },
+        CodeActionOrCommand::CodeAction(action) => {
+            let command = match &action.command {
+                Some(command) => "\n".to_string() + &execute_command_editor_command(command, sync),
+                None => "".to_string(),
+            };
+            match &action.edit {
+                Some(edit) => apply_workspace_edit_editor_command(edit, sync) + &command,
+                None => "lsp-show-error 'unresolved code action'".to_string(),
+            }
+        }
     }
 }
 
