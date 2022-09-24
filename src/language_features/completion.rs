@@ -89,26 +89,6 @@ fn editor_completion(
                 None => escape_kakoune_markup(&x.label),
             };
 
-            let maybe_filter_text = if !params.have_kakoune_feature_filtertext {
-                None
-            } else {
-                let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
-                let specified_insert_text = x
-                    .text_edit
-                    .as_ref()
-                    .map(|cte| match cte {
-                        CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
-                        CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
-                    })
-                    .or(x.insert_text.as_ref())
-                    .unwrap_or(&x.label);
-                if specified_filter_text == specified_insert_text {
-                    None
-                } else {
-                    Some(specified_filter_text.clone())
-                }
-            };
-
             let insert_text = x.text_edit.as_ref().and_then(|cte| {
                 let document = match ctx.documents.get(&meta.buffile) {
                     Some(doc) => doc,
@@ -186,6 +166,37 @@ fn editor_completion(
                     ))
                 }
             }
+
+            let maybe_filter_text = {
+                let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
+                let specified_insert_text = x
+                    .text_edit
+                    .as_ref()
+                    .map(|cte| match cte {
+                        CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
+                        CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
+                    })
+                    .or(x.insert_text.as_ref())
+                    .unwrap_or(&x.label);
+                if !params.have_kakoune_feature_filtertext && specified_filter_text != specified_insert_text
+                    && x.insert_text_format != Some(InsertTextFormat::SNIPPET) {
+                    // Simulate filter-text support by giving the filter-text to Kakoune
+                    // but expand to the insert-text when the completion is accepted.
+                    let command = formatdoc!(
+                        "{on_select}
+                         lsp-snippets-insert-completion {}",
+                        editor_quote(&(insert_text + "$0"))
+                    );
+                    let insert_text = specified_filter_text;
+                    return completion_entry(insert_text, &None, &command, &entry)
+                }
+                if params.have_kakoune_feature_filtertext && specified_filter_text != specified_insert_text {
+                        Some(specified_filter_text.clone())
+                } else {
+                    None
+                }
+            };
+
 
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.

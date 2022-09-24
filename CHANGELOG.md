@@ -5,6 +5,7 @@ Additions:
 - `lsp-definition` and friends now select the symbol name instead of merely placing the cursor at symbol start.
 ` `lsp-highlight-references` now select all references in the current buffer.
 - Added support for `codeAction/resolve`, which allows to use code actions sent by Deno for example.
+- The support for `filterText` in completions no longer depends on a proposed Kakoune feature.
 
 Fixes:
 - `lsp-rename` will now write modified background buffers to preserve consistency.
