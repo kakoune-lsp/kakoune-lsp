@@ -272,6 +272,11 @@ settings_section = "intelephense"
 [language.php.settings]
 intelephense.storagePath = "/tmp/intelephense"
 
+[language.proto]
+filetypes = ["protobuf"]
+roots = [".git", ".hg"]
+command = "pls" # https://github.com/lasorda/protobuf-language-server
+
 [language.python]
 filetypes = ["python"]
 roots = ["requirements.txt", "setup.py", ".git", ".hg"]
