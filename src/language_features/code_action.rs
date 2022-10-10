@@ -4,7 +4,10 @@ use crate::context::*;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
+use crate::wcwidth;
+use indoc::formatdoc;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
@@ -146,7 +149,18 @@ fn editor_code_actions(
         if actions.is_empty() {
             "lsp-hide-code-actions\n".to_string()
         } else {
-            format!("lsp-show-code-actions {}\n", titles_and_commands)
+            lazy_static! {
+                static ref CODE_ACTION_INDICATOR: &'static str =
+                    wcwidth::expected_width_or_fallback("💡", 2, "[A]");
+            }
+            let commands = formatdoc!(
+                "set-option global lsp_code_action_indicator {}
+                 lsp-show-code-actions {}
+                 ",
+                *CODE_ACTION_INDICATOR,
+                titles_and_commands
+            );
+            format!("evaluate-commands -- {}", editor_quote(&commands))
         }
     };
     ctx.exec(meta, command);

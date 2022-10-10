@@ -1,7 +1,10 @@
 use crate::context::Context;
 use crate::types::{EditorMeta, EditorParams};
 use crate::util::editor_quote;
+use crate::wcwidth;
+use indoc::formatdoc;
 use jsonrpc_core::Params;
+use lazy_static::lazy_static;
 use lsp_types::{
     notification::WorkDoneProgressCancel, NumberOrString, ProgressParams, ProgressParamsValue,
     WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCancelParams,
@@ -58,8 +61,14 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
             NumberOrString::Number(token) => token.to_string(),
             NumberOrString::String(token) => editor_quote(token),
         };
-        format!(
-            "lsp-handle-progress {} {} {} {} {} {}",
+        lazy_static! {
+            static ref PROGRESS_INDICATOR: &'static str =
+                wcwidth::expected_width_or_fallback("⌛", 2, "[P]");
+        }
+        formatdoc!(
+            "set-option global lsp_progress_indicator {}
+             lsp-handle-progress {} {} {} {} {} {}",
+            *PROGRESS_INDICATOR,
             token,
             editor_quote(title),
             cancelable,

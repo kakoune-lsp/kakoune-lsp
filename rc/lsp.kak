@@ -152,33 +152,9 @@ Capture groups must be:
 
 # Callback functions. Override these to tune kak-lsp's behavior.
 
+declare-option -hidden str lsp_code_action_indicator
 define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
-    set-option buffer lsp_modeline_code_actions %sh{
-        if [ $kak_opt_lsp_emoji_lightbulb_ok = 3 ]; then
-            echo "💡"
-        else
-            echo [A]
-        fi
-    }
-}
-# Work around terminals/libc using different versions of wcwidth(3).
-declare-option -hidden int lsp_emoji_lightbulb_ok
-declare-option -hidden int lsp_emoji_hourglass_ok
-evaluate-commands -save-regs t %{
-    set-register t %{
-        edit -scratch *lsp-scratch*
-        execute-keys -draft i💡<esc>
-        set-option global lsp_emoji_lightbulb_ok %val{cursor_display_column}
-        execute-keys -draft ui⌛<esc>
-        set-option global lsp_emoji_hourglass_ok %val{cursor_display_column}
-        buffer *debug*
-        delete-buffer *lsp-scratch*
-    }
-    try %{
-        evaluate-commands -draft %reg{t}
-    } catch %{
-        evaluate-commands %reg{t}
-    }
+    set-option buffer lsp_modeline_code_actions %opt{lsp_code_action_indicator}
 }
 
 define-command -hidden lsp-hide-code-actions -docstring "Called when no code action is available for the main cursor position" %{
@@ -1821,17 +1797,14 @@ define-command -hidden lsp-show-message-log -params 1 -docstring %{
     echo -debug "kak-lsp: log:" %arg{1}
 }
 
+declare-option -hidden str lsp_progress_indicator
 define-command -hidden lsp-handle-progress -params 6 -docstring %{
   lsp-handle-progress <token> <title> <cancelable> <message> <percentage> <done>
   Handle progress messages sent from the language server. Override to handle this.
 } %{
     set-option global lsp_modeline_progress %sh{
         if ! "$6"; then
-            if [ $kak_opt_lsp_emoji_hourglass_ok = 3 ]; then
-                echo ⌛
-            else
-                echo [P]
-            fi
+            echo "$kak_opt_lsp_progress_indicator"
             # More verbose alternative that shows what the server is working on.  Don't show this in
             # the modeline by default because the modeline is part of the terminal title; changing
             # that too quickly can be noisy.

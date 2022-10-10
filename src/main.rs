@@ -26,6 +26,7 @@ mod text_sync;
 mod thread_worker;
 mod types;
 mod util;
+mod wcwidth;
 mod workspace;
 
 use crate::types::*;
@@ -39,6 +40,7 @@ use sloggers::types::Severity;
 use sloggers::Build;
 use std::borrow::Cow;
 use std::env;
+use std::ffi::CString;
 use std::fs;
 use std::io::{stdin, Read, Write};
 use std::os::unix::net::UnixStream;
@@ -48,6 +50,10 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 fn main() {
+    {
+        let locale = CString::new("").unwrap();
+        unsafe { libc::setlocale(libc::LC_ALL, locale.as_ptr()) };
+    }
     let matches = App::new("kak-lsp")
         .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
