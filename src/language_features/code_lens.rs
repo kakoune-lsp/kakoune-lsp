@@ -1,5 +1,4 @@
 use super::code_action::execute_command_editor_command;
-use crate::capabilities::server_has_capability;
 use crate::capabilities::CAPABILITY_CODE_LENS;
 use crate::capabilities::CAPABILITY_EXECUTE_COMMANDS;
 use crate::context::*;
@@ -7,7 +6,12 @@ use crate::diagnostics::gather_line_flags;
 use crate::position::*;
 use crate::types::*;
 use crate::util::editor_quote;
+use crate::util::escape_tuple_element;
+use crate::wcwidth;
+use crate::{capabilities::server_has_capability, markup::escape_kakoune_markup};
+use indoc::formatdoc;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
@@ -34,20 +38,43 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
 fn editor_code_lens(meta: EditorMeta, result: Option<Vec<CodeLens>>, ctx: &mut Context) {
     let mut lenses = result.unwrap_or_default();
     lenses.sort_by_key(|lens| lens.range.start);
-    ctx.code_lenses.insert(meta.buffile.clone(), lenses);
 
     let buffile = &meta.buffile;
-    let version = match ctx.documents.get(buffile) {
-        Some(document) => document.version,
+    let document = match ctx.documents.get(buffile) {
+        Some(document) => document,
         None => {
             ctx.code_lenses.remove(buffile);
             return;
         }
     };
+    let version = document.version;
+    let range_specs = lenses
+        .iter()
+        .map(|lens| {
+            let label = lens.command.as_ref().map_or("", |v| &v.title);
+            let position =
+                lsp_position_to_kakoune(&lens.range.start, &document.text, ctx.offset_encoding);
+            let line = position.line;
+            let column = position.column;
+            lazy_static! {
+                static ref CODE_LENS_INDICATOR: &'static str =
+                    wcwidth::expected_width_or_fallback("🔎", 2, "[L]");
+            }
+
+            editor_quote(&format!(
+                "{line}.{column}+0|{{InlayCodeLens}}[{} {}] ",
+                *CODE_LENS_INDICATOR,
+                escape_tuple_element(&escape_kakoune_markup(label))
+            ))
+        })
+        .join(" ");
+
+    ctx.code_lenses.insert(meta.buffile.clone(), lenses);
+
     let line_flags = gather_line_flags(ctx, buffile).0;
-    let command = format!(
-         "evaluate-commands \"set-option buffer lsp_diagnostic_lines {} {} '0|%opt[lsp_diagnostic_line_error_sign]'\"",
-         version, line_flags,
+    let command = formatdoc!(
+         "evaluate-commands \"set-option buffer lsp_diagnostic_lines {version} {line_flags} '0|%opt[lsp_diagnostic_line_error_sign]'\"
+          set-option buffer lsp_inlay_code_lenses {version} {range_specs}",
     );
     let command = format!(
         "evaluate-commands -buffer {} %§{}§",

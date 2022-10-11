@@ -187,6 +187,8 @@ If you have followed above steps you get
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
   * for lines with code lenses, a `>` flag which can be customized via the `lsp_code_lens_sign` option
   * `lsp-code-lens` command to execute a code lens from the current selection
+  * commands `lsp-inlay-code-lenses-enable` and `lsp-inlay-code-lenses-disable` to toggle rendering of code lenses.
+    * You can change the code lenses' face with `set-face global InlayCodeLens <face>`.
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
 * `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
 

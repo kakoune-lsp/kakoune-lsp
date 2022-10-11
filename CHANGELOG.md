@@ -2,6 +2,7 @@
 
 Additions:
 - Default language server for protobuf.
+- New `lsp-inlay-code-lenses-enable` command to render code lenses as virtual text (#623).
 - `lsp-auto-signature-help-enable` now shows an info box by default, and formats the active parameter in a bold font.
 - `lsp-definition` and friends now select the symbol name instead of merely placing the cursor at symbol start.
 ` `lsp-highlight-references` now select all references in the current buffer.
