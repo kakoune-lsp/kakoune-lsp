@@ -178,8 +178,10 @@ fn editor_completion(
                     })
                     .or(x.insert_text.as_ref())
                     .unwrap_or(&x.label);
-                if !params.have_kakoune_feature_filtertext && specified_filter_text != specified_insert_text
-                    && x.insert_text_format != Some(InsertTextFormat::SNIPPET) {
+                if !params.have_kakoune_feature_filtertext
+                    && specified_filter_text != specified_insert_text
+                    && x.insert_text_format != Some(InsertTextFormat::SNIPPET)
+                {
                     // Simulate filter-text support by giving the filter-text to Kakoune
                     // but expand to the insert-text when the completion is accepted.
                     let command = formatdoc!(
@@ -188,10 +190,12 @@ fn editor_completion(
                         editor_quote(&(insert_text + "$0"))
                     );
                     let insert_text = specified_filter_text;
-                    return completion_entry(insert_text, &None, &command, &entry)
+                    return completion_entry(insert_text, &None, &command, &entry);
                 }
-                if params.have_kakoune_feature_filtertext && specified_filter_text != specified_insert_text {
-                        Some(specified_filter_text.clone())
+                if params.have_kakoune_feature_filtertext
+                    && specified_filter_text != specified_insert_text
+                {
+                    Some(specified_filter_text.clone())
                 } else {
                     None
                 }
@@ -204,7 +208,8 @@ fn editor_completion(
             {
                 lazy_static::lazy_static! {
                     static ref SNIPPET_TABSTOP_RE: Regex = Regex::new(r"\$(?P<i>\d+)").unwrap();
-                    static ref SNIPPET_PLACEHOLDER_RE: Regex = Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
+                    static ref SNIPPET_PLACEHOLDER_RE: Regex =
+                        Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
                 }
                 let mut snippet = insert_text;
                 if !snippet.contains("$0") && !snippet.contains("${0") {
