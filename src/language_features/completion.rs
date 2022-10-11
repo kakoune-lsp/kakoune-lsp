@@ -6,6 +6,7 @@ use crate::types::*;
 use crate::util::*;
 use indoc::formatdoc;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
@@ -201,12 +202,11 @@ fn editor_completion(
                 }
             };
 
-
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.
             if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::SNIPPET)
             {
-                lazy_static::lazy_static! {
+                lazy_static! {
                     static ref SNIPPET_TABSTOP_RE: Regex = Regex::new(r"\$(?P<i>\d+)").unwrap();
                     static ref SNIPPET_PLACEHOLDER_RE: Regex =
                         Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
