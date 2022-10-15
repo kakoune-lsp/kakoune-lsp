@@ -99,23 +99,20 @@ pub fn start(
                     dispatch_editor_request(msg, &mut ctx);
                 } else {
                     debug!("Language server is not initialized, parking request");
-                    {
-                        let method: &str = &msg.method;
-                        match method {
-                            notification::DidOpenTextDocument::METHOD => (),
-                            notification::DidChangeTextDocument::METHOD => (),
-                            notification::DidCloseTextDocument::METHOD => (),
-                            notification::DidSaveTextDocument::METHOD => (),
-                            // TODO if auto-hover or auto-hl-references is not enabled we might want warning about parking as well
-                            request::HoverRequest::METHOD => (),
-                            request::CodeActionRequest::METHOD => (),
-                            request::DocumentHighlightRequest::METHOD => (),
-                            _ => ctx.exec(
-                                msg.meta.clone(),
-                                "lsp-show-error 'language server is not initialized, parking request'"
-                                    .to_string(),
-                            ),
-                        }
+                    match &*msg.method {
+                        notification::DidOpenTextDocument::METHOD => (),
+                        notification::DidChangeTextDocument::METHOD => (),
+                        notification::DidCloseTextDocument::METHOD => (),
+                        notification::DidSaveTextDocument::METHOD => (),
+                        // TODO if auto-hover or auto-hl-references is not enabled we might want warning about parking as well
+                        request::HoverRequest::METHOD => (),
+                        request::CodeActionRequest::METHOD => (),
+                        request::DocumentHighlightRequest::METHOD => (),
+                        _ => ctx.exec(
+                            msg.meta.clone(),
+                            "lsp-show-error 'language server is not initialized, parking request'"
+                                .to_string(),
+                        ),
                     }
                     ctx.pending_requests.push(msg);
                 }

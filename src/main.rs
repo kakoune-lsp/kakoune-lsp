@@ -205,7 +205,7 @@ fn main() {
 }
 
 fn kakoune() {
-    let script: &str = include_str!("../rc/lsp.kak");
+    let script = include_str!("../rc/lsp.kak");
     let args = env::args()
         .skip(1)
         .filter(|arg| arg != "--kakoune")
