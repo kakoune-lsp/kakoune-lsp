@@ -1960,7 +1960,6 @@ Jump to the next or previous diagnostic error" %{
             fi
         fi
         printf 'select %s\n' "$selection"
-        printf 'execute-keys <c-s>vv\n'
     }
 }
 
