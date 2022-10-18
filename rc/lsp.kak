@@ -1869,25 +1869,69 @@ Jump to the next or previous diagnostic error" %{
         #expand quoting, stores option in $@
         eval set -- "${kak_quoted_opt_lsp_inline_diagnostics}"
 
+        less_than() {
+            line1=$1
+            column1=$2
+            line2=$3
+            column2=$4
+            [ "$line1" -lt "$line2" ] || {
+                [ "$line1" -eq "$line2" ] && [ "$column1" -lt "$column2" ]
+            }
+        }
+
+        min() {
+            line1=$1 column1=$2
+            line2=$3 column2=$4
+            less_than "$@" &&
+                echo "$line1 $column1" ||
+                echo "$line2 $column2"
+        }
+
+        max() {
+            line1=$1 column1=$2
+            line2=$3 column2=$4
+            less_than "$@" &&
+                echo "$line2 $column2" ||
+                echo "$line1 $column1"
+        }
+
+        anchor=${kak_selection_desc%,*}
+        anchor_line=${anchor%.*}
+        anchor_column=${anchor#*.}
+        cursor=${kak_selection_desc#*,}
+        cursor_line=${cursor%.*}
+        cursor_column=${cursor#*.}
+        selection_start=$(min $anchor_line $anchor_column $cursor_line $cursor_column)
+        selection_end=$(max $anchor_line $anchor_column $cursor_line $cursor_column)
+
         first=""
         current=""
         prev=""
         selection=""
+        prev_no_overlap=true
         for e in "$@"; do
             if [ -z "${e##*DiagnosticError*}" ] || {
                 $includeWarnings && [ -z "${e##*DiagnosticWarning*}" ]
             } then # e is an error or warning
-                e=${e%,*}
-                line=${e%.*}
-                column=${e#*.}
-                if [ $line -eq $kak_cursor_line ] && [ $column -eq $kak_cursor_column ]; then
-                    continue #do not return the current location
-                fi
-                current="$line $column"
+                range=${e%|*}
+                start=${range%,*}
+                end=${range#*,}
+                start_line=${start%.*}
+                start_column=${start#*.}
+                end_line=${end%.*}
+                end_column=${end#*.}
+
+                current="$range"
                 if [ -z "$first" ]; then
                     first="$current"
                 fi
-                if [ $line -gt $kak_cursor_line ] || { [ $line -eq $kak_cursor_line ] && [ $column -gt $kak_cursor_column ]; }; then
+                intersection_start=$(max $selection_start $start_line $start_column)
+                intersection_end=$(min $selection_end $end_line $end_column)
+                no_overlap=$(less_than $intersection_end $intersection_start && echo true || echo false)
+                range_is_after_selection=$(less_than $selection_start $end_line $end_column && echo true || echo false)
+                if "$range_is_after_selection" && {
+                    $previous && $prev_no_overlap || $no_overlap
+                } then
                     #after the cursor
                     if $previous; then
                         selection="$prev"
@@ -1900,6 +1944,7 @@ Jump to the next or previous diagnostic error" %{
                     fi
                 else
                     prev="$current"
+                    prev_no_overlap=$no_overlap
                 fi
             fi
         done
@@ -1914,7 +1959,8 @@ Jump to the next or previous diagnostic error" %{
                 selection="$first"
             fi
         fi
-        printf 'edit "%b" %b' "$kak_buffile" "$selection"
+        printf 'select %s\n' "$selection"
+        printf 'execute-keys <c-s>vv\n'
     }
 }
 
