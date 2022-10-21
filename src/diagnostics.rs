@@ -183,11 +183,11 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
     let line_flags = diagnostics
         .merge_join_by(lenses, |left, right| left.0.cmp(&right.0))
         .map(|r| match r {
-            EitherOrBoth::Left((line, label)) => (line, label, ""),
-            EitherOrBoth::Right((line, label)) => (line, label, ""),
-            EitherOrBoth::Both((line, label1), (_, label2)) => (line, label1, label2),
+            EitherOrBoth::Left((line, diagnostic_label)) => (line, diagnostic_label),
+            EitherOrBoth::Right((line, lens_label)) => (line, lens_label),
+            EitherOrBoth::Both((line, diagnostic_label), _) => (line, diagnostic_label),
         })
-        .map(|(line, left, right)| format!("'{}|{}{}'", line + 1, left, right))
+        .map(|(line, label)| format!("'{}|{}'", line + 1, label))
         .join(" ");
 
     (
