@@ -317,6 +317,14 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     version: Some(env!("CARGO_PKG_VERSION").to_string()),
                 }),
                 stale_request_support: None,
+                position_encodings: Some(match ctx.preferred_offset_encoding {
+                    None | Some(OffsetEncoding::Utf8) => {
+                        vec![PositionEncodingKind::UTF8, PositionEncodingKind::UTF16]
+                    }
+                    Some(OffsetEncoding::Utf16) => {
+                        vec![PositionEncodingKind::UTF16, PositionEncodingKind::UTF8]
+                    }
+                }),
             }),
             offset_encoding: Some(
                 match ctx.preferred_offset_encoding {

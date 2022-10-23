@@ -564,9 +564,9 @@ interpreted as UTF-16 code units. Many servers violate the spec. Please refer to
 https://github.com/Microsoft/language-server-protocol/issues/376 for some background.
 
 kak-lsp adheres to the spec but will prefer UTF-8 offsets if the server advertises
-https://clangd.llvm.org/extensions.html#utf-8-offsets[support for UTF-8 offsets via the clangd
-protocol extension], or if `kak-lsp.toml` contains `offset_encoding = "utf-8"` for that language
-server.
+support for UTF-8 offsets via client capabilities `general.positionEncodings` or
+https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol extension],
+or if `kak-lsp.toml` contains `offset_encoding = "utf-8"` for that language server.
 
 == Troubleshooting
 
