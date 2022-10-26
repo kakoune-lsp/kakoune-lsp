@@ -42,7 +42,7 @@ jobs:
       run: ci/build-release.sh
     - name: Compute the tag
       id: tag
-      run: echo "::set-output name=TAG::${GITHUB_REF#refs/tags/}"
+      run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
     - name: Upload build
       uses: actions/upload-release-asset@v1
       env:
