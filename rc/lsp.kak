@@ -1951,6 +1951,7 @@ Jump to the next or previous diagnostic error" %{
         if [ -z "$first" ]; then
             # if nothing found
             echo "echo -markup '{Error}No errors found'"
+            exit
         fi
         if [ -z "$selection" ]; then #if nothing found past the cursor
             if $previous; then
