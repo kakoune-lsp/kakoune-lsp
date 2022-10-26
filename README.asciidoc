@@ -173,7 +173,7 @@ If you have followed above steps you get
 - `lsp-selection-range` command to quickly select interesting ranges around selections.
   - `lsp-selection-range-select` to navigate ranges fetched by `lsp-selection-range`.
 * `lsp-next-location` and `lsp-previous-location` to jump to the next or previous location listed in a buffer with the `lsp-goto` filetype. These also work for buffers `\*grep*`, `\*lint*` and `\*make*`
-* `lsp-highlight-references` command to highlight all references to the symbol under the main cursor in the current buffer with the `Reference` face (which is equal to the `MatchingChar` face by default)
+* `lsp-highlight-references` command to select (unless run in a hook context) all references to the symbol under the main cursor in the current buffer and highlight them with the `Reference` face (which is equal to the `MatchingChar` face by default)
 * `lsp-document-symbol` command to list the current buffer's symbols
 * `lsp-goto-document-symbol` command to jump to one of the current buffer's symbols
 * `lsp-workspace-symbol` command to list project-wide symbols matching the query
