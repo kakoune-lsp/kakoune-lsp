@@ -1,4 +1,4 @@
-## Unreleased
+## 14.1.0 - 2022-10-26
 
 Additions:
 - Default language server for protobuf.
