@@ -1,3 +1,4 @@
+use crate::context::meta_for_session;
 use crate::controller;
 use crate::editor_transport;
 use crate::project_root::find_project_root;
@@ -7,6 +8,7 @@ use crate::util::*;
 use crossbeam_channel::{after, never, select, Sender};
 use lsp_types::notification::Notification;
 use lsp_types::*;
+use regex::Regex;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -63,6 +65,18 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 // should be safe to unwrap as we just checked request for being None
                 // done this way instead of `match` to reduce nesting
                 let request = request.unwrap();
+                let request: EditorRequest = match toml::from_str(&request) {
+                    Ok(req) => req,
+                    Err(err) => {
+                        error!("Failed to parse editor request: {}", err);
+                        handle_broken_editor_request(
+                            editor.to_editor.sender(),
+                            request,
+                            &config.server.session
+                        );
+                        continue 'event_loop;
+                    }
+                };
                 // editor explicitely asked us to stop kak-lsp session
                 // (and we stop, even if other editor sessions are using this kak-lsp session)
                 if request.method == "stop" {
@@ -76,30 +90,12 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
 
                 let language_id = filetypes.get(&request.meta.filetype);
                 if language_id.is_none() {
-                    debug!(
+                    let msg = format!(
                         "Language server is not configured for filetype `{}`",
                         &request.meta.filetype
                     );
-
-                    let command = format!(
-                        "lsp-show-error 'Language server is not configured for filetype `{}`'",
-                        request.meta.filetype
-                    );
-
-                    // If the editor is expecting a fifo response, give it one, so it won't hang.
-                    if let Some(ref fifo) = request.meta.fifo {
-                        std::fs::write(fifo, &command).expect("Failed to write command to fifo");
-                    }
-
-                    if !request.meta.hook {
-                        let response = EditorResponse {
-                            meta: request.meta.clone(),
-                            command: command.into(),
-                        };
-                        if let Err(err) = editor.to_editor.sender().send(response) {
-                            error!("Failed to send stop message to editor: {err}");
-                        };
-                    }
+                    debug!("{}", msg);
+                    return_request_error(editor.to_editor.sender(), &request, &msg);
 
                     continue 'event_loop;
                 }
@@ -118,11 +114,13 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 match controllers.entry(route.clone()) {
                     Entry::Occupied(controller_entry) => {
                         if let Err(err) = controller_entry.get().worker.sender().send(request.clone())  {
-                            if let Some(fifo) = request.meta.fifo {
-                                cancel_blocking_request(fifo);
-                            }
-                            controller_entry.remove();
                             error!("Failed to send message to controller: {}", err);
+                            return_request_error(
+                                editor.to_editor.sender(),
+                                &request,
+                                "Language server is no longer running"
+                            );
+                            controller_entry.remove();
                             continue 'event_loop;
                         }
                     }
@@ -149,14 +147,61 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
     0
 }
 
-/// When server is not running it's better to cancel blocking request.
-/// Because server can take a long time to initialize or can fail to start.
-/// We assume that it's less annoying for user to just repeat command later
-/// than to wait, cancel, and repeat.
-fn cancel_blocking_request(fifo: String) {
-    debug!("Blocking request but LSP server is not running");
-    let command = "lsp-show-error 'language server is not running, cancelling blocking request'";
-    std::fs::write(fifo, command).expect("Failed to write command to fifo");
+/// Tries to send an error to the client about a request that failed to parse.
+fn handle_broken_editor_request(
+    to_editor: &Sender<EditorResponse>,
+    request: String,
+    session: &str,
+) {
+    // Try to parse enough of the broken toml to send the error to the editor.
+    lazy_static::lazy_static! {
+        static ref CLIENT_RE: Regex = Regex::new(r#"(?m)^client *= *"([a-zA-Z0-9_-]*)""#)
+            .expect("Failed to parse client name regex");
+        static ref HOOK_RE: Regex = Regex::new(r"(?m)^hook *= *true")
+            .expect("Failed to parse hook regex");
+    }
+    if let Some(client_name) = CLIENT_RE
+        .captures(&request)
+        .and_then(|cap| cap.get(1))
+        .map(|cap| cap.as_str())
+    {
+        // We still don't want to spam the user if a hook triggered the error.
+        if !HOOK_RE.is_match(&request) {
+            let msg = "Failed to parse editor request";
+            let meta = meta_for_session(session.to_string(), Some(client_name.to_string()));
+            let command = format!("lsp-show-error {}", editor_quote(msg));
+            let response = EditorResponse {
+                meta,
+                command: command.into(),
+            };
+            if let Err(err) = to_editor.send(response) {
+                error!("Failed to send error message to editor: {err}");
+            };
+        }
+    }
+}
+
+/// Sends an error back to the editor.
+///
+/// This will cancel any blocking requests and also print an error if the
+/// request was not triggered by an editor hook.
+fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
+    let command = format!("lsp-show-error {}", editor_quote(msg));
+
+    // If editor is expecting a fifo response, give it one, so it won't hang.
+    if let Some(ref fifo) = request.meta.fifo {
+        std::fs::write(fifo, &command).expect("Failed to write command to fifo");
+    }
+
+    if !request.meta.hook {
+        let response = EditorResponse {
+            meta: request.meta.clone(),
+            command: command.into(),
+        };
+        if let Err(err) = to_editor.send(response) {
+            error!("Failed to send error message to editor: {err}");
+        };
+    }
 }
 
 /// Reap controllers associated with editor session.
