@@ -158,8 +158,8 @@ fn handle_broken_editor_request(
     lazy_static! {
         static ref CLIENT_RE: Regex = Regex::new(r#"(?m)^client *= *"([a-zA-Z0-9_-]*)""#)
             .expect("Failed to parse client name regex");
-        static ref HOOK_RE: Regex = Regex::new(r"(?m)^hook *= *true")
-            .expect("Failed to parse hook regex");
+        static ref HOOK_RE: Regex =
+            Regex::new(r"(?m)^hook *= *true").expect("Failed to parse hook regex");
     }
     if let Some(client_name) = CLIENT_RE
         .captures(&request)
