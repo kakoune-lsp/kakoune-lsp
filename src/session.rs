@@ -6,6 +6,7 @@ use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
 use crossbeam_channel::{after, never, select, Sender};
+use lazy_static::lazy_static;
 use lsp_types::notification::Notification;
 use lsp_types::*;
 use regex::Regex;
@@ -154,7 +155,7 @@ fn handle_broken_editor_request(
     session: &str,
 ) {
     // Try to parse enough of the broken toml to send the error to the editor.
-    lazy_static::lazy_static! {
+    lazy_static! {
         static ref CLIENT_RE: Regex = Regex::new(r#"(?m)^client *= *"([a-zA-Z0-9_-]*)""#)
             .expect("Failed to parse client name regex");
         static ref HOOK_RE: Regex = Regex::new(r"(?m)^hook *= *true")
