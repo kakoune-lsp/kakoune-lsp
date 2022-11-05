@@ -59,17 +59,17 @@ fn main() {
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
         .arg(
-            Arg::with_name("kakoune")
+            Arg::new("kakoune")
                 .long("kakoune")
                 .help("Generate commands for Kakoune to plug in kak-lsp"),
         )
         .arg(
-            Arg::with_name("request")
+            Arg::new("request")
                 .long("request")
                 .help("Forward stdin to kak-lsp server"),
         )
         .arg(
-            Arg::with_name("config")
+            Arg::new("config")
                 .short('c')
                 .long("config")
                 .value_name("FILE")
@@ -77,13 +77,13 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("daemonize")
+            Arg::new("daemonize")
                 .short('d')
                 .long("daemonize")
                 .help("Daemonize kak-lsp process (server only)"),
         )
         .arg(
-            Arg::with_name("session")
+            Arg::new("session")
                 .short('s')
                 .long("session")
                 .value_name("SESSION")
@@ -92,7 +92,7 @@ fn main() {
                 .required(true),
         )
         .arg(
-            Arg::with_name("timeout")
+            Arg::new("timeout")
                 .short('t')
                 .long("timeout")
                 .value_name("TIMEOUT")
@@ -100,18 +100,18 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("initial-request")
+            Arg::new("initial-request")
                 .long("initial-request")
                 .help("Read initial request from stdin"),
         )
         .arg(
-            Arg::with_name("v")
+            Arg::new("v")
                 .short('v')
                 .action(ArgAction::Count)
                 .help("Sets the level of verbosity (use up to 4 times)"),
         )
         .arg(
-            Arg::with_name("log")
+            Arg::new("log")
                 .long("log")
                 .value_name("PATH")
                 .help("File to write the log into instead of stderr")
