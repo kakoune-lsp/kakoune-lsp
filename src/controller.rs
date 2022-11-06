@@ -72,15 +72,15 @@ pub fn start(
     initial_request_meta.fifo = None;
     initial_request_meta.write_response_to_fifo = false;
 
-    let mut ctx = Context::new(
-        &route.language,
+    let mut ctx = Context::new(ContextBuilder {
+        language_id: route.language.clone(),
         initial_request,
-        lang_srv.to_lang_server.sender().clone(),
-        to_editor,
+        lang_srv_tx: lang_srv.to_lang_server.sender().clone(),
+        editor_tx: to_editor,
         config,
-        route.root.clone(),
+        root_path: route.root.clone(),
         offset_encoding,
-    );
+    });
 
     initialize(&route.root, initial_request_meta.clone(), &mut ctx);
 

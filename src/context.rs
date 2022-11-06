@@ -53,38 +53,40 @@ pub struct Context {
     pub work_done_progress_report_timestamp: time::Instant,
 }
 
+pub struct ContextBuilder {
+    pub language_id: String,
+    pub initial_request: EditorRequest,
+    pub lang_srv_tx: Sender<ServerMessage>,
+    pub editor_tx: Sender<EditorResponse>,
+    pub config: Config,
+    pub root_path: String,
+    pub offset_encoding: Option<OffsetEncoding>,
+}
+
 impl Context {
-    pub fn new(
-        language_id: &str,
-        initial_request: EditorRequest,
-        lang_srv_tx: Sender<ServerMessage>,
-        editor_tx: Sender<EditorResponse>,
-        config: Config,
-        root_path: String,
-        offset_encoding: Option<OffsetEncoding>,
-    ) -> Self {
-        let session = initial_request.meta.session.clone();
+    pub fn new(params: ContextBuilder) -> Self {
+        let session = params.initial_request.meta.session.clone();
         Context {
             batch_counter: 0,
             batches: HashMap::default(),
             capabilities: None,
             completion_items: vec![],
             completion_last_client: None,
-            config,
+            config: params.config,
             dynamic_config: DynamicConfig::default(),
             diagnostics: HashMap::default(),
             code_lenses: HashMap::default(),
-            editor_tx,
-            lang_srv_tx,
-            language_id: language_id.to_string(),
-            pending_requests: vec![initial_request],
+            editor_tx: params.editor_tx,
+            lang_srv_tx: params.lang_srv_tx,
+            language_id: params.language_id,
+            pending_requests: vec![params.initial_request],
             request_counter: 0,
             response_waitlist: HashMap::default(),
-            root_path,
+            root_path: params.root_path,
             session,
             documents: HashMap::default(),
-            offset_encoding: offset_encoding.unwrap_or(OffsetEncoding::Utf16),
-            preferred_offset_encoding: offset_encoding,
+            offset_encoding: params.offset_encoding.unwrap_or(OffsetEncoding::Utf16),
+            preferred_offset_encoding: params.offset_encoding,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
         }
