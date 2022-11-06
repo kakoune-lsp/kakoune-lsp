@@ -68,6 +68,7 @@ pub fn start(
     }
 
     let mut initial_request_meta = initial_request.meta.clone();
+    initial_request_meta.buffile = "".to_string();
     initial_request_meta.fifo = None;
     initial_request_meta.write_response_to_fifo = false;
 
