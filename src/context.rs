@@ -1,3 +1,4 @@
+use crate::text_sync::CompiledFileSystemWatcher;
 use crate::types::*;
 use crossbeam_channel::Sender;
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
@@ -51,6 +52,7 @@ pub struct Context {
     pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
+    pub pending_file_watchers: Vec<CompiledFileSystemWatcher>,
 }
 
 pub struct ContextBuilder {
@@ -89,6 +91,7 @@ impl Context {
             preferred_offset_encoding: params.offset_encoding,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
+            pending_file_watchers: vec![],
         }
     }
 

@@ -68,7 +68,9 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 did_change_configuration: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
                 }),
-                did_change_watched_files: None,
+                did_change_watched_files: Some(DidChangeWatchedFilesClientCapabilities {
+                    dynamic_registration: Some(true),
+                }),
                 symbol: Some(WorkspaceSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: symbol_kind_capability.clone(),
