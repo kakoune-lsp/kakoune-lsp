@@ -2,7 +2,15 @@
 
 Additions:
 - Default configuration for CMake.
-- `lsp-code-actions` will conveniently show code actions pertaining to diagnostics anywhere on the selected line instead of just the ones that touch the main selection.
+- If there are no code actions in the main selection, `lsp-code-actions` will show code actions from anywhere on a selected line, to make it easier to perform quick-fixes.
+- If requested by the language server, kak-lsp will recursively watch the entire root directory for file changes and forward them to the server via `workspace/didChangeWatchedFiles` (#649).
+- kak-lsp now asks the server to cancel stale requests (#666).
+- `lsp-did-change` is async again, which can improve performance (#667).
+- kak-lsp is published to crates.io for easy installation (#660).
+
+Fixes:
+- Fix race conditions when spinning up a new server in "kak-lsp --request" (#654), and in "lsp-hover-buffer" (#664).
+- Send inlay hints and semantic tokens only after buffer changes (#663).
 
 ## 14.1.0 - 2022-10-26
 
