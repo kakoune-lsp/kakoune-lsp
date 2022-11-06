@@ -1,4 +1,7 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
+use std::mem;
+use std::time::Duration;
 
 use crate::capabilities;
 use crate::capabilities::initialize;
@@ -8,10 +11,11 @@ use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
 use crate::progress;
 use crate::text_sync::*;
+use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
 use crate::workspace;
-use crossbeam_channel::{select, Receiver, Sender};
+use crossbeam_channel::{never, select, tick, Receiver, Sender};
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
@@ -83,6 +87,12 @@ pub fn start(
     });
 
     initialize(&route.root, initial_request_meta.clone(), &mut ctx);
+
+    struct FileWatcher {
+        pending_file_events: HashSet<FileEvent>,
+        worker: Worker<(), Vec<FileEvent>>,
+    }
+    let mut file_watcher: Option<FileWatcher> = None;
 
     'event_loop: loop {
         select! {
@@ -193,6 +203,46 @@ pub fn start(
                     }
                 }
             }
+            recv(file_watcher.as_ref().map(|fw| fw.worker.receiver()).unwrap_or(&never())) -> msg => {
+                if msg.is_err() {
+                    break 'event_loop;
+                }
+                let mut file_events = msg.unwrap();
+                info!("received {} events from file watcher", file_events.len());
+                // Enqueue the events from the file watcher.
+                file_watcher.as_mut().unwrap().pending_file_events.extend(file_events.drain(..));
+            }
+            recv(file_watcher.as_ref().and_then(
+                // If there are enqueud events, let's wait a bit for others to come in, to send
+                // them in batch.
+                |fw| if fw.pending_file_events.is_empty() { None } else {
+                    Some(tick(Duration::from_millis(500)))
+                })
+                .unwrap_or_else(never)
+            ) -> _ => {
+                let fw = file_watcher.as_mut().unwrap();
+                if !fw.pending_file_events.is_empty() {
+                    let file_events = fw.pending_file_events.drain().collect();
+                    workspace_did_change_watched_files(file_events, &mut ctx);
+                    fw.pending_file_events.clear();
+                }
+            }
+        }
+        // Did the language server request us to watch for file changes?
+        if !ctx.pending_file_watchers.is_empty() {
+            let mut requested_watchers = vec![];
+            mem::swap(&mut ctx.pending_file_watchers, &mut requested_watchers);
+            // If there's an existing watcher, ask nicely to terminate.
+            if let Some(ref fw) = file_watcher.as_mut() {
+                info!("stopping stale file watcher");
+                if let Err(err) = fw.worker.sender().send(()) {
+                    error!("{}", err);
+                }
+            }
+            file_watcher = Some(FileWatcher {
+                pending_file_events: HashSet::new(),
+                worker: spawn_file_watcher(route.root.clone(), requested_watchers),
+            });
         }
     }
 }
@@ -386,12 +436,20 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
                 .parse()
                 .expect("Failed to parse RegistrationParams params");
             for registration in params.registrations {
-                // Since we only support one root path, we are never going to send
-                // "workspace/didChangeWorkspaceFolders" anyway, so let's not issue a warning.
-                if registration.method == notification::DidChangeWorkspaceFolders::METHOD {
-                    continue;
+                match registration.method.as_str() {
+                    notification::DidChangeWatchedFiles::METHOD => {
+                        register_workspace_did_change_watched_files(
+                            registration.register_options,
+                            ctx,
+                        )
+                    }
+                    notification::DidChangeWorkspaceFolders::METHOD => {
+                        // Since we only support one root path, we are never going to send
+                        // "workspace/didChangeWorkspaceFolders" anyway, so let's not issue a warning.
+                        continue;
+                    }
+                    _ => warn!("Unsupported registration: {}", registration.method),
                 }
-                warn!("Unsupported registration: {}", registration.method);
             }
             Ok(serde_json::Value::Null)
         }
