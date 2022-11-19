@@ -22,11 +22,19 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         .expect("Params should follow CodeActionsParams structure");
 
     let document = ctx.documents.get(&meta.buffile).unwrap();
-    let range = kakoune_range_to_lsp(
+    let mut range = kakoune_range_to_lsp(
         &parse_kakoune_range(&params.selection_desc).0,
         &document.text,
         ctx.offset_encoding,
     );
+    // Some servers send code actions only if the requested range includes the affected
+    // AST nodes.  Let's make them more convenient to access by requesting the entire line.
+    // Technically this violates the protocol; let's do it only for single-line selections to
+    // avoid breaking use cases like extract-to-function.
+    if range.start.line == range.end.line {
+        range.start.character = 0;
+        range.end.character = EOL_OFFSET;
+    }
 
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
 
