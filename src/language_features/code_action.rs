@@ -22,20 +22,20 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         .expect("Params should follow CodeActionsParams structure");
 
     let document = ctx.documents.get(&meta.buffile).unwrap();
-    let mut range = kakoune_range_to_lsp(
+    let range = kakoune_range_to_lsp(
         &parse_kakoune_range(&params.selection_desc).0,
         &document.text,
         ctx.offset_encoding,
     );
-    // Some servers send code actions only if the requested range includes the affected
-    // AST nodes.  Let's make them more convenient to access by requesting the entire line.
-    // Technically this violates the protocol; let's do it only for single-line selections to
-    // avoid breaking use cases like extract-to-function.
-    if range.start.line == range.end.line {
-        range.start.character = 0;
-        range.end.character = EOL_OFFSET;
-    }
+    code_actions_for_range(meta, params, ctx, range)
+}
 
+fn code_actions_for_range(
+    meta: EditorMeta,
+    params: CodeActionsParams,
+    ctx: &mut Context,
+    range: Range,
+) {
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
 
     let diagnostics: Vec<Diagnostic> = if let Some(buff_diags) = buff_diags {
@@ -61,7 +61,7 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         partial_result_params: Default::default(),
     };
     ctx.call::<CodeActionRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_code_actions(meta, result, ctx, params)
+        editor_code_actions(meta, result, ctx, params, range)
     });
 }
 
@@ -70,7 +70,21 @@ fn editor_code_actions(
     result: Option<CodeActionResponse>,
     ctx: &mut Context,
     params: CodeActionsParams,
+    mut range: Range,
 ) {
+    if !meta.hook
+        && result == Some(vec![])
+        && range.start.character != 0
+        && range.end.character != EOL_OFFSET
+    {
+        // Some servers send code actions only if the requested range includes the affected
+        // AST nodes.  Let's make them more convenient to access by requesting on whole lines.
+        range.start.character = 0;
+        range.end.character = EOL_OFFSET;
+        code_actions_for_range(meta, params, ctx, range);
+        return;
+    }
+
     let result = result.unwrap_or_default();
 
     for cmd in &result {
