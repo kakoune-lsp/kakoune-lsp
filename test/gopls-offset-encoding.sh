@@ -31,7 +31,7 @@ test_sleep_until 'test_tmux capture-pane -p | grep -F "/**/"'
 #CHECK: func /*åååååååååå*/ /**/BMP() {
 
 # Check that characters outside the BMP work.
-test_tmux send-keys Escape u gk / BeyondBMP Enter gd
+test_tmux send-keys u gk / BeyondBMP Enter gd
 test_sleep
 test_tmux send-keys 'i/**/' Escape
 test_sleep_until 'test_tmux capture-pane -p | grep -F "/**/"'
