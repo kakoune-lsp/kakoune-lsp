@@ -356,8 +356,16 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     };
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
-        ctx.capabilities = Some(result.capabilities);
-        if let Some(encoding) = result.offset_encoding {
+        if let Some(encoding) = result.capabilities.position_encoding.as_ref() {
+            match encoding.as_str() {
+                "utf-8" => ctx.offset_encoding = OffsetEncoding::Utf8,
+                "utf-16" => ctx.offset_encoding = OffsetEncoding::Utf16,
+                _ => error!(
+                    "Language server sent unsupported offset encoding: {}",
+                    encoding.as_str()
+                ),
+            }
+        } else if let Some(encoding) = result.offset_encoding {
             match encoding.deref() {
                 "utf-8" => ctx.offset_encoding = OffsetEncoding::Utf8,
                 "utf-16" => ctx.offset_encoding = OffsetEncoding::Utf16,
@@ -367,6 +375,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 ),
             }
         }
+        ctx.capabilities = Some(result.capabilities);
         ctx.notify::<Initialized>(InitializedParams {});
         controller::dispatch_pending_editor_requests(ctx)
     });
