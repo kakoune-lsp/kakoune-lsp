@@ -567,7 +567,7 @@ dependencies = [
 [[package]]
 name = "lsp-types"
 version = "0.93.2"
-source = "git+https://github.com/krobelus/lsp-types?branch=hash-file-event#d7219cfaacfe6b6f8e53eb040171f08dc55e4290"
+source = "git+https://github.com/krobelus/lsp-types?branch=hash-file-event#a2091e15d1e0743c37241c9c93ccb8657a928e93"
 dependencies = [
  "bitflags",
  "serde",
