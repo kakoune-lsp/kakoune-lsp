@@ -1,6 +1,7 @@
 ## Unreleased
 
 Additions:
+- Default configuration for CMake.
 - `lsp-code-actions` will conveniently show code actions pertaining to diagnostics anywhere on the selected line instead of just the ones that touch the main selection.
 
 ## 14.1.0 - 2022-10-26

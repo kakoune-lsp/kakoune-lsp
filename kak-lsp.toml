@@ -27,6 +27,11 @@ settings_section = "_"
 # See https://clojure-lsp.io/settings/#all-settings
 # source-paths-ignore-regex = ["resources.*", "target.*"]
 
+[language.cmake]
+filetypes = ["cmake"]
+roots = ["CMakeLists.txt", ".git", ".hg"]
+command = "cmake-language-server"
+
 [language.crystal]
 filetypes = ["crystal"]
 roots = ["shard.yml"]
