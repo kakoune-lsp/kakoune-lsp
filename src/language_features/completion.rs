@@ -11,6 +11,7 @@ use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
 use serde::Deserialize;
+use std::convert::TryInto;
 use url::Url;
 
 pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -275,6 +276,13 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
     } = CompletionItemResolveParams::deserialize(params).unwrap();
 
     if ctx.completion_last_client.is_none() || meta.client != ctx.completion_last_client {
+        return;
+    }
+
+    if completion_item_index >= ctx.completion_items.len().try_into().unwrap() {
+        error!(
+            "ignoring request to resolve completion item of invalid index {completion_item_index}"
+        );
         return;
     }
 
