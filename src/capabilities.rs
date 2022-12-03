@@ -9,7 +9,6 @@ use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
 use std::collections::HashSet;
-use std::ops::Deref;
 use std::process;
 use url::Url;
 
@@ -356,24 +355,27 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
     };
 
     ctx.call::<Initialize, _>(meta, params, move |ctx: &mut Context, _meta, result| {
-        if let Some(encoding) = result.capabilities.position_encoding.as_ref() {
-            match encoding.as_str() {
-                "utf-8" => ctx.offset_encoding = OffsetEncoding::Utf8,
-                "utf-16" => ctx.offset_encoding = OffsetEncoding::Utf16,
-                _ => error!(
-                    "Language server sent unsupported offset encoding: {}",
-                    encoding.as_str()
-                ),
-            }
-        } else if let Some(encoding) = result.offset_encoding {
-            match encoding.deref() {
-                "utf-8" => ctx.offset_encoding = OffsetEncoding::Utf8,
-                "utf-16" => ctx.offset_encoding = OffsetEncoding::Utf16,
-                _ => error!(
-                    "Language server sent unexpected offset encoding: '{}'",
-                    encoding
-                ),
-            }
+        ctx.offset_encoding = result
+            .capabilities
+            .position_encoding
+            .as_ref()
+            .map(|enc| enc.as_str())
+            .or(result.offset_encoding.as_deref())
+            .map(|encoding| match encoding {
+                "utf-8" => OffsetEncoding::Utf8,
+                "utf-16" => OffsetEncoding::Utf16,
+                encoding => {
+                    error!("Language server sent unsupported offset encoding: {encoding}");
+                    OffsetEncoding::Utf16
+                }
+            })
+            .unwrap_or(OffsetEncoding::Utf16);
+        if matches!(
+            (ctx.preferred_offset_encoding, ctx.offset_encoding),
+            (Some(OffsetEncoding::Utf8), OffsetEncoding::Utf16)) {
+                warn!(
+                    "Requested offset encoding utf-8 is not supported by server, falling back to utf-16"
+                );
         }
         ctx.capabilities = Some(result.capabilities);
         ctx.notify::<Initialized>(InitializedParams {});

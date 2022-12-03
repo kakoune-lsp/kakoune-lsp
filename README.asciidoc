@@ -565,8 +565,7 @@ https://github.com/Microsoft/language-server-protocol/issues/376 for some backgr
 
 kak-lsp adheres to the spec but will prefer UTF-8 offsets if the server advertises
 support for UTF-8 offsets via client capabilities `general.positionEncodings` or
-https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol extension],
-or if `kak-lsp.toml` contains `offset_encoding = "utf-8"` for that language server.
+https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol extension].
 
 == Troubleshooting
 
