@@ -144,7 +144,7 @@ fn editor_code_actions(
         return;
     }
 
-    let actions: Vec<_> = results
+    let mut actions: Vec<_> = results
         .into_iter()
         .flat_map(|(server_name, cmd)| {
             let cmd: Vec<_> = cmd
@@ -222,6 +222,25 @@ fn editor_code_actions(
         return;
     }
 
+    actions.sort_by_key(|(_server, ca)| {
+        // TODO Group by server?
+        let empty = CodeActionKind::EMPTY;
+        let kind = match ca {
+            CodeActionOrCommand::Command(_) => &empty,
+            CodeActionOrCommand::CodeAction(action) => action.kind.as_ref().unwrap_or(&empty),
+        };
+        // TODO These loosely follow what VSCode does, we should be more accurate.
+        match kind.as_str() {
+            "quickfix" => 0,
+            "refactor" => 1,
+            "refactor.extract" => 2,
+            "refactor.inline" => 3,
+            "refactor.rewrite" => 4,
+            "source" => 5,
+            "source.organizeImports" => 6,
+            _ => 7,
+        }
+    });
     let titles_and_commands = actions
         .iter()
         .map(|(server_name, c)| {
