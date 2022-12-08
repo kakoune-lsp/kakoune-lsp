@@ -447,6 +447,7 @@ ${kak_opt_lsp_connect_fifo}\
 [params]
 $hover_buffer_args
 selectionDesc = \"${kak_selection_desc}\"
+tabstop = ${kak_opt_tabstop}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 

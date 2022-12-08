@@ -335,6 +335,7 @@ fn editor_next_or_prev_for_details(
                 start: symbol_position,
                 end: symbol_position,
             },
+            0,
             result,
             ctx,
         )

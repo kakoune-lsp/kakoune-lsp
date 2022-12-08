@@ -32,7 +32,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         None => HoverType::InfoBox,
     };
 
-    let params = MainSelectionParams::deserialize(params).unwrap();
+    let params = EditorHoverParams::deserialize(params).unwrap();
     let (range, cursor) = parse_kakoune_range(&params.selection_desc);
     let req_params = HoverParams {
         text_document_position_params: TextDocumentPositionParams {
@@ -44,7 +44,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         work_done_progress_params: Default::default(),
     };
     ctx.call::<HoverRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_hover(meta, hover_type, cursor, range, result, ctx)
+        editor_hover(meta, hover_type, cursor, range, params.tabstop, result, ctx)
     });
 }
 
@@ -53,6 +53,7 @@ pub fn editor_hover(
     hover_type: HoverType,
     cursor: KakounePosition,
     range: KakouneRange,
+    tabstop: usize,
     result: Option<Hover>,
     ctx: &mut Context,
 ) {
@@ -148,7 +149,7 @@ pub fn editor_hover(
         }
     };
 
-    let (is_markdown, contents) = match result {
+    let (is_markdown, mut contents) = match result {
         None => (false, "".to_string()),
         Some(result) => match result.contents {
             HoverContents::Scalar(contents) => (true, marked_string_to_hover(contents)),
@@ -177,6 +178,17 @@ pub fn editor_hover(
             },
         },
     };
+
+    if !for_hover_buffer && contents.contains('\t') {
+        // TODO also expand tabs in the middle.
+        contents = contents
+            .split('\n')
+            .map(|line| {
+                let n = line.bytes().take_while(|c| *c == b'\t').count();
+                " ".repeat(tabstop * n) + &line[n..]
+            })
+            .join("\n");
+    }
 
     match hover_type {
         HoverType::InfoBox => {
