@@ -245,6 +245,7 @@ declare-option -docstring "Number of warnings" int lsp_diagnostic_warning_count 
 # Internal variables.
 
 declare-option -hidden completions lsp_completions
+declare-option -hidden int lsp_completions_timestamp -1
 declare-option -hidden int lsp_completions_selected_item
 declare-option -hidden range-specs lsp_inline_diagnostics
 declare-option -hidden line-specs lsp_diagnostic_lines 0 '0| '
@@ -399,6 +400,7 @@ version  = ${kak_timestamp:-0}
 method   = \"completionItem/resolve\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
+completion_item_timestamp = ${kak_opt_lsp_completions_timestamp}
 completion_item_index = ${index}
 pager_active = ${1}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }

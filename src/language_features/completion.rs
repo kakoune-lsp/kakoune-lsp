@@ -44,7 +44,9 @@ fn editor_completion(
         None => vec![],
     };
 
+    let version = meta.version;
     ctx.completion_items = items;
+    ctx.completion_items_timestamp = version;
     let items = &ctx.completion_items;
     if ctx.completion_last_client != meta.client {
         ctx.completion_last_client = meta.client.clone();
@@ -234,11 +236,11 @@ fn editor_completion(
         })
         .join(" ");
 
-    let p = params.position;
+    let line = params.position.line;
     let offset = inferred_offset.unwrap_or(params.completion.offset);
-    let command = format!(
-        "set-option window lsp_completions {}.{}@{} {}\n",
-        p.line, offset, meta.version, items
+    let command = formatdoc!(
+        "set-option window lsp_completions {line}.{offset}@{version} {items}
+         set-option window lsp_completions_timestamp {version}"
     );
 
     ctx.exec(meta, command);
@@ -271,11 +273,16 @@ fn completion_menu_text(x: &CompletionItem) -> String {
 
 pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let CompletionItemResolveParams {
+        completion_item_timestamp,
         completion_item_index,
         pager_active,
     } = CompletionItemResolveParams::deserialize(params).unwrap();
 
     if ctx.completion_last_client.is_none() || meta.client != ctx.completion_last_client {
+        return;
+    }
+
+    if completion_item_timestamp != ctx.completion_items_timestamp {
         return;
     }
 

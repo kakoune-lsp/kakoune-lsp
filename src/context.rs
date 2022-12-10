@@ -31,6 +31,7 @@ pub struct Context {
         HashMap<BatchNumber, (BatchCount, Vec<serde_json::value::Value>, ResponsesCallback)>,
     pub capabilities: Option<ServerCapabilities>,
     pub completion_items: Vec<CompletionItem>,
+    pub completion_items_timestamp: i32,
     // We currently only track one client's completion items, to simplify cleanup (else we
     // might need to hook into ClientClose). Track the client name, so we can check if the
     // completions are valid.
@@ -73,6 +74,7 @@ impl Context {
             batches: HashMap::default(),
             capabilities: None,
             completion_items: vec![],
+            completion_items_timestamp: i32::max_value(),
             completion_last_client: None,
             config: params.config,
             dynamic_config: DynamicConfig::default(),

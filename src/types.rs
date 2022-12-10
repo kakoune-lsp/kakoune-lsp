@@ -189,6 +189,7 @@ pub struct TextDocumentCompletionParams {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompletionItemResolveParams {
+    pub completion_item_timestamp: i32,
     pub completion_item_index: isize,
     pub pager_active: bool,
 }
