@@ -170,16 +170,26 @@ fn main() {
         config.server.timeout = timeout.parse().unwrap();
     }
 
+    let mut input = Vec::new();
+    if matches.is_present("request") || matches.is_present("initial-request") {
+        stdin()
+            .read_to_end(&mut input)
+            .expect("Failed to read stdin");
+    }
     if matches.is_present("request") {
-        request(&config);
+        let mut path = util::temp_dir();
+        path.push(&config.server.session);
+        if let Ok(mut stream) = UnixStream::connect(&path) {
+            stream
+                .write_all(&input)
+                .expect("Failed to send stdin to server");
+        } else {
+            spin_up_server(&input);
+        }
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
         let initial_request = if matches.is_present("initial-request") {
-            let mut input = Vec::new();
-            stdin()
-                .read_to_end(&mut input)
-                .expect("Failed to read stdin");
             Some(String::from_utf8_lossy(&input).to_string())
         } else {
             None
@@ -218,22 +228,6 @@ fn kakoune() {
         editor_escape(&args)
     );
     println!("{}\n{}", script, lsp_cmd);
-}
-
-fn request(config: &Config) {
-    let mut input = Vec::new();
-    stdin()
-        .read_to_end(&mut input)
-        .expect("Failed to read stdin");
-    let mut path = util::temp_dir();
-    path.push(&config.server.session);
-    if let Ok(mut stream) = UnixStream::connect(&path) {
-        stream
-            .write_all(&input)
-            .expect("Failed to send stdin to server");
-    } else {
-        spin_up_server(&input);
-    }
 }
 
 fn spin_up_server(input: &[u8]) {
