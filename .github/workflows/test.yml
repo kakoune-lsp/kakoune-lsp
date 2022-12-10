@@ -105,7 +105,7 @@ jobs:
 
     - name: Install gopls
       run: |
-        GO111MODULE=on go get golang.org/x/tools/gopls@v0.7.1
+        go install golang.org/x/tools/gopls@v0.7.1
         sudo ln "$HOME/go/bin/gopls" /usr/local/bin/
 
     - name: Download rust-analyzer
