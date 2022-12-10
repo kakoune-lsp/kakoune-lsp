@@ -33,6 +33,7 @@ use crate::types::*;
 use crate::util::*;
 use clap::{crate_version, App, Arg, ArgAction, ArgMatches};
 use daemonize::Daemonize;
+use fs4::FileExt;
 use itertools::Itertools;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
@@ -48,6 +49,8 @@ use std::panic;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::thread;
+use std::time::Duration;
 
 fn main() {
     {
@@ -179,13 +182,44 @@ fn main() {
     if matches.is_present("request") {
         let mut path = util::temp_dir();
         path.push(&config.server.session);
-        if let Ok(mut stream) = UnixStream::connect(&path) {
-            stream
-                .write_all(&input)
-                .expect("Failed to send stdin to server");
-        } else {
-            spin_up_server(&input);
+        let connect = || match UnixStream::connect(&path) {
+            Ok(mut stream) => {
+                stream
+                    .write_all(&input)
+                    .expect("Failed to send stdin to server");
+                true
+            }
+            _ => false,
+        };
+        if connect() {
+            return;
         }
+        let mut lockfile_path = util::temp_dir();
+        lockfile_path.push(format!("{}.lock", config.server.session));
+        let lockfile = match fs::File::create(&lockfile_path) {
+            Ok(lockfile) => lockfile,
+            Err(err) => {
+                println!("Failed to create lock file: {:?}", err);
+                goodbye(&config.server.session, 1)
+            }
+        };
+        if lockfile.try_lock_exclusive().is_ok() {
+            spin_up_server(&input);
+            if let Err(err) = lockfile.unlock() {
+                println!("Failed to unlock lock file: {:?}", err);
+                goodbye(&config.server.session, 1);
+            }
+            fs::remove_file(&lockfile_path).expect("Failed to remove lock file");
+            return;
+        }
+        for _attempt in 0..10 {
+            if connect() {
+                return;
+            }
+            thread::sleep(Duration::from_millis(30));
+        }
+        println!("Could not launch server or connect to it, giving up after 10 attempts");
+        goodbye(&config.server.session, 1);
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.

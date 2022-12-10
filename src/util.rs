@@ -83,7 +83,7 @@ pub fn escape_tuple_element(s: &str) -> String {
 }
 
 // Cleanup and gracefully exit
-pub fn goodbye(session: &str, code: i32) {
+pub fn goodbye(session: &str, code: i32) -> ! {
     if code == 0 {
         let path = temp_dir();
         let sock_path = path.join(session);
