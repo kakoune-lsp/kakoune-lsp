@@ -184,9 +184,9 @@ fn main() {
         } else {
             None
         };
-        let mut pid_path = util::temp_dir();
-        pid_path.push(format!("{}.pid", config.server.session));
         if matches.is_present("daemonize") {
+            let mut pid_path = util::temp_dir();
+            pid_path.push(format!("{}.pid", config.server.session));
             if let Err(e) = Daemonize::new()
                 .pid_file(&pid_path)
                 .working_directory(std::env::current_dir().unwrap())
