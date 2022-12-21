@@ -51,13 +51,17 @@ pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mu
     );
 }
 
+fn sort_text(item: &CompletionItem) -> &str {
+    item.sort_text.as_ref().unwrap_or(&item.label)
+}
+
 fn editor_completion(
     meta: EditorMeta,
     params: TextDocumentCompletionParams,
     results: Vec<(String, Option<CompletionResponse>)>,
     ctx: &mut Context,
 ) {
-    let items = results
+    let mut items: Vec<(String, CompletionItem)> = results
         .into_iter()
         .flat_map(|(server_name, items)| {
             let items = match items {
@@ -69,6 +73,11 @@ fn editor_completion(
             items.into_iter().map(move |v| (server_name.clone(), v))
         })
         .collect();
+
+    // TODO Group by server?
+    items.sort_by(|(_left_server, left), (_right_server, right)| {
+        sort_text(left).cmp(sort_text(right))
+    });
 
     let version = meta.version;
     ctx.completion_items = items;
