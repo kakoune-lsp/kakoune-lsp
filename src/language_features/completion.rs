@@ -12,6 +12,7 @@ use lsp_types::*;
 use regex::Regex;
 use serde::Deserialize;
 use std::convert::TryInto;
+use unicode_width::UnicodeWidthStr;
 use url::Url;
 
 pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
@@ -56,8 +57,12 @@ fn editor_completion(
         return;
     }
 
-    // Length of the longest label in the current completion list
-    let maxlen = items.iter().map(|x| x.label.len()).max().unwrap_or(0);
+    // Maximum display width of any completion label.
+    let maxwidth = items
+        .iter()
+        .map(|x| UnicodeWidthStr::width(x.label.as_str()))
+        .max()
+        .unwrap_or(0);
 
     let mut inferred_offset: Option<u32> = None;
     let mut can_infer_offset = true;
@@ -87,7 +92,7 @@ fn editor_completion(
                 Some(k) => format!(
                     "{}{} {{MenuInfo}}{:?}",
                     escape_kakoune_markup(&x.label),
-                    " ".repeat(maxlen - x.label.len()),
+                    " ".repeat(maxwidth - UnicodeWidthStr::width(x.label.as_str())),
                     k
                 ),
                 None => escape_kakoune_markup(&x.label),
