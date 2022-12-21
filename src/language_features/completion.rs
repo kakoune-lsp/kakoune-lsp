@@ -178,63 +178,14 @@ fn editor_completion(
                 .or_else(|| x.insert_text.clone())
                 .unwrap_or_else(|| x.label.clone());
 
-            fn completion_entry(
-                insert_text: &str,
-                maybe_filter_text: &Option<String>,
-                on_select: &str,
-                menu: &str,
-            ) -> String {
-                if let Some(filter_text) = maybe_filter_text {
-                    editor_quote(&format!(
-                        "{}|{}|{}|{}",
-                        escape_tuple_element(insert_text),
-                        escape_tuple_element(filter_text),
-                        escape_tuple_element(on_select),
-                        escape_tuple_element(menu),
-                    ))
-                } else {
-                    editor_quote(&format!(
-                        "{}|{}|{}",
-                        escape_tuple_element(insert_text),
-                        escape_tuple_element(on_select),
-                        escape_tuple_element(menu),
-                    ))
-                }
+            fn completion_entry(insert_text: &str, on_select: &str, menu: &str) -> String {
+                editor_quote(&format!(
+                    "{}|{}|{}",
+                    escape_tuple_element(insert_text),
+                    escape_tuple_element(on_select),
+                    escape_tuple_element(menu),
+                ))
             }
-
-            let maybe_filter_text = {
-                let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
-                let specified_insert_text = x
-                    .text_edit
-                    .as_ref()
-                    .map(|cte| match cte {
-                        CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
-                        CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
-                    })
-                    .or(x.insert_text.as_ref())
-                    .unwrap_or(&x.label);
-                if !params.have_kakoune_feature_filtertext
-                    && specified_filter_text != specified_insert_text
-                    && x.insert_text_format != Some(InsertTextFormat::SNIPPET)
-                {
-                    // Simulate filter-text support by giving the filter-text to Kakoune
-                    // but expand to the insert-text when the completion is accepted.
-                    let command = formatdoc!(
-                        "{on_select}
-                         lsp-snippets-insert-completion {}",
-                        editor_quote(&(insert_text + "$0"))
-                    );
-                    let insert_text = specified_filter_text;
-                    return completion_entry(insert_text, &None, &command, &entry);
-                }
-                if params.have_kakoune_feature_filtertext
-                    && specified_filter_text != specified_insert_text
-                {
-                    Some(specified_filter_text.clone())
-                } else {
-                    None
-                }
-            };
 
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.
@@ -260,9 +211,33 @@ fn editor_completion(
                     editor_quote(&snippet)
                 );
 
-                completion_entry(&insert_text, &maybe_filter_text, &command, &entry)
+                completion_entry(&insert_text, &command, &entry)
             } else {
-                completion_entry(&insert_text, &maybe_filter_text, &on_select, &entry)
+                // Due to implementation reasons, we currently do not support filter text
+                // with snippets.
+                let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
+                let specified_insert_text = x
+                    .text_edit
+                    .as_ref()
+                    .map(|cte| match cte {
+                        CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
+                        CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
+                    })
+                    .or(x.insert_text.as_ref())
+                    .unwrap_or(&x.label);
+                let (insert_text, on_select) = if specified_filter_text != specified_insert_text {
+                    // Simulate filter-text support by giving the filter-text to Kakoune
+                    // but expand to the insert-text when the completion is accepted.
+                    let on_select = formatdoc!(
+                        "{on_select}
+                         lsp-snippets-insert-completion {}",
+                        editor_quote(&(insert_text + "$0"))
+                    );
+                    (specified_filter_text, on_select)
+                } else {
+                    (&insert_text, on_select)
+                };
+                completion_entry(insert_text, &on_select, &entry)
             }
         })
         .join(" ");
