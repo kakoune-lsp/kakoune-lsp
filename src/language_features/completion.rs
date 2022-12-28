@@ -247,6 +247,7 @@ fn editor_completion(
         "set-option window lsp_completions {line}.{offset}@{version} {items}
          set-option window lsp_completions_timestamp {version}"
     );
+    let command = format!("evaluate-commands -- {}", editor_quote(&command));
 
     ctx.exec(meta, command);
 }
