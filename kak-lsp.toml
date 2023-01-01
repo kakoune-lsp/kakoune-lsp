@@ -222,10 +222,10 @@ roots = [".git", ".hg"]
 command = "texlab"
 settings_section = "texlab"
 [language.latex.settings.texlab]
-# See https://github.com/latex-lsp/texlab/blob/master/docs/options.md
+# See https://github.com/latex-lsp/texlab/wiki/Configuration
 #
 # Preview configuration for zathura with SyncTeX search.
-# For other PDF viewers see https://github.com/latex-lsp/texlab/blob/master/docs/previewing.md
+# For other PDF viewers see https://github.com/latex-lsp/texlab/wiki/Previewing
 forwardSearch.executable = "zathura"
 forwardSearch.args = [
     "%p",
