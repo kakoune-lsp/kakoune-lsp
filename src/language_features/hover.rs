@@ -1,5 +1,3 @@
-use std::fs;
-
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_HOVER;
 use crate::context::*;
@@ -7,6 +5,7 @@ use crate::diagnostics::format_related_information;
 use crate::markup::*;
 use crate::position::*;
 use crate::types::*;
+use crate::util::editor_quote;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
@@ -20,15 +19,11 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
     }
 
     let HoverDetails {
-        hover_fifo: maybe_hover_fifo,
         hover_client: maybe_hover_client,
     } = HoverDetails::deserialize(params.clone()).unwrap();
 
-    let hover_type = match maybe_hover_fifo {
-        Some(fifo) => HoverType::HoverBuffer {
-            fifo,
-            client: maybe_hover_client.unwrap(),
-        },
+    let hover_type = match maybe_hover_client {
+        Some(client) => HoverType::HoverBuffer { client },
         None => HoverType::InfoBox,
     };
 
@@ -211,12 +206,12 @@ pub fn editor_hover(
         } => {
             show_hover_modal(meta, ctx, modal_heading, do_after, contents, diagnostics);
         }
-        HoverType::HoverBuffer { fifo, client } => {
+        HoverType::HoverBuffer { client } => {
             if contents.is_empty() && diagnostics.is_empty() {
                 return;
             }
 
-            show_hover_in_hover_client(meta, ctx, fifo, client, is_markdown, contents, diagnostics);
+            show_hover_in_hover_client(meta, ctx, client, is_markdown, contents, diagnostics);
         }
     };
 }
@@ -249,38 +244,37 @@ fn show_hover_modal(
 fn show_hover_in_hover_client(
     meta: EditorMeta,
     ctx: &Context,
-    hover_fifo: String,
     hover_client: String,
     is_markdown: bool,
     contents: String,
     diagnostics: String,
 ) {
-    let handle = std::thread::spawn(move || {
-        let contents = if diagnostics.is_empty() {
-            contents
-        } else {
-            formatdoc!(
-                "{}
+    let contents = if diagnostics.is_empty() {
+        contents
+    } else {
+        formatdoc!(
+            "{}
 
-                 ## Diagnostics
-                 {}",
-                contents,
-                diagnostics,
-            )
-        };
-        fs::write(hover_fifo, contents).unwrap();
-    });
+             ## Diagnostics
+             {}",
+            contents,
+            diagnostics,
+        )
+    };
 
     let command = format!(
-        "%[ edit! -existing -fifo %opt[lsp_hover_fifo] *hover*; \
+        "%[ edit! -scratch *hover*; \
              set-option buffer=*hover* filetype {}; \
-             try %[ add-highlighter buffer/lsp_wrap wrap -word ] \
+             try %[ add-highlighter buffer/lsp_wrap wrap -word ]; \
+             execute-keys Rgk \
          ]",
         if is_markdown { "markdown" } else { "''" },
     );
 
     let command = formatdoc!(
-        "try %[
+        "set-register dquote {}
+         try %[ delete-buffer! *hover* ]
+         try %[
              evaluate-commands -client {hover_client} {command}
          ] catch %[
              new %[
@@ -289,9 +283,13 @@ fn show_hover_in_hover_client(
                  focus {}
              ]
          ]",
+        editor_quote(&contents),
         meta.client.as_ref().unwrap(),
     );
 
+    let command = format!(
+        "evaluate-commands -save-regs '\"' {}",
+        &editor_quote(&command)
+    );
     ctx.exec(meta, command);
-    handle.join().unwrap();
 }

@@ -215,7 +215,6 @@ pub struct EditorHoverParams {
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct HoverDetails {
-    pub hover_fifo: Option<String>,
     pub hover_client: Option<String>,
 }
 
@@ -324,7 +323,6 @@ pub enum HoverType {
         do_after: String,
     },
     HoverBuffer {
-        fifo: String,
         client: String,
     },
 }

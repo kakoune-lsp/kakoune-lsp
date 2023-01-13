@@ -421,20 +421,8 @@ define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover 
     evaluate-commands %sh{
         hover_buffer_args=""
         if [ $# -eq 1 ]; then
-            if [ -z "${kak_opt_lsp_hover_fifo}" ]; then
-                tmpdir=$(mktemp -q -d -t 'kak-lsp-hover-buffer.XXXXXX' 2>/dev/null || mktemp -q -d)
-                kak_opt_lsp_hover_fifo="$tmpdir/fifo"
-                mkfifo "$kak_opt_lsp_hover_fifo"
-                echo "declare-option -hidden str lsp_hover_fifo $kak_opt_lsp_hover_fifo"
-                printf %s 'hook -always -group lsp global KakEnd .* %{
-                    nop %sh{rm "$kak_opt_lsp_hover_fifo"; rmdir "${kak_opt_lsp_hover_fifo%/*}"}
-                }'
-            fi
             client=${1:-"${kak_opt_docsclient:-"$kak_client"}"}
-            hover_buffer_args=$(printf '%s\n' \
-                "hoverFifo = \"${kak_opt_lsp_hover_fifo}\"" \
-                "hoverClient = \"${client}\""
-            )
+            hover_buffer_args="hoverClient = \"${client}\""
         fi
 
         (printf %s "
