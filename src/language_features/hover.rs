@@ -281,18 +281,14 @@ fn show_hover_in_hover_client(
 
     let command = formatdoc!(
         "try %[
-             evaluate-commands -client {} {}
+             evaluate-commands -client {hover_client} {command}
          ] catch %[
              new %[
-                 rename-client {}
-                 evaluate-commands {}
+                 rename-client {hover_client}
+                 evaluate-commands {command}
                  focus {}
              ]
          ]",
-        &hover_client,
-        command,
-        &hover_client,
-        command,
         meta.client.as_ref().unwrap(),
     );
 
