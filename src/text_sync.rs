@@ -149,7 +149,6 @@ pub fn spawn_file_watcher(
 }
 
 fn event_file_changes(
-    // sender: Sender<Vec<FileEvent>>,
     watch_requests: &Vec<CompiledFileSystemWatcher>,
     event: notify::Event,
 ) -> Vec<FileEvent> {
