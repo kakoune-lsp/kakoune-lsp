@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
 use std::time::Duration;
@@ -230,7 +231,7 @@ pub fn start(
         }
         // Did the language server request us to watch for file changes?
         if !ctx.pending_file_watchers.is_empty() {
-            let mut requested_watchers = vec![];
+            let mut requested_watchers = HashMap::default();
             mem::swap(&mut ctx.pending_file_watchers, &mut requested_watchers);
             // If there's an existing watcher, ask nicely to terminate.
             if let Some(ref fw) = file_watcher.as_mut() {
@@ -355,7 +356,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             }
             None => warn!("No range provided to {}", method),
         },
-        request::WorkspaceSymbol::METHOD => {
+        request::WorkspaceSymbolRequest::METHOD => {
             workspace::workspace_symbol(meta, params, ctx);
         }
         request::Rename::METHOD => {

@@ -8,6 +8,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::{fs, time};
 
 // Copy of Kakoune's timestamped buffer content.
@@ -53,7 +54,7 @@ pub struct Context {
     pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
-    pub pending_file_watchers: Vec<CompiledFileSystemWatcher>,
+    pub pending_file_watchers: HashMap<Option<PathBuf>, Vec<CompiledFileSystemWatcher>>,
 }
 
 pub struct ContextBuilder {
@@ -93,7 +94,7 @@ impl Context {
             preferred_offset_encoding: params.offset_encoding,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
-            pending_file_watchers: vec![],
+            pending_file_watchers: HashMap::default(),
         }
     }
 

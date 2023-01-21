@@ -94,21 +94,59 @@ pub fn configuration(params: Params, ctx: &mut Context) -> Result<Value, jsonrpc
 pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = WorkspaceSymbolParams::deserialize(params)
         .expect("Params should follow WorkspaceSymbolParams structure");
-    ctx.call::<WorkspaceSymbol, _>(meta, params, move |ctx: &mut Context, meta, result| {
+    ctx.call::<WorkspaceSymbolRequest, _>(meta, params, move |ctx: &mut Context, meta, result| {
         editor_workspace_symbol(meta, result, ctx)
     });
 }
 
+impl document_symbol::Symbol<WorkspaceSymbol> for WorkspaceSymbol {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn kind(&self) -> SymbolKind {
+        self.kind
+    }
+    fn uri(&self) -> Option<&Url> {
+        None
+    }
+    fn range(&self) -> Range {
+        match &self.location {
+            OneOf::Left(location) => location.range,
+            OneOf::Right(_workspace_location) => {
+                Range::new(Position::new(0, 0), Position::new(0, 0))
+            }
+        }
+    }
+    fn selection_range(&self) -> Range {
+        self.range()
+    }
+    fn children(self) -> Vec<WorkspaceSymbol> {
+        vec![]
+    }
+}
+
 fn editor_workspace_symbol(
     meta: EditorMeta,
-    result: Option<Vec<SymbolInformation>>,
+    result: Option<WorkspaceSymbolResponse>,
     ctx: &mut Context,
 ) {
-    if result.is_none() {
-        return;
-    }
-    let result = result.unwrap();
-    let content = document_symbol::format_symbol(result, &meta, ctx);
+    let content = match result {
+        Some(WorkspaceSymbolResponse::Flat(result)) => {
+            if result.is_empty() {
+                return;
+            }
+            document_symbol::format_symbol(result, &meta, ctx)
+        }
+        Some(WorkspaceSymbolResponse::Nested(result)) => {
+            if result.is_empty() {
+                return;
+            }
+            document_symbol::format_symbol(result, &meta, ctx)
+        }
+        None => {
+            return;
+        }
+    };
     let command = format!(
         "lsp-show-workspace-symbol {} {}",
         editor_quote(&ctx.root_path),

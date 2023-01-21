@@ -56,6 +56,11 @@ fn code_actions_for_range(
         context: CodeActionContext {
             diagnostics,
             only: None,
+            trigger_kind: Some(if meta.hook {
+                CodeActionTriggerKind::AUTOMATIC
+            } else {
+                CodeActionTriggerKind::INVOKED
+            }),
         },
         work_done_progress_params: Default::default(),
         partial_result_params: Default::default(),

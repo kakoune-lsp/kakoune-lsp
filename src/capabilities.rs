@@ -69,11 +69,13 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 }),
                 did_change_watched_files: Some(DidChangeWatchedFilesClientCapabilities {
                     dynamic_registration: Some(true),
+                    relative_pattern_support: Some(true),
                 }),
                 symbol: Some(WorkspaceSymbolClientCapabilities {
                     dynamic_registration: Some(false),
                     symbol_kind: symbol_kind_capability.clone(),
                     tag_support: None,
+                    resolve_support: None,
                 }),
                 execute_command: Some(DynamicRegistrationClientCapabilities {
                     dynamic_registration: Some(false),
@@ -85,6 +87,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     refresh_support: None,
                 }),
                 file_operations: None,
+                inline_value: None,
                 inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
                     refresh_support: Some(false),
                 }),
@@ -150,6 +153,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     }),
                     context_support: Some(false),
                     insert_text_mode: None,
+                    completion_list: None,
                 }),
                 hover: Some(HoverClientCapabilities {
                     dynamic_registration: Some(false),
@@ -294,6 +298,8 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     dynamic_registration: Some(false),
                 }),
                 moniker: None,
+                inline_value: None,
+                type_hierarchy: None,
                 inlay_hint: Some(InlayHintClientCapabilities {
                     dynamic_registration: Some(false),
                     resolve_support: None,
@@ -316,6 +322,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 markdown: Some(MarkdownClientCapabilities {
                     parser: "kak-lsp".to_string(),
                     version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                    allowed_tags: None,
                 }),
                 stale_request_support: None,
                 position_encodings: Some(match ctx.preferred_offset_encoding {

@@ -1,4 +1,7 @@
-use std::path::Path;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::context::*;
 use crate::language_features::code_lens::text_document_code_lens;
@@ -102,36 +105,41 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
 
 pub fn spawn_file_watcher(
     root_path: String,
-    watch_requests: Vec<CompiledFileSystemWatcher>,
+    watch_requests: HashMap<Option<PathBuf>, Vec<CompiledFileSystemWatcher>>,
 ) -> Worker<(), Vec<FileEvent>> {
     info!("starting file watcher");
     Worker::spawn(
         "File system change watcher",
         1024, // arbitrary
         move |receiver: Receiver<()>, sender: Sender<Vec<FileEvent>>| {
-            let callback = move |res: notify::Result<notify::Event>| {
-                match res {
-                    Ok(event) => {
-                        let file_changes = event_file_changes(&watch_requests, event);
-                        if !file_changes.is_empty() {
-                            if let Err(err) = sender.send(file_changes) {
-                                error!("{}", err);
+            let mut watchers = Vec::new();
+            for (path, path_watch_requests) in watch_requests {
+                let sender = sender.clone();
+                let callback = move |res: notify::Result<notify::Event>| {
+                    match res {
+                        Ok(event) => {
+                            let file_changes = event_file_changes(&path_watch_requests, event);
+                            if !file_changes.is_empty() {
+                                if let Err(err) = sender.send(file_changes) {
+                                    error!("{}", err);
+                                }
                             }
                         }
-                    }
-                    Err(e) => error!("{}", e),
+                        Err(e) => error!("{}", e),
+                    };
                 };
-            };
-            let mut watcher = match notify::recommended_watcher(callback) {
-                Ok(watcher) => watcher,
-                Err(err) => {
+                let mut watcher = match notify::recommended_watcher(callback) {
+                    Ok(watcher) => watcher,
+                    Err(err) => {
+                        error!("{}", err);
+                        return;
+                    }
+                };
+                let path = path.as_deref().unwrap_or_else(|| Path::new(&root_path));
+                if let Err(err) = watcher.watch(path, RecursiveMode::Recursive) {
                     error!("{}", err);
-                    return;
                 }
-            };
-            let path = Path::new(&root_path);
-            if let Err(err) = watcher.watch(path, RecursiveMode::Recursive) {
-                error!("{}", err);
+                watchers.push(watcher);
             }
             if let Err(err) = receiver.recv() {
                 error!("{}", err);
@@ -199,32 +207,50 @@ pub struct CompiledFileSystemWatcher {
 pub fn register_workspace_did_change_watched_files(options: Option<Value>, ctx: &mut Context) {
     let options = options.unwrap();
     let options = DidChangeWatchedFilesRegistrationOptions::deserialize(options).unwrap();
-    let watchers = options
-        .watchers
-        .into_iter()
-        .filter_map(|watcher| {
-            if watcher.glob_pattern.contains('{') {
-                error!(
-                    "unsupported braces in glob patttern: '{}'",
-                    &watcher.glob_pattern
-                );
-                return None;
-            }
-            let pattern = match glob::Pattern::new(&watcher.glob_pattern) {
-                Ok(pattern) => pattern,
-                Err(err) => {
-                    error!(
-                        "failed to compile glob pattern '{}': {}",
-                        &watcher.glob_pattern, err
-                    );
-                    return None;
-                }
-            };
-            let default_watch_kind = WatchKind::Create | WatchKind::Change | WatchKind::Delete;
-            let kind = watcher.kind.unwrap_or(default_watch_kind);
-            Some(CompiledFileSystemWatcher { kind, pattern })
-        })
-        .collect();
     assert!(ctx.pending_file_watchers.is_empty());
-    ctx.pending_file_watchers = watchers;
+    for watcher in options.watchers {
+        {
+            let bare_pattern = match &watcher.glob_pattern {
+                GlobPattern::String(pattern) => pattern,
+                GlobPattern::Relative(relative) => &relative.pattern,
+            };
+            if bare_pattern.contains('{') {
+                error!("unsupported braces in glob patttern: '{}'", &bare_pattern);
+                continue;
+            }
+        }
+        let (root_path, glob_pattern) = match watcher.glob_pattern {
+            GlobPattern::String(pattern) => (None, pattern),
+            GlobPattern::Relative(RelativePattern { base_uri, pattern }) => {
+                let url = match base_uri {
+                    OneOf::Left(workspace_folder) => workspace_folder.uri,
+                    OneOf::Right(url) => url,
+                };
+                let root = match url.to_file_path() {
+                    Ok(root) => root,
+                    Err(_) => {
+                        error!("URL is not a file path: {}", url);
+                        continue;
+                    }
+                };
+                (Some(root), pattern)
+            }
+        };
+        let pattern = match glob::Pattern::new(&glob_pattern) {
+            Ok(pattern) => pattern,
+            Err(err) => {
+                error!(
+                    "failed to compile glob pattern '{}': {}",
+                    &glob_pattern, err
+                );
+                continue;
+            }
+        };
+        let default_watch_kind = WatchKind::Create | WatchKind::Change | WatchKind::Delete;
+        let kind = watcher.kind.unwrap_or(default_watch_kind);
+        ctx.pending_file_watchers
+            .entry(root_path)
+            .or_default()
+            .push(CompiledFileSystemWatcher { kind, pattern });
+    }
 }
