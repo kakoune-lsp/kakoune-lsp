@@ -277,6 +277,43 @@ define-command -hidden lsp-did-change -docstring "Notify language server about b
     set-option buffer lsp_timestamp %val{timestamp}
     evaluate-commands -save-regs '|' %{
         set-register '|' %{
+# dump stdin synchronously
+# append a . to the end, otherwise the subshell strips trailing newlines
+lsp_draft=$(cat; printf '.')
+# and process it asynchronously
+(
+# replace \ with \\
+#         " with \"
+#     <tab> with \t
+lsp_draft=$(printf '%s' "$lsp_draft" | sed 's/\\/\\\\/g ; s/"/\\"/g ; s/'"$(printf '\t')"'/\\t/g')
+# remove the trailing . we added earlier
+lsp_draft=${lsp_draft%.}
+printf %s "
+session  = \"${kak_session}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"textDocument/didChange\"
+hook     = true
+[params]
+draft    = \"\"\"
+${lsp_draft}\"\"\"
+" | eval "${kak_opt_lsp_cmd} --request"
+) > /dev/null 2>&1 < /dev/null &
+        }
+        execute-keys -draft '%<a-|><ret>'
+    }
+}}
+
+define-command -hidden lsp-did-change-sync -docstring "Notify language server about buffer change, blocking version" %{ try %{
+    evaluate-commands %sh{
+        if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
+            echo "fail"
+        fi
+    }
+    set-option buffer lsp_timestamp %val{timestamp}
+    evaluate-commands -save-regs '|' %{
+        set-register '|' %{
 # append a . to the end, otherwise the subshell strips trailing newlines
 lsp_draft=$(cat; printf '.')
 # replace \ with \\
@@ -602,6 +639,7 @@ define-command lsp-code-action -params 1 -docstring "lsp-code-action <pattern>: 
 
 define-command lsp-code-action-sync -params 1 -docstring "lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-code-action-sync
+    lsp-did-change-sync
     lsp-code-actions-request true %arg{1} true
 }
 
@@ -678,6 +716,7 @@ define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <co
 }
 
 define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command, blocking Kakoune session until done" %{
+    lsp-did-change-sync
     lsp-execute-command-request true %arg{@}
 }
 define-command -hidden lsp-execute-command-request -params 3 %{ evaluate-commands %sh{
@@ -1043,6 +1082,7 @@ define-command lsp-apply-workspace-edit -params 1 -hidden %{
     lsp-apply-workspace-edit-request false %arg{1}
 }
 define-command lsp-apply-workspace-edit-sync -params 1 -hidden %{
+    lsp-did-change-sync
     lsp-apply-workspace-edit-request true %arg{1}
 }
 define-command lsp-apply-workspace-edit-request -params 2 -hidden %{ evaluate-commands %sh{
@@ -1110,6 +1150,7 @@ define-command lsp-formatting -docstring "Format document" %{
 
 define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-formatting-sync
+    lsp-did-change-sync
     lsp-formatting-request true
 }
 
@@ -1151,6 +1192,7 @@ define-command lsp-range-formatting -docstring "Format selections" %{
 
 define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-range-formatting-sync
+    lsp-did-change-sync
     lsp-range-formatting-request true
 }
 
