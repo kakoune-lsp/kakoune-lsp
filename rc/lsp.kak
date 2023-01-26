@@ -1264,7 +1264,7 @@ ${fifo}
 tabSize      = ${kak_opt_tabstop}
 insertSpaces = ${kak_opt_lsp_insert_spaces}
 ${ranges_str}
-" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
 
     if "$sync"; then
         cat ${pipe}
