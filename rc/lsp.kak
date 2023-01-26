@@ -337,7 +337,7 @@ try %{
         }
     }
 
-    nop %sh{ (printf "
+    nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
