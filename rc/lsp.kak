@@ -1303,11 +1303,10 @@ define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inla
 
 define-command -hidden lsp-inlay-hints-request %{
     declare-option -hidden int lsp_inlay_hints_timestamp -1
-    evaluate-commands %sh{
+    nop %sh{
         if [ $kak_opt_lsp_inlay_hints_timestamp -eq $kak_timestamp ]; then
             exit
         fi
-        echo 'set-option buffer lsp_inlay_hints_timestamp %val{timestamp}'
         (printf %s "
 session  = \"${kak_session}\"
 buffile  = \"${kak_buffile}\"
@@ -1553,11 +1552,10 @@ define-command lsp-semantic-tokens -docstring "lsp-semantic-tokens: Request sema
 
 define-command -hidden lsp-semantic-tokens-request %{
     declare-option -hidden int lsp_semantic_tokens_timestamp -1
-    evaluate-commands %sh{
+    nop %sh{
         if [ $kak_opt_lsp_semantic_tokens_timestamp -eq $kak_timestamp ]; then
             exit
         fi
-        echo 'set-option buffer lsp_semantic_tokens_timestamp %val{timestamp}'
         ( printf %s "
 session  = \"${kak_session}\"
 buffile  = \"${kak_buffile}\"

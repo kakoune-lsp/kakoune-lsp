@@ -1,3 +1,4 @@
+use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::{
     request::InlayHintRequest, InlayHint, InlayHintLabel, InlayHintParams, Position, Range,
@@ -77,14 +78,15 @@ pub fn inlay_hints_response(meta: EditorMeta, inlay_hints: Vec<InlayHint>, ctx: 
             },
         )
         .join(" ");
-    let command = format!(
-        "set-option buffer lsp_inlay_hints {} {}",
-        meta.version, ranges
+    let version = meta.version;
+    let command = formatdoc!(
+        "set-option buffer lsp_inlay_hints {version} {ranges}
+         set-option buffer lsp_inlay_hints_timestamp {version}"
     );
     let command = format!(
-        "evaluate-commands -buffer {} -verbatim -- {}",
+        "evaluate-commands -buffer {} -- {}",
         editor_quote(&meta.buffile),
-        command
+        editor_quote(&command)
     );
     ctx.exec(meta, command)
 }
