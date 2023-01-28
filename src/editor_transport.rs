@@ -52,49 +52,8 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
         channel_capacity,
         move |receiver: Receiver<EditorResponse>, _| {
             for response in receiver {
-                match Command::new("kak")
-                    .args(&["-p", &response.meta.session])
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .spawn()
-                {
-                    Ok(mut child) => {
-                        let stdin = match child.stdin.as_mut() {
-                            Some(stdin) => stdin,
-                            None => {
-                                error!("Failed to get editor stdin");
-                                return;
-                            }
-                        };
-
-                        let client = response.meta.client.as_ref();
-                        let command = match client.filter(|&s| !s.is_empty()) {
-                            Some(client) => {
-                                let command = format!(
-                                    "evaluate-commands -client {} -verbatim -- {}",
-                                    client, response.command
-                                );
-                                debug!("To editor `{}`: {}", response.meta.session, command);
-                                Cow::from(command)
-                            }
-                            None => {
-                                debug!(
-                                    "To editor `{}`: {}",
-                                    response.meta.session, response.command
-                                );
-                                response.command
-                            }
-                        };
-
-                        if stdin.write_all(command.as_bytes()).is_err() {
-                            error!("Failed to write to editor stdin");
-                        }
-                        // code should fail earlier if Kakoune was not spawned
-                        // otherwise something went completely wrong, better to panic
-                        child.wait().unwrap();
-                    }
-                    Err(e) => error!("Failed to run Kakoune: {}", e),
+                if let Err(err) = send_command_to_editor(response) {
+                    error!("Failed to send command to editor: {}", err);
                 }
             }
         },
@@ -104,6 +63,58 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
         from_editor,
         to_editor,
     })
+}
+
+pub fn send_command_to_editor(response: EditorResponse) -> Result<(), String> {
+    match Command::new("kak")
+        .args(&["-p", &response.meta.session])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(mut child) => {
+            let stdin = match child.stdin.as_mut() {
+                Some(stdin) => stdin,
+                None => {
+                    return Err("failed to get editor stdin".to_string());
+                }
+            };
+
+            let client = response.meta.client.as_ref();
+            let command = match client.filter(|&s| !s.is_empty()) {
+                Some(client) => {
+                    let command = format!(
+                        "evaluate-commands -client {} -verbatim -- {}",
+                        client, response.command
+                    );
+                    debug!("To editor `{}`: {}", response.meta.session, command);
+                    Cow::from(command)
+                }
+                None => {
+                    debug!(
+                        "To editor `{}`: {}",
+                        response.meta.session, response.command
+                    );
+                    response.command
+                }
+            };
+
+            if stdin.write_all(command.as_bytes()).is_err() {
+                error!("Failed to write to editor stdin");
+            }
+            // code should fail earlier if Kakoune was not spawned
+            // otherwise something went completely wrong, better to panic
+            let exit_code = child.wait().unwrap();
+            if !exit_code.success() {
+                return Err("kak -p exited with non-zero status".to_string());
+            }
+        }
+        Err(e) => {
+            error!("Failed to run Kakoune: {}", e);
+        }
+    }
+    Ok(())
 }
 
 pub fn start_unix(path: &path::Path, sender: Sender<String>) {

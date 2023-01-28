@@ -31,15 +31,17 @@ mod workspace;
 
 use crate::types::*;
 use crate::util::*;
-use clap::{crate_version, App, Arg, ArgAction, ArgMatches};
+use clap::ArgMatches;
+use clap::{crate_version, App, Arg, ArgAction};
+use context::meta_for_session;
 use daemonize::Daemonize;
+use editor_transport::send_command_to_editor;
 use fs4::FileExt;
 use itertools::Itertools;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
-use std::borrow::Cow;
 use std::env;
 use std::ffi::CString;
 use std::fs;
@@ -165,7 +167,16 @@ fn main() {
     let mut config: Config = match toml::from_str(&config) {
         Ok(cfg) => cfg,
         Err(err) => {
-            consume_stdin_and_report_config_error(&matches, &session, &err);
+            let command = format!(
+                "lsp-show-error {}",
+                editor_quote(&format!("failed to parse config file: {}", err)),
+            );
+            if let Err(err) = send_command_to_editor(EditorResponse {
+                meta: meta_for_session(session, None),
+                command: command.into(),
+            }) {
+                println!("Failed to send lsp-show-error command to editor: {}", err);
+            }
             panic!("invalid configuration: {}", err)
         }
     };
@@ -287,7 +298,7 @@ fn spin_up_server(input: &[u8]) {
     child.wait().expect("Failed to daemonize server");
 }
 
-fn setup_logger(config: &Config, matches: &clap::ArgMatches) -> slog_scope::GlobalLoggerGuard {
+fn setup_logger(config: &Config, matches: &ArgMatches) -> slog_scope::GlobalLoggerGuard {
     let mut verbosity = matches.get_count("v") as u8;
 
     if verbosity == 0 {
@@ -318,45 +329,6 @@ fn setup_logger(config: &Config, matches: &clap::ArgMatches) -> slog_scope::Glob
     }));
 
     slog_scope::set_global_logger(logger)
-}
-
-fn consume_stdin_and_report_config_error(
-    matches: &ArgMatches,
-    session: &str,
-    error: &toml::de::Error,
-) {
-    if !matches.is_present("initial-request") && !matches.is_present("request") {
-        return; // Don't know how to reach the editor.
-    }
-
-    let mut input = Vec::new();
-    stdin()
-        .read_to_end(&mut input)
-        .expect("Failed to read stdin");
-
-    let data = String::from_utf8_lossy(&input).to_string();
-    let request: EditorRequest = toml::from_str(&data).expect("Failed to parse request");
-    assert!(request.meta.session == session);
-
-    let editor = match editor_transport::start(session, None) {
-        Ok(ed) => ed,
-        Err(_code) => return,
-    };
-    let command = format!(
-        "lsp-show-error {}",
-        editor_quote(&format!("failed to parse config file: {}", error)),
-    );
-    if editor
-        .to_editor
-        .sender()
-        .send(EditorResponse {
-            meta: request.meta,
-            command: Cow::from(command),
-        })
-        .is_err()
-    {
-        error!("Failed to send command to editor");
-    }
 }
 
 // Cleanup and gracefully exit
