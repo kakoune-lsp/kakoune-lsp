@@ -2,12 +2,14 @@ use crate::text_sync::CompiledFileSystemWatcher;
 use crate::types::*;
 use crossbeam_channel::Sender;
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
-use lsp_types::notification::Notification;
+use lsp_types::notification::{Cancel, Notification};
 use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::path::PathBuf;
 use std::{fs, time};
 
@@ -25,6 +27,11 @@ pub struct Document {
 pub type ResponsesCallback = Box<dyn FnOnce(&mut Context, EditorMeta, Vec<Value>) -> ()>;
 type BatchNumber = usize;
 type BatchCount = BatchNumber;
+
+pub struct OutstandingRequests {
+    oldest: Option<Id>,
+    youngest: Option<Id>,
+}
 
 pub struct Context {
     batch_counter: BatchNumber,
@@ -44,9 +51,10 @@ pub struct Context {
     pub editor_tx: Sender<EditorResponse>,
     pub lang_srv_tx: Sender<ServerMessage>,
     pub language_id: String,
+    pub outstanding_requests: HashMap<(&'static str, String, Option<String>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
     pub request_counter: u64,
-    pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber)>,
+    pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub root_path: String,
     pub session: SessionId,
     pub documents: HashMap<String, Document>,
@@ -84,6 +92,7 @@ impl Context {
             editor_tx: params.editor_tx,
             lang_srv_tx: params.lang_srv_tx,
             language_id: params.language_id,
+            outstanding_requests: HashMap::default(),
             pending_requests: vec![params.initial_request],
             request_counter: 0,
             response_waitlist: HashMap::default(),
@@ -159,7 +168,14 @@ impl Context {
             }
             let id = self.next_request_id();
             self.response_waitlist
-                .insert(id.clone(), (meta.clone(), R::METHOD, batch_id));
+                .insert(id.clone(), (meta.clone(), R::METHOD, batch_id, false));
+            add_outstanding_request(
+                self,
+                R::METHOD,
+                meta.buffile.clone(),
+                meta.client.clone(),
+                id.clone(),
+            );
 
             let call = jsonrpc_core::MethodCall {
                 jsonrpc: Some(Version::V2),
@@ -175,6 +191,25 @@ impl Context {
                 error!("Failed to call language server");
             };
         }
+    }
+
+    pub fn cancel(&mut self, id: Id) {
+        match self.response_waitlist.get_mut(&id) {
+            Some((_meta, method, _batch_id, canceled)) => {
+                debug!("Canceling request {id:?} ({method})");
+                *canceled = true;
+            }
+            None => {
+                error!("Failed to cancel request {id:?}");
+            }
+        }
+        let id = match id {
+            Id::Num(id) => id,
+            _ => panic!("expected numeric ID"),
+        };
+        self.notify::<Cancel>(CancelParams {
+            id: NumberOrString::Number(id.try_into().unwrap()),
+        });
     }
 
     pub fn reply(&mut self, id: Id, result: Result<Value, Error>) {
@@ -291,4 +326,62 @@ pub fn meta_for_session(session: String, client: Option<String>) -> EditorMeta {
         write_response_to_fifo: false,
         hook: false,
     }
+}
+
+fn add_outstanding_request(
+    ctx: &mut Context,
+    method: &'static str,
+    buffile: String,
+    client: Option<String>,
+    id: Id,
+) {
+    let to_cancel = match ctx.outstanding_requests.entry((method, buffile, client)) {
+        Entry::Occupied(mut e) => {
+            let OutstandingRequests { oldest, youngest } = e.get_mut();
+            if oldest.is_none() {
+                *oldest = Some(id);
+                None
+            } else {
+                let mut tmp = Some(id);
+                std::mem::swap(youngest, &mut tmp);
+                tmp
+            }
+        }
+        Entry::Vacant(e) => {
+            e.insert(OutstandingRequests {
+                oldest: Some(id),
+                youngest: None,
+            });
+            None
+        }
+    };
+    if let Some(id) = to_cancel {
+        ctx.cancel(id);
+    }
+}
+
+pub fn remove_outstanding_request(
+    ctx: &mut Context,
+    method: &'static str,
+    buffile: String,
+    client: Option<String>,
+    id: &Id,
+) {
+    let key = (method, buffile, client);
+    if let Some(outstanding) = ctx.outstanding_requests.get_mut(&key) {
+        if outstanding.youngest.as_ref() == Some(id) {
+            outstanding.youngest = None;
+            return;
+        } else if outstanding.oldest.as_ref() == Some(id) {
+            outstanding.oldest = std::mem::take(&mut outstanding.youngest);
+            assert!(outstanding.youngest.is_none());
+            return;
+        }
+    }
+    error!(
+        "Not in outstanding requests: method {} buffile {} client {}",
+        key.0,
+        key.1,
+        key.2.unwrap_or_default()
+    );
 }

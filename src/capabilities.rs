@@ -291,7 +291,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     overlapping_token_support: None,
                     multiline_token_support: None,
                     augments_syntax_tokens: None,
-                    server_cancel_support: None,
+                    server_cancel_support: Some(true),
                 }),
                 linked_editing_range: None,
                 call_hierarchy: Some(CallHierarchyClientCapabilities {
