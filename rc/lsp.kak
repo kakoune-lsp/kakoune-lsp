@@ -407,14 +407,14 @@ pager_active = ${1}
 }
 
 define-command lsp-hover -docstring "Request hover info for the main cursor position" %{
-    lsp-did-change-and-then lsp-hover-request
+    lsp-hover-request
 }
 
 define-command lsp-hover-buffer -params 0..1 -client-completion \
     -docstring "lsp-hover-buffer [<client>]: request hover info for the main cursor position in a scratch buffer.
 
 If a client name argument is given use that client. Create it with :new if it doesn't exist." %{
-    lsp-did-change-and-then "lsp-hover-request '%arg{1}'"
+    lsp-hover-request "%arg{1}"
 }
 
 define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover info for the main cursor position" %{
@@ -451,22 +451,22 @@ declare-option -hidden str lsp_symbol_kind_completion %{
 
 define-command lsp-previous-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
     -docstring "lsp-previous-symbol [<symbol-kinds>...]: goto the buffer's previous symbol of a type in <symbol-kinds>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol previous goto %arg{@}"
+    lsp-next-or-previous-symbol previous goto %arg{@}
 }
 
 define-command lsp-next-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
     -docstring "lsp-next-symbol [<symbol-kinds>...]: goto the buffer's next symbol of a type in <symbol-kinds>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol next goto %arg{@}"
+    lsp-next-or-previous-symbol next goto %arg{@}
 }
 
 define-command lsp-hover-previous-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
     -docstring "lsp-hover-previous-symbol [<symbol-kinds>...]: show hover of the buffer's current or previous symbol of a type in <symbol-kinds>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol previous hover %arg{@}"
+    lsp-next-or-previous-symbol previous hover %arg{@}
 }
 
 define-command lsp-hover-next-symbol -params 0.. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
     -docstring "lsp-hover-next-symbol [<symbol-kinds>...]: show hover of the buffer's next symbol of a type in <symbol-kinds>, or of any type" %{
-    lsp-did-change-and-then "lsp-next-or-previous-symbol next hover %arg{@}"
+    lsp-next-or-previous-symbol next hover %arg{@}
 }
 
 # Requests for hover/goto next/previous symbol are funneled through this command
@@ -556,10 +556,6 @@ symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
 }
 
 define-command lsp-definition -docstring "Go to definition" %{
-    lsp-did-change-and-then lsp-definition-request
-}
-
-define-command -hidden lsp-definition-request -docstring "Go to definition" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -576,10 +572,6 @@ column    = ${kak_cursor_column}
 }
 
 define-command lsp-implementation -docstring "Go to implementation" %{
-    lsp-did-change-and-then lsp-implementation-request
-}
-
-define-command -hidden lsp-implementation-request -docstring "Go to implementation" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -596,10 +588,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-type-definition -docstring "Go to type-definition" %{
-    lsp-did-change-and-then lsp-type-definition-request
-}
-
-define-command -hidden lsp-type-definition-request -docstring "Go to type definition" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -616,16 +604,16 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-code-actions -docstring "Perform code actions for the main cursor position" %{
-    lsp-did-change-and-then 'lsp-code-actions-request true'
+    lsp-code-actions-request true
 }
 
 define-command lsp-code-action -params 1 -docstring "lsp-code-action <pattern>: perform the code action that matches the given regex" %{
-    lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}' false"
+    lsp-code-actions-request true %arg{1} false
 }
 
 define-command lsp-code-action-sync -params 1 -docstring "lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-code-action-sync
-    lsp-did-change-and-then "lsp-code-actions-request true '%sh{printf %s ""$1"" | sed ""s/'/''/g""}' true"
+    lsp-code-actions-request true %arg{1} true
 }
 
 define-command -hidden lsp-code-actions-request -params 1..3 -docstring "Request code actions for the main cursor position" %{ evaluate-commands -no-hooks %sh{
@@ -697,15 +685,11 @@ selectionDesc    = \"${kak_selection_desc}\"
 }
 
 define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command" %{
-    declare-option -hidden str lsp_execute_command_command %arg{1}
-    declare-option -hidden str lsp_execute_command_arguments %arg{2}
-    lsp-did-change-and-then %{lsp-execute-command-request false %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
+    lsp-execute-command-request false %arg{@}
 }
 
 define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command, blocking Kakoune session until done" %{
-    declare-option -hidden str lsp_execute_command_command %arg{1}
-    declare-option -hidden str lsp_execute_command_arguments %arg{2}
-    lsp-did-change-and-then %{lsp-execute-command-request true %opt{lsp_execute_command_command} %opt{lsp_execute_command_arguments}}
+    lsp-execute-command-request true %arg{@}
 }
 define-command -hidden lsp-execute-command-request -params 3 %{ evaluate-commands %sh{
     sync=$1
@@ -740,10 +724,6 @@ arguments = $3
 }}
 
 define-command lsp-references -docstring "Open buffer with symbol references" %{
-    lsp-did-change-and-then lsp-references-request
-}
-
-define-command -hidden lsp-references-request -docstring "Open buffer with symbol references" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -760,10 +740,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
-    lsp-did-change-and-then lsp-highlight-references-request
-}
-
-define-command -hidden lsp-highlight-references-request -docstring "Highlight symbol references" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -780,10 +756,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-rename -params 1 -docstring "lsp-rename <new-name>: rename symbol under the main cursor" %{
-    lsp-did-change-and-then "lsp-rename-request ""%arg{1}"""
-}
-
-define-command -hidden lsp-rename-request -params 1 -docstring "Rename symbol under the main cursor" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -877,10 +849,6 @@ A numeric argument selects by absolute index, where 1 is the innermost child" %{
 }
 
 define-command lsp-signature-help -docstring "Request signature help for the main cursor position" %{
-    lsp-did-change-and-then lsp-signature-help-request
-}
-
-define-command -hidden lsp-signature-help-request -docstring "Request signature help for the main cursor position" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -897,10 +865,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
-    lsp-did-change-and-then lsp-diagnostics-request
-}
-
-define-command -hidden lsp-diagnostics-request -docstring "Open buffer with project-wide diagnostics for current filetype" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -915,10 +879,6 @@ ${kak_opt_lsp_connect_fifo}\
 }
 
 define-command lsp-document-symbol -docstring "Open buffer with document symbols" %{
-    lsp-did-change-and-then lsp-document-symbol-request
-}
-
-define-command -hidden lsp-document-symbol-request -docstring "Open buffer with document symbols" %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -947,14 +907,6 @@ ${kak_opt_lsp_connect_fifo}\
 }
 
 define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
-    buffile filetype timestamp query
-    Open buffer with a list of project-wide symbols matching the query
-    on behalf of the buffile at timestamp
-} %{
-    lsp-did-change-and-then "lsp-workspace-symbol-buffer-request '%arg{1}' '%arg{2}' '%arg{3}' '%arg{4}'"
-}
-
-define-command -hidden lsp-workspace-symbol-buffer-request -params 4 -docstring %{
     buffile filetype timestamp query
     Open buffer with a list of project-wide symbols matching the query
     on behalf of the buffile at timestamp
@@ -1099,14 +1051,10 @@ token    = \"$1\"
 }
 
 define-command lsp-apply-workspace-edit -params 1 -hidden %{
-    lsp-did-change-and-then %sh{
-        printf "lsp-apply-workspace-edit-request false '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
-    }
+    lsp-apply-workspace-edit-request false %arg{1}
 }
 define-command lsp-apply-workspace-edit-sync -params 1 -hidden %{
-    lsp-did-change-and-then %sh{
-        printf "lsp-apply-workspace-edit-request true '%s'" "$(printf %s "$1" | sed "s/'/''/g")"
-    }
+    lsp-apply-workspace-edit-request true %arg{1}
 }
 define-command lsp-apply-workspace-edit-request -params 2 -hidden %{ evaluate-commands %sh{
     sync=$1
@@ -1140,10 +1088,6 @@ edit     = $2
 }}
 
 define-command lsp-apply-text-edits -params 1 -hidden %{
-    lsp-did-change-and-then "lsp-apply-text-edits-request '%arg{1}'"
-}
-
-define-command lsp-apply-text-edits-request -params 1 -hidden %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1172,12 +1116,12 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 }
 
 define-command lsp-formatting -docstring "Format document" %{
-    lsp-did-change-and-then 'lsp-formatting-request false'
+    lsp-formatting-request false
 }
 
 define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-formatting-sync
-    lsp-did-change-and-then 'lsp-formatting-request true'
+    lsp-formatting-request true
 }
 
 define-command -hidden lsp-formatting-request -params 1 %{ evaluate-commands -no-hooks %sh{
@@ -1213,12 +1157,12 @@ insertSpaces = ${kak_opt_lsp_insert_spaces}
 }}
 
 define-command lsp-range-formatting -docstring "Format selections" %{
-    lsp-did-change-and-then 'lsp-range-formatting-request false'
+    lsp-range-formatting-request false
 }
 
 define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-range-formatting-sync
-    lsp-did-change-and-then 'lsp-range-formatting-request true'
+    lsp-range-formatting-request true
 }
 
 define-command -hidden lsp-range-formatting-request -params 1 %{ evaluate-commands -no-hooks %sh{
@@ -1298,10 +1242,6 @@ incomingOrOutgoing = $1
 
 
 define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inlay hints" %{
-  lsp-did-change-and-then lsp-inlay-hints-request
-}
-
-define-command -hidden lsp-inlay-hints-request %{
     declare-option -hidden int lsp_inlay_hints_timestamp -1
     nop %sh{
         if [ $kak_opt_lsp_inlay_hints_timestamp -eq $kak_timestamp ]; then
@@ -1322,10 +1262,6 @@ buf_line_count = ${kak_buf_line_count}
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
-    lsp-did-change-and-then "ccls-navigate-request '%arg{1}'"
-}
-
-define-command -hidden ccls-navigate-request -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1343,10 +1279,6 @@ column    = ${kak_cursor_column}
 }
 
 define-command ccls-vars -docstring "ccls-vars: Find instances of symbol at point." %{
-    lsp-did-change-and-then ccls-vars-request
-}
-
-define-command -hidden ccls-vars-request -docstring "ccls-vars: Find instances of symbol at point." %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1362,10 +1294,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command ccls-inheritance -params 1..2 -docstring "ccls-inheritance <derived|base> [levels]: Find base- or derived classes of symbol at point." %{
-    lsp-did-change-and-then "ccls-inheritance-request '%arg{1}' '%arg{2}'"
-}
-
-define-command -hidden ccls-inheritance-request -params 1..2 -docstring "ccls-inheritance <derived|base> [levels]: Find base- or derived classes of symbol at point." %{
     nop %sh{
         derived="false"
         if [ "$1" = "derived" ]; then
@@ -1390,10 +1318,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command ccls-call -params 1 -docstring "ccls-call <caller|callee>: Find callers or callees of symbol at point." %{
-    lsp-did-change-and-then "ccls-call-request '%arg{1}'"
-}
-
-define-command -hidden ccls-call-request -params 1 -docstring "ccls-call <caller|callee>: Find callers or callees of symbol at point." %{
     nop %sh{
         callee="false"
         if [ "$1" = "callee" ]; then
@@ -1416,10 +1340,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command ccls-member -params 1 -docstring "ccls-member <vars|types|functions>: Find member variables/types/functions of symbol at point." %{
-    lsp-did-change-and-then "ccls-member-request '%arg{1}'"
-}
-
-define-command -hidden ccls-member-request -params 1 -docstring "ccls-member <vars|types|functions>: Find member variables/types/functions of symbol at point." %{
     nop %sh{
         kind=0
         case "$1" in
@@ -1446,10 +1366,6 @@ column   = ${kak_cursor_column}
 # clangd Extensions
 
 define-command clangd-switch-source-header -docstring "clangd-switch-source-header: Switch source/header." %{
-    lsp-did-change-and-then clangd-switch-source-header-request
-}
-
-define-command -hidden clangd-switch-source-header-request -docstring "clangd-switch-source-header: Switch source/header." %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1465,10 +1381,6 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 # eclipse.jdt.ls Extension
 #
 define-command ejdtls-organize-imports -docstring "ejdtls-organize-imports: Organize imports." %{
-    lsp-did-change-and-then ejdtls-organize-imports-request
-}
-
-define-command -hidden ejdtls-organize-imports-request -docstring "ejdtls-organize-imports: Organize imports." %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1509,10 +1421,6 @@ define-command texlab-forward-search -docstring "Request SyncTeX Forward Search 
 This will focus the current line in your PDF viewer, starting one if necessary.
 To configure the PDF viewer, use texlab's options 'forwardSearch.executable' and 'forwardSearch.args'." %{
     declare-option -hidden str texlab_client %val{client}
-    lsp-did-change-and-then texlab-forward-search-request
-}
-
-define-command -hidden texlab-forward-search-request %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1528,10 +1436,6 @@ column   = ${kak_cursor_column}
 }
 
 define-command texlab-build -docstring "Ask the texlab language server to build the LaTeX document" %{
-    lsp-did-change-and-then texlab-build-request
-}
-
-define-command -hidden texlab-build-request %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1547,10 +1451,6 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 # semantic tokens
 
 define-command lsp-semantic-tokens -docstring "lsp-semantic-tokens: Request semantic tokens" %{
-  lsp-did-change-and-then lsp-semantic-tokens-request
-}
-
-define-command -hidden lsp-semantic-tokens-request %{
     declare-option -hidden int lsp_semantic_tokens_timestamp -1
     nop %sh{
         if [ $kak_opt_lsp_semantic_tokens_timestamp -eq $kak_timestamp ]; then
@@ -2175,7 +2075,7 @@ define-command lsp-enable -docstring "Default integration with kak-lsp" %{
         lsp-did-change
         evaluate-commands %sh{
             if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
-            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false"; fi
         }
     }
     hook -group lsp global NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
@@ -2232,7 +2132,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
         lsp-did-change
         evaluate-commands %sh{
             if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
-            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-did-change-and-then 'lsp-code-actions-request false'"; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false"; fi
         }
     }
     hook -group lsp window NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{

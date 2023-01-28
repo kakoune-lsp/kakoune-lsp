@@ -147,6 +147,16 @@ pub struct EditorRequest {
     pub params: EditorParams,
 }
 
+impl Default for EditorRequest {
+    fn default() -> Self {
+        Self {
+            meta: Default::default(),
+            method: Default::default(),
+            params: toml::Value::Boolean(false),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct EditorResponse {
     pub meta: EditorMeta,

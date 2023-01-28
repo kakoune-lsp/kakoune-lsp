@@ -108,7 +108,7 @@ pub fn start(
                 // we park all requests from editor before initialization is complete
                 // and then dispatch them
                 if ctx.capabilities.is_some() {
-                    dispatch_editor_request(msg, &mut ctx);
+                    dispatch_incoming_editor_request(msg, &mut ctx);
                 } else {
                     debug!("Language server is not initialized, parking request");
                     let err = "lsp-show-error 'language server is not initialized, parking request'";
@@ -262,11 +262,86 @@ pub fn dispatch_pending_editor_requests(ctx: &mut Context) {
     }
 }
 
+fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
+    let method: &str = &request.method;
+    let document_version = {
+        let buffile = &request.meta.buffile;
+        ctx.documents
+            .get(buffile)
+            .map(|doc| doc.version)
+            .unwrap_or(0)
+    };
+    if document_version > request.meta.version {
+        debug!(
+            "incoming request {} is stale, version {} but I already have {}",
+            request.method, request.meta.version, document_version
+        );
+        // Keep it nevertheless because at least "completionItem/resolve" is useful.
+    }
+    if request.meta.fifo.is_none() {
+        let notifications = &[
+            notification::DidOpenTextDocument::METHOD,
+            notification::DidChangeTextDocument::METHOD,
+            notification::DidCloseTextDocument::METHOD,
+            notification::DidSaveTextDocument::METHOD,
+            notification::DidChangeConfiguration::METHOD,
+            notification::Exit::METHOD,
+            notification::WorkDoneProgressCancel::METHOD,
+        ];
+
+        if !request.meta.buffile.is_empty()
+            && document_version < request.meta.version
+            && !notifications.contains(&method)
+        {
+            // Wait for buffer update.
+            ctx.pending_requests.push(request);
+            return;
+        }
+    };
+    let version_bump = [
+        notification::DidOpenTextDocument::METHOD,
+        notification::DidChangeTextDocument::METHOD,
+    ]
+    .contains(&method);
+
+    dispatch_editor_request(request, ctx);
+
+    if !version_bump {
+        return;
+    }
+    let mut requests = std::mem::take(&mut ctx.pending_requests);
+    requests.retain_mut(|request| {
+        let buffile = &request.meta.buffile;
+        let document = match ctx.documents.get(buffile) {
+            Some(document) => document,
+            None => return true,
+        };
+        if document.version < request.meta.version {
+            return true;
+        }
+        info!(
+            "dispatching pending request {} because we have received matching version in didChange",
+            request.method
+        );
+        if document.version > request.meta.version {
+            debug!(
+                "pending request {} is stale, version {} but I already have {}",
+                request.method, request.meta.version, document.version
+            );
+            // Keep it nevertheless because at least "completionItem/resolve" is useful.
+        }
+        dispatch_editor_request(std::mem::take(request), ctx);
+        false
+    });
+    assert!(ctx.pending_requests.is_empty());
+    ctx.pending_requests = std::mem::take(&mut requests);
+}
+
 fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
     ensure_did_open(&request, ctx);
+    let method: &str = &request.method;
     let meta = request.meta;
     let params = request.params;
-    let method: &str = &request.method;
     match method {
         notification::DidOpenTextDocument::METHOD => {
             text_document_did_open(meta, params, ctx);
@@ -545,7 +620,8 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
         return;
     };
     if request.method == notification::DidChangeTextDocument::METHOD {
-        return text_document_did_open(request.meta.clone(), request.params.clone(), ctx);
+        text_document_did_open(request.meta.clone(), request.params.clone(), ctx);
+        return;
     }
     match read_document(buffile) {
         Ok(draft) => {
