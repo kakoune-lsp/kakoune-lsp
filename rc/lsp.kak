@@ -1241,11 +1241,11 @@ ranges_str="$(for range in ${kak_selections_char_desc}; do
     endline=${end%.*}
     endcolumn=${end#*.}
     printf %s "
-[[ranges]]
-  [ranges.start]
+[[params.ranges]]
+  [params.ranges.start]
   line = $((startline - 1))
   character = $((startcolumn - 1))
-  [ranges.end]
+  [params.ranges.end]
   line = $((endline - 1))
   character = $((endcolumn - 1))
 "

@@ -7,26 +7,23 @@ use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_range_formatting(
-    meta: EditorMeta,
-    params: EditorParams,
-    ranges: Vec<Range>,
-    ctx: &mut Context,
-) {
+pub fn text_document_range_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_RANGE_FORMATTING) {
         return;
     }
 
-    let params = FormattingOptions::deserialize(params)
-        .expect("Params should follow FormattingOptions structure");
-    let req_params = ranges
-        .into_iter()
+    let params = RangeFormattingParams::deserialize(params)
+        .expect("Params should follow RangeFormattingParams structure");
+
+    let req_params = params
+        .ranges
+        .iter()
         .map(|range| DocumentRangeFormattingParams {
             text_document: TextDocumentIdentifier {
                 uri: Url::from_file_path(&meta.buffile).unwrap(),
             },
-            range,
-            options: params.clone(),
+            range: *range,
+            options: params.formatting_options.clone(),
             work_done_progress_params: Default::default(),
         })
         .collect();

@@ -1,5 +1,5 @@
 use jsonrpc_core::{Call, Output, Params};
-use lsp_types::{DiagnosticSeverity, Position, Range, SemanticTokenModifier};
+use lsp_types::{DiagnosticSeverity, FormattingOptions, Position, Range, SemanticTokenModifier};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
@@ -145,7 +145,6 @@ pub struct EditorRequest {
     pub meta: EditorMeta,
     pub method: String,
     pub params: EditorParams,
-    pub ranges: Option<Vec<Range>>,
 }
 
 #[derive(Deserialize)]
@@ -237,6 +236,13 @@ pub struct CodeActionsParams {
 #[serde(rename_all = "camelCase")]
 pub struct CodeActionResolveParams {
     pub code_action: String,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct RangeFormattingParams {
+    #[serde(flatten)]
+    pub formatting_options: FormattingOptions,
+    pub ranges: Vec<Range>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
