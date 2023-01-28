@@ -56,16 +56,14 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                 break 'event_loop
             }
 
-            recv(editor.from_editor) -> request  => {
+            recv(editor.from_editor) -> request => {
                 // editor.receiver was closed, either because of the unrecoverable error or timeout
                 // nothing we can do except to gracefully exit by stopping session
                 // luckily, next `kak-lsp --request` invocation would spin up fresh session
-                if request.is_err() {
-                    break 'event_loop;
-                }
-                // should be safe to unwrap as we just checked request for being None
-                // done this way instead of `match` to reduce nesting
-                let request = request.unwrap();
+                let request = match request {
+                    Ok(request) => request,
+                    Err(_) => break 'event_loop,
+                };
                 let request: EditorRequest = match toml::from_str(&request) {
                     Ok(req) => req,
                     Err(err) => {
