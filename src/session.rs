@@ -71,7 +71,8 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                         handle_broken_editor_request(
                             editor.to_editor.sender(),
                             request,
-                            &config.server.session
+                            &config.server.session,
+                            err,
                         );
                         continue 'event_loop;
                     }
@@ -151,6 +152,7 @@ fn handle_broken_editor_request(
     to_editor: &Sender<EditorResponse>,
     request: String,
     session: &str,
+    err: toml::de::Error,
 ) {
     // Try to parse enough of the broken toml to send the error to the editor.
     lazy_static! {
@@ -166,9 +168,9 @@ fn handle_broken_editor_request(
     {
         // We still don't want to spam the user if a hook triggered the error.
         if !HOOK_RE.is_match(&request) {
-            let msg = "Failed to parse editor request";
+            let msg = format!("Failed to parse editor request: {err}");
             let meta = meta_for_session(session.to_string(), Some(client_name.to_string()));
-            let command = format!("lsp-show-error {}", editor_quote(msg));
+            let command = format!("lsp-show-error {}", editor_quote(&msg));
             let response = EditorResponse {
                 meta,
                 command: command.into(),
