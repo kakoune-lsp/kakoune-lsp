@@ -43,11 +43,14 @@ use std::borrow::Cow;
 use std::env;
 use std::ffi::CString;
 use std::fs;
+use std::io::stderr;
+use std::io::stdout;
 use std::io::{stdin, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::panic;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
@@ -354,4 +357,24 @@ fn consume_stdin_and_report_config_error(
     {
         error!("Failed to send command to editor");
     }
+}
+
+// Cleanup and gracefully exit
+fn goodbye(session: &str, code: i32) -> ! {
+    if code == 0 {
+        let path = temp_dir();
+        let sock_path = path.join(session);
+        let pid_path = path.join(format!("{}.pid", session));
+        if fs::remove_file(sock_path).is_err() {
+            warn!("Failed to remove socket file");
+        };
+        if pid_path.exists() && fs::remove_file(pid_path).is_err() {
+            warn!("Failed to remove pid file");
+        };
+    }
+    stderr().flush().unwrap();
+    stdout().flush().unwrap();
+    // give stdio a chance to actually flush
+    thread::sleep(Duration::from_secs(1));
+    process::exit(code);
 }

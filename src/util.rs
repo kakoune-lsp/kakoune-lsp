@@ -1,9 +1,7 @@
 use crate::types::*;
-use std::io::{stderr, stdout, Write};
 use std::os::unix::fs::DirBuilderExt;
-use std::time::Duration;
 use std::{collections::HashMap, path::Path};
-use std::{env, fs, io, path, process, thread};
+use std::{env, fs, io, path};
 
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
@@ -80,26 +78,6 @@ pub fn escape_keys(s: &str) -> String {
 /// "range-specs".
 pub fn escape_tuple_element(s: &str) -> String {
     s.replace('\\', "\\\\").replace('|', "\\|")
-}
-
-// Cleanup and gracefully exit
-pub fn goodbye(session: &str, code: i32) -> ! {
-    if code == 0 {
-        let path = temp_dir();
-        let sock_path = path.join(session);
-        let pid_path = path.join(format!("{}.pid", session));
-        if fs::remove_file(sock_path).is_err() {
-            warn!("Failed to remove socket file");
-        };
-        if pid_path.exists() && fs::remove_file(pid_path).is_err() {
-            warn!("Failed to remove pid file");
-        };
-    }
-    stderr().flush().unwrap();
-    stdout().flush().unwrap();
-    // give stdio a chance to actually flush
-    thread::sleep(Duration::from_secs(1));
-    process::exit(code);
 }
 
 /// Convert language filetypes configuration into a more lookup-friendly form.
