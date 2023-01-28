@@ -268,13 +268,7 @@ set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 define-command lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (eval "${kak_opt_lsp_cmd}") > /dev/null 2>&1 < /dev/null & } }
 
-define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
-    lsp-did-change-and-then nop
-}
-
-define-command -hidden lsp-did-change-and-then -params 1 -docstring %{
-    Notify language server about buffer change and eval another command afterwards.
-} %{ try %{
+define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{ try %{
     evaluate-commands %sh{
         if [ $kak_opt_lsp_timestamp -eq $kak_timestamp ]; then
             echo "fail"
@@ -304,13 +298,8 @@ ${lsp_draft}\"\"\"
 " | eval "${kak_opt_lsp_cmd} --request"
         }
         execute-keys -draft '%<a-|><ret>'
-    }}
-    evaluate-commands %arg{1}
-}
-
-define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
-    lsp-did-change-and-then lsp-completion-request
-}
+    }
+}}
 
 declare-option -hidden bool lsp_have_kakoune_feature_filtertext
 declare-option -hidden completions lsp_have_kakoune_feature_filtertext_tmp
@@ -319,7 +308,7 @@ try %{
     set-option global lsp_have_kakoune_feature_filtertext true
 }
 
-define-command -hidden lsp-completion-request -docstring "Request completions for the main cursor position" %{
+define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
 try %{
     # Fail if preceding character is a whitespace (by default; the trigger could be customized).
     evaluate-commands -draft %opt{lsp_completion_trigger}
@@ -2064,7 +2053,7 @@ define-command lsp-enable -docstring "Default integration with kak-lsp" %{
     hook -group lsp global BufWritePost .* lsp-did-save
     hook -group lsp global BufSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
-    hook -group lsp global InsertIdle .* lsp-completion
+    hook -group lsp global InsertIdle .* %{ lsp-did-change; lsp-completion }
     hook -group lsp global ModeChange pop:insert:.* %{
         set-option window lsp_snippets_placeholders
         set-option window lsp_snippets_placeholder_groups
@@ -2121,7 +2110,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     hook -group lsp window BufWritePost .* lsp-did-save
     hook -group lsp window WinSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
-    hook -group lsp window InsertIdle .* lsp-completion
+    hook -group lsp window InsertIdle .* %{ lsp-did-change; lsp-completion }
     hook -group lsp window ModeChange pop:insert:.* %{
         set-option window lsp_snippets_placeholders
         set-option window lsp_snippets_placeholder_groups
