@@ -18,15 +18,11 @@ use crate::util::*;
 use crate::workspace;
 use crossbeam_channel::{never, select, tick, Receiver, Sender};
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
+use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::Serialize;
-
-// This is an error code defined by the language server protocol, signifying that a request was
-// cancelled because the content changed before it could be fulfilled. In this case, the user
-// should not be notified.
-const CONTENT_MODIFIED: i64 = -32801;
 
 /// Start controller.
 ///
