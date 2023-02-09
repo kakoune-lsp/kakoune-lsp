@@ -12,7 +12,8 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_DOCUMENT_HIGHLIGHT) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT)
+    {
         return;
     }
 

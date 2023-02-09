@@ -412,15 +412,18 @@ pub const CAPABILITY_SIGNATURE_HELP: &str = "lsp-signature-help";
 pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
 pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
 
-pub fn attempt_server_capability(ctx: &Context, feature: &'static str) -> bool {
+pub fn attempt_server_capability(ctx: &Context, meta: &EditorMeta, feature: &'static str) -> bool {
     if server_has_capability(ctx, feature) {
         return true;
     }
 
-    warn!(
-        "Server does not support {}, refusing to send request",
-        feature
-    );
+    if !meta.hook {
+        warn!(
+            "Server does not support {}, refusing to send request",
+            feature
+        );
+    }
+
     false
 }
 

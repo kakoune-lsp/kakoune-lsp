@@ -7,7 +7,7 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_FORMATTING) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, &meta, CAPABILITY_FORMATTING) {
         return;
     }
 

@@ -13,7 +13,7 @@ use lsp_types::{
 use url::Url;
 
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
-    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_SEMANTIC_TOKENS) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, &meta, CAPABILITY_SEMANTIC_TOKENS) {
         return;
     }
 

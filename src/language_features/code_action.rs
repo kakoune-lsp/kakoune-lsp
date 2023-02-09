@@ -15,7 +15,7 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    if meta.fifo.is_none() && !attempt_server_capability(ctx, CAPABILITY_CODE_ACTIONS) {
+    if meta.fifo.is_none() && !attempt_server_capability(ctx, &meta, CAPABILITY_CODE_ACTIONS) {
         return;
     }
 
@@ -100,7 +100,7 @@ fn editor_code_actions(
         }
     }
 
-    let may_resolve = attempt_server_capability(ctx, CAPABILITY_CODE_ACTIONS_RESOLVE);
+    let may_resolve = attempt_server_capability(ctx, &meta, CAPABILITY_CODE_ACTIONS_RESOLVE);
 
     if let Some(pattern) = params.code_action_pattern.as_ref() {
         let regex = match regex::Regex::new(pattern) {
