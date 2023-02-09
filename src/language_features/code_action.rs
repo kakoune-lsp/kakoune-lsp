@@ -1,5 +1,6 @@
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_CODE_ACTIONS;
+use crate::capabilities::CAPABILITY_CODE_ACTIONS_RESOLVE;
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
@@ -99,6 +100,8 @@ fn editor_code_actions(
         }
     }
 
+    let may_resolve = attempt_server_capability(ctx, CAPABILITY_CODE_ACTIONS_RESOLVE);
+
     if let Some(pattern) = params.code_action_pattern.as_ref() {
         let regex = match regex::Regex::new(pattern) {
             Ok(regex) => regex,
@@ -132,7 +135,7 @@ fn editor_code_actions(
         .to_string();
         let command = match matches.len() {
             0 => fail + " 'no matching action available'",
-            1 => code_action_or_command_to_editor_command(matches[0], sync),
+            1 => code_action_or_command_to_editor_command(matches[0], sync, may_resolve),
             _ => fail + " 'multiple matching actions'",
         };
         ctx.exec(meta, command);
@@ -149,7 +152,7 @@ fn editor_code_actions(
             if let Some((head, _)) = title.split_once('\n') {
                 title = head
             }
-            let select_cmd = code_action_or_command_to_editor_command(c, false);
+            let select_cmd = code_action_or_command_to_editor_command(c, false, may_resolve);
             format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
         })
         .join(" ");
@@ -182,11 +185,15 @@ fn editor_code_actions(
     ctx.exec(meta, command);
 }
 
-fn code_action_or_command_to_editor_command(action: &CodeActionOrCommand, sync: bool) -> String {
+fn code_action_or_command_to_editor_command(
+    action: &CodeActionOrCommand,
+    sync: bool,
+    may_resolve: bool,
+) -> String {
     match action {
         CodeActionOrCommand::Command(command) => execute_command_editor_command(command, sync),
         CodeActionOrCommand::CodeAction(action) => {
-            code_action_to_editor_command(action, sync, true)
+            code_action_to_editor_command(action, sync, may_resolve)
         }
     }
 }
@@ -203,7 +210,7 @@ fn code_action_to_editor_command(action: &CodeAction, sync: bool, may_resolve: b
                 let args = &serde_json::to_string(&action).unwrap();
                 format!("lsp-code-action-resolve-request {}", editor_quote(args))
             } else {
-                "lsp-show-error 'unresolved code action'".to_string()
+                command
             }
         }
     }

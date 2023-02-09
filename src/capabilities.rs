@@ -392,6 +392,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
 
 pub const CAPABILITY_CALL_HIERARCHY: &str = "lsp-incoming-calls, lsp-outgoing-calls";
 pub const CAPABILITY_CODE_ACTIONS: &str = "lsp-code-actions";
+pub const CAPABILITY_CODE_ACTIONS_RESOLVE: &str = "lsp-code-actions-resolve";
 pub const CAPABILITY_CODE_LENS: &str = "lsp-code-lens";
 pub const CAPABILITY_COMPLETION: &str = "lsp-completion (hooked on InsertIdle)";
 pub const CAPABILITY_DEFINITION: &str = "lsp-definition (mapped to `gd` by default)";
@@ -435,6 +436,13 @@ pub fn server_has_capability(ctx: &Context, feature: &'static str) -> bool {
             Some(_) => true,
             None => false,
         },
+        CAPABILITY_CODE_ACTIONS_RESOLVE => matches!(
+            server_capabilities.code_action_provider,
+            Some(CodeActionProviderCapability::Options(CodeActionOptions {
+                resolve_provider: Some(true),
+                ..
+            }))
+        ),
         CAPABILITY_CODE_LENS => server_capabilities.code_lens_provider.is_some(),
         CAPABILITY_CALL_HIERARCHY => match server_capabilities.call_hierarchy_provider {
             Some(CallHierarchyServerCapability::Simple(ok)) => ok,
@@ -541,6 +549,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     probe_feature(ctx, &mut features, CAPABILITY_RANGE_FORMATTING);
     probe_feature(ctx, &mut features, CAPABILITY_RENAME);
     probe_feature(ctx, &mut features, CAPABILITY_CODE_ACTIONS);
+    probe_feature(ctx, &mut features, CAPABILITY_CODE_ACTIONS_RESOLVE);
     probe_feature(ctx, &mut features, CAPABILITY_CODE_LENS);
     probe_feature(ctx, &mut features, CAPABILITY_CALL_HIERARCHY);
     features.push("lsp-diagnostics".to_string());
