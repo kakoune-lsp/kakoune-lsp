@@ -90,25 +90,14 @@ fn editor_code_actions(
         return;
     }
 
-    let result = result.unwrap_or_default();
+    let mut actions = result.unwrap_or_default();
 
-    for cmd in &result {
+    for cmd in &actions {
         match cmd {
             CodeActionOrCommand::Command(cmd) => info!("Command: {:?}", cmd),
             CodeActionOrCommand::CodeAction(action) => info!("Action: {:?}", action),
         }
     }
-
-    let actions = result
-        .into_iter()
-        .map(|c| match c {
-            CodeActionOrCommand::Command(_) => c,
-            CodeActionOrCommand::CodeAction(action) => match action.command {
-                Some(cmd) => CodeActionOrCommand::Command(cmd),
-                None => CodeActionOrCommand::CodeAction(action),
-            },
-        })
-        .collect::<Vec<_>>();
 
     if let Some(pattern) = params.code_action_pattern.as_ref() {
         let regex = match regex::Regex::new(pattern) {
