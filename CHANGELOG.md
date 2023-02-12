@@ -1,4 +1,4 @@
-## Unreleased
+## 14.2.0 - 2023-02-13
 
 Additions:
 - Default configuration for CMake.

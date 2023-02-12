@@ -514,7 +514,7 @@ dependencies = [
 
 [[package]]
 name = "kak-lsp"
-version = "14.1.0-snapshot"
+version = "14.2.0"
 dependencies = [
  "clap",
  "crossbeam-channel",
