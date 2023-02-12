@@ -91,7 +91,7 @@ fn editor_code_actions(
         return;
     }
 
-    let mut actions = result.unwrap_or_default();
+    let actions = result.unwrap_or_default();
 
     for cmd in &actions {
         match cmd {
