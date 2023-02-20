@@ -679,7 +679,7 @@ fn flat_symbol_ranges<T: Symbol<T>>(
     result
 }
 
-pub fn document_symbol_menu(meta: EditorMeta, _editor_params: EditorParams, ctx: &mut Context) {
+pub fn document_symbol_menu(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
     let req_params = DocumentSymbolParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -690,7 +690,15 @@ pub fn document_symbol_menu(meta: EditorMeta, _editor_params: EditorParams, ctx:
     ctx.call::<DocumentSymbolRequest, _>(
         meta,
         req_params,
-        move |ctx: &mut Context, meta, result| editor_document_symbol_menu(meta, result, ctx),
+        move |ctx: &mut Context, meta, result| {
+            let maybe_goto_symbol = GotoSymbolParams::deserialize(editor_params)
+                .unwrap()
+                .goto_symbol;
+            match maybe_goto_symbol {
+                Some(goto_symbol) => editor_document_symbol_goto(meta, goto_symbol, result, ctx),
+                None => editor_document_symbol_menu(meta, result, ctx),
+            }
+        },
     );
 }
 
@@ -718,17 +726,51 @@ fn editor_document_symbol_menu(
     ctx.exec(meta, command);
 }
 
-fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
-    fn walk<T, F>(visit: &mut F, s: T)
-    where
-        T: Symbol<T>,
-        F: FnMut(&T),
-    {
-        visit(&s);
-        for child in s.children() {
-            walk(visit, child);
+fn editor_document_symbol_goto(
+    meta: EditorMeta,
+    goto_symbol: String,
+    result: Option<DocumentSymbolResponse>,
+    ctx: &mut Context,
+) {
+    let navigate_command = match result {
+        Some(DocumentSymbolResponse::Flat(result)) => {
+            if result.is_empty() {
+                return;
+            }
+            symbol_search(result, goto_symbol, &meta, ctx)
+        }
+        Some(DocumentSymbolResponse::Nested(result)) => {
+            if result.is_empty() {
+                return;
+            }
+            symbol_search(result, goto_symbol, &meta, ctx)
+        }
+        None => return,
+    };
+    if navigate_command.is_empty() {
+        return;
+    }
+    ctx.exec(meta, navigate_command);
+}
+
+fn symbols_walk<T, F>(visit: &mut F, s: T) -> bool
+where
+    T: Symbol<T>,
+    F: FnMut(&T) -> bool,
+{
+    if !visit(&s) {
+        return false;
+    }
+    for child in s.children() {
+        if !symbols_walk(visit, child) {
+            return false;
         }
     }
+
+    true
+}
+
+fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
     let mut menu_cmd = String::new();
     let mut add_symbol = |symbol: &T| {
         let mut filename_path = PathBuf::default();
@@ -742,9 +784,41 @@ fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) 
             editor_quote(&edit_at_range(filename, range))
         )
         .unwrap();
+        true
     };
     for symbol in symbols {
-        walk(&mut add_symbol, symbol);
+        symbols_walk(&mut add_symbol, symbol);
     }
     menu_cmd
+}
+
+fn symbol_search<T: Symbol<T>>(
+    symbols: Vec<T>,
+    goto_symbol: String,
+    meta: &EditorMeta,
+    ctx: &Context,
+) -> String {
+    let mut navigate_cmd = String::new();
+    let mut symbol_matches = |symbol: &T| {
+        if symbol.name() == goto_symbol {
+            let mut filename_path = PathBuf::default();
+            let filename = symbol_filename(meta, symbol, &mut filename_path);
+            let range = get_kakoune_range_with_fallback(filename, &symbol.selection_range(), ctx);
+            write!(
+                &mut navigate_cmd,
+                " evaluate-commands %{{{}}} ",
+                edit_at_range(filename, range)
+            )
+            .unwrap();
+            false
+        } else {
+            true
+        }
+    };
+    for symbol in symbols {
+        if !symbols_walk(&mut symbol_matches, symbol) {
+            break;
+        }
+    }
+    navigate_cmd
 }
