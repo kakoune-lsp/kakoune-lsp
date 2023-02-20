@@ -920,7 +920,9 @@ ${kak_opt_lsp_connect_fifo}\
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-goto-document-symbol -params 0..1 -docstring "Jump to any symbol from current buffer" %{
+define-command lsp-goto-document-symbol -params 0..1 -docstring "lsp-goto-document-symbol [<name>]: pick a symbol from current buffer to jump to
+
+If <name> is given, jump to the symbol of that name." %{
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
