@@ -806,8 +806,8 @@ fn symbol_search<T: Symbol<T>>(
             let range = get_kakoune_range_with_fallback(filename, &symbol.selection_range(), ctx);
             write!(
                 &mut navigate_cmd,
-                " evaluate-commands %{{{}}} ",
-                edit_at_range(filename, range)
+                "evaluate-commands '{}'",
+                editor_escape(&edit_at_range(filename, range))
             )
             .unwrap();
             false
