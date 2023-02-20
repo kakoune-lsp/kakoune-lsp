@@ -271,6 +271,11 @@ pub struct NextOrPrevSymbolParams {
 }
 
 #[derive(Clone, Deserialize, Debug)]
+pub struct GotoSymbolParams {
+    pub goto_symbol: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Debug)]
 pub struct ObjectParams {
     pub count: u32,
     pub mode: String,
