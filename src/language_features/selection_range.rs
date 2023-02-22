@@ -1,6 +1,7 @@
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
+use crate::util::editor_escape;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
@@ -20,7 +21,17 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
 
     let is_cursor_left_of_anchor = params.position == selections[0].start;
 
-    let document = ctx.documents.get(&meta.buffile).unwrap();
+    let document = match ctx.documents.get(&meta.buffile) {
+        Some(document) => document,
+        None => {
+            let err = format!("Missing document for {}", &meta.buffile);
+            error!("{}", err);
+            if !meta.hook {
+                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
+            }
+            return;
+        }
+    };
     let cursor_positions = selections
         .iter()
         .map(|range| {
@@ -62,7 +73,17 @@ fn editor_selection_range(
         None => return,
     };
 
-    let document = ctx.documents.get(&meta.buffile).unwrap();
+    let document = match ctx.documents.get(&meta.buffile) {
+        Some(document) => document,
+        None => {
+            let err = format!("Missing document for {}", &meta.buffile);
+            error!("{}", err);
+            if !meta.hook {
+                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
+            }
+            return;
+        }
+    };
     // We get a list of ranges of parent nodes for each Kakoune selection.  The UI wants to
     // select parent nodes of all Kakoune selections at once.  This means we want to have a
     // list where each entry updates all selections.  As first step, convert to a matrix where

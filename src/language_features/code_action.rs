@@ -22,7 +22,17 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
     let params = CodeActionsParams::deserialize(params)
         .expect("Params should follow CodeActionsParams structure");
 
-    let document = ctx.documents.get(&meta.buffile).unwrap();
+    let document = match ctx.documents.get(&meta.buffile) {
+        Some(document) => document,
+        None => {
+            let err = format!("Missing document for {}", &meta.buffile);
+            error!("{}", err);
+            if !meta.hook {
+                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
+            }
+            return;
+        }
+    };
     let range = kakoune_range_to_lsp(
         &parse_kakoune_range(&params.selection_desc).0,
         &document.text,

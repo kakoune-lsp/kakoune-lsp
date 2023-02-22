@@ -520,7 +520,17 @@ fn editor_object(
         .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
         .collect::<Vec<_>>();
 
-    let document = ctx.documents.get(&meta.buffile).unwrap();
+    let document = match ctx.documents.get(&meta.buffile) {
+        Some(document) => document,
+        None => {
+            let err = format!("Missing document for {}", &meta.buffile);
+            error!("{}", err);
+            if !meta.hook {
+                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
+            }
+            return;
+        }
+    };
     let mut ranges = match result {
         None => return,
         Some(DocumentSymbolResponse::Flat(symbols)) => {
