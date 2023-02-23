@@ -2223,11 +2223,6 @@ define-command -hidden lsp-snippets-insert-completion -params 1 %{ evaluate-comm
 }}
 
 define-command lsp-snippets-insert -hidden -params 1 %[
-    evaluate-commands %sh{
-        if ! command -v perl > /dev/null 2>&1; then
-            printf "fail '''perl'' must be installed to use the ''snippets-insert'' command'"
-        fi
-    }
     evaluate-commands -draft -save-regs '^"' %[
         set-register '"' %arg{1}
         execute-keys <a-P>
@@ -2269,7 +2264,7 @@ define-command lsp-snippets-insert -hidden -params 1 %[
                 # ${6:ab\}cd}def    - ok
                 # ${7:ab\}\}cd}def  - ok
                 # ${8:a\}b\}c\}}def - ok
-                lsp-snippets-insert-perl-impl
+                lsp-snippets-insert-impl
             ]
         ]
         try %{
@@ -2279,51 +2274,50 @@ define-command lsp-snippets-insert -hidden -params 1 %[
     ]
 ]
 
-define-command -hidden lsp-snippets-insert-perl-impl %[
+define-command -hidden lsp-snippets-insert-impl %[
     evaluate-commands %sh[ # $kak_quoted_selections
-        perl -e '
-use strict;
-use warnings;
-use Text::ParseWords();
+        eval set -- "$kak_quoted_selections"
 
-my @sel_content = Text::ParseWords::shellwords($ENV{"kak_quoted_selections"});
+        split='^\([0-9]\+\):\(.\+\)$'
 
-my %placeholder_id_to_default;
-my @placeholder_ids;
+        printf 'set-option window lsp_snippets_placeholder_groups'
+        while [ $# -gt 0 ]; do
+            # Strip ${ and } from selection
+            sel=$(printf '%s' "$1" | sed 's/^\${\?\|}//g')
+            # Split by :
+            placeholder_id=$(printf '%s' "$sel" | sed -n "s/$split/\1/gp")
+            if [ -z "$placeholder_id" ]; then
+                # sed failed; There's no default placeholder.
+                placeholder_id="$sel"
+            fi
+            if [ "$placeholder_id" -eq 0 ]; then
+                placeholder_id=9999
+            fi
+            placeholder_ids+=(placeholder_id)
+            printf ' %s' "$placeholder_id"
+            shift
+        done
+        printf '\n'
 
-print("set-option window lsp_snippets_placeholder_groups");
-for my $i (0 .. $#sel_content) {
-    my $sel = $sel_content[$i];
-    $sel =~ s/\A\$\{?|\}\Z//g;
-    my ($placeholder_id, $placeholder_default) = ($sel =~ /^(\d+)(?::(.*))?$/);
-    if ($placeholder_id eq "0") {
-        $placeholder_id = "9999";
-    }
-    $placeholder_ids[$i] = $placeholder_id;
-    print(" $placeholder_id");
-    if (defined($placeholder_default)) {
-        $placeholder_id_to_default{$placeholder_id} = $placeholder_default;
-    }
-}
-print("\n");
+        # No arrays in POSIX sh so we just loop again
+        eval set -- "$kak_quoted_selections"
 
-print("set-register dquote");
-foreach my $i (0 .. $#sel_content) {
-    my $placeholder_id = $placeholder_ids[$i];
-    my $def = "";
-    if (exists $placeholder_id_to_default{$placeholder_id}) {
-        $def = $placeholder_id_to_default{$placeholder_id};
-        # de-double up closing braces
-        $def =~ s/\}\}/}/g;
-        # double up single-quotes
-        $def =~ s/'\''/'\'''\''/g;
-    }
-    # make sure that the placeholder is non-empty so we can select it
-    if (length $def == 0) { $def = " " }
-    print(" '\''$def'\''");
-}
-print("\n");
-'
+        printf 'set-register dquote'
+        while [ $# -gt 0 ]; do
+            # Strip ${ and } from selection
+            sel=$(printf '%s' "$1" | sed 's/^\${\?\|}//g')
+            # Split by :
+            placeholder_id=$(printf '%s' "$sel" | sed -n "s/$split/\1/gp")
+            def=$(printf '%s' "$sel" | sed -n "s/$split/\2/gp")
+            if [ -n "$def" ]; then
+                def=$(printf '%s' "$def" | sed "s/}}/}/g; s/'/''/g")
+            else # if [ -z "$def" ]; then
+                def=' '
+            fi
+            printf " '%s'" "$def"
+            shift
+        done
+        printf '\n'
     ]
     execute-keys R
     set-option window lsp_snippets_placeholders %val{timestamp}

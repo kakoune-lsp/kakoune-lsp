@@ -1,0 +1,1 @@
+'${0:expression}' '${1:const void *p}' '$0'

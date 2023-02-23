@@ -1,0 +1,2 @@
+set-option window lsp_snippets_placeholder_groups 9999 1 9999
+set-register dquote 'expression' 'const void *p' ' '
