@@ -2278,12 +2278,13 @@ define-command -hidden lsp-snippets-insert-impl %[
     evaluate-commands %sh[ # $kak_quoted_selections
         eval set -- "$kak_quoted_selections"
 
+        strip='s/^\${\?\|}//g'
         split='^\([0-9]\+\):\(.\+\)$'
 
         printf 'set-option window lsp_snippets_placeholder_groups'
         while [ $# -gt 0 ]; do
             # Strip ${ and } from selection
-            sel=$(printf '%s' "$1" | sed 's/^\${\?\|}//g')
+            sel=$(printf '%s' "$1" | sed "$strip")
             # Split by :
             placeholder_id=$(printf '%s' "$sel" | sed -n "s/$split/\1/gp")
             if [ -z "$placeholder_id" ]; then
@@ -2293,7 +2294,6 @@ define-command -hidden lsp-snippets-insert-impl %[
             if [ "$placeholder_id" -eq 0 ]; then
                 placeholder_id=9999
             fi
-            placeholder_ids+=(placeholder_id)
             printf ' %s' "$placeholder_id"
             shift
         done
@@ -2305,7 +2305,7 @@ define-command -hidden lsp-snippets-insert-impl %[
         printf 'set-register dquote'
         while [ $# -gt 0 ]; do
             # Strip ${ and } from selection
-            sel=$(printf '%s' "$1" | sed 's/^\${\?\|}//g')
+            sel=$(printf '%s' "$1" | sed "$strip")
             # Split by :
             placeholder_id=$(printf '%s' "$sel" | sed -n "s/$split/\1/gp")
             def=$(printf '%s' "$sel" | sed -n "s/$split/\2/gp")
