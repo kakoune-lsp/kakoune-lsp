@@ -103,7 +103,6 @@ fn editor_completion(
                     Some(doc) => doc,
                     None => {
                         warn!("No document in context for file: {}", &meta.buffile);
-                        can_infer_offset = false;
                         return None;
                     }
                 };
@@ -142,12 +141,13 @@ fn editor_completion(
                             None
                         }
                     }
-                    CompletionTextEdit::InsertAndReplace(_) => {
-                        can_infer_offset = false;
-                        None
-                    }
+                    CompletionTextEdit::InsertAndReplace(_) => None,
                 }
             });
+            if insert_text.is_none() {
+                can_infer_offset = false;
+                inferred_offset = None;
+            }
             let insert_text = insert_text
                 .or_else(|| x.insert_text.clone())
                 .unwrap_or_else(|| x.label.clone());
