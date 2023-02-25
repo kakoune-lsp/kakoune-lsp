@@ -297,6 +297,9 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
         if !request.meta.buffile.is_empty()
             && document_version < request.meta.version
             && !notifications.contains(&method)
+            // InsertIdle is not triggered while the completion pager is active, so let's
+            // smuggle completion-related requests through.
+            && method != request::ResolveCompletionItem::METHOD
         {
             // Wait for buffer update.
             ctx.pending_requests.push(request);

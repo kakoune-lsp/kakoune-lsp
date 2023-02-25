@@ -1,5 +1,8 @@
 ## Unreleased
 
+Fixes:
+- A regression broke resolving completion item documentation when cycling through completion candidates, which has been fixed (#674).
+
 ## 14.2.0 - 2023-02-13
 
 Additions:
