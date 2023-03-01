@@ -446,9 +446,9 @@ If a client name argument is given use that client. Create it with :new if it do
 define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover info for the main cursor position" %{
     evaluate-commands %sh{
         hover_buffer_args=""
-        if [ $# -eq 1 ]; then
-            client=${1:-"${kak_opt_docsclient:-"$kak_client"}"}
-            hover_buffer_args="hoverClient = \"${client}\""
+        if [ $# -eq 1 ] || [ -n "${kak_opt_docsclient}" ]; then
+            hover_client=${1:-"${kak_opt_docsclient:-"$kak_client"}"}
+            hover_buffer_args="hoverClient = \"${hover_client}\""
         fi
 
         (printf %s "
