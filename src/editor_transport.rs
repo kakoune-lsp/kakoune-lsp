@@ -22,7 +22,7 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
 
     let (sender, receiver) = bounded(channel_capacity);
     let mut path = temp_dir();
-    path.push(&session);
+    path.push(session);
     if path.exists() {
         if UnixStream::connect(&path).is_err() {
             if fs::remove_file(&path).is_err() {
@@ -67,7 +67,7 @@ pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTra
 
 pub fn send_command_to_editor(response: EditorResponse) -> Result<(), String> {
     match Command::new("kak")
-        .args(&["-p", &response.meta.session])
+        .args(["-p", &response.meta.session])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -118,7 +118,7 @@ pub fn send_command_to_editor(response: EditorResponse) -> Result<(), String> {
 }
 
 pub fn start_unix(path: &path::Path, sender: Sender<String>) {
-    let listener = match UnixListener::bind(&path) {
+    let listener = match UnixListener::bind(path) {
         Ok(listener) => listener,
         Err(e) => {
             error!("Failed to bind: {}", e);

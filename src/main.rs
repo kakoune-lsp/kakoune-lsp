@@ -285,7 +285,7 @@ fn spin_up_server(input: &[u8]) {
     let mut cmd = Command::new(&args[0]);
     let mut child = cmd
         .args(&args[1..])
-        .args(&["--daemonize", "--initial-request"])
+        .args(["--daemonize", "--initial-request"])
         .stdin(Stdio::piped())
         .spawn()
         .expect("Failed to run server");
@@ -299,7 +299,7 @@ fn spin_up_server(input: &[u8]) {
 }
 
 fn setup_logger(config: &Config, matches: &ArgMatches) -> slog_scope::GlobalLoggerGuard {
-    let mut verbosity = matches.get_count("v") as u8;
+    let mut verbosity = matches.get_count("v");
 
     if verbosity == 0 {
         verbosity = config.verbosity

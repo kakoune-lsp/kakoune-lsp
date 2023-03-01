@@ -235,7 +235,7 @@ pub fn apply_document_resource_op(
                 if let Some(parent) = to.parent() {
                     fs::create_dir_all(parent)?;
                 }
-                fs::rename(&from, &to)
+                fs::rename(from, &to)
             }
         }
     }

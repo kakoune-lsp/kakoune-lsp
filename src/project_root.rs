@@ -71,6 +71,6 @@ pub fn roots_by_env(roots: &HashSet<PathBuf>, path: &str) -> Option<String> {
     };
     roots
         .iter()
-        .find(|x| pwd.starts_with(&x))
+        .find(|x| pwd.starts_with(x))
         .map(|x| x.to_str().unwrap().to_string())
 }

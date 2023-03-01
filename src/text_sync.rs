@@ -182,7 +182,7 @@ fn event_file_changes(
             };
             if watch_request.pattern.matches_path(path) {
                 file_changes.push(FileEvent {
-                    uri: Url::from_file_path(&path).unwrap(),
+                    uri: Url::from_file_path(path).unwrap(),
                     typ: file_change_type,
                 });
                 break;
