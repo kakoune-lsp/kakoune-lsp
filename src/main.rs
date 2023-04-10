@@ -21,6 +21,7 @@ mod progress;
 mod project_root;
 mod session;
 mod settings;
+mod show_message;
 mod text_edit;
 mod text_sync;
 mod thread_worker;

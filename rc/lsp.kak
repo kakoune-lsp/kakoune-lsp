@@ -177,6 +177,11 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
             shellquote() {
                 printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
             }
+            on_abort=
+            if [ $1 = "-on-abort" ]; then
+                ob_abort="-on-abort $(shellquote "$2" s/¶/¶¶/g)"
+                shift 2
+            fi
             cases=
             completion=
             nl=$(printf '\n.'); nl=${nl%.}
@@ -261,7 +266,8 @@ declare-option -hidden str lsp_project_root
 
 declare-option -hidden str lsp_modeline_code_actions
 declare-option -hidden str lsp_modeline_progress ""
-declare-option -hidden str lsp_modeline '%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}'
+declare-option -hidden str lsp_modeline_message_requests ""
+declare-option -hidden str lsp_modeline '%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 ### Requests ###
@@ -1732,6 +1738,56 @@ define-command -hidden lsp-show-message-log -params 1 -docstring %{
     Render language server message of the "log" level.
 } %{
     echo -debug "kak-lsp: log:" %arg{1}
+}
+
+define-command -hidden lsp-show-message-request -params 4.. -docstring %{
+    lsp-show-message-request <prompt> <on-abort> <opt> <command> [<opt> <command>]...
+    Render a prompt message with options.
+} %{
+    evaluate-commands -try-client %opt{toolsclient} %{
+        info -title "From LSP" %arg{1}
+        evaluate-commands %sh{
+            on_abort="$2"
+            shift 2
+            echo lsp-menu -on-abort $on_abort "$@"
+        }
+    }
+}
+
+define-command lsp-show-message-request-next -params 0 -docstring %{
+    lsp-show-message-request-next
+    Show the next pending message request.
+} %{
+    nop %sh{ (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"window/showMessageRequest\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+${kak_opt_lsp_connect_fifo}\
+[params]
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command lsp-show-message-request-respond -params 1..2 -hidden %{
+    nop %sh{ (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"window/showMessageRequest\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+${kak_opt_lsp_connect_fifo}\
+[params]
+message_request_id = $1
+[params.item]
+${2:-""}
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+    # Close the info
+    execute-keys "<esc>"
 }
 
 declare-option -hidden str lsp_progress_indicator
