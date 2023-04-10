@@ -8,7 +8,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::convert::TryInto;
 use std::path::PathBuf;
 use std::{fs, time};
@@ -53,6 +53,7 @@ pub struct Context {
     pub language_id: String,
     pub outstanding_requests: HashMap<(&'static str, String, Option<String>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
+    pub pending_message_requests: VecDeque<(Id, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub root_path: String,
@@ -94,6 +95,7 @@ impl Context {
             language_id: params.language_id,
             outstanding_requests: HashMap::default(),
             pending_requests: vec![params.initial_request],
+            pending_message_requests: VecDeque::new(),
             request_counter: 0,
             response_waitlist: HashMap::default(),
             root_path: params.root_path,

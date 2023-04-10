@@ -11,6 +11,7 @@ use crate::diagnostics;
 use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
 use crate::progress;
+use crate::show_message;
 use crate::text_sync::*;
 use crate::thread_worker::Worker;
 use crate::types::*;
@@ -129,7 +130,7 @@ pub fn start(
                     ServerMessage::Request(call) => {
                         match call {
                             Call::MethodCall(request) => {
-                              dispatch_server_request(request, &mut ctx);
+                              dispatch_server_request(initial_request_meta.clone(), request, &mut ctx);
                             }
                             Call::Notification(notification) => {
                                 dispatch_server_notification(
@@ -458,6 +459,13 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             inlay_hints::inlay_hints(meta, params, ctx);
         }
 
+        show_message::SHOW_MESSAGE_REQUEST_NEXT => {
+            show_message::show_message_request_next(meta, ctx);
+        }
+        show_message::SHOW_MESSAGE_REQUEST_RESPOND => {
+            show_message::show_message_request_respond(params, ctx);
+        }
+
         // CCLS
         ccls::NavigateRequest::METHOD => {
             ccls::navigate(meta, params, ctx);
@@ -504,7 +512,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
     }
 }
 
-fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
+fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Context) {
     let method: &str = &request.method;
     let result = match method {
         request::ApplyWorkspaceEdit::METHOD => {
@@ -545,6 +553,9 @@ fn dispatch_server_request(request: MethodCall, ctx: &mut Context) {
             progress::work_done_progress_create(request.params, ctx)
         }
         request::WorkspaceConfiguration::METHOD => workspace::configuration(request.params, ctx),
+        request::ShowMessageRequest::METHOD => {
+            return show_message::show_message_request(meta, request, ctx);
+        }
         _ => {
             warn!("Unsupported method: {}", method);
             Err(jsonrpc_core::Error::new(
@@ -577,20 +588,7 @@ fn dispatch_server_notification(meta: EditorMeta, method: &str, params: Params, 
             let params: ShowMessageParams = params
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
-            let command = match params.typ {
-                MessageType::ERROR => "lsp-show-message-error",
-                MessageType::WARNING => "lsp-show-message-warning",
-                MessageType::INFO => "lsp-show-message-info",
-                MessageType::LOG => "lsp-show-message-log",
-                _ => {
-                    warn!("Unexpected ShowMessageParams type: {:?}", params.typ);
-                    "nop"
-                }
-            };
-            ctx.exec(
-                meta,
-                format!("{} {}", command, editor_quote(&params.message)),
-            );
+            show_message::show_message(meta, params.typ, &params.message, ctx);
         }
         "window/logMessage" => {
             let params: LogMessageParams = params
