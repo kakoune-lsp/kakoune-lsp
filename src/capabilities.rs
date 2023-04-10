@@ -309,7 +309,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 work_done_progress: Some(true),
                 show_message: Some(ShowMessageRequestClientCapabilities {
                     message_action_item: Some(MessageActionItemCapabilities {
-                        additional_properties_support: Some(false),
+                        additional_properties_support: Some(true),
                     }),
                 }),
                 show_document: None,
