@@ -588,7 +588,7 @@ fn dispatch_server_notification(meta: EditorMeta, method: &str, params: Params, 
             let params: ShowMessageParams = params
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
-            show_message::show_message(meta, params, ctx);
+            show_message::show_message(meta, params.typ, &params.message, ctx);
         }
         "window/logMessage" => {
             let params: LogMessageParams = params

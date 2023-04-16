@@ -52,14 +52,7 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         Some(opts) if !opts.is_empty() => &opts[..],
         _ => {
             // a ShowMessageRequest with no actions is just a ShowMessage notification.
-            show_message(
-                meta,
-                ShowMessageParams {
-                    typ: params.typ,
-                    message: params.message,
-                },
-                ctx,
-            );
+            show_message(meta, params.typ, &params.message, ctx);
             ctx.reply(id, Ok(serde_json::Value::Null));
             return;
         }
@@ -72,15 +65,15 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
     let option_menu_opts = options
         .iter()
         .flat_map(|item| {
-            let cmd = format!(
-                "%{{lsp-show-message-request-respond {} {}}}",
+            let cmd = editor_quote(&format!(
+                "lsp-show-message-request-respond {} {}",
                 request_id,
                 editor_quote(
                     toml::to_string(item)
                         .expect("cannot convert message action to toml")
                         .as_ref()
                 )
-            );
+            ));
             [editor_quote(item.title.as_ref()), cmd]
         })
         .map(|v| editor_quote(v.as_ref())) // double quoting for request passing
@@ -99,12 +92,9 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
 }
 
 /// Implements ShowMessage notification.
-pub fn show_message(meta: EditorMeta, params: ShowMessageParams, ctx: &Context) {
-    let command = message_type(params.typ).unwrap_or("nop");
-    ctx.exec(
-        meta,
-        format!("{} {}", command, editor_quote(&params.message)),
-    );
+pub fn show_message(meta: EditorMeta, typ: MessageType, msg: &str, ctx: &Context) {
+    let command = message_type(typ).unwrap_or("nop");
+    ctx.exec(meta, format!("{} {}", command, editor_quote(msg)));
 }
 
 fn update_modeline(meta: EditorMeta, ctx: &Context) {
