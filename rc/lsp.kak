@@ -128,6 +128,11 @@ info=$lsp_info \
             lines++
         }
 
+        if (ENVIRON["kak_opt_lsp_modeline_message_requests"]) {
+            r = r "There are unread messages (use lsp-show-message-request-next to read)\n"
+            lines++
+        }
+
         info_lines = split(info, info_line, /\n/)
         for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+2 <= max_lines); i++)
             print info_line[i]
