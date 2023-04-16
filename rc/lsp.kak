@@ -179,7 +179,7 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
             }
             on_abort=
             if [ $1 = "-on-abort" ]; then
-                ob_abort="-on-abort $(shellquote "$2" s/¶/¶¶/g)"
+                on_abort="-on-abort $(shellquote "$2" s/¶/¶¶/g)"
                 shift 2
             fi
             cases=
@@ -1745,16 +1745,16 @@ define-command -hidden lsp-show-message-request -params 4.. -docstring %{
     Render a prompt message with options.
 } %{
     evaluate-commands -try-client %opt{toolsclient} %{
-        info -title "From LSP" %arg{1}
+        info -title "From language server" %arg{1}
         evaluate-commands %sh{
             on_abort="$2"
             shift 2
-            echo lsp-menu -on-abort $on_abort "$@"
+            echo lsp-menu -on-abort "$on_abort" "$@"
         }
     }
 }
 
-define-command lsp-show-message-request-next -params 0 -docstring %{
+define-command lsp-show-message-request-next -docstring %{
     lsp-show-message-request-next
     Show the next pending message request.
 } %{
