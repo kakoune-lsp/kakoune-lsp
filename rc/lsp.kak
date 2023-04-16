@@ -207,6 +207,7 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
                     esac
                 ¶
             §" "$cases"
+            printf ' %s' "$on_abort"
             printf ' -menu -shell-script-candidates %%§
                 printf %%s %s
                 §\n' "$(shellquote "$completion")"
