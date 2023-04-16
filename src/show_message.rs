@@ -7,40 +7,40 @@ use serde::Deserialize;
 
 use crate::{context::Context, types::EditorMeta, util::editor_quote};
 
+// commands to be handled
+pub const SHOW_MESSAGE_REQUEST_NEXT: &'static str = "window/showMessageRequest/showNext";
+pub const SHOW_MESSAGE_REQUEST_RESPOND: &'static str = "window/showMessageRequest/respond";
+
 /// Queues the message request from the LSP server.
 pub fn show_message_request(meta: EditorMeta, request: MethodCall, ctx: &mut Context) {
+    let request_id = request.id;
     let params: ShowMessageRequestParams = request
         .params
-        .clone()
         .parse()
         .expect("Failed to parse ShowMessageRequest params");
-    ctx.pending_message_requests.push_back((request.id, params));
+    ctx.pending_message_requests.push_back((request_id, params));
     update_modeline(meta, ctx)
 }
 
 #[derive(Deserialize)]
 struct MessageRequestResponse {
-    pub message_request_id: Option<Id>,
+    pub message_request_id: Id,
     pub item: Option<toml::Value>,
 }
 
 /// Handles an user's response to a message request (or the user's request to display the next message request).
-pub fn show_message_request_respond(meta: EditorMeta, params: toml::Value, ctx: &mut Context) {
+pub fn show_message_request_respond(params: toml::Value, ctx: &mut Context) {
     let resp =
         MessageRequestResponse::deserialize(params).expect("Cannot parse message request response");
-    let req_id = match resp.message_request_id {
-        None => return show_message_request_next(meta, ctx),
-        Some(id) => id,
-    };
     let item = resp
         .item
         .and_then(|v| MessageActionItem::deserialize(v).ok())
         .map(|v| jsonrpc_core::to_value(v).expect("Cannot serialize item"))
         .unwrap_or(jsonrpc_core::Value::Null);
-    ctx.reply(req_id, Ok(item));
+    ctx.reply(resp.message_request_id, Ok(item));
 }
 
-fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
+pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
     let (id, params) = match ctx.pending_message_requests.pop_front() {
         Some(v) => v,
         None => {

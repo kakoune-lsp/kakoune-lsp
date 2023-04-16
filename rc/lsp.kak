@@ -1764,7 +1764,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
-method   = \"window/showMessageRequest\"
+method   = \"window/showMessageRequest/showNext\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
@@ -1778,7 +1778,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
-method   = \"window/showMessageRequest\"
+method   = \"window/showMessageRequest/respond\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]

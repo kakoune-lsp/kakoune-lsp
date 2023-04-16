@@ -459,8 +459,11 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             inlay_hints::inlay_hints(meta, params, ctx);
         }
 
-        request::ShowMessageRequest::METHOD => {
-            show_message::show_message_request_respond(meta, params, ctx);
+        show_message::SHOW_MESSAGE_REQUEST_NEXT => {
+            show_message::show_message_request_next(meta, ctx);
+        }
+        show_message::SHOW_MESSAGE_REQUEST_RESPOND => {
+            show_message::show_message_request_respond(params, ctx);
         }
 
         // CCLS
