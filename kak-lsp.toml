@@ -264,7 +264,8 @@ command = "rnix-lsp"
 
 [language.ocaml]
 filetypes = ["ocaml"]
-roots = ["Makefile", "opam", "*.opam", "dune"]
+# Often useful to simply do a `touch dune-workspace` in your project root folder if you have problems with root detection
+roots = ["dune-workspace", "dune-project", "Makefile", "opam", "*.opam", "esy.json", ".git", ".hg", "dune"]
 command = "ocamllsp"
 
 [language.php]
