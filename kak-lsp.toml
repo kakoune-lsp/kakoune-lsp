@@ -112,7 +112,7 @@ settings_section = "gopls"
 
 [language.haskell]
 filetypes = ["haskell"]
-roots = ["Setup.hs", "stack.yaml", "*.cabal"]
+roots = ["hie.yaml", "cabal.project", "Setup.hs", "stack.yaml", "*.cabal"]
 command = "haskell-language-server-wrapper"
 args = ["--lsp"]
 settings_section = "_"
