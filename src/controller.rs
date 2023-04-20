@@ -389,7 +389,10 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             hover::text_document_hover(meta, params, ctx);
         }
         request::GotoDefinition::METHOD => {
-            goto::text_document_definition(meta, params, ctx);
+            goto::text_document_definition(false, meta, params, ctx);
+        }
+        request::GotoDeclaration::METHOD => {
+            goto::text_document_definition(true, meta, params, ctx);
         }
         request::GotoImplementation::METHOD => {
             goto::text_document_implementation(meta, params, ctx);

@@ -4,7 +4,9 @@ use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams};
 use crate::util::{editor_quote, short_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
-use lsp_types::request::{GotoDefinition, GotoImplementation, GotoTypeDefinition, References};
+use lsp_types::request::{
+    GotoDeclaration, GotoDefinition, GotoImplementation, GotoTypeDefinition, References,
+};
 use lsp_types::*;
 use serde::Deserialize;
 use url::Url;
@@ -95,7 +97,12 @@ fn goto_locations(meta: EditorMeta, locations: &[Location], ctx: &mut Context) {
     ctx.exec(meta, command);
 }
 
-pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_definition(
+    declaration: bool,
+    meta: EditorMeta,
+    params: EditorParams,
+    ctx: &mut Context,
+) {
     let params = PositionParams::deserialize(params).unwrap();
     let req_params = GotoDefinitionParams {
         text_document_position_params: TextDocumentPositionParams {
@@ -107,9 +114,15 @@ pub fn text_document_definition(meta: EditorMeta, params: EditorParams, ctx: &mu
         partial_result_params: Default::default(),
         work_done_progress_params: Default::default(),
     };
-    ctx.call::<GotoDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto(meta, result, ctx);
-    });
+    if declaration {
+        ctx.call::<GotoDeclaration, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+            goto(meta, result, ctx);
+        });
+    } else {
+        ctx.call::<GotoDefinition, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
+            goto(meta, result, ctx);
+        });
+    }
 }
 
 pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {

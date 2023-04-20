@@ -2,6 +2,7 @@
 
 Fixes:
 - A regression broke resolving completion item documentation when cycling through completion candidates, which has been fixed (#674).
+- New command `lsp-declaration`, implementing `textDocument/declaration`.
 
 ## 14.2.0 - 2023-02-13
 
