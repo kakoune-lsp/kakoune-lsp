@@ -8,8 +8,8 @@ use serde::Deserialize;
 use crate::{context::Context, types::EditorMeta, util::editor_quote};
 
 // commands to be handled
-pub const SHOW_MESSAGE_REQUEST_NEXT: &'static str = "window/showMessageRequest/showNext";
-pub const SHOW_MESSAGE_REQUEST_RESPOND: &'static str = "window/showMessageRequest/respond";
+pub const SHOW_MESSAGE_REQUEST_NEXT: &str = "window/showMessageRequest/showNext";
+pub const SHOW_MESSAGE_REQUEST_RESPOND: &str = "window/showMessageRequest/respond";
 
 /// Queues the message request from the LSP server.
 pub fn show_message_request(meta: EditorMeta, request: MethodCall, ctx: &mut Context) {
