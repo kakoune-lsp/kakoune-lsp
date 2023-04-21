@@ -183,7 +183,7 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
                 printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
             }
             on_abort=
-            if [ $1 = "-on-abort" ]; then
+            if [ "$1" = "-on-abort" ]; then
                 on_abort="-on-abort $(shellquote "$2" s/¶/¶¶/g)"
                 shift 2
             fi
@@ -217,6 +217,9 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
             shellquote() {
                 printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
             }
+            if [ "$1" = "-on-abort" ]; then
+                shift 2
+            fi
             cases=
             completion=
             nl=$(printf '\n.'); nl=${nl%.}
