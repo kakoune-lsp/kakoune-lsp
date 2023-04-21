@@ -184,7 +184,7 @@ define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with promp
             }
             on_abort=
             if [ "$1" = "-on-abort" ]; then
-                on_abort="-on-abort $(shellquote "$2" s/¶/¶¶/g)"
+                on_abort=$(printf "-on-abort ¶%s¶" "$(printf "$2" | sed s/¶/¶¶/g)")
                 shift 2
             fi
             cases=
