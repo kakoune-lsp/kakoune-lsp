@@ -6,10 +6,11 @@ use indoc::formatdoc;
 #[cfg(test)]
 use indoc::indoc;
 use itertools::Itertools;
+use lsp_types::notification::DidOpenTextDocument;
 use lsp_types::*;
 use ropey::Rope;
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Write};
+use std::io::{BufReader, Write};
 use std::os::unix::io::FromRawFd;
 
 pub trait TextEditish<T: TextEditish<T>> {
@@ -65,7 +66,7 @@ impl TextEditish<OneOf<TextEdit, AnnotatedTextEdit>> for OneOf<TextEdit, Annotat
 
 /// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
 /// buffer or by editing file directly when it's not open in editor.
-pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx: &Context) {
+pub fn apply_text_edits(meta: &EditorMeta, uri: Url, edits: Vec<TextEdit>, ctx: &mut Context) {
     apply_annotated_text_edits(meta, uri, edits, ctx)
 }
 
@@ -73,9 +74,9 @@ pub fn apply_text_edits(meta: &EditorMeta, uri: &Url, edits: Vec<TextEdit>, ctx:
 /// buffer or by editing file directly when it's not open in editor.
 pub fn apply_annotated_text_edits<T: TextEditish<T>>(
     meta: &EditorMeta,
-    uri: &Url,
+    uri: Url,
     edits: Vec<T>,
-    ctx: &Context,
+    ctx: &mut Context,
 ) {
     let path = uri.to_file_path().ok().unwrap();
     let buffile = path.to_str().unwrap();
@@ -99,15 +100,15 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
             // editor is blocked waiting for response via fifo.
             None => ctx.exec(meta, "nop"),
         }
-    } else if let Err(e) = apply_text_edits_to_file(uri, edits, ctx.offset_encoding) {
-        error!("Failed to apply edits to file {} ({})", uri, e);
+    } else if let Err(e) = apply_text_edits_to_file(&uri, edits, ctx) {
+        error!("Failed to apply edits to file {} ({})", &uri, e);
     }
 }
 
 pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     uri: &Url,
     text_edits: Vec<T>,
-    offset_encoding: OffsetEncoding,
+    ctx: &mut Context,
 ) -> std::io::Result<()> {
     let path = uri.to_file_path().unwrap();
     let filename = path.to_str().unwrap();
@@ -141,11 +142,11 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     };
     fn apply_text_edits_to_file_impl<T: TextEditish<T>>(
         text: Rope,
-        temp_file: File,
+        mut temp_file: File,
         text_edits: Vec<T>,
         offset_encoding: OffsetEncoding,
-    ) -> Result<(), std::io::Error> {
-        let mut output = BufWriter::new(temp_file);
+    ) -> Result<Vec<u8>, std::io::Error> {
+        let mut output: Vec<u8> = vec![];
 
         let text_len_lines = text.len_lines() as u64;
         let mut cursor = 0;
@@ -185,29 +186,44 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
             let end_byte = text.line_to_byte(end.line as _) + end_offset.unwrap();
 
             for chunk in text.byte_slice(cursor..start_byte).chunks() {
-                output.write_all(chunk.as_bytes())?;
+                output.extend_from_slice(chunk.as_bytes());
             }
 
-            output.write_all(new_text.as_bytes())?;
+            output.extend_from_slice(new_text.as_bytes());
             cursor = end_byte;
         }
 
         for chunk in text.slice(cursor..).chunks() {
-            output.write_all(chunk.as_bytes())?;
+            output.extend_from_slice(chunk.as_bytes());
         }
 
-        Ok(())
+        temp_file.write_all(&output)?;
+
+        Ok(output)
     }
 
-    apply_text_edits_to_file_impl(text, temp_file, text_edits, offset_encoding)
-        .and_then(|_| std::fs::rename(&temp_path, filename))
-        .map(|_| unsafe {
-            libc::chmod(path.as_ptr(), stat.st_mode);
-        })
-        .map_err(|e| {
+    match apply_text_edits_to_file_impl(text, temp_file, text_edits, ctx.offset_encoding) {
+        Ok(updated_text) => {
+            std::fs::rename(&temp_path, filename)?;
+            unsafe {
+                libc::chmod(path.as_ptr(), stat.st_mode);
+            }
+            let params = DidOpenTextDocumentParams {
+                text_document: TextDocumentItem {
+                    uri: uri.clone(),
+                    language_id: ctx.language_id.clone(),
+                    version: 1,
+                    text: String::from_utf8_lossy(&updated_text).to_string(),
+                },
+            };
+            ctx.notify::<DidOpenTextDocument>(params);
+            Ok(())
+        }
+        Err(e) => {
             let _ = std::fs::remove_file(&temp_path);
-            e
-        })
+            Err(e)
+        }
+    }
 }
 
 // Adapted from std/src/sys/unix/mod.rs.
@@ -392,7 +408,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
 
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     client: &Option<String>,
-    uri: Option<&Url>,
+    uri: Option<Url>,
     text_edits: Vec<T>,
     text: &Rope,
     offset_encoding: OffsetEncoding,

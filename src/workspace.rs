@@ -251,7 +251,7 @@ pub fn apply_edit(
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    apply_annotated_text_edits(&meta, &edit.text_document.uri, edit.edits, ctx);
+                    apply_annotated_text_edits(&meta, edit.text_document.uri, edit.edits, ctx);
                 }
             }
             DocumentChanges::Operations(ops) => {
@@ -260,7 +260,7 @@ pub fn apply_edit(
                         DocumentChangeOperation::Edit(edit) => {
                             apply_annotated_text_edits(
                                 &meta,
-                                &edit.text_document.uri,
+                                edit.text_document.uri,
                                 edit.edits,
                                 ctx,
                             );
@@ -281,7 +281,7 @@ pub fn apply_edit(
         }
     } else if let Some(changes) = edit.changes {
         for (uri, change) in changes {
-            apply_text_edits(&meta, &uri, change, ctx);
+            apply_text_edits(&meta, uri, change, ctx);
         }
     }
     ApplyWorkspaceEditResponse {
