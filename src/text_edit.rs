@@ -414,7 +414,11 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     offset_encoding: OffsetEncoding,
     write_to_disk: bool,
 ) -> Option<String> {
-    let mut apply_edits = lsp_text_edits_to_kakoune(client, text_edits, text, offset_encoding)?;
+    let mut apply_edits = formatdoc!(
+        "{}
+         lsp-did-change",
+        lsp_text_edits_to_kakoune(client, text_edits, text, offset_encoding)?
+    );
 
     if write_to_disk {
         apply_edits = formatdoc!(
