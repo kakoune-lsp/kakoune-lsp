@@ -17,6 +17,7 @@ use std::any::TypeId;
 use std::convert::TryInto;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use unicode_width::UnicodeWidthStr;
 use url::Url;
 
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
@@ -57,7 +58,8 @@ pub trait Symbol<T: Symbol<T>> {
     fn uri(&self) -> Option<&Url>;
     fn range(&self) -> Range;
     fn selection_range(&self) -> Range;
-    fn children(self) -> Vec<T>;
+    fn children(&self) -> &[T];
+    fn children_mut(&mut self) -> &mut [T];
 }
 
 fn symbol_filename<'a, T: Symbol<T>>(
@@ -89,8 +91,11 @@ impl Symbol<SymbolInformation> for SymbolInformation {
     fn selection_range(&self) -> Range {
         self.range()
     }
-    fn children(self) -> Vec<SymbolInformation> {
-        vec![]
+    fn children(&self) -> &[SymbolInformation] {
+        &[]
+    }
+    fn children_mut(&mut self) -> &mut [SymbolInformation] {
+        &mut []
     }
 }
 
@@ -110,8 +115,14 @@ impl Symbol<DocumentSymbol> for DocumentSymbol {
     fn selection_range(&self) -> Range {
         self.selection_range
     }
-    fn children(self) -> Vec<DocumentSymbol> {
-        self.children.unwrap_or_default()
+    fn children(&self) -> &[DocumentSymbol] {
+        self.children.as_ref().map(|v| &v[..]).unwrap_or_default()
+    }
+    fn children_mut(&mut self) -> &mut [DocumentSymbol] {
+        self.children
+            .as_mut()
+            .map(|v| &mut v[..])
+            .unwrap_or_default()
     }
 }
 
@@ -125,13 +136,13 @@ fn editor_document_symbol(
             if result.is_empty() {
                 return;
             }
-            format_symbol(result, &meta, ctx)
+            format_symbol(result, true, &meta, ctx)
         }
         Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            format_symbol(result, &meta, ctx)
+            format_symbol(result, true, &meta, ctx)
         }
         None => {
             return;
@@ -147,36 +158,67 @@ fn editor_document_symbol(
 
 /// Represent list of symbols as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
-pub fn format_symbol<T: Symbol<T>>(items: Vec<T>, meta: &EditorMeta, ctx: &Context) -> String {
-    fn format_symbol_at_depth<T: Symbol<T>>(
-        items: Vec<T>,
+pub fn format_symbol<T: Symbol<T>>(
+    items: Vec<T>,
+    align: bool,
+    meta: &EditorMeta,
+    ctx: &Context,
+) -> String {
+    fn format_symbol_at_depth<'a, T: Symbol<T>>(
+        output: &mut Vec<(String, String, &'a str)>,
+        items: &'a [T],
         meta: &EditorMeta,
         ctx: &Context,
         depth: usize,
-    ) -> String {
-        items
-            .into_iter()
-            .map(|symbol| {
-                let mut filename_path = PathBuf::default();
-                let filename = symbol_filename(meta, &symbol, &mut filename_path);
-                let position = get_kakoune_position_with_fallback(
-                    filename,
-                    symbol.selection_range().start,
-                    ctx,
-                );
-                let description = format!("{:?} {}", symbol.kind(), symbol.name());
+    ) {
+        for symbol in items {
+            let mut filename_path = PathBuf::default();
+            let filename = symbol_filename(meta, symbol, &mut filename_path);
+            let position =
+                get_kakoune_position_with_fallback(filename, symbol.selection_range().start, ctx);
+            output.push((
                 format!(
-                    "{}{}:{}:{}:{}\n",
+                    "{}{}:{}:{}:",
                     "  ".repeat(depth),
                     short_file_path(filename, &ctx.root_path),
                     position.line,
                     position.column,
-                    description
-                ) + &format_symbol_at_depth(symbol.children(), meta, ctx, depth + 1)
+                ),
+                format!("{:?}", symbol.kind()),
+                symbol.name(),
+            ));
+            format_symbol_at_depth(output, symbol.children(), meta, ctx, depth + 1)
+        }
+    }
+    let mut columns = vec![];
+    format_symbol_at_depth(&mut columns, &items, meta, ctx, 0);
+    if align {
+        let Some(width1) = columns.iter().map(|(position, _, _)|
+            UnicodeWidthStr::width(position.as_str())
+        ).max() else {
+            return "".to_string();
+        };
+        let width2 = columns
+            .iter()
+            .map(|(_, kind, _)| UnicodeWidthStr::width(kind.as_str()))
+            .max()
+            .unwrap();
+        columns
+            .into_iter()
+            .map(|(position, kind, description)| {
+                format!(
+                    "{position:width1$} {kind:width2$} {description}\n",
+                    width1 = width1,
+                    width2 = width2
+                )
             })
             .join("")
+    } else {
+        columns
+            .into_iter()
+            .map(|(position, kind, description)| format!("{position} {kind} {description}\n"))
+            .join("")
     }
-    format_symbol_at_depth(items, meta, ctx, 0)
 }
 
 fn symbol_kind_from_string(value: &str) -> Option<SymbolKind> {
@@ -228,17 +270,17 @@ fn editor_next_or_prev_symbol(
 
     let maybe_details = match result {
         None => return,
-        Some(DocumentSymbolResponse::Flat(result)) => {
+        Some(DocumentSymbolResponse::Flat(mut result)) => {
             if result.is_empty() {
                 return;
             }
-            next_or_prev_symbol_details(result, &params, &symbol_kinds_query, &meta, ctx)
+            next_or_prev_symbol_details(&mut result, &params, &symbol_kinds_query, &meta, ctx)
         }
-        Some(DocumentSymbolResponse::Nested(result)) => {
+        Some(DocumentSymbolResponse::Nested(mut result)) => {
             if result.is_empty() {
                 return;
             }
-            next_or_prev_symbol_details(result, &params, &symbol_kinds_query, &meta, ctx)
+            next_or_prev_symbol_details(&mut result, &params, &symbol_kinds_query, &meta, ctx)
         }
     };
 
@@ -344,7 +386,7 @@ fn editor_next_or_prev_for_details(
 
 /// Gets (filename, kakoune position, name) of the next/previous symbol in the buffer.
 fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
-    mut items: Vec<T>,
+    items: &mut [T],
     params: &NextOrPrevSymbolParams,
     symbol_kinds_query: &[SymbolKind],
     meta: &EditorMeta,
@@ -355,10 +397,10 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     items.sort_by(|a, b| a.selection_range().start.cmp(&b.selection_range().start));
 
     // Setup an iterator dependending on whether we are searching forwards or backwards
-    let it: Box<dyn Iterator<Item = T>> = if params.search_next {
-        Box::new(items.into_iter())
+    let it: Box<dyn Iterator<Item = &mut T>> = if params.search_next {
+        Box::new(items.iter_mut())
     } else {
-        Box::new(items.into_iter().rev())
+        Box::new(items.iter_mut().rev())
     };
 
     let cursor = params.position;
@@ -366,7 +408,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     for symbol in it {
         let kind = symbol.kind();
         let mut filename_path = PathBuf::default();
-        let filename = symbol_filename(meta, &symbol, &mut filename_path).to_string();
+        let filename = symbol_filename(meta, symbol, &mut filename_path).to_string();
 
         let mut symbol_position = symbol.selection_range().start;
         if TypeId::of::<T>() == TypeId::of::<SymbolInformation>() {
@@ -394,9 +436,13 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
             return Some((filename, symbol_position, symbol_name, kind));
         }
 
-        if let Some(from_children) =
-            next_or_prev_symbol_details(symbol.children(), params, symbol_kinds_query, meta, ctx)
-        {
+        if let Some(from_children) = next_or_prev_symbol_details(
+            symbol.children_mut(),
+            params,
+            symbol_kinds_query,
+            meta,
+            ctx,
+        ) {
             return Some(from_children);
         }
 
@@ -666,7 +712,7 @@ fn flat_symbol_ranges<T: Symbol<T>>(
         result: &mut Vec<(KakouneRange, KakounePosition)>,
         symbol_kinds_query: &[SymbolKind],
         convert: &F,
-        s: T,
+        s: &T,
     ) where
         T: Symbol<T>,
         F: Fn(Range) -> KakouneRange,
@@ -684,7 +730,7 @@ fn flat_symbol_ranges<T: Symbol<T>>(
     let mut result = vec![];
     let convert = |range| lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
     for s in symbols {
-        walk(&mut result, &symbol_kinds_query, &convert, s);
+        walk(&mut result, &symbol_kinds_query, &convert, &s);
     }
     result
 }
@@ -763,12 +809,12 @@ fn editor_document_symbol_goto(
     ctx.exec(meta, navigate_command);
 }
 
-fn symbols_walk<T, F>(visit: &mut F, s: T) -> bool
+fn symbols_walk<T, F>(visit: &mut F, s: &T) -> bool
 where
     T: Symbol<T>,
     F: FnMut(&T) -> bool,
 {
-    if !visit(&s) {
+    if !visit(s) {
         return false;
     }
     for child in s.children() {
@@ -797,7 +843,7 @@ fn symbol_menu<T: Symbol<T>>(symbols: Vec<T>, meta: &EditorMeta, ctx: &Context) 
         true
     };
     for symbol in symbols {
-        symbols_walk(&mut add_symbol, symbol);
+        symbols_walk(&mut add_symbol, &symbol);
     }
     menu_cmd
 }
@@ -826,7 +872,7 @@ fn symbol_search<T: Symbol<T>>(
         }
     };
     for symbol in symbols {
-        if !symbols_walk(&mut symbol_matches, symbol) {
+        if !symbols_walk(&mut symbol_matches, &symbol) {
             break;
         }
     }

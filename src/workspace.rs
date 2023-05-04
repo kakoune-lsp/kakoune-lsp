@@ -120,8 +120,11 @@ impl document_symbol::Symbol<WorkspaceSymbol> for WorkspaceSymbol {
     fn selection_range(&self) -> Range {
         self.range()
     }
-    fn children(self) -> Vec<WorkspaceSymbol> {
-        vec![]
+    fn children(&self) -> &[WorkspaceSymbol] {
+        &[]
+    }
+    fn children_mut(&mut self) -> &mut [WorkspaceSymbol] {
+        &mut []
     }
 }
 
@@ -135,13 +138,13 @@ fn editor_workspace_symbol(
             if result.is_empty() {
                 return;
             }
-            document_symbol::format_symbol(result, &meta, ctx)
+            document_symbol::format_symbol(result, false, &meta, ctx)
         }
         Some(WorkspaceSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            document_symbol::format_symbol(result, &meta, ctx)
+            document_symbol::format_symbol(result, false, &meta, ctx)
         }
         None => {
             return;
