@@ -354,6 +354,7 @@ args = [
 [language_server.rust-analyzer.settings.rust-analyzer]
 # See https://rust-analyzer.github.io/manual.html#configuration
 # cargo.features = []
+check.command = "clippy"
 
 [language_server.solargraph]
 filetypes = ["ruby"]
