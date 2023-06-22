@@ -1,5 +1,9 @@
 ## Unreleased
 
+Additions:
+- Support multiple language servers per filetype (#17).
+- The `kak-lsp.toml` format for specifying language servers has changed. The old format is still supported (#686).
+
 Fixes:
 - A regression broke resolving completion item documentation when cycling through completion candidates, which has been fixed (#674).
 - New command `lsp-declaration`, implementing `textDocument/declaration`.

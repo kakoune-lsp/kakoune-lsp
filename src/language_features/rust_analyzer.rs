@@ -1,4 +1,4 @@
-use crate::context::Context;
+use crate::context::{Context, RequestParams};
 use crate::position::{get_lsp_position, lsp_position_to_kakoune};
 use crate::text_edit::apply_text_edits;
 use crate::types::{EditorMeta, EditorParams, KakounePosition, PositionParams};
@@ -65,6 +65,9 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
         cursor_position,
         ..
     } = serde_json::from_value(arg).expect("Invalid source change");
+
+    let (server_name, _) = ctx.language_servers.first_key_value().unwrap();
+    let server_name = server_name.clone();
     if let Some(document_changes) = document_changes {
         for op in document_changes {
             match op {
@@ -87,13 +90,13 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
                              }| TextEdit { range, new_text },
                         )
                         .collect();
-                    apply_text_edits(&meta, uri, edits, ctx);
+                    apply_text_edits(&server_name, &meta, uri, edits, ctx);
                 }
             }
         }
     } else if let Some(changes) = changes {
         for (uri, change) in changes {
-            apply_text_edits(&meta, uri, change, ctx);
+            apply_text_edits(&server_name, &meta, uri, change, ctx);
         }
     }
     if let (
@@ -108,7 +111,8 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
         let buffile = buffile.to_str().unwrap();
         let position = match ctx.documents.get(buffile) {
             Some(document) => {
-                lsp_position_to_kakoune(position, &document.text, ctx.offset_encoding)
+                let server = &ctx.language_servers[&server_name];
+                lsp_position_to_kakoune(position, &document.text, server.offset_encoding)
             }
             _ => KakounePosition {
                 line: position.line + 1,
@@ -130,7 +134,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ExpandMacroParams {
     pub text_document: TextDocumentIdentifier,
@@ -153,18 +157,41 @@ impl Request for ExpandMacroRequest {
 
 pub fn expand_macro(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = ExpandMacroParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![ExpandMacroParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    position: get_lsp_position(
+                        server_settings,
+                        &meta.buffile,
+                        &params.position,
+                        ctx,
+                    )
+                    .unwrap(),
+                }],
+            )
+        })
+        .collect();
+
+    ctx.call::<ExpandMacroRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| {
+            if let Some((_, result)) = results.first() {
+                editor_expand_macro(meta, result, ctx);
+            }
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-    };
-    ctx.call::<ExpandMacroRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        editor_expand_macro(meta, result, ctx);
-    });
+    );
 }
 
-fn editor_expand_macro(meta: EditorMeta, result: ExpandMacroResponse, ctx: &mut Context) {
+fn editor_expand_macro(meta: EditorMeta, result: &ExpandMacroResponse, ctx: &mut Context) {
     let command = format!(
         "info 'expansion of {}!\n\n{}'",
         editor_escape(&result.name),

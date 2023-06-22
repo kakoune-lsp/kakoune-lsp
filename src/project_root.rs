@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 
-pub fn find_project_root(language: &str, markers: &[String], path: &str) -> String {
+pub fn find_project_root(server_name: &str, markers: &[String], path: &str) -> String {
     if let Ok(force_root) = env::var("KAK_LSP_FORCE_PROJECT_ROOT") {
         debug!(
             "Using $KAK_LSP_FORCE_PROJECT_ROOT as project root: \"{}\"",
@@ -11,7 +11,7 @@ pub fn find_project_root(language: &str, markers: &[String], path: &str) -> Stri
         );
         return force_root;
     }
-    let vars = gather_env_roots(language);
+    let vars = gather_env_roots(server_name);
     if vars.is_empty() {
         roots_by_marker(markers, path)
     } else {

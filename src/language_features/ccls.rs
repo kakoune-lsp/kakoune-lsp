@@ -12,7 +12,7 @@ use url::Url;
 
 // Navigate
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NavigateParams {
     pub text_document: TextDocumentIdentifier,
@@ -36,19 +36,34 @@ impl Request for NavigateRequest {
 
 pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = KakouneNavigateParams::deserialize(params).unwrap();
-    let req_params = NavigateParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
-        },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-        direction: params.direction,
-    };
+
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![NavigateParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    position: get_lsp_position(
+                        server_settings,
+                        &meta.buffile,
+                        &params.position,
+                        ctx,
+                    )
+                    .unwrap(),
+                    direction: params.direction.clone(),
+                }],
+            )
+        })
+        .collect();
+
     ctx.call::<NavigateRequest, _>(
         meta,
-        req_params,
-        move |ctx: &mut Context, meta, response| {
-            goto::goto(meta, response, ctx);
-        },
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| goto::goto(meta, results, ctx),
     );
 }
 
@@ -57,7 +72,7 @@ pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
 
 // $ccls/vars
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VarsParams {
     pub text_document: TextDocumentIdentifier,
@@ -74,20 +89,46 @@ impl Request for VarsRequest {
 
 pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = VarsParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![VarsParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    position: get_lsp_position(
+                        server_settings,
+                        &meta.buffile,
+                        &params.position,
+                        ctx,
+                    )
+                    .unwrap(),
+                }],
+            )
+        })
+        .collect();
+
+    ctx.call::<VarsRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| {
+            let results = results
+                .into_iter()
+                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .collect();
+
+            goto::goto(meta, results, ctx)
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-    };
-    ctx.call::<VarsRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
-    });
+    );
 }
 
 // $ccls/inheritance
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InheritanceParams {
     pub text_document: TextDocumentIdentifier,
@@ -113,22 +154,48 @@ impl Request for InheritanceRequest {
 
 pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = KakouneInheritanceParams::deserialize(params).unwrap();
-    let req_params = InheritanceParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![InheritanceParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    position: get_lsp_position(
+                        server_settings,
+                        &meta.buffile,
+                        &params.position,
+                        ctx,
+                    )
+                    .unwrap(),
+                    levels: params.levels,
+                    derived: params.derived,
+                }],
+            )
+        })
+        .collect();
+
+    ctx.call::<InheritanceRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx, meta, results| {
+            let results = results
+                .into_iter()
+                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .collect();
+
+            goto::goto(meta, results, ctx)
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-        levels: params.levels,
-        derived: params.derived,
-    };
-    ctx.call::<InheritanceRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
-    });
+    );
 }
 
 // $ccls/call
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CallParams {
     pub text_document: TextDocumentIdentifier,
@@ -152,21 +219,47 @@ impl Request for CallRequest {
 
 pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = KakouneCallParams::deserialize(params).unwrap();
-    let req_params = CallParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![CallParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    position: get_lsp_position(
+                        server_settings,
+                        &meta.buffile,
+                        &params.position,
+                        ctx,
+                    )
+                    .unwrap(),
+                    callee: params.callee,
+                }],
+            )
+        })
+        .collect();
+
+    ctx.call::<CallRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx, meta, results| {
+            let results = results
+                .into_iter()
+                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .collect();
+
+            goto::goto(meta, results, ctx)
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-        callee: params.callee,
-    };
-    ctx.call::<CallRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx);
-    });
+    );
 }
 
 // $ccls/member
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MemberParams {
     pub text_document: TextDocumentIdentifier,
@@ -190,16 +283,42 @@ impl Request for MemberRequest {
 
 pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = KakouneMemberParams::deserialize(params).unwrap();
-    let req_params = MemberParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![MemberParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    position: get_lsp_position(
+                        server_settings,
+                        &meta.buffile,
+                        &params.position,
+                        ctx,
+                    )
+                    .unwrap(),
+                    kind: params.kind,
+                }],
+            )
+        })
+        .collect();
+
+    ctx.call::<MemberRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx, meta, results| {
+            let results = results
+                .into_iter()
+                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .collect();
+
+            goto::goto(meta, results, ctx)
         },
-        position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-        kind: params.kind,
-    };
-    ctx.call::<MemberRequest, _>(meta, req_params, move |ctx: &mut Context, meta, result| {
-        goto::goto(meta, result.map(GotoDefinitionResponse::Array), ctx)
-    });
+    );
 }
 
 // Semantic Highlighting
@@ -351,7 +470,7 @@ pub struct PublishSemanticHighlightingParams {
     pub symbols: Vec<SemanticSymbol>,
 }
 
-pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
+pub fn publish_semantic_highlighting(server_name: &ServerName, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
     let path = params.uri.to_file_path().unwrap();
@@ -364,12 +483,13 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
         Some(meta) => meta,
         None => return,
     };
+    let server = &ctx.language_servers[server_name];
     let ranges = params
         .symbols
         .iter()
         .flat_map(|x| {
             let face = x.get_face();
-            let offset_encoding = ctx.offset_encoding;
+            let offset_encoding = server.offset_encoding;
             x.ls_ranges.iter().filter_map(move |r| {
                 if face.is_empty() {
                     warn!("No face found for {:?}", x);

@@ -18,7 +18,11 @@ const fn default_true() -> bool {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
-    pub language: HashMap<String, LanguageConfig>,
+    #[serde(default)]
+    pub language_server: HashMap<ServerName, LanguageServerConfig>,
+    // Deprecated.
+    #[serde(default)]
+    pub language: HashMap<LanguageId, LanguageServerConfig>,
     #[serde(default)]
     pub server: ServerConfig,
     #[serde(default)]
@@ -27,12 +31,14 @@ pub struct Config {
     pub snippet_support: bool,
     #[serde(default)]
     pub semantic_tokens: SemanticTokenConfig,
+    #[serde(default)]
+    pub language_ids: HashMap<String, LanguageId>,
 }
 
 #[derive(Clone, Default, Deserialize, Debug)]
 pub struct DynamicConfig {
-    #[serde(default)]
-    pub language: HashMap<String, DynamicLanguageConfig>,
+    #[serde(default, alias = "language")]
+    pub language_server: HashMap<ServerName, DynamicLanguageServerConfig>,
 }
 
 #[derive(Clone, Default, Deserialize, Debug)]
@@ -45,7 +51,7 @@ pub struct ServerConfig {
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct LanguageConfig {
+pub struct LanguageServerConfig {
     pub filetypes: Vec<String>,
     pub roots: Vec<String>,
     pub command: String,
@@ -62,7 +68,7 @@ pub struct LanguageConfig {
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct DynamicLanguageConfig {
+pub struct DynamicLanguageServerConfig {
     pub settings: Option<Value>,
 }
 
@@ -139,6 +145,7 @@ pub struct EditorMeta {
     pub write_response_to_fifo: bool,
     #[serde(default)]
     pub hook: bool,
+    pub server: Option<ServerName>,
 }
 
 pub type EditorParams = toml::Value;
@@ -169,12 +176,13 @@ pub struct EditorResponse {
 
 pub type SessionId = String;
 pub type LanguageId = String;
+pub type ServerName = String;
 pub type RootPath = String;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct Route {
     pub session: SessionId,
-    pub language: LanguageId,
+    pub server_name: ServerName,
     pub root: RootPath,
 }
 
@@ -379,6 +387,12 @@ pub enum OffsetEncoding {
     /// UTF-16 code units
     #[serde(rename = "utf-16")]
     Utf16,
+}
+
+impl Default for OffsetEncoding {
+    fn default() -> Self {
+        Self::Utf16
+    }
 }
 
 // An intermediate representation of the diagnostics on a line, for use with inlay diagnostics

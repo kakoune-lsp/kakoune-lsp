@@ -1,7 +1,9 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
-use crate::context::Context;
+use crate::context::{Context, RequestParams};
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams};
+use crate::types::{
+    EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams, ServerName,
+};
 use crate::util::editor_quote;
 use itertools::Itertools;
 use lsp_types::{
@@ -12,26 +14,52 @@ use serde::Deserialize;
 use url::Url;
 
 pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    if meta.fifo.is_none() && !attempt_server_capability(ctx, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT)
-    {
+    let eligible_servers: Vec<_> = ctx
+        .language_servers
+        .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT))
+        .collect();
+    if meta.fifo.is_none() && eligible_servers.is_empty() {
         return;
     }
 
+    let (first_server, _) = eligible_servers.first().unwrap();
+    let first_server = first_server.to_string();
+
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = DocumentHighlightParams {
-        text_document_position_params: TextDocumentPositionParams {
-            text_document: TextDocumentIdentifier {
-                uri: Url::from_file_path(&meta.buffile).unwrap(),
-            },
-            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-        },
-        partial_result_params: Default::default(),
-        work_done_progress_params: Default::default(),
-    };
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![DocumentHighlightParams {
+                    text_document_position_params: TextDocumentPositionParams {
+                        text_document: TextDocumentIdentifier {
+                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        },
+                        position: get_lsp_position(
+                            server_settings,
+                            &meta.buffile,
+                            &params.position,
+                            ctx,
+                        )
+                        .unwrap(),
+                    },
+                    partial_result_params: Default::default(),
+                    work_done_progress_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
     ctx.call::<DocumentHighlightRequest, _>(
         meta,
-        req_params,
-        move |ctx: &mut Context, meta, result| {
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| {
+            let result = match results.into_iter().find(|(_, v)| v.is_some()) {
+                Some(result) => result,
+                None => (first_server, Some(vec![])),
+            };
+
             editor_document_highlight(meta, result, params.position, ctx)
         },
     );
@@ -39,22 +67,24 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
 
 fn editor_document_highlight(
     meta: EditorMeta,
-    result: Option<Vec<DocumentHighlight>>,
+    result: (ServerName, Option<Vec<DocumentHighlight>>),
     main_cursor: KakounePosition,
     ctx: &mut Context,
 ) {
+    let (server_name, result) = result;
     let document = ctx.documents.get(&meta.buffile);
     if document.is_none() {
         return;
     }
     let document = document.unwrap();
+    let server = &ctx.language_servers[&server_name];
     let mut ranges = vec![];
     let range_specs = match result {
         Some(highlights) => highlights
             .into_iter()
             .map(|highlight| {
                 let range =
-                    lsp_range_to_kakoune(&highlight.range, &document.text, ctx.offset_encoding);
+                    lsp_range_to_kakoune(&highlight.range, &document.text, server.offset_encoding);
                 ranges.push(range);
                 format!(
                     "{}|{}",

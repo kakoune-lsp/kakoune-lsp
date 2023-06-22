@@ -8,7 +8,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::convert::TryInto;
 use std::path::PathBuf;
 use std::{fs, time};
@@ -24,7 +24,16 @@ pub struct Document {
     pub text: ropey::Rope,
 }
 
-pub type ResponsesCallback = Box<dyn FnOnce(&mut Context, EditorMeta, Vec<Value>) -> ()>;
+/// Groups parameters for each request.
+pub enum RequestParams<T> {
+    /// Replicates the same list of parameters for all language servers in a context.
+    All(Vec<T>),
+    /// Uses different parameters for each language server in a context.
+    Each(HashMap<ServerName, Vec<T>>),
+}
+
+pub type ResponsesCallback =
+    Box<dyn FnOnce(&mut Context, EditorMeta, Vec<(ServerName, Value)>) -> ()>;
 type BatchNumber = usize;
 type BatchCount = BatchNumber;
 
@@ -33,76 +42,83 @@ pub struct OutstandingRequests {
     youngest: Option<Id>,
 }
 
-pub struct Context {
-    batch_counter: BatchNumber,
-    pub batches:
-        HashMap<BatchNumber, (BatchCount, Vec<serde_json::value::Value>, ResponsesCallback)>,
+pub struct ServerSettings {
+    pub root_path: String,
+    pub offset_encoding: OffsetEncoding,
+    pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub capabilities: Option<ServerCapabilities>,
-    pub completion_items: Vec<CompletionItem>,
+    pub tx: Sender<ServerMessage>,
+}
+
+pub struct Context {
+    batch_count: BatchCount,
+    pub batch_sizes: HashMap<BatchNumber, HashMap<ServerName, usize>>,
+    pub batches: HashMap<
+        BatchNumber,
+        (
+            Vec<(ServerName, serde_json::value::Value)>,
+            ResponsesCallback,
+        ),
+    >,
+    pub code_lenses: HashMap<String, Vec<(ServerName, CodeLens)>>,
+    pub completion_items: Vec<(ServerName, CompletionItem)>,
     pub completion_items_timestamp: i32,
     // We currently only track one client's completion items, to simplify cleanup (else we
     // might need to hook into ClientClose). Track the client name, so we can check if the
     // completions are valid.
     pub completion_last_client: Option<String>,
     pub config: Config,
+    pub diagnostics: HashMap<String, Vec<(ServerName, Diagnostic)>>,
+    pub documents: HashMap<String, Document>,
     pub dynamic_config: DynamicConfig,
-    pub diagnostics: HashMap<String, Vec<Diagnostic>>,
-    pub code_lenses: HashMap<String, Vec<CodeLens>>,
     pub editor_tx: Sender<EditorResponse>,
-    pub lang_srv_tx: Sender<ServerMessage>,
-    pub language_id: String,
-    pub outstanding_requests: HashMap<(&'static str, String, Option<String>), OutstandingRequests>,
+    pub language_id: LanguageId,
+    pub language_servers: BTreeMap<ServerName, ServerSettings>,
+    pub outstanding_requests:
+        HashMap<(ServerName, &'static str, String, Option<String>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
     pub pending_message_requests: VecDeque<(Id, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
-    pub root_path: String,
     pub session: SessionId,
-    pub documents: HashMap<String, Document>,
-    pub offset_encoding: OffsetEncoding,
-    pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
-    pub pending_file_watchers: HashMap<Option<PathBuf>, Vec<CompiledFileSystemWatcher>>,
+    pub pending_file_watchers:
+        HashMap<(ServerName, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
 }
 
 pub struct ContextBuilder {
-    pub language_id: String,
+    pub language_id: LanguageId,
+    pub language_servers: BTreeMap<ServerName, ServerSettings>,
     pub initial_request: EditorRequest,
-    pub lang_srv_tx: Sender<ServerMessage>,
     pub editor_tx: Sender<EditorResponse>,
     pub config: Config,
-    pub root_path: String,
-    pub offset_encoding: Option<OffsetEncoding>,
 }
 
 impl Context {
     pub fn new(params: ContextBuilder) -> Self {
         let session = params.initial_request.meta.session.clone();
         Context {
-            batch_counter: 0,
-            batches: HashMap::default(),
-            capabilities: None,
+            batch_count: 0,
+            batch_sizes: Default::default(),
+            batches: Default::default(),
+            code_lenses: Default::default(),
             completion_items: vec![],
             completion_items_timestamp: i32::max_value(),
             completion_last_client: None,
             config: params.config,
+            diagnostics: Default::default(),
+            documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
-            diagnostics: HashMap::default(),
-            code_lenses: HashMap::default(),
             editor_tx: params.editor_tx,
-            lang_srv_tx: params.lang_srv_tx,
             language_id: params.language_id,
+            language_servers: params.language_servers,
             outstanding_requests: HashMap::default(),
             pending_requests: vec![params.initial_request],
             pending_message_requests: VecDeque::new(),
             request_counter: 0,
             response_waitlist: HashMap::default(),
-            root_path: params.root_path,
             session,
-            documents: HashMap::default(),
-            offset_encoding: params.offset_encoding.unwrap_or(OffsetEncoding::Utf16),
-            preferred_offset_encoding: params.offset_encoding,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
             pending_file_watchers: HashMap::default(),
@@ -111,58 +127,91 @@ impl Context {
 
     pub fn call<
         R: Request,
-        F: for<'a> FnOnce(&'a mut Context, EditorMeta, R::Result) -> () + 'static,
+        F: for<'a> FnOnce(&'a mut Context, EditorMeta, Vec<(ServerName, R::Result)>) -> () + 'static,
     >(
         &mut self,
         meta: EditorMeta,
-        params: R::Params,
+        params: RequestParams<R::Params>,
         callback: F,
     ) where
-        R::Params: IntoParams,
+        R::Params: IntoParams + Clone,
         R::Result: for<'a> Deserialize<'a>,
     {
-        let ops: Vec<R::Params> = vec![params];
+        let ops = match params {
+            RequestParams::All(params) => {
+                let mut ops = Vec::with_capacity(params.len() * self.language_servers.len());
+                for server_name in self.language_servers.keys() {
+                    let params: Vec<_> = params.to_vec();
+                    for params in params {
+                        ops.push((server_name.clone(), params));
+                    }
+                }
+                ops
+            }
+            RequestParams::Each(params) => params
+                .into_iter()
+                .flat_map(|(key, ops)| {
+                    let ops: Vec<(ServerName, <R as Request>::Params)> =
+                        ops.into_iter().map(|op| (key.clone(), op)).collect();
+                    ops
+                })
+                .collect(),
+        };
         self.batch_call::<R, _>(
             meta,
             ops,
             Box::new(
-                move |ctx: &mut Context, meta: EditorMeta, mut results: Vec<R::Result>| {
-                    if let Some(result) = results.pop() {
-                        callback(ctx, meta, result);
-                    }
+                move |ctx: &mut Context,
+                      meta: EditorMeta,
+                      results: Vec<(ServerName, R::Result)>| {
+                    callback(ctx, meta, results)
                 },
             ),
         );
     }
 
-    pub fn batch_call<
+    fn batch_call<
         R: Request,
-        F: for<'a> FnOnce(&'a mut Context, EditorMeta, Vec<R::Result>) -> () + 'static,
+        F: for<'a> FnOnce(&'a mut Context, EditorMeta, Vec<(ServerName, R::Result)>) -> () + 'static,
     >(
         &mut self,
         meta: EditorMeta,
-        ops: Vec<R::Params>,
+        ops: Vec<(ServerName, R::Params)>,
         callback: F,
     ) where
         R::Params: IntoParams,
         R::Result: for<'a> Deserialize<'a>,
     {
         let batch_id = self.next_batch_id();
+
+        self.batch_sizes.insert(
+            batch_id,
+            ops.iter().fold(HashMap::new(), |mut m, (server_name, _)| {
+                let count = m.entry(server_name.clone()).or_default();
+                *count += 1;
+                m
+            }),
+        );
         self.batches.insert(
             batch_id,
             (
-                ops.len(),
                 Vec::with_capacity(ops.len()),
                 Box::new(move |ctx, meta, vals| {
-                    let results: Vec<R::Result> = vals
+                    // Only get the last response of each server.
+                    let results = vals
                         .into_iter()
-                        .map(|val| serde_json::from_value(val).expect("Failed to parse response"))
+                        .map(|(server_name, val)| {
+                            (
+                                server_name,
+                                serde_json::from_value(val).expect("Failed to parse response"),
+                            )
+                        })
                         .collect();
                     callback(ctx, meta, results)
                 }),
             ),
         );
-        for params in ops {
+        for (server_name, params) in ops {
             let params = params.into_params();
             if params.is_err() {
                 error!("Failed to convert params");
@@ -171,7 +220,9 @@ impl Context {
             let id = self.next_request_id();
             self.response_waitlist
                 .insert(id.clone(), (meta.clone(), R::METHOD, batch_id, false));
+
             add_outstanding_request(
+                &server_name,
                 self,
                 R::METHOD,
                 meta.buffile.clone(),
@@ -185,8 +236,9 @@ impl Context {
                 method: R::METHOD.into(),
                 params: params.unwrap(),
             };
-            if self
-                .lang_srv_tx
+            let server = &self.language_servers[&server_name];
+            if server
+                .tx
                 .send(ServerMessage::Request(Call::MethodCall(call)))
                 .is_err()
             {
@@ -195,26 +247,29 @@ impl Context {
         }
     }
 
-    pub fn cancel(&mut self, id: Id) {
+    pub fn cancel(&mut self, server_name: &ServerName, id: Id) {
         match self.response_waitlist.get_mut(&id) {
             Some((_meta, method, _batch_id, canceled)) => {
-                debug!("Canceling request {id:?} ({method})");
+                debug!("Canceling request to {server_name} server {id:?} ({method})");
                 *canceled = true;
             }
             None => {
-                error!("Failed to cancel request {id:?}");
+                error!("Failed to cancel request {id:?} to {server_name} server");
             }
         }
         let id = match id {
             Id::Num(id) => id,
-            _ => panic!("expected numeric ID"),
+            _ => panic!("expected numeric ID for {} server", server_name),
         };
-        self.notify::<Cancel>(CancelParams {
-            id: NumberOrString::Number(id.try_into().unwrap()),
-        });
+        self.notify::<Cancel>(
+            server_name,
+            CancelParams {
+                id: NumberOrString::Number(id.try_into().unwrap()),
+            },
+        );
     }
 
-    pub fn reply(&mut self, id: Id, result: Result<Value, Error>) {
+    pub fn reply(&mut self, server_name: &ServerName, id: Id, result: Result<Value, Error>) {
         let output = match result {
             Ok(result) => Output::Success(Success {
                 jsonrpc: Some(Version::V2),
@@ -227,16 +282,13 @@ impl Context {
                 error,
             }),
         };
-        if self
-            .lang_srv_tx
-            .send(ServerMessage::Response(output))
-            .is_err()
-        {
-            error!("Failed to reply to language server");
+        let server = &self.language_servers[server_name];
+        if server.tx.send(ServerMessage::Response(output)).is_err() {
+            error!("Failed to reply to language server {server_name}");
         };
     }
 
-    pub fn notify<N: Notification>(&mut self, params: N::Params)
+    pub fn notify<N: Notification>(&mut self, server_name: &ServerName, params: N::Params)
     where
         N::Params: IntoParams,
     {
@@ -250,12 +302,13 @@ impl Context {
             method: N::METHOD.into(),
             params: params.unwrap(),
         };
-        if self
-            .lang_srv_tx
+        let server = &self.language_servers[server_name];
+        if server
+            .tx
             .send(ServerMessage::Request(Call::Notification(notification)))
             .is_err()
         {
-            error!("Failed to send notification to language server");
+            error!("Failed to send notification to language server {server_name}");
         }
     }
 
@@ -284,8 +337,8 @@ impl Context {
     }
 
     fn next_batch_id(&mut self) -> BatchNumber {
-        let id = self.batch_counter;
-        self.batch_counter += 1;
+        let id = self.batch_count;
+        self.batch_count += 1;
         id
     }
 
@@ -327,49 +380,56 @@ pub fn meta_for_session(session: String, client: Option<String>) -> EditorMeta {
         command_fifo: None,
         write_response_to_fifo: false,
         hook: false,
+        server: None,
     }
 }
 
 fn add_outstanding_request(
+    server_name: &ServerName,
     ctx: &mut Context,
     method: &'static str,
     buffile: String,
     client: Option<String>,
     id: Id,
 ) {
-    let to_cancel = match ctx.outstanding_requests.entry((method, buffile, client)) {
-        Entry::Occupied(mut e) => {
-            let OutstandingRequests { oldest, youngest } = e.get_mut();
-            if oldest.is_none() {
-                *oldest = Some(id);
-                None
-            } else {
-                let mut tmp = Some(id);
-                std::mem::swap(youngest, &mut tmp);
-                tmp
+    let to_cancel =
+        match ctx
+            .outstanding_requests
+            .entry((server_name.clone(), method, buffile, client))
+        {
+            Entry::Occupied(mut e) => {
+                let OutstandingRequests { oldest, youngest } = e.get_mut();
+                if oldest.is_none() {
+                    *oldest = Some(id);
+                    None
+                } else {
+                    let mut tmp = Some(id);
+                    std::mem::swap(youngest, &mut tmp);
+                    tmp
+                }
             }
-        }
-        Entry::Vacant(e) => {
-            e.insert(OutstandingRequests {
-                oldest: Some(id),
-                youngest: None,
-            });
-            None
-        }
-    };
+            Entry::Vacant(e) => {
+                e.insert(OutstandingRequests {
+                    oldest: Some(id),
+                    youngest: None,
+                });
+                None
+            }
+        };
     if let Some(id) = to_cancel {
-        ctx.cancel(id);
+        ctx.cancel(server_name, id);
     }
 }
 
 pub fn remove_outstanding_request(
+    server_name: &ServerName,
     ctx: &mut Context,
     method: &'static str,
     buffile: String,
     client: Option<String>,
     id: &Id,
 ) {
-    let key = (method, buffile, client);
+    let key = (server_name.clone(), method, buffile, client);
     if let Some(outstanding) = ctx.outstanding_requests.get_mut(&key) {
         if outstanding.youngest.as_ref() == Some(id) {
             outstanding.youngest = None;
@@ -381,9 +441,10 @@ pub fn remove_outstanding_request(
         }
     }
     error!(
-        "Not in outstanding requests: method {} buffile {} client {}",
+        "[{}] Not in outstanding requests: method {} buffile {} client {}",
         key.0,
         key.1,
-        key.2.unwrap_or_default()
+        key.2,
+        key.3.unwrap_or_default()
     );
 }

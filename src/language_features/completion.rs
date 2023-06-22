@@ -11,39 +11,64 @@ use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::convert::TryInto;
 use unicode_width::UnicodeWidthStr;
 use url::Url;
 
 pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = TextDocumentCompletionParams::deserialize(params).unwrap();
-    let req_params = CompletionParams {
-        text_document_position: TextDocumentPositionParams {
-            text_document: TextDocumentIdentifier {
-                uri: Url::from_file_path(&meta.buffile).unwrap(),
-            },
-            position: get_lsp_position(&meta.buffile, &params.position, ctx).unwrap(),
-        },
-        context: None,
-        work_done_progress_params: Default::default(),
-        partial_result_params: Default::default(),
-    };
-    ctx.call::<Completion, _>(meta, req_params, |ctx: &mut Context, meta, result| {
-        editor_completion(meta, params, result, ctx)
-    });
+    let req_params = ctx
+        .language_servers
+        .iter()
+        .map(|(server_name, server_settings)| {
+            (
+                server_name.clone(),
+                vec![CompletionParams {
+                    text_document_position: TextDocumentPositionParams {
+                        text_document: TextDocumentIdentifier {
+                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        },
+                        position: get_lsp_position(
+                            server_settings,
+                            &meta.buffile,
+                            &params.position,
+                            ctx,
+                        )
+                        .unwrap(),
+                    },
+                    context: None,
+                    work_done_progress_params: Default::default(),
+                    partial_result_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
+    ctx.call::<Completion, _>(
+        meta,
+        RequestParams::Each(req_params),
+        |ctx: &mut Context, meta, results| editor_completion(meta, params, results, ctx),
+    );
 }
 
 fn editor_completion(
     meta: EditorMeta,
     params: TextDocumentCompletionParams,
-    result: Option<CompletionResponse>,
+    results: Vec<(String, Option<CompletionResponse>)>,
     ctx: &mut Context,
 ) {
-    let items = match result {
-        Some(CompletionResponse::Array(items)) => items,
-        Some(CompletionResponse::List(list)) => list.items,
-        None => vec![],
-    };
+    let items = results
+        .into_iter()
+        .flat_map(|(server_name, items)| {
+            let items = match items {
+                Some(CompletionResponse::Array(items)) => items,
+                Some(CompletionResponse::List(list)) => list.items,
+                None => vec![],
+            };
+
+            items.into_iter().map(move |v| (server_name.clone(), v))
+        })
+        .collect();
 
     let version = meta.version;
     ctx.completion_items = items;
@@ -60,7 +85,7 @@ fn editor_completion(
     // Maximum display width of any completion label.
     let maxwidth = items
         .iter()
-        .map(|x| UnicodeWidthStr::width(x.label.as_str()))
+        .map(|(_, x)| UnicodeWidthStr::width(x.label.as_str()))
         .max()
         .unwrap_or(0);
 
@@ -70,8 +95,9 @@ fn editor_completion(
     let items = items
         .iter()
         .enumerate()
-        .map(|(completion_item_index, x)| {
-            let maybe_resolve = if ctx
+        .map(|(completion_item_index, (server_name, x))| {
+            let server = &ctx.language_servers[server_name];
+            let maybe_resolve = if server
                 .capabilities
                 .as_ref()
                 .and_then(|caps| caps.completion_provider.as_ref())
@@ -116,7 +142,7 @@ fn editor_completion(
                         let range = lsp_range_to_kakoune(
                             &text_edit.range,
                             &document.text,
-                            ctx.offset_encoding,
+                            server.offset_encoding,
                         );
 
                         if can_infer_offset {
@@ -299,20 +325,21 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
         return;
     }
 
-    let (item, detail, documentation) = if pager_active {
-        let item = &ctx.completion_items[completion_item_index as usize];
+    let (server_name, item, detail, documentation) = if pager_active {
+        let (server_name, item) = &ctx.completion_items[completion_item_index as usize];
         // Stop if there is nothing interesting to resolve.
         if item.detail.is_some() && item.documentation.is_some() {
             return;
         }
         (
+            server_name.clone(),
             item.clone(),
             item.detail.clone(),
             item.documentation.clone(),
         )
     } else {
         // Since we're the only user of the completion items, we can clear them.
-        let item = ctx
+        let (server_name, item) = ctx
             .completion_items
             .drain(..)
             .nth(completion_item_index as usize)
@@ -322,21 +349,39 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
             Some(edits) if !edits.is_empty() => {
                 // Not sure if this case ever happens, the spec is unclear.
                 let uri = Url::from_file_path(&meta.buffile).unwrap();
-                apply_text_edits(&meta, uri, edits, ctx);
+                apply_text_edits(&server_name, &meta, uri, edits, ctx);
                 return;
             }
             _ => (),
         }
 
-        (item, None, None)
+        (server_name, item, None, None)
     };
 
-    ctx.call::<ResolveCompletionItem, _>(meta, item, move |tx: &mut Context, meta, new_item| {
-        editor_completion_item_resolve(tx, meta, pager_active, detail, documentation, new_item)
-    });
+    let mut req_params = HashMap::new();
+    req_params.insert(server_name, vec![item]);
+
+    ctx.call::<ResolveCompletionItem, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx, meta, results| {
+            if let Some((server_name, new_item)) = results.into_iter().next() {
+                editor_completion_item_resolve(
+                    &server_name,
+                    ctx,
+                    meta,
+                    pager_active,
+                    detail,
+                    documentation,
+                    new_item,
+                )
+            }
+        },
+    );
 }
 
 fn editor_completion_item_resolve(
+    server_name: &ServerName,
     ctx: &mut Context,
     meta: EditorMeta,
     pager_active: bool,
@@ -357,6 +402,6 @@ fn editor_completion_item_resolve(
         );
     } else if let Some(resolved_edits) = new_item.additional_text_edits {
         let uri = Url::from_file_path(&meta.buffile).unwrap();
-        apply_text_edits(&meta, uri, resolved_edits, ctx)
+        apply_text_edits(server_name, &meta, uri, resolved_edits.clone(), ctx)
     }
 }

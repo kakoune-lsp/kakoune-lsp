@@ -32,12 +32,17 @@ struct MessageRequestResponse {
 pub fn show_message_request_respond(params: toml::Value, ctx: &mut Context) {
     let resp =
         MessageRequestResponse::deserialize(params).expect("Cannot parse message request response");
-    let item = resp
-        .item
-        .and_then(|v| MessageActionItem::deserialize(v).ok())
-        .map(|v| jsonrpc_core::to_value(v).expect("Cannot serialize item"))
-        .unwrap_or(jsonrpc_core::Value::Null);
-    ctx.reply(resp.message_request_id, Ok(item));
+
+    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
+    for server_name in &servers {
+        let item = resp
+            .item
+            .clone()
+            .and_then(|v| MessageActionItem::deserialize(v).ok())
+            .map(|v| jsonrpc_core::to_value(v).expect("Cannot serialize item"))
+            .unwrap_or(jsonrpc_core::Value::Null);
+        ctx.reply(server_name, resp.message_request_id.clone(), Ok(item));
+    }
 }
 
 pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
@@ -53,7 +58,11 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         _ => {
             // a ShowMessageRequest with no actions is just a ShowMessage notification.
             show_message(meta, params.typ, &params.message, ctx);
-            ctx.reply(id, Ok(serde_json::Value::Null));
+
+            let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
+            for server_name in &servers {
+                ctx.reply(server_name, id.clone(), Ok(serde_json::Value::Null));
+            }
             return;
         }
     };

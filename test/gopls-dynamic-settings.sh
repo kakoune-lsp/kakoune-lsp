@@ -29,7 +29,7 @@ test_tmux capture-pane -p
 
 echo '
 set global lsp_config %{
-	[language.go.settings.gopls]
+	[language_server.gopls.settings.gopls]
 	"formatting.gofumpt" = true
 }' | kak -p "$test_kak_session"
 test_sleep

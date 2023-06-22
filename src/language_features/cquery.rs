@@ -1,5 +1,6 @@
 use crate::context::*;
 use crate::position::*;
+use crate::types::ServerName;
 use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
@@ -154,7 +155,7 @@ pub struct PublishSemanticHighlightingParams {
     pub symbols: Vec<SemanticSymbol>,
 }
 
-pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
+pub fn publish_semantic_highlighting(server_name: &ServerName, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
     let client = None;
@@ -166,12 +167,13 @@ pub fn publish_semantic_highlighting(params: Params, ctx: &mut Context) {
     }
     let document = document.unwrap();
     let version = document.version;
+    let server = &ctx.language_servers[server_name];
     let ranges = params
         .symbols
         .iter()
         .flat_map(|x| {
             let face = x.get_face();
-            let offset_encoding = ctx.offset_encoding;
+            let offset_encoding = server.offset_encoding;
             x.ranges.iter().filter_map(move |r| {
                 if face.is_empty() {
                     warn!("No face found for {:?}", x);

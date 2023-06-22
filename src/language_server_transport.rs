@@ -17,11 +17,16 @@ pub struct LanguageServerTransport {
 }
 
 pub fn start(
+    server_name: &str,
     cmd: &str,
     args: &[String],
     envs: &HashMap<String, String>,
 ) -> Result<LanguageServerTransport, String> {
-    info!("Starting Language server `{} {}`", cmd, args.join(" "));
+    info!(
+        "Starting Language server {server_name} as `{} {}`",
+        cmd,
+        args.join(" ")
+    );
     let mut child = match Command::new(cmd)
         .args(args)
         .envs(envs)
@@ -71,44 +76,50 @@ pub fn start(
     );
     // XXX
 
-    let from_lang_server = Worker::spawn(
-        "Messages from language server",
-        channel_capacity,
-        move |receiver, sender| {
-            if let Err(msg) = reader_loop(reader, receiver, &sender) {
-                error!("{}", msg);
-            }
-        },
-    );
+    let from_lang_server = {
+        let server_name = server_name.to_string();
+        Worker::spawn(
+            "Messages from language server",
+            channel_capacity,
+            move |receiver, sender| {
+                if let Err(msg) = reader_loop(&server_name, reader, receiver, &sender) {
+                    error!("{}", msg);
+                }
+            },
+        )
+    };
 
-    let to_lang_server = Worker::spawn(
-        "Messages to language server",
-        channel_capacity,
-        move |receiver, _| {
-            if writer_loop(writer, &receiver).is_err() {
-                error!("Failed to write message to language server");
-            }
-            // NOTE prevent zombie
-            debug!("Waiting for language server process end");
-            drop(child.stdin.take());
-            drop(child.stdout.take());
-            drop(child.stderr.take());
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            match child.try_wait() {
-                Ok(None) => {
-                    std::thread::sleep(std::time::Duration::from_secs(1));
-                    if let Ok(None) = child.try_wait() {
-                        // Okay, we asked politely enough and waited long enough.
-                        child.kill().unwrap();
+    let to_lang_server = {
+        let server_name = server_name.to_string();
+        Worker::spawn(
+            "Messages to language server",
+            channel_capacity,
+            move |receiver, _| {
+                if writer_loop(&server_name, writer, &receiver).is_err() {
+                    error!("Failed to write message to language server");
+                }
+                // NOTE prevent zombie
+                debug!("Waiting for language server process end");
+                drop(child.stdin.take());
+                drop(child.stdout.take());
+                drop(child.stderr.take());
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                match child.try_wait() {
+                    Ok(None) => {
+                        std::thread::sleep(std::time::Duration::from_secs(1));
+                        if let Ok(None) = child.try_wait() {
+                            // Okay, we asked politely enough and waited long enough.
+                            child.kill().unwrap();
+                        }
                     }
+                    Err(_) => {
+                        error!("Language server wasn't running was it?!");
+                    }
+                    _ => {}
                 }
-                Err(_) => {
-                    error!("Language server wasn't running was it?!");
-                }
-                _ => {}
-            }
-        },
-    );
+            },
+        )
+    };
 
     Ok(LanguageServerTransport {
         to_lang_server,
@@ -118,6 +129,7 @@ pub fn start(
 }
 
 fn reader_loop(
+    server_name: &str,
     mut reader: impl BufRead,
     receiver: Receiver<Void>,
     sender: &Sender<ServerMessage>,
@@ -153,7 +165,7 @@ fn reader_loop(
         reader.read_exact(&mut content)?;
         let msg = String::from_utf8(content)
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to read content as UTF-8 string"))?;
-        debug!("From server: {}", msg);
+        debug!("From server {server_name}: {msg}");
         let output: serde_json::Result<Output> = serde_json::from_str(&msg);
         match output {
             Ok(output) => {
@@ -173,13 +185,17 @@ fn reader_loop(
     }
 }
 
-fn writer_loop(mut writer: impl Write, receiver: &Receiver<ServerMessage>) -> io::Result<()> {
+fn writer_loop(
+    server_name: &str,
+    mut writer: impl Write,
+    receiver: &Receiver<ServerMessage>,
+) -> io::Result<()> {
     for request in receiver {
         let request = match request {
             ServerMessage::Request(request) => serde_json::to_string(&request),
             ServerMessage::Response(response) => serde_json::to_string(&response),
         }?;
-        debug!("To server: {}", request);
+        debug!("To server {server_name}: {request}");
         write!(
             writer,
             "Content-Length: {}\r\n\r\n{}",

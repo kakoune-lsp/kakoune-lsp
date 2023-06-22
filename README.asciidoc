@@ -304,22 +304,52 @@ Please let us know if you have any ideas about how to make the default config mo
 ==== Server-specific configuration
 
 Many servers accept configuration options that are not part of the LSP spec.  The TOML table
-`[language.<filetype>.settings]` holds those configuration options.  It has the same structure
+`[language_server.<server_name>.settings]` holds those configuration options.  It has the same structure
 as the corresponding fragments from VSCode's `settings.json`. For example:
 
 [source,toml]
 ----
-[language.go]
+[language_server.gopls]
 ...
-settings_section = "gopls"
-[language.go.settings.gopls]
+settings_section = "gopls" # Optional, defaults to server name.
+[language_server.gopls.settings.gopls]
 "formatting.gofumpt" = true
 ----
 
-During server initialization, kak-lsp sends the section specified by `settings_section`; in this
-case `{"formatting.gofumpt":true}`.  Whenever you change the Kakoune option `lsp_config`, the
-same section is sent via `workspace/didChangeConfiguration`.  Additionally, kak-lsp will send
-arbitrary sections that are requested by the server in `workspace/configuration`.
+During server initialization, kak-lsp sends either the section specified by `settings_section`.
+or the section with same name as the server; in this case `{"formatting.gofumpt":true}`.
+Whenever you change the Kakoune option `lsp_config`, the same section is sent via
+`workspace/didChangeConfiguration`.  Additionally, kak-lsp will send arbitrary sections that
+are requested by the server in `workspace/configuration`.
+
+==== Multiple language servers
+
+It is possible to map more than one language server to a filetype. For example, if you want to
+set up TSServer and TailwindCSS to use in React projects:
+
+[source,toml]
+----
+[language_ids]
+javascript = "javascriptreact"
+typescript = "typescriptreact"
+
+[language_server.tsserver]
+filetypes = ["javascript", "typescript"]
+roots = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+command = "typescript-language-server"
+args = ["--stdio"]
+
+[language_server.tailwindcss]
+filetypes = ["javascript", "typescript"]
+roots = ["tailwind.config.ts", "tailwind.config.js"]
+command = "tailwindcss-language-server"
+args = ["--stdio"]
+[language_server.tailwindcss.settings.tailwindcss]
+editor = {}
+----
+
+Note that, just like in the config above, it is possible to override the language ID sent to
+the language server by mapping filetypes using `language_ids`.
 
 === Configuring Kakoune
 
@@ -334,14 +364,14 @@ kak-lsp's Kakoune integration declares the following options:
 * `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time the user pauses in normal mode.
 * `lsp_auto_show_code_actions` (bool): If this option is `true` then `lsp-code-actions` is executed every time the user pauses in normal mode.
 * `lsp_config` (str): This is a TOML string of the same format as `kak-lsp.toml`, except it currently only supports one kind of configuration value:
-** `[language.<filetype>.settings]`: this works just like the static configuration of the same name in `kak-lsp.toml`, see the section about server-specific configuration. This will override the static configuration of the given language.
+** `[language_server.<server_name>.settings]`: this works just like the static configuration of the same name in `kak-lsp.toml`, see the section about server-specific configuration. This will override the static configuration of the given language server.
 
 For example, you can toggle an option dynamically with a command like this:
 
 [source,kak]
 ----
 set-option global lsp_config %{
-    [language.go.settings.gopls]
+    [language_server.gopls.settings.gopls]
     "formatting.gofumpt" = true
 }
 ----

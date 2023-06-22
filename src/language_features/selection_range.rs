@@ -15,7 +15,6 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
     let selections: Vec<KakouneRange> = params
         .selections_desc
         .split_ascii_whitespace()
-        .into_iter()
         .map(|desc| parse_kakoune_range(desc).0)
         .collect();
 
@@ -32,42 +31,60 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
             return;
         }
     };
-    let cursor_positions = selections
+    let req_params = ctx
+        .language_servers
         .iter()
-        .map(|range| {
-            let cursor = if is_cursor_left_of_anchor {
-                &range.start
-            } else {
-                &range.end
-            };
-            kakoune_position_to_lsp(cursor, &document.text, ctx.offset_encoding)
+        .map(|(server_name, server_settings)| {
+            let cursor_positions = selections
+                .iter()
+                .map(|range| {
+                    let cursor = if is_cursor_left_of_anchor {
+                        &range.start
+                    } else {
+                        &range.end
+                    };
+                    kakoune_position_to_lsp(cursor, &document.text, server_settings.offset_encoding)
+                })
+                .collect();
+
+            (
+                server_name.clone(),
+                vec![SelectionRangeParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    positions: cursor_positions,
+                    work_done_progress_params: WorkDoneProgressParams::default(),
+                    partial_result_params: PartialResultParams::default(),
+                }],
+            )
         })
         .collect();
-
-    let req_params = SelectionRangeParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
-        },
-        positions: cursor_positions,
-        work_done_progress_params: WorkDoneProgressParams::default(),
-        partial_result_params: PartialResultParams::default(),
-    };
     ctx.call::<SelectionRangeRequest, _>(
         meta,
-        req_params,
-        move |ctx: &mut Context, meta, result| {
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| {
+            let result = match results.into_iter().find(|(_, v)| v.is_some()) {
+                Some(result) => result,
+                None => {
+                    let entry = ctx.language_servers.first_entry().unwrap();
+                    (entry.key().clone(), None)
+                }
+            };
+
             editor_selection_range(result, selections, is_cursor_left_of_anchor, meta, ctx);
         },
     );
 }
 
 fn editor_selection_range(
-    result: Option<Vec<SelectionRange>>,
+    result: (ServerName, Option<Vec<SelectionRange>>),
     selections: Vec<KakouneRange>,
     is_cursor_left_of_anchor: bool,
     meta: EditorMeta,
     ctx: &mut Context,
 ) {
+    let (server_name, result) = result;
     let selection_ranges = match result {
         Some(selection_ranges) => selection_ranges,
         None => return,
@@ -84,6 +101,9 @@ fn editor_selection_range(
             return;
         }
     };
+
+    let server = &ctx.language_servers[&server_name];
+
     // We get a list of ranges of parent nodes for each Kakoune selection.  The UI wants to
     // select parent nodes of all Kakoune selections at once.  This means we want to have a
     // list where each entry updates all selections.  As first step, convert to a matrix where
@@ -94,7 +114,8 @@ fn editor_selection_range(
         let mut i = 0;
         loop {
             let range = {
-                let range = lsp_range_to_kakoune(&cur.range, &document.text, ctx.offset_encoding);
+                let range =
+                    lsp_range_to_kakoune(&cur.range, &document.text, server.offset_encoding);
                 if is_cursor_left_of_anchor {
                     KakouneRange {
                         start: range.end,
@@ -140,7 +161,7 @@ fn editor_selection_range(
         let mut cur = &selection_ranges[0];
         let mut i = 0;
         loop {
-            let range = lsp_range_to_kakoune(&cur.range, &document.text, ctx.offset_encoding);
+            let range = lsp_range_to_kakoune(&cur.range, &document.text, server.offset_encoding);
             // Found a range that exceeds the main selection's range.
             if !contains(&selections[0], &range) {
                 break i;
