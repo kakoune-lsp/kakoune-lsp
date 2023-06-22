@@ -11,12 +11,24 @@ use lsp_types::*;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
+pub fn publish_diagnostics(server_name: &ServerName, params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
-    ctx.diagnostics
-        .insert(buffile.to_string(), params.diagnostics);
+    let mut diagnostics: Vec<_> = ctx
+        .diagnostics
+        .remove(buffile)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(name, _)| name != server_name)
+        .collect();
+    let params: Vec<_> = params
+        .diagnostics
+        .into_iter()
+        .map(|d| (server_name.clone(), d))
+        .collect();
+    diagnostics.extend(params);
+    ctx.diagnostics.insert(buffile.to_string(), diagnostics);
     let document = ctx.documents.get(buffile);
     if document.is_none() {
         return;
@@ -26,12 +38,13 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     let diagnostics = &ctx.diagnostics[buffile];
     let inline_diagnostics = diagnostics
         .iter()
-        .sorted_unstable_by_key(|x| x.severity)
+        .sorted_unstable_by_key(|(_, x)| x.severity)
         .rev()
-        .map(|x| {
+        .map(|(server_name, x)| {
+            let server = &ctx.language_servers[server_name];
             format!(
                 "{}|{}",
-                lsp_range_to_kakoune(&x.range, &document.text, ctx.offset_encoding),
+                lsp_range_to_kakoune(&x.range, &document.text, server.offset_encoding),
                 match x.severity {
                     Some(DiagnosticSeverity::ERROR) => "DiagnosticError",
                     Some(DiagnosticSeverity::HINT) => "DiagnosticHint",
@@ -48,7 +61,7 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
 
     // Assemble a list of diagnostics by line number
     let mut lines_with_diagnostics = HashMap::new();
-    for diagnostic in diagnostics {
+    for (server_name, diagnostic) in diagnostics {
         let face = match diagnostic.severity {
             Some(DiagnosticSeverity::ERROR) => "InlayDiagnosticError",
             Some(DiagnosticSeverity::HINT) => "InlayDiagnosticHint",
@@ -59,15 +72,18 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
                 "InlayDiagnosticWarning"
             }
         };
-        let line_diagnostics = lines_with_diagnostics
+        let (_, line_diagnostics) = lines_with_diagnostics
             .entry(diagnostic.range.end.line)
-            .or_insert(LineDiagnostics {
-                range_end: diagnostic.range.end,
-                symbols: String::new(),
-                text: "",
-                text_face: "",
-                text_severity: None,
-            });
+            .or_insert((
+                server_name.clone(),
+                LineDiagnostics {
+                    range_end: diagnostic.range.end,
+                    symbols: String::new(),
+                    text: "",
+                    text_face: "",
+                    text_severity: None,
+                },
+            ));
 
         let severity = diagnostic.severity.unwrap_or(DiagnosticSeverity::WARNING);
         if line_diagnostics
@@ -91,12 +107,13 @@ pub fn publish_diagnostics(params: Params, ctx: &mut Context) {
     // Assemble ranges based on the lines
     let inlay_diagnostics = lines_with_diagnostics
         .iter()
-        .map(|(line_number, line_diagnostics)| {
+        .map(|(line_number, (server_name, line_diagnostics))| {
+            let server = &ctx.language_servers[server_name];
             let line_text = get_line(*line_number as usize, &document.text);
             let mut pos = lsp_position_to_kakoune(
                 &line_diagnostics.range_end,
                 &document.text,
-                ctx.offset_encoding,
+                server.offset_encoding,
             );
             pos.column = std::cmp::max(line_text.len_bytes() as u32, 1);
 
@@ -149,10 +166,10 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
         .get(buffile)
         .unwrap_or(&empty)
         .iter()
-        .map(|lens| (lens.range.start.line, "%opt[lsp_code_lens_sign]"));
+        .map(|(_, lens)| (lens.range.start.line, "%opt[lsp_code_lens_sign]"));
 
     let empty = vec![];
-    let diagnostics = diagnostics.unwrap_or(&empty).iter().map(|x| {
+    let diagnostics = diagnostics.unwrap_or(&empty).iter().map(|(_, x)| {
         (
             x.range.start.line,
             match x.severity {
@@ -204,14 +221,16 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
         write_response_to_fifo(meta, &ctx.diagnostics);
         return;
     }
+    let (_, main_settings) = ctx.language_servers.first_key_value().unwrap();
     let content = ctx
         .diagnostics
         .iter()
         .flat_map(|(filename, diagnostics)| {
             diagnostics
                 .iter()
-                .map(|x| {
-                    let p = match get_kakoune_position(filename, &x.range.start, ctx) {
+                .map(|(server_name, x)| {
+                    let server = &ctx.language_servers[server_name];
+                    let p = match get_kakoune_position(server, filename, &x.range.start, ctx) {
                         Some(position) => position,
                         None => {
                             warn!("Cannot get position from file {}", filename);
@@ -219,10 +238,15 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                         }
                     };
                     format!(
-                        "{}:{}:{}: {}: {}{}",
-                        short_file_path(filename, &ctx.root_path),
+                        "{}:{}:{}: {}{}: {}{}",
+                        short_file_path(filename, &server.root_path),
                         p.line,
                         p.column,
+                        &if ctx.language_servers.len() > 1 {
+                            format!("[{server_name}] ")
+                        } else {
+                            "".to_string()
+                        },
                         match x.severity {
                             Some(DiagnosticSeverity::ERROR) => "error",
                             Some(DiagnosticSeverity::HINT) => "hint",
@@ -234,7 +258,8 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             }
                         },
                         x.message,
-                        format_related_information(x, ctx).unwrap_or_default()
+                        format_related_information(x, server_name, server, main_settings, ctx)
+                            .unwrap_or_default()
                     )
                 })
                 .collect::<Vec<_>>()
@@ -242,13 +267,19 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
         .join("\n");
     let command = format!(
         "lsp-show-diagnostics {} {}",
-        editor_quote(&ctx.root_path),
+        editor_quote(&main_settings.root_path),
         editor_quote(&content),
     );
     ctx.exec(meta, command);
 }
 
-pub fn format_related_information(d: &Diagnostic, ctx: &Context) -> Option<String> {
+pub fn format_related_information(
+    d: &Diagnostic,
+    server_name: &ServerName,
+    server: &ServerSettings,
+    main_settings: &ServerSettings,
+    ctx: &Context,
+) -> Option<String> {
     d.related_information.as_ref().map(|infos| {
         "\n".to_string()
             + &infos
@@ -257,15 +288,21 @@ pub fn format_related_information(d: &Diagnostic, ctx: &Context) -> Option<Strin
                     let path = info.location.uri.to_file_path().unwrap();
                     let filename = path.to_str().unwrap();
                     let p = get_kakoune_position_with_fallback(
+                        server,
                         filename,
                         info.location.range.start,
                         ctx,
                     );
                     format!(
-                        "{}:{}:{}: {}",
-                        short_file_path(filename, &ctx.root_path),
+                        "{}:{}:{}: {}{}",
+                        short_file_path(filename, &main_settings.root_path),
                         p.line,
                         p.column,
+                        &if ctx.language_servers.len() > 1 {
+                            format!("[{server_name}] ")
+                        } else {
+                            "".to_string()
+                        },
                         info.message
                     )
                 })

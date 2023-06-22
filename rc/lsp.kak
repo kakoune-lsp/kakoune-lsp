@@ -1184,17 +1184,17 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-formatting -docstring "Format document" %{
-    lsp-formatting-request false
+define-command lsp-formatting -params 0..1 -docstring "lsp-formatting [<server_name>]: format document" %{
+    lsp-formatting-request false %arg{1}
 }
 
-define-command lsp-formatting-sync -docstring "Format document, blocking Kakoune session until done" %{
+define-command lsp-formatting-sync -params 0..1 -docstring "lsp-formatting-sync [<server_name>]: format document, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-formatting-sync
     lsp-did-change-sync
-    lsp-formatting-request true
+    lsp-formatting-request true %arg{1}
 }
 
-define-command -hidden lsp-formatting-request -params 1 %{ evaluate-commands -no-hooks %sh{
+define-command -hidden lsp-formatting-request -params 1..2 %{ evaluate-commands -no-hooks %sh{
     sync=$1
     fifo=""
     if "$sync"; then
@@ -1214,6 +1214,7 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 ${fifo}
 method   = \"textDocument/formatting\"
+$([ -z ${2} ] || echo server = \"${2}\")
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 tabSize      = ${kak_opt_tabstop}
@@ -1226,17 +1227,17 @@ insertSpaces = ${kak_opt_lsp_insert_spaces}
     fi
 }}
 
-define-command lsp-range-formatting -docstring "Format selections" %{
-    lsp-range-formatting-request false
+define-command lsp-range-formatting -params 0..1 -docstring "lsp-range-formatting [<server_name>]: format selections" %{
+    lsp-range-formatting-request false %arg{1}
 }
 
-define-command lsp-range-formatting-sync -docstring "Format selections, blocking Kakoune session until done" %{
+define-command lsp-range-formatting-sync -params 0..1 -docstring "lsp-range-formatting-sync [<server_name>]: format selections, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-range-formatting-sync
     lsp-did-change-sync
-    lsp-range-formatting-request true
+    lsp-range-formatting-request true %arg{1}
 }
 
-define-command -hidden lsp-range-formatting-request -params 1 %{ evaluate-commands -no-hooks %sh{
+define-command -hidden lsp-range-formatting-request -params 1..2 %{ evaluate-commands -no-hooks %sh{
     sync=$1
     fifo=""
     if "$sync"; then
@@ -1273,6 +1274,7 @@ buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/rangeFormatting\"
+$([ -z ${2} ] || echo server = \"${2}\")
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${fifo}
 [params]
@@ -1736,41 +1738,41 @@ define-command -hidden lsp-show-signature-help -params 2 -docstring "Render sign
     info -markup -anchor %arg{1} -style above -- %arg{2}
 }
 
-define-command -hidden lsp-show-message-error -params 1 -docstring %{
+define-command -hidden lsp-show-message-error -params 2 -docstring %{
     lsp-show-message-error <message>
     Render language server message of the "error" level.
 } %{
-    echo -debug "kak-lsp: error from server:" %arg{1}
+    echo -debug "kak-lsp: error from server %arg{1}: %arg{2}"
     evaluate-commands -try-client %opt{toolsclient} %{
-        info "kak-lsp: error from server: %arg{1}"
+        info "kak-lsp: error from server %arg{1}: %arg{2}"
     }
 }
 
-define-command -hidden lsp-show-message-warning -params 1 -docstring %{
+define-command -hidden lsp-show-message-warning -params 2 -docstring %{
     lsp-show-message-warning <message>
     Render language server message of the "warning" level.
 } %{
-    echo -debug "kak-lsp: warning from server:" %arg{1}
+    echo -debug "kak-lsp: warning from server %arg{1}: %arg{2}"
     evaluate-commands -try-client %opt{toolsclient} %{
-        echo "kak-lsp: warning from server:" %arg{1}
+        echo "kak-lsp: warning from server %arg{1}: %arg{2}"
     }
 }
 
-define-command -hidden lsp-show-message-info -params 1 -docstring %{
+define-command -hidden lsp-show-message-info -params 2 -docstring %{
     lsp-show-message-info <message>
     Render language server message of the "info" level.
 } %{
-    echo -debug "kak-lsp: info from server:" %arg{1}
+    echo -debug "kak-lsp: info from server %arg{1}: %arg{2}"
     evaluate-commands -try-client %opt{toolsclient} %{
-        echo "kak-lsp: info from server:" %arg{1}
+        echo "kak-lsp: info from server %arg{1}: %arg{2}"
     }
 }
 
-define-command -hidden lsp-show-message-log -params 1 -docstring %{
+define-command -hidden lsp-show-message-log -params 2 -docstring %{
     lsp-show-message-log <message>
     Render language server message of the "log" level.
 } %{
-    echo -debug "kak-lsp: log:" %arg{1}
+    echo -debug "kak-lsp: [%arg{1}] log %arg{1}: %arg{2}"
 }
 
 define-command -hidden lsp-show-message-request -params 4.. -docstring %{

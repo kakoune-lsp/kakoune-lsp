@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
@@ -17,7 +18,9 @@ use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
 use crate::workspace;
-use crossbeam_channel::{never, select, tick, Receiver, Sender};
+use crossbeam_channel::Select;
+use crossbeam_channel::{never, tick, Receiver, Sender};
+use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
@@ -33,39 +36,50 @@ use serde::Serialize;
 pub fn start(
     to_editor: Sender<EditorResponse>,
     from_editor: Receiver<EditorRequest>,
-    route: &Route,
+    language_id: &LanguageId,
+    routes: &[Route],
     initial_request: EditorRequest,
     config: Config,
 ) {
-    let lang_srv: language_server_transport::LanguageServerTransport;
-    let offset_encoding;
-    {
-        // should be fine to unwrap because request was already routed which means language is configured
-        let lang = &config.language[&route.language];
-        offset_encoding = lang.offset_encoding;
-        lang_srv = match language_server_transport::start(&lang.command, &lang.args, &lang.envs) {
-            Ok(ls) => ls,
-            Err(err) => {
-                error!("failed to start language server: {}", err);
-                // If the server command isn't from a hook (e.g. auto-hover),
-                // then send a prominent error to the editor.
-                if !initial_request.meta.hook {
-                    let command = format!(
-                        "lsp-show-error {}",
-                        editor_quote(&format!("failed to start language server: {}", err)),
-                    );
-                    if to_editor
-                        .send(EditorResponse {
-                            meta: initial_request.meta,
-                            command: Cow::from(command),
-                        })
-                        .is_err()
-                    {
-                        error!("Failed to send command to editor");
+    let mut language_servers = BTreeMap::new();
+    for route in routes {
+        {
+            // should be fine to unwrap because request was already routed which means language is configured
+            let server_config = &config.language_server[&route.server_name];
+            let server_transport = match language_server_transport::start(
+                &route.server_name,
+                &server_config.command,
+                &server_config.args,
+                &server_config.envs,
+            ) {
+                Ok(ls) => ls,
+                Err(err) => {
+                    error!("failed to start language server: {}", err);
+                    // If the server command isn't from a hook (e.g. auto-hover),
+                    // then send a prominent error to the editor.
+                    if !initial_request.meta.hook {
+                        let command = format!(
+                            "lsp-show-error {}",
+                            editor_quote(&format!("failed to start language server: {}", err)),
+                        );
+                        if to_editor
+                            .send(EditorResponse {
+                                meta: initial_request.meta,
+                                command: Cow::from(command),
+                            })
+                            .is_err()
+                        {
+                            error!("Failed to send command to editor");
+                        }
                     }
+                    return;
                 }
-                return;
-            }
+            };
+
+            language_servers.insert(
+                &route.server_name,
+                (server_transport, server_config.offset_encoding),
+            );
         }
     }
 
@@ -75,16 +89,36 @@ pub fn start(
     initial_request_meta.write_response_to_fifo = false;
 
     let mut ctx = Context::new(ContextBuilder {
-        language_id: route.language.clone(),
         initial_request,
-        lang_srv_tx: lang_srv.to_lang_server.sender().clone(),
         editor_tx: to_editor,
         config,
-        root_path: route.root.clone(),
-        offset_encoding,
+        language_id: language_id.clone(),
+        language_servers: routes
+            .iter()
+            .map(|route| {
+                let (transport, offset_encoding) = &language_servers[&route.server_name];
+                let tx = transport.to_lang_server.sender().clone();
+
+                (
+                    route.server_name.clone(),
+                    ServerSettings {
+                        root_path: route.root.clone(),
+                        offset_encoding: offset_encoding.unwrap_or_default(),
+                        preferred_offset_encoding: *offset_encoding,
+                        capabilities: None,
+                        tx,
+                    },
+                )
+            })
+            .collect(),
     });
 
-    initialize(&route.root, initial_request_meta.clone(), &mut ctx);
+    initialize(initial_request_meta.clone(), &mut ctx);
+
+    let server_rxs: Vec<&Receiver<ServerMessage>> = language_servers
+        .values()
+        .map(|(transport, _)| transport.from_lang_server.receiver())
+        .collect();
 
     struct FileWatcher {
         pending_file_events: HashSet<FileEvent>,
@@ -93,8 +127,40 @@ pub fn start(
     let mut file_watcher: Option<FileWatcher> = None;
 
     'event_loop: loop {
-        select! {
-            recv(from_editor) -> msg => {
+        let never_rx = never();
+        let from_file_watcher = file_watcher
+            .as_ref()
+            .map(|fw| fw.worker.receiver())
+            .unwrap_or(&never_rx);
+        let from_pending_file_watcher = &file_watcher
+            .as_ref()
+            .and_then(
+                // If there are enqueud events, let's wait a bit for others to come in, to send
+                // them in batch.
+                |fw| {
+                    if fw.pending_file_events.is_empty() {
+                        None
+                    } else {
+                        Some(tick(Duration::from_millis(500)))
+                    }
+                },
+            )
+            .unwrap_or_else(never);
+
+        let mut sel = Select::new();
+        // Server receivers are registered first so we can match their order
+        // with servers in the context.
+        for rx in &server_rxs {
+            sel.recv(rx);
+        }
+        let from_editor_op = sel.recv(&from_editor);
+        let from_file_watcher_op = sel.recv(from_file_watcher);
+        let from_pending_file_watcher_op = sel.recv(from_pending_file_watcher);
+
+        let op = sel.select();
+        match op.index() {
+            idx if idx == from_editor_op => {
+                let msg = op.recv(&from_editor);
                 if msg.is_err() {
                     break 'event_loop;
                 }
@@ -104,65 +170,137 @@ pub fn start(
                 // capabilities also serve as a marker of completing initialization
                 // we park all requests from editor before initialization is complete
                 // and then dispatch them
-                if ctx.capabilities.is_some() {
+                let parked: Vec<_> = ctx
+                    .language_servers
+                    .iter()
+                    .filter(|(_, server)| server.capabilities.is_none())
+                    .collect();
+                if parked.is_empty() {
                     dispatch_incoming_editor_request(msg, &mut ctx);
                 } else {
-                    debug!("Language server is not initialized, parking request");
-                    let err = "lsp-show-error 'language server is not initialized, parking request'";
+                    let servers = parked.into_iter().map(|(s, _)| s).join(", ");
+                    debug!(
+                        "Language servers {} are still not initialized, parking request",
+                        servers
+                    );
+                    let err =
+                        format!("lsp-show-error 'language servers {} are still not initialized, parking request'", servers);
                     match &*msg.method {
                         notification::DidOpenTextDocument::METHOD => (),
                         notification::DidChangeTextDocument::METHOD => (),
                         notification::DidCloseTextDocument::METHOD => (),
                         notification::DidSaveTextDocument::METHOD => (),
-                        _ => if !msg.meta.hook {
-                                ctx.exec(msg.meta.clone(), err.to_string());
+                        _ => {
+                            if !msg.meta.hook {
+                                ctx.exec(msg.meta.clone(), err);
+                            }
                         }
                     }
                     ctx.pending_requests.push(msg);
                 }
             }
-            recv(lang_srv.from_lang_server.receiver()) -> msg => {
+            i if i == from_file_watcher_op => {
+                let msg = op.recv(from_file_watcher);
+
+                if msg.is_err() {
+                    break 'event_loop;
+                }
+                let mut file_events = msg.unwrap();
+                info!("received {} events from file watcher", file_events.len());
+                // Enqueue the events from the file watcher.
+                file_watcher
+                    .as_mut()
+                    .unwrap()
+                    .pending_file_events
+                    .extend(file_events.drain(..));
+            }
+            i if i == from_pending_file_watcher_op => {
+                let _msg = op.recv(from_pending_file_watcher);
+
+                let fw = file_watcher.as_mut().unwrap();
+                if !fw.pending_file_events.is_empty() {
+                    let file_events: Vec<_> = fw.pending_file_events.drain().collect();
+                    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
+                    for server_name in &servers {
+                        workspace_did_change_watched_files(
+                            server_name,
+                            file_events.clone(),
+                            &mut ctx,
+                        );
+                    }
+                    fw.pending_file_events.clear();
+                }
+            }
+            i => {
+                let msg = op.recv(server_rxs[i]);
+                let server_name = ctx
+                    .language_servers
+                    .iter()
+                    .nth(i)
+                    .map(|(s, _)| s.clone())
+                    .unwrap();
+
                 if msg.is_err() {
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
                 match msg {
-                    ServerMessage::Request(call) => {
-                        match call {
-                            Call::MethodCall(request) => {
-                              dispatch_server_request(initial_request_meta.clone(), request, &mut ctx);
-                            }
-                            Call::Notification(notification) => {
-                                dispatch_server_notification(
-                                    initial_request_meta.clone(),
-                                    &notification.method,
-                                    notification.params,
-                                    &mut ctx,
-                                );
-                            }
-                            Call::Invalid {id} => {
-                                error!("Invalid call from language server: {:?}", id);
-                            }
+                    ServerMessage::Request(call) => match call {
+                        Call::MethodCall(request) => {
+                            dispatch_server_request(
+                                &server_name,
+                                initial_request_meta.clone(),
+                                request,
+                                &mut ctx,
+                            );
                         }
-                    }
+                        Call::Notification(notification) => {
+                            dispatch_server_notification(
+                                &server_name,
+                                initial_request_meta.clone(),
+                                &notification.method,
+                                notification.params,
+                                &mut ctx,
+                            );
+                        }
+                        Call::Invalid { id } => {
+                            error!("Invalid call from language server: {:?}", id);
+                        }
+                    },
                     ServerMessage::Response(output) => {
                         match output {
                             Output::Success(success) => {
-                                if let Some((meta, method, batch_id, canceled)) = ctx.response_waitlist.remove(&success.id) {
+                                if let Some((meta, method, batch_id, canceled)) =
+                                    ctx.response_waitlist.remove(&success.id)
+                                {
                                     if canceled {
                                         continue;
                                     }
-                                    remove_outstanding_request(&mut ctx, method, meta.buffile.clone(), meta.client.clone(), &success.id);
+                                    remove_outstanding_request(
+                                        &server_name,
+                                        &mut ctx,
+                                        method,
+                                        meta.buffile.clone(),
+                                        meta.client.clone(),
+                                        &success.id,
+                                    );
                                     if meta.write_response_to_fifo {
                                         write_response_to_fifo(meta, &success);
                                         continue;
                                     }
-                                    if let Some((batch_amt, mut vals, callback)) = ctx.batches.remove(&batch_id) {
-                                        vals.push(success.result);
-                                        if batch_amt == 1 {
-                                            callback(&mut ctx, meta, vals);
-                                        } else {
-                                            ctx.batches.insert(batch_id, (batch_amt - 1, vals, callback));
+                                    if let Some((mut vals, callback)) =
+                                        ctx.batches.remove(&batch_id)
+                                    {
+                                        if let Some(batch_seq) = ctx.batch_sizes.remove(&batch_id) {
+                                            vals.push((server_name.clone(), success.result));
+                                            let batch_size = batch_seq.values().sum();
+
+                                            if vals.len() >= batch_size {
+                                                callback(&mut ctx, meta, vals);
+                                            } else {
+                                                ctx.batch_sizes.insert(batch_id, batch_seq);
+                                                ctx.batches.insert(batch_id, (vals, callback));
+                                            }
                                         }
                                     }
                                 } else {
@@ -171,67 +309,92 @@ pub fn start(
                             }
                             Output::Failure(failure) => {
                                 if let Some(request) = ctx.response_waitlist.remove(&failure.id) {
-                                    let (meta, method, _, canceled) = request;
+                                    let (meta, method, batch_id, canceled) = request;
                                     if canceled {
                                         continue;
                                     }
-                                    remove_outstanding_request(&mut ctx, method, meta.buffile.clone(), meta.client.clone(), &failure.id);
-                                    error!("Error response from server: {:?}", failure);
+                                    remove_outstanding_request(
+                                        &server_name,
+                                        &mut ctx,
+                                        method,
+                                        meta.buffile.clone(),
+                                        meta.client.clone(),
+                                        &failure.id,
+                                    );
+                                    error!(
+                                        "Error response from server {}: {:?}",
+                                        server_name, failure
+                                    );
                                     if meta.write_response_to_fifo {
                                         write_response_to_fifo(meta, failure);
                                         continue;
                                     }
+                                    if let Some((vals, callback)) = ctx.batches.remove(&batch_id) {
+                                        if let Some(mut batch_seq) =
+                                            ctx.batch_sizes.remove(&batch_id)
+                                        {
+                                            batch_seq.remove(&server_name);
+
+                                            // We con only keep going if there are still other servers to respond.
+                                            // Otherwise, skip the following block and handle failure.
+                                            if !batch_seq.is_empty() {
+                                                // Remove this failing language server from the batch, allowing
+                                                // working ones to still be handled.
+                                                let vals: Vec<_> = vals
+                                                    .into_iter()
+                                                    .filter(|(name, _)| *name != server_name)
+                                                    .collect();
+
+                                                // Scenario: this failing server is holding back the response handling
+                                                // for all other servers, which already responded successfully.
+                                                if vals.len() >= batch_seq.values().sum() {
+                                                    callback(&mut ctx, meta, vals);
+                                                } else {
+                                                    // Re-insert the batch, as we have no business with it at the moment,
+                                                    // since not all servers have completely responded.
+                                                    ctx.batch_sizes.insert(batch_id, batch_seq);
+                                                    ctx.batches.insert(batch_id, (vals, callback));
+                                                }
+
+                                                continue;
+                                            }
+                                        }
+                                    }
                                     match failure.error.code {
-                                        code if code == ErrorCode::ServerError(CONTENT_MODIFIED) || method == request::CodeActionRequest::METHOD => {
+                                        code if code
+                                            == ErrorCode::ServerError(CONTENT_MODIFIED)
+                                            || method == request::CodeActionRequest::METHOD =>
+                                        {
                                             // Nothing to do, but sending command back to the editor is required to handle case when
                                             // editor is blocked waiting for response via fifo.
                                             ctx.exec(meta, "nop".to_string());
-                                        },
+                                        }
                                         code => {
                                             let msg = match code {
                                                 ErrorCode::MethodNotFound => format!(
-                                                    "{} language server doesn't support method {}",
-                                                    ctx.language_id, method
+                                                    "language server {server_name} doesn't support method {method}",
                                                 ),
                                                 _ => format!(
-                                                    "{} language server error: {}",
-                                                    ctx.language_id, editor_quote(&failure.error.message)
+                                                    "language server {server_name} error: {}",
+                                                    editor_quote(&failure.error.message)
                                                 ),
                                             };
-                                            ctx.exec(meta, format!("lsp-show-error {}", editor_quote(&msg)));
+                                            ctx.exec(
+                                                meta,
+                                                format!("lsp-show-error {}", editor_quote(&msg)),
+                                            );
                                         }
                                     }
                                 } else {
-                                    error!("Error response from server: {:?}", failure);
+                                    error!(
+                                        "Error response from server {}: {:?}",
+                                        server_name, failure
+                                    );
                                     error!("Id {:?} is not in waitlist!", failure.id);
                                 }
                             }
                         }
                     }
-                }
-            }
-            recv(file_watcher.as_ref().map(|fw| fw.worker.receiver()).unwrap_or(&never())) -> msg => {
-                if msg.is_err() {
-                    break 'event_loop;
-                }
-                let mut file_events = msg.unwrap();
-                info!("received {} events from file watcher", file_events.len());
-                // Enqueue the events from the file watcher.
-                file_watcher.as_mut().unwrap().pending_file_events.extend(file_events.drain(..));
-            }
-            recv(file_watcher.as_ref().and_then(
-                // If there are enqueud events, let's wait a bit for others to come in, to send
-                // them in batch.
-                |fw| if fw.pending_file_events.is_empty() { None } else {
-                    Some(tick(Duration::from_millis(500)))
-                })
-                .unwrap_or_else(never)
-            ) -> _ => {
-                let fw = file_watcher.as_mut().unwrap();
-                if !fw.pending_file_events.is_empty() {
-                    let file_events = fw.pending_file_events.drain().collect();
-                    workspace_did_change_watched_files(file_events, &mut ctx);
-                    fw.pending_file_events.clear();
                 }
             }
         }
@@ -248,7 +411,7 @@ pub fn start(
             }
             file_watcher = Some(FileWatcher {
                 pending_file_events: HashSet::new(),
-                worker: spawn_file_watcher(route.root.clone(), requested_watchers),
+                worker: spawn_file_watcher(requested_watchers),
             });
         }
     }
@@ -404,8 +567,12 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             goto::text_document_references(meta, params, ctx);
         }
         notification::Exit::METHOD => {
-            ctx.notify::<notification::Exit>(());
+            let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
+            for server_name in &servers {
+                ctx.notify::<notification::Exit>(server_name, ());
+            }
         }
+
         notification::WorkDoneProgressCancel::METHOD => {
             progress::work_done_progress_cancel(meta, params, ctx);
         }
@@ -452,7 +619,10 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             capabilities::capabilities(meta, ctx);
         }
         "apply-workspace-edit" => {
-            workspace::apply_edit_from_editor(meta, params, ctx);
+            let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
+            if let Some(server_name) = servers.first() {
+                workspace::apply_edit_from_editor(server_name, meta, params, ctx);
+            }
         }
         request::SemanticTokensFullRequest::METHOD => {
             semantic_tokens::tokens_request(meta, ctx);
@@ -515,11 +685,16 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
     }
 }
 
-fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Context) {
+fn dispatch_server_request(
+    server_name: &ServerName,
+    meta: EditorMeta,
+    request: MethodCall,
+    ctx: &mut Context,
+) {
     let method: &str = &request.method;
     let result = match method {
         request::ApplyWorkspaceEdit::METHOD => {
-            workspace::apply_edit_from_server(request.params, ctx)
+            workspace::apply_edit_from_server(server_name, request.params, ctx)
         }
         request::RegisterCapability::METHOD => {
             let params: RegistrationParams = request
@@ -530,6 +705,7 @@ fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Cont
                 match registration.method.as_str() {
                     notification::DidChangeWatchedFiles::METHOD => {
                         register_workspace_did_change_watched_files(
+                            server_name,
                             registration.register_options,
                             ctx,
                         )
@@ -545,9 +721,10 @@ fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Cont
             Ok(serde_json::Value::Null)
         }
         request::WorkspaceFoldersRequest::METHOD => {
+            let server = &ctx.language_servers[server_name];
             Ok(serde_json::to_value(vec![WorkspaceFolder {
-                uri: Url::from_file_path(&ctx.root_path).unwrap(),
-                name: ctx.root_path.to_string(),
+                uri: Url::from_file_path(&server.root_path).unwrap(),
+                name: server.root_path.to_string(),
             }])
             .ok()
             .unwrap())
@@ -555,7 +732,9 @@ fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Cont
         request::WorkDoneProgressCreate::METHOD => {
             progress::work_done_progress_create(request.params, ctx)
         }
-        request::WorkspaceConfiguration::METHOD => workspace::configuration(request.params, ctx),
+        request::WorkspaceConfiguration::METHOD => {
+            workspace::configuration(request.params, server_name, ctx)
+        }
         request::ShowMessageRequest::METHOD => {
             return show_message::show_message_request(meta, request, ctx);
         }
@@ -567,25 +746,31 @@ fn dispatch_server_request(meta: EditorMeta, request: MethodCall, ctx: &mut Cont
         }
     };
 
-    ctx.reply(request.id, result);
+    ctx.reply(server_name, request.id, result);
 }
 
-fn dispatch_server_notification(meta: EditorMeta, method: &str, params: Params, ctx: &mut Context) {
+fn dispatch_server_notification(
+    server_name: &ServerName,
+    meta: EditorMeta,
+    method: &str,
+    params: Params,
+    ctx: &mut Context,
+) {
     match method {
         notification::Progress::METHOD => {
             progress::dollar_progress(meta, params, ctx);
         }
         notification::PublishDiagnostics::METHOD => {
-            diagnostics::publish_diagnostics(params, ctx);
+            diagnostics::publish_diagnostics(server_name, params, ctx);
         }
         "$cquery/publishSemanticHighlighting" => {
-            cquery::publish_semantic_highlighting(params, ctx);
+            cquery::publish_semantic_highlighting(server_name, params, ctx);
         }
         "$ccls/publishSemanticHighlight" => {
-            ccls::publish_semantic_highlighting(params, ctx);
+            ccls::publish_semantic_highlighting(server_name, params, ctx);
         }
         notification::Exit::METHOD => {
-            debug!("Language server exited");
+            debug!("{server_name} language server exited");
         }
         notification::ShowMessage::METHOD => {
             let params: ShowMessageParams = params
@@ -599,7 +784,11 @@ fn dispatch_server_notification(meta: EditorMeta, method: &str, params: Params, 
                 .expect("Failed to parse LogMessageParams params");
             ctx.exec(
                 meta,
-                format!("lsp-show-message-log {}", editor_quote(&params.message)),
+                format!(
+                    "lsp-show-message-log {} {}",
+                    editor_quote(server_name),
+                    editor_quote(&params.message)
+                ),
             );
         }
         "telemetry/event" => {

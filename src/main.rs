@@ -165,7 +165,32 @@ fn main() {
 
     let session = String::from(matches.value_of("session").unwrap());
 
-    let mut config: Config = match toml::from_str(&config) {
+    let mut config: Config = match toml::from_str(&config)
+        .map_err(|err| err.to_string())
+        .and_then(|mut cfg: Config| {
+            // Translate legacy config.
+            if !cfg.language.is_empty()
+                && (!cfg.language_server.is_empty() || !cfg.language_ids.is_empty())
+            {
+                return Err(
+                    "incompatible options: language_server/language_id and legacy language"
+                        .to_string(),
+                );
+            }
+            if cfg.language_server.is_empty() {
+                for (language_id, language) in cfg.language.drain() {
+                    for filetype in &language.filetypes {
+                        if filetype != &language_id {
+                            cfg.language_ids
+                                .insert(filetype.clone(), language_id.clone());
+                        }
+                    }
+                    cfg.language_server
+                        .insert(language.command.clone(), language);
+                }
+            }
+            Ok(cfg)
+        }) {
         Ok(cfg) => cfg,
         Err(err) => {
             let command = format!(

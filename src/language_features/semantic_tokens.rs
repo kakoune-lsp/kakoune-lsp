@@ -1,7 +1,7 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_SEMANTIC_TOKENS};
-use crate::context::Context;
+use crate::context::{Context, RequestParams};
 use crate::position::lsp_range_to_kakoune;
-use crate::types::EditorMeta;
+use crate::types::{EditorMeta, ServerName};
 use crate::util::editor_quote;
 use indoc::formatdoc;
 use lsp_types::request::SemanticTokensFullRequest;
@@ -13,26 +13,62 @@ use lsp_types::{
 use url::Url;
 
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
-    if meta.fifo.is_none() && !attempt_server_capability(ctx, &meta, CAPABILITY_SEMANTIC_TOKENS) {
+    let eligible_servers: Vec<_> = ctx
+        .language_servers
+        .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SEMANTIC_TOKENS))
+        .collect();
+    if meta.fifo.is_none() && eligible_servers.is_empty() {
         return;
     }
 
-    let req_params = SemanticTokensParams {
-        partial_result_params: Default::default(),
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+    let (first_server, _) = eligible_servers.first().unwrap();
+    let first_server = first_server.to_string();
+
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_name, _)| {
+            (
+                server_name.clone(),
+                vec![SemanticTokensParams {
+                    partial_result_params: Default::default(),
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    work_done_progress_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
+    ctx.call::<SemanticTokensFullRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx, meta, results| {
+            let (server_name, response) = match results.into_iter().find(|(_, v)| v.is_some()) {
+                Some(result) => result,
+                None => (first_server, None),
+            };
+
+            if let Some(response) = response {
+                tokens_response(meta, (server_name, response), ctx);
+            }
         },
-        work_done_progress_params: Default::default(),
-    };
-    ctx.call::<SemanticTokensFullRequest, _>(meta, req_params, move |ctx, meta, response| {
-        if let Some(response) = response {
-            tokens_response(meta, response, ctx);
-        }
-    });
+    );
 }
 
-pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut Context) {
-    let legend = match ctx.capabilities.as_ref().unwrap().semantic_tokens_provider {
+pub fn tokens_response(
+    meta: EditorMeta,
+    response: (ServerName, SemanticTokensResult),
+    ctx: &mut Context,
+) {
+    let (server_name, tokens) = response;
+    let server = &ctx.language_servers[&server_name];
+    let legend = match server
+        .capabilities
+        .as_ref()
+        .unwrap()
+        .semantic_tokens_provider
+    {
         Some(SemanticTokensOptions(SemanticTokensOptions { ref legend, .. }))
         | Some(SemanticTokensRegistrationOptions(SemanticTokensRegistrationOptions {
             semantic_tokens_options: SemanticTokensOptions { ref legend, .. },
@@ -78,7 +114,7 @@ pub fn tokens_response(meta: EditorMeta, tokens: SemanticTokensResult, ctx: &mut
                     start: Position::new(line, start),
                     end: Position::new(line, start + length),
                 };
-                let range = lsp_range_to_kakoune(&range, &document.text, ctx.offset_encoding);
+                let range = lsp_range_to_kakoune(&range, &document.text, server.offset_encoding);
                 // See the spec for information on the integer encoding:
                 // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_semanticTokens
                 let token_name = legend.token_types[token_type as usize].as_str();
