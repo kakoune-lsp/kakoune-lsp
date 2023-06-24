@@ -4,6 +4,12 @@
 # Sourcing via `kak-lsp --kakoune` does it automatically.
 declare-option -docstring "Command with which lsp is run" str lsp_cmd "kak-lsp -s %val{session}"
 
+declare-option -docstring 'name of the client in which documentation is to be displayed' str docsclient
+declare-option -docstring 'name of the client in which all source code jumps will be executed' str jumpclient
+declare-option -docstring 'name of the client in which utilities display information' str toolsclient
+
+declare-option -hidden int grep_current_line 0
+
 # Faces
 
 # Faces used by inline diagnostics.
@@ -2486,8 +2492,10 @@ hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{ # from g
 }
 
 hook global WinSetOption filetype=lsp-goto %{
-    hook buffer -group lsp-goto-hooks NormalKey <ret> lsp-jump
-    hook -once -always window WinSetOption filetype=.* %{ remove-hooks buffer lsp-goto-hooks }
+    map window normal <ret> ':lsp-jump<ret>'
+    hook -always -once window WinSetOption filetype=.* %{
+        unmap window normal <ret> ':lsp-jump<ret>'
+    }
 }
 
 define-command -hidden lsp-make-register-relative-to-root %{
