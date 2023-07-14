@@ -6,8 +6,10 @@ use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
 use crossbeam_channel::{after, never, select, Sender};
+use indoc::formatdoc;
 use lazy_static::lazy_static;
 use lsp_types::notification::Notification;
+use lsp_types::request::Request;
 use lsp_types::*;
 use regex::Regex;
 use std::collections::HashMap;
@@ -201,7 +203,23 @@ fn handle_broken_editor_request(
 /// This will cancel any blocking requests and also print an error if the
 /// request was not triggered by an editor hook.
 fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
-    let command = format!("lsp-show-error {}", editor_quote(msg));
+        let word_regex = request.meta.word_regex.as_ref();
+        let command =
+        if let Some(multi_cmds) =
+        match request.method.as_str() {
+            _ if request.meta.hook => None,
+            request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
+                "grep {}
+                 lsp-show-error {}",
+                editor_quote(word_regex.unwrap()),
+                editor_quote(msg),
+            )),
+            _ => None,
+        } {
+            format!( "evaluate-commands {}", &editor_quote(&multi_cmds))
+        }else {
+            format!("lsp-show-error {}", editor_quote(msg))
+        };
 
     // If editor is expecting a fifo response, give it one, so it won't hang.
     if let Some(ref fifo) = request.meta.fifo {

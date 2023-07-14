@@ -645,8 +645,19 @@ symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command -hidden lsp-get-word-regex %{
+    try %{
+        execute-keys %exp{<a-i>c\A|[^\w%opt{lsp_extra_word_chars}],\z|[^\w%opt{lsp_extra_word_chars}]<ret>}
+        execute-keys %{"a*}
+    } catch %{
+        set-register a %{}
+    }
+}
+
 define-command lsp-definition -docstring "Go to definition" %{
-    nop %sh{ (printf %s "
+    evaluate-commands -draft -save-regs a %{
+        lsp-get-word-regex
+        nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
@@ -654,11 +665,13 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
+word_regex = '''${kak_reg_a}'''
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
 column    = ${kak_cursor_column}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+    }
 }
 
 define-command lsp-declaration -docstring "Go to declaration" %{
@@ -832,7 +845,9 @@ arguments = $3
 }}
 
 define-command lsp-references -docstring "Open buffer with symbol references" %{
-    nop %sh{ (printf %s "
+    evaluate-commands -draft -save-regs a %{
+        lsp-get-word-regex
+        nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
@@ -840,11 +855,13 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/references\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
+word_regex = '''${kak_reg_a}'''
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+    }
 }
 
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{

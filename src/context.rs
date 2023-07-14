@@ -381,6 +381,7 @@ pub fn meta_for_session(session: String, client: Option<String>) -> EditorMeta {
         write_response_to_fifo: false,
         hook: false,
         server: None,
+        word_regex: None,
     }
 }
 

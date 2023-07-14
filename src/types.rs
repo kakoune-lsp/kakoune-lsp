@@ -146,6 +146,7 @@ pub struct EditorMeta {
     #[serde(default)]
     pub hook: bool,
     pub server: Option<ServerName>,
+    pub word_regex: Option<String>,
 }
 
 pub type EditorParams = toml::Value;
