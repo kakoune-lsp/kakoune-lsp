@@ -602,8 +602,25 @@ symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+# Can be overriden by user using `define-command -override lsp-get-word ...`
+# Always places word in %reg{a} and suppresses any exception -- this is the main contract of this command
+# Note: lsp-get-word is later invoked in a -draft context
+define-command lsp-get-word -hidden -docstring "If LSP is not available for a filetype (or possibly other errors), kak-lsp will run :grep on word found using this command" %{
+    try %{
+        # This logic can be made as sophisticated as we want
+        # Very simple default now; end user can always make more sophisticated
+        execute-keys '<a-i>w"ay'
+        set-register a "\b%reg{a}\b"
+    } catch %{
+        set-register a %{}
+    }
+}
+
 define-command lsp-definition -docstring "Go to definition" %{
-    nop %sh{ (printf %s "
+    evaluate-commands -draft %{
+        # Puts word in %reg{a}
+        lsp-get-word
+        nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
@@ -611,11 +628,13 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
+grep_with_error  = '''${kak_reg_a}'''
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
 column    = ${kak_cursor_column}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+    }
 }
 
 define-command lsp-declaration -docstring "Go to declaration" %{
@@ -1569,6 +1588,12 @@ define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
     echo -debug "kak-lsp:" %arg{1}
     info "kak-lsp: %arg{1}"
 }
+
+define-command -hidden lsp-grep-and-show-error -params 2 -docstring "Grep and render error" %{
+    grep %arg{1}
+    lsp-show-error %arg{2}
+}
+
 
 define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{

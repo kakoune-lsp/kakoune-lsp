@@ -187,7 +187,17 @@ fn handle_broken_editor_request(
 /// This will cancel any blocking requests and also print an error if the
 /// request was not triggered by an editor hook.
 fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
-    let command = format!("lsp-show-error {}", editor_quote(msg));
+    let command;
+    if let Some(ref search_word) = request.meta.grep_with_error {
+        command = format!(
+            "lsp-grep-and-show-error {} {}
+        }}",
+            editor_quote(search_word),
+            editor_quote(&format!("{}, trying fallback :grep", msg))
+        );
+    } else {
+        command = format!("lsp-show-error {}", editor_quote(msg));
+    }
 
     // If editor is expecting a fifo response, give it one, so it won't hang.
     if let Some(ref fifo) = request.meta.fifo {
