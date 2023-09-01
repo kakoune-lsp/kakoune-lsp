@@ -156,11 +156,15 @@ args = ["--stdio"]
 # # See https://github.dev/eclipse/eclipse.jdt.ls
 # # "java.format.insertSpaces" = true
 
-[language.jsx] # works for javascript as well
+[language.javascriptreact]
 filetypes = ["javascript"]
 roots = ["package.json", "tsconfig.json", ".git", ".hg"]
 command = "typescript-language-server"
 args = ["--stdio"]
+settings_section = "_"
+[language.javascriptreact.settings._]
+# quotePreference = "single"
+# javascript.format.semicolons = "insert"
 
 [language.json]
 filetypes = ["json"]
@@ -366,11 +370,15 @@ args = ["serve"]
 # See https://github.com/hashicorp/terraform-ls/blob/main/docs/SETTINGS.md
 # rootModulePaths = []
 
-[language.tsx] # works for typescript as well
+[language.typescriptreact]
 filetypes = ["typescript"]
 roots = ["package.json", "tsconfig.json", ".git", ".hg"]
 command = "typescript-language-server"
 args = ["--stdio"]
+settings_section = "_"
+[language.typescriptreact.settings._]
+# quotePreference = "double"
+# typescript.format.semicolons = "insert"
 
 # [language.typescript]
 # filetypes = ["typescript"]
