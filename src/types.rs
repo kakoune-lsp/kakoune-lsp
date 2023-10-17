@@ -12,6 +12,10 @@ pub enum Void {}
 
 // Configuration
 
+const fn default_true() -> bool {
+    true
+}
+
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     pub language: HashMap<String, LanguageConfig>,
@@ -19,7 +23,7 @@ pub struct Config {
     pub server: ServerConfig,
     #[serde(default)]
     pub verbosity: u8,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub snippet_support: bool,
     #[serde(default)]
     pub semantic_tokens: SemanticTokenConfig,
