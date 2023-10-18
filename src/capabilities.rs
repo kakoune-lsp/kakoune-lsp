@@ -91,6 +91,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                 inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
                     refresh_support: Some(false),
                 }),
+                diagnostic: None,
             }),
             text_document: Some(TextDocumentClientCapabilities {
                 synchronization: Some(TextDocumentSyncClientCapabilities {
@@ -304,6 +305,7 @@ pub fn initialize(root_path: &str, meta: EditorMeta, ctx: &mut Context) {
                     dynamic_registration: Some(false),
                     resolve_support: None,
                 }),
+                diagnostic: None,
             }),
             window: Some(WindowClientCapabilities {
                 work_done_progress: Some(true),
