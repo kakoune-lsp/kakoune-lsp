@@ -193,9 +193,11 @@ pub fn format_symbol<T: Symbol<T>>(
     let mut columns = vec![];
     format_symbol_at_depth(&mut columns, &items, meta, ctx, 0);
     if align {
-        let Some(width1) = columns.iter().map(|(position, _, _)|
-            UnicodeWidthStr::width(position.as_str())
-        ).max() else {
+        let Some(width1) = columns
+            .iter()
+            .map(|(position, _, _)| UnicodeWidthStr::width(position.as_str()))
+            .max()
+        else {
             return "".to_string();
         };
         let width2 = columns
