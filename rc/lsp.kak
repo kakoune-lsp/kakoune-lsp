@@ -1679,9 +1679,10 @@ define-command lsp-next-location -params 1 -docstring %{
 
     %opt{lsp_location_format} determines matching locations.
 } -buffer-completion %{
-    evaluate-commands -try-client %opt{jumpclient} %{
+    evaluate-commands -try-client %opt{jumpclient} -save-regs / %{
         buffer %arg{1}
-        execute-keys ge %opt{grep_current_line}g<a-l> / %opt{lsp_location_format}<ret>
+        set-register / %opt{lsp_location_format}
+        execute-keys ge %opt{grep_current_line}g<a-l> /<ret>
         lsp-jump
     }
     try %{
@@ -1699,9 +1700,10 @@ define-command lsp-previous-location -params 1 -docstring %{
 
     %opt{lsp_location_format} determines matching locations.
 } -buffer-completion %{
-    evaluate-commands -try-client %opt{jumpclient} %{
+    evaluate-commands -try-client %opt{jumpclient} -save-regs / %{
         buffer %arg{1}
-        execute-keys ge %opt{grep_current_line}g<a-h> <a-/> %opt{lsp_location_format}<ret>
+        set-register / %opt{lsp_location_format}
+        execute-keys ge %opt{grep_current_line}g<a-h> <a-/><ret>
         lsp-jump
     }
     try %{
@@ -2512,8 +2514,9 @@ define-command -hidden lsp-make-register-relative-to-root %{
 define-command -hidden lsp-jump %{ # from grep.kak
     evaluate-commands -save-regs abc %{ # use evaluate-commands to ensure jumps are collapsed
         try %{
-            evaluate-commands -draft %{
-                execute-keys "<semicolon>xs%opt{lsp_location_format}<ret>"
+            evaluate-commands -draft -save-regs / %{
+                set-register / %opt{lsp_location_format}
+                execute-keys <semicolon>xs<ret>
                 set-register a "%reg{1}"
                 set-register b "%reg{2}"
                 set-register c "%reg{3}"
@@ -2528,8 +2531,9 @@ define-command -hidden lsp-jump %{ # from grep.kak
 
 define-command -hidden lsp-diagnostics-jump %{ # from make.kak
     evaluate-commands -save-regs abcd %{
-        evaluate-commands -draft %{
-            execute-keys "<semicolon>xs%opt{lsp_location_format}<ret>"
+        evaluate-commands -draft -save-regs / %{
+            set-register / %opt{lsp_location_format}
+            execute-keys <semicolon>xs<ret>
             set-register a "%reg{1}"
             set-register b "%reg{2}"
             set-register c "%reg{3}"
