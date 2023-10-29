@@ -11,6 +11,7 @@ use lsp_types::notification::Notification;
 use lsp_types::*;
 use regex::Regex;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::Duration;
 
 struct ControllerHandle {
@@ -27,7 +28,11 @@ type Controllers = HashMap<Vec<Route>, ControllerHandle>;
 ///
 /// `initial_request` could be passed to avoid extra synchronization churn if event loop is started
 /// as a result of request from editor.
-pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
+pub fn start(
+    config: &Config,
+    log_path: &'static Option<PathBuf>,
+    initial_request: Option<String>,
+) -> i32 {
     info!("Starting main event loop");
 
     let editor = editor_transport::start(&config.server.session, initial_request);
@@ -140,6 +145,7 @@ pub fn start(config: &Config, initial_request: Option<String>) -> i32 {
                             debug!("Spawning a new controller for {:#?}", routes);
                             controller_entry.insert(spawn_controller(
                                 config.clone(),
+                                log_path,
                                 language_id.clone(),
                                 routes,
                                 request,
@@ -264,6 +270,7 @@ fn stop_session(controllers: &mut Controllers) {
 
 fn spawn_controller(
     config: Config,
+    log_path: &'static Option<PathBuf>,
     language_id: LanguageId,
     routes: Vec<Route>,
     request: EditorRequest,
@@ -273,7 +280,15 @@ fn spawn_controller(
     let channel_capacity = 1024;
 
     let worker = Worker::spawn("Controller", channel_capacity, move |receiver, _| {
-        controller::start(to_editor, receiver, &language_id, &routes, request, config);
+        controller::start(
+            to_editor,
+            receiver,
+            &language_id,
+            &routes,
+            request,
+            config,
+            log_path,
+        );
     });
 
     ControllerHandle { worker }

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::capabilities;
@@ -40,6 +41,7 @@ pub fn start(
     routes: &[Route],
     initial_request: EditorRequest,
     config: Config,
+    log_path: &'static Option<PathBuf>,
 ) {
     let mut language_servers = BTreeMap::new();
     for route in routes {
@@ -135,7 +137,7 @@ pub fn start(
         let from_pending_file_watcher = &file_watcher
             .as_ref()
             .and_then(
-                // If there are enqueud events, let's wait a bit for others to come in, to send
+                // If there are enqueued events, let's wait a bit for others to come in, to send
                 // them in batch.
                 |fw| {
                     if fw.pending_file_events.is_empty() {
@@ -411,7 +413,7 @@ pub fn start(
             }
             file_watcher = Some(FileWatcher {
                 pending_file_events: HashSet::new(),
-                worker: spawn_file_watcher(requested_watchers),
+                worker: spawn_file_watcher(log_path, requested_watchers),
             });
         }
     }

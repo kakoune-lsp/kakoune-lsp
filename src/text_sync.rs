@@ -120,6 +120,7 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
 }
 
 pub fn spawn_file_watcher(
+    log_path: &'static Option<PathBuf>,
     watch_requests: HashMap<(ServerName, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
 ) -> Worker<(), Vec<FileEvent>> {
     info!("starting file watcher");
@@ -133,7 +134,8 @@ pub fn spawn_file_watcher(
                 let callback = move |res: notify::Result<notify::Event>| {
                     match res {
                         Ok(event) => {
-                            let file_changes = event_file_changes(&path_watch_requests, event);
+                            let file_changes =
+                                event_file_changes(log_path, &path_watch_requests, event);
                             if !file_changes.is_empty() {
                                 if let Err(err) = sender.send(file_changes) {
                                     error!("{}", err);
@@ -164,12 +166,16 @@ pub fn spawn_file_watcher(
 }
 
 fn event_file_changes(
+    log_path: &'static Option<PathBuf>,
     watch_requests: &Vec<CompiledFileSystemWatcher>,
     event: notify::Event,
 ) -> Vec<FileEvent> {
     let mut file_changes = vec![];
 
     for path in &event.paths {
+        if log_path.as_ref().map_or(false, |log_path| path == log_path) {
+            continue;
+        }
         for watch_request in watch_requests {
             let watch_kind = watch_request.kind;
             let file_change_type = match event.kind {

@@ -55,6 +55,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 
@@ -282,8 +283,9 @@ fn main() {
         }
         // Setting up the logger after potential daemonization,
         // otherwise it refuses to work properly.
-        let _guard = setup_logger(&config, &matches);
-        let code = session::start(&config, initial_request);
+        let (_guard, log_path) = setup_logger(&config, &matches);
+        let log_path = Box::leak(log_path);
+        let code = session::start(&config, log_path, initial_request);
         goodbye(&config.server.session, code);
     }
 }
@@ -324,7 +326,10 @@ fn spin_up_server(input: &[u8]) {
     child.wait().expect("Failed to daemonize server");
 }
 
-fn setup_logger(config: &Config, matches: &ArgMatches) -> slog_scope::GlobalLoggerGuard {
+fn setup_logger(
+    config: &Config,
+    matches: &ArgMatches,
+) -> (slog_scope::GlobalLoggerGuard, Box<Option<PathBuf>>) {
     let mut verbosity = matches.get_count("v");
 
     if verbosity == 0 {
@@ -339,8 +344,13 @@ fn setup_logger(config: &Config, matches: &ArgMatches) -> slog_scope::GlobalLogg
         _ => Severity::Trace,
     };
 
-    let logger = if let Some(log_path) = matches.value_of("log") {
-        let mut builder = FileLoggerBuilder::new(log_path);
+    let mut log_path = Box::default();
+    let logger = if let Some(path) = matches.value_of("log") {
+        log_path = Box::new({
+            let path = PathBuf::from_str(path).unwrap();
+            path.parent().and_then(|path| path.canonicalize().ok())
+        });
+        let mut builder = FileLoggerBuilder::new(path);
         builder.level(level);
         builder.build().unwrap()
     } else {
@@ -354,7 +364,7 @@ fn setup_logger(config: &Config, matches: &ArgMatches) -> slog_scope::GlobalLogg
         error!("panic: {}", panic_info);
     }));
 
-    slog_scope::set_global_logger(logger)
+    (slog_scope::set_global_logger(logger), log_path)
 }
 
 // Cleanup and gracefully exit
