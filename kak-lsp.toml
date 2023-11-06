@@ -267,6 +267,12 @@ filetypes = ["protobuf"]
 roots = [".git", ".hg"]
 command = "pls" # https://github.com/lasorda/protobuf-language-server
 
+[language_server.purescript-language-server]
+filetypes = ["purescript"]
+roots = ["spago.dhall", "spago.yaml", "package.json", ".git", ".hg"]
+command = "purescript-language-server"
+args = ["--stdio"]
+
 [language_server.pylsp]
 filetypes = ["python"]
 roots = ["requirements.txt", "setup.py", ".git", ".hg"]
