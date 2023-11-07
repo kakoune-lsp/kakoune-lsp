@@ -77,7 +77,6 @@ roots = ["build.sbt", ".scala-build"]
 command = "metals"
 args = ["-Dmetals.extensions=false"]
 settings_section = "metals"
-
 [language_server.metals.settings.metals]
 icons = "unicode"
 isHttpEnabled = true
