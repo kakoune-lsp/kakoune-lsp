@@ -269,7 +269,7 @@ command = "pls" # https://github.com/lasorda/protobuf-language-server
 
 [language_server.purescript]
 filetypes = ["purescript"]
-roots = [".git", "package.json", "spago.dhall", "spago.yaml"]
+roots = ["spago.dhall", "spago.yaml",, "package.json" ".git"]
 command = "purescript-language-server"
 args = ["--stdio"]
 
