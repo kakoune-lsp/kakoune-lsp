@@ -182,46 +182,74 @@ define-command -hidden lsp-perform-code-lens -params 1.. -docstring "Called on :
 }
 
 define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
-    try %{
-        evaluate-commands -draft %{prompt -menu '' ''}
-        evaluate-commands %sh{
-            shellquote() {
-                printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+    evaluate-commands -save-regs ^ %{
+        execute-keys -save-regs "" Z
+        try %{
+            evaluate-commands -draft %{prompt -menu '' ''}
+            evaluate-commands %sh{
+                shellquote() {
+                    printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+                }
+                promiscuous=false
+                restore_position() {
+                    :
+                }
+                if [ "$1" = "-promiscuous" ]; then
+                    promiscuous=true
+                    restore_position() {
+                        printf %s 'evaluate-commands -save-regs ^ %{ # TODO
+                            evaluate-commands %sh{
+                                set -- '"$kak_quoted_reg_caret"'
+                                file=$1
+                                shift
+                                printf %s "set-register ^ %|$(printf %s "$file" | sed "s/|/||/g")| $@"
+                            }
+                            execute-keys -save-regs "" '"$1"'
+                        }'
+                    }
+                    on_abort=$(printf " -on-abort %%¶%s¶" "$(printf %s "$(restore_position "z<esc>")" | sed s/¶/¶¶/g)")
+                    shift
+                elif [ "$1" = "-on-abort" ]; then
+                    on_abort=$(printf " -on-abort %%¶%s¶" "$(printf %s "$2" | sed s/¶/¶¶/g)")
+                    shift 2
+                fi
+                cases=
+                completion=
+                nl=$(printf '\n.'); nl=${nl%.}
+                while [ $# -gt 0 ]; do
+                    title=$1; shift
+                    command=$1; shift
+                    completion="${completion}${title}${nl}"
+                    cases="${cases}
+                    ($(shellquote "$title" s/¶/¶¶/g))
+                        printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
+                        ;;"
+                done
+                printf "\
+                prompt %%{} %%§
+                    evaluate-commands %%sh¶
+                        case \"\$kak_text\" in%s
+                        (*) echo fail -- no such item: \"'\$(printf %%s \"\$kak_text\" | sed \"s/'/''/g\")'\" ;;
+                        esac
+                    ¶
+                § -on-change %%§
+                    evaluate-commands %%sh¶
+                        $promiscuous || exit
+                        case \"\$kak_text\" in%s
+                        (*) printf %%s %s ;;
+                        esac
+                    ¶
+                §" "$cases" "$cases" "$(shellquote "$(restore_position "<a-semicolon>z")" s/¶/¶¶/g)"
+                printf ' %s' "$on_abort"
+                printf ' -menu -shell-script-candidates %%§
+                    printf %%s %s
+                    §\n' "$(shellquote "$completion")"
             }
-            on_abort=
-            if [ "$1" = "-on-abort" ]; then
-                on_abort=$(printf "-on-abort ¶%s¶" "$(printf "$2" | sed s/¶/¶¶/g)")
-                shift 2
-            fi
-            cases=
-            completion=
-            nl=$(printf '\n.'); nl=${nl%.}
-            while [ $# -gt 0 ]; do
-                title=$1; shift
-                command=$1; shift
-                completion="${completion}${title}${nl}"
-                cases="${cases}
-                $(shellquote "$title" s/¶/¶¶/g))
-                    printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
-                    ;;"
-            done
-            printf "\
-            prompt %%{} %%§
-                evaluate-commands %%sh¶
-                    case \"\$kak_text\" in%s
-                    *) echo fail -- no such item: \"'\$(printf %%s \"\$kak_text\" | sed \"s/'/''/g\")'\" ;;
-                    esac
-                ¶
-            §" "$cases"
-            printf ' %s' "$on_abort"
-            printf ' -menu -shell-script-candidates %%§
-                printf %%s %s
-                §\n' "$(shellquote "$completion")"
-        }
-    } catch %{
-        evaluate-commands %sh{
-            shellquote() {
-                printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+        } catch %{
+            evaluate-commands %sh{
+                shellquote() {
+                    printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+                }
             }
             if [ "$1" = "-on-abort" ]; then
                 shift 2

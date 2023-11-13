@@ -3,6 +3,8 @@
 Additions:
 - Support multiple language servers per filetype (#17).
 - The `kak-lsp.toml` format for specifying language servers has changed. The old format is still supported (#686).
+- `lsp-goto-document-symbol` learned to show a preview of the jump target.
+- Default configuration for PureScript and Scala.
 
 Fixes:
 - A regression broke resolving completion item documentation when cycling through completion candidates, which has been fixed (#674).
