@@ -1632,7 +1632,7 @@ fifo = ""%reg{p}""
             shift
             for arg
             do
-                printf "'%s' " "$(printf "$arg" | sed "s/'/''/")"
+                printf "'%s' " "$(printf %s "$arg" | sed "s/'/''/")"
             done
         }
         try %{
