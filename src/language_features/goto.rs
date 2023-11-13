@@ -61,11 +61,12 @@ pub fn goto(
     }
 }
 
-pub fn edit_at_range(buffile: &str, range: KakouneRange) -> String {
+pub fn edit_at_range(buffile: &str, range: KakouneRange, in_normal_mode: bool) -> String {
+    let normal = if in_normal_mode { "" } else { "<a-semicolon>" };
     formatdoc!(
         "edit -existing {}
          select {}
-         execute-keys <c-s>vv",
+         execute-keys {normal}<c-s>{normal}vv",
         editor_quote(buffile),
         range,
     )
@@ -83,7 +84,7 @@ fn goto_location(
         let range = lsp_range_to_kakoune(range, &contents, server.offset_encoding);
         let command = format!(
             "evaluate-commands -try-client %opt{{jumpclient}} -- {}",
-            editor_quote(&edit_at_range(path_str, range)),
+            editor_quote(&edit_at_range(path_str, range, true)),
         );
         ctx.exec(meta, command);
     }

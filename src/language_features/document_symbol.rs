@@ -906,7 +906,7 @@ fn editor_document_symbol_menu(
         }
         None => return,
     };
-    let command = format!("lsp-menu{}", choices);
+    let command = format!("lsp-menu -promiscuous {}", choices);
     ctx.exec(meta, command);
 }
 
@@ -962,26 +962,36 @@ fn symbol_menu<T: Symbol<T>>(
     server: &ServerSettings,
     ctx: &Context,
 ) -> String {
-    let mut menu_cmd = String::new();
+    let mut choices = vec![];
     let mut add_symbol = |symbol: &T| {
         let mut filename_path = PathBuf::default();
         let filename = symbol_filename(meta, symbol, &mut filename_path);
         let range =
             get_kakoune_range_with_fallback(server, filename, &symbol.selection_range(), ctx);
         let name = symbol.name();
-        write!(
-            &mut menu_cmd,
-            " {} {}",
-            editor_quote(name),
-            editor_quote(&edit_at_range(filename, range))
-        )
-        .unwrap();
+        let kind = symbol.kind();
+        choices.push((name.to_owned(), kind, edit_at_range(filename, range, false)));
         true
     };
     for symbol in symbols {
         symbols_walk(&mut add_symbol, &symbol);
     }
-    menu_cmd
+    let mut occurrences: HashMap<String, i32> = HashMap::new();
+    for (name, _, _) in &choices {
+        *occurrences.entry(name.clone()).or_default() += 1;
+    }
+    choices
+        .into_iter()
+        .map(|(mut name, kind, goto_command)| {
+            match occurrences.get(&name) {
+                Some(n) if *n > 1 => {
+                    write!(&mut name, " ({:?})", kind).unwrap();
+                }
+                _ => (),
+            }
+            format!("{} {}", editor_quote(&name), editor_quote(&goto_command))
+        })
+        .join(" ")
 }
 
 fn symbol_search<T: Symbol<T>>(
@@ -1001,7 +1011,7 @@ fn symbol_search<T: Symbol<T>>(
             write!(
                 &mut navigate_cmd,
                 "evaluate-commands '{}'",
-                editor_escape(&edit_at_range(filename, range))
+                editor_escape(&edit_at_range(filename, range, true))
             )
             .unwrap();
             false
