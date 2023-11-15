@@ -3,7 +3,9 @@ use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 
-pub fn find_project_root(server_name: &str, markers: &[String], path: &str) -> String {
+use crate::types::LanguageId;
+
+pub fn find_project_root(language_id: &LanguageId, markers: &[String], path: &str) -> String {
     if let Ok(force_root) = env::var("KAK_LSP_FORCE_PROJECT_ROOT") {
         debug!(
             "Using $KAK_LSP_FORCE_PROJECT_ROOT as project root: \"{}\"",
@@ -11,7 +13,7 @@ pub fn find_project_root(server_name: &str, markers: &[String], path: &str) -> S
         );
         return force_root;
     }
-    let vars = gather_env_roots(server_name);
+    let vars = gather_env_roots(language_id);
     if vars.is_empty() {
         roots_by_marker(markers, path)
     } else {
@@ -53,8 +55,8 @@ pub fn roots_by_marker(roots: &[String], path: &str) -> String {
     return src.to_str().unwrap().to_string();
 }
 
-pub fn gather_env_roots(language: &str) -> HashSet<PathBuf> {
-    let prefix = format!("KAK_LSP_PROJECT_ROOT_{}", language.to_uppercase());
+pub fn gather_env_roots(language_id: &LanguageId) -> HashSet<PathBuf> {
+    let prefix = format!("KAK_LSP_PROJECT_ROOT_{}", language_id.to_uppercase());
     debug!("Searching for vars starting with {}", prefix);
     env::vars()
         .filter(|(k, _v)| k.starts_with(&prefix))

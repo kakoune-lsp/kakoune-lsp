@@ -110,7 +110,7 @@ pub fn start(
                     .iter()
                     .map(|server_name| {
                         let language  = &languages[server_name];
-                        let root = find_project_root(server_name, &language.roots, &request.meta.buffile);
+                        let root = find_project_root(&language_id, &language.roots, &request.meta.buffile);
                         let route = Route {
                             session: request.meta.session.clone(),
                             server_name: server_name.clone(),
