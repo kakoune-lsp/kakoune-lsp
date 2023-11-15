@@ -288,7 +288,7 @@ to that parent directory.
 
 You can define an environment variable like `KAK_LSP_PROJECT_ROOT_RUST=/my/project` to always
 use `/my/project` as root for Rust files inside `/my/project`.  Substitute `RUST` with another
-language ID to do the same for other file types.
+capitalized language ID to do the same for other file types.
 
 The environment variable `KAK_LSP_FORCE_PROJECT_ROOT=/my/project` will make `kak-lsp` always
 use `/my/project` as project root, even for files outside this directory. This avoids starting
@@ -322,6 +322,11 @@ Whenever you change the Kakoune option `lsp_config`, the same section is sent vi
 `workspace/didChangeConfiguration`.  Additionally, kak-lsp will send arbitrary sections that
 are requested by the server in `workspace/configuration`.
 
+==== Language ID ("languageId")
+
+By default, the Kakoune filetype is sent to the server as LSP language ID.
+To send a different identifier for a given filetype, use the `[language_ids]` config option, see the example below.
+
 ==== Multiple language servers
 
 It is possible to map more than one language server to a filetype. For example, if you want to
@@ -347,9 +352,6 @@ args = ["--stdio"]
 [language_server.tailwindcss.settings.tailwindcss]
 editor = {}
 ----
-
-Note that, just like in the config above, it is possible to override the language ID sent to
-the language server by mapping filetypes using `language_ids`.
 
 === Configuring Kakoune
 
