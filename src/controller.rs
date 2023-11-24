@@ -738,7 +738,7 @@ fn dispatch_server_request(
             workspace::configuration(request.params, server_name, ctx)
         }
         request::ShowMessageRequest::METHOD => {
-            return show_message::show_message_request(meta, request, ctx);
+            return show_message::show_message_request(meta, server_name, request, ctx);
         }
         _ => {
             warn!("Unsupported method: {}", method);
@@ -778,7 +778,7 @@ fn dispatch_server_notification(
             let params: ShowMessageParams = params
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
-            show_message::show_message(meta, params.typ, &params.message, ctx);
+            show_message::show_message(meta, server_name, params.typ, &params.message, ctx);
         }
         "window/logMessage" => {
             let params: LogMessageParams = params

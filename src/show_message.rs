@@ -5,20 +5,30 @@ use jsonrpc_core::{Id, MethodCall};
 use lsp_types::{MessageActionItem, MessageType, ShowMessageRequestParams};
 use serde::Deserialize;
 
-use crate::{context::Context, types::EditorMeta, util::editor_quote};
+use crate::{
+    context::Context,
+    types::{EditorMeta, ServerName},
+    util::editor_quote,
+};
 
 // commands to be handled
 pub const SHOW_MESSAGE_REQUEST_NEXT: &str = "window/showMessageRequest/showNext";
 pub const SHOW_MESSAGE_REQUEST_RESPOND: &str = "window/showMessageRequest/respond";
 
 /// Queues the message request from the LSP server.
-pub fn show_message_request(meta: EditorMeta, request: MethodCall, ctx: &mut Context) {
+pub fn show_message_request(
+    meta: EditorMeta,
+    server_name: &ServerName,
+    request: MethodCall,
+    ctx: &mut Context,
+) {
     let request_id = request.id;
     let params: ShowMessageRequestParams = request
         .params
         .parse()
         .expect("Failed to parse ShowMessageRequest params");
-    ctx.pending_message_requests.push_back((request_id, params));
+    ctx.pending_message_requests
+        .push_back((request_id, server_name.clone(), params));
     update_modeline(meta, ctx)
 }
 
@@ -46,7 +56,7 @@ pub fn show_message_request_respond(params: toml::Value, ctx: &mut Context) {
 }
 
 pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
-    let (id, params) = match ctx.pending_message_requests.pop_front() {
+    let (id, server_name, params) = match ctx.pending_message_requests.pop_front() {
         Some(v) => v,
         None => {
             return ctx.exec(meta, "lsp-show-error 'No pending message requests.'");
@@ -57,12 +67,9 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         Some(opts) if !opts.is_empty() => &opts[..],
         _ => {
             // a ShowMessageRequest with no actions is just a ShowMessage notification.
-            show_message(meta, params.typ, &params.message, ctx);
+            show_message(meta, &server_name, params.typ, &params.message, ctx);
 
-            let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-            for server_name in &servers {
-                ctx.reply(server_name, id.clone(), Ok(serde_json::Value::Null));
-            }
+            ctx.reply(&server_name, id.clone(), Ok(serde_json::Value::Null));
             return;
         }
     };
@@ -101,9 +108,23 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
 }
 
 /// Implements ShowMessage notification.
-pub fn show_message(meta: EditorMeta, typ: MessageType, msg: &str, ctx: &Context) {
+pub fn show_message(
+    meta: EditorMeta,
+    server_name: &ServerName,
+    typ: MessageType,
+    msg: &str,
+    ctx: &Context,
+) {
     let command = message_type(typ).unwrap_or("nop");
-    ctx.exec(meta, format!("{} {}", command, editor_quote(msg)));
+    ctx.exec(
+        meta,
+        format!(
+            "{} {} {}",
+            command,
+            editor_quote(server_name),
+            editor_quote(msg)
+        ),
+    );
 }
 
 fn update_modeline(meta: EditorMeta, ctx: &Context) {

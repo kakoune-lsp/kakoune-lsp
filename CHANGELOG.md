@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- Default configuration for Markdown via [marksman](https://github.com/artempyanykh/marksman).
+
 Fixes:
 - Fix regression in "lsp-show-message-error" and friends.
 

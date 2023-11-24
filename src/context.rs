@@ -77,7 +77,7 @@ pub struct Context {
     pub outstanding_requests:
         HashMap<(ServerName, &'static str, String, Option<String>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
-    pub pending_message_requests: VecDeque<(Id, ShowMessageRequestParams)>,
+    pub pending_message_requests: VecDeque<(Id, ServerName, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub session: SessionId,
