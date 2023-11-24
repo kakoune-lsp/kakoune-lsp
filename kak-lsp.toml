@@ -265,6 +265,12 @@ settings_section = "Lua"
 # See https://github.com/sumneko/vscode-lua/blob/master/setting/schema.json
 # diagnostics.enable = true
 
+[language_server.markdown]
+filetypes = ["markdown"]
+roots = [".marksman.toml"]
+command = "marksman"
+args = ["server"]
+
 [language_server.nimlsp]
 filetypes = ["nim"]
 roots = ["*.nimble", ".git", ".hg"]

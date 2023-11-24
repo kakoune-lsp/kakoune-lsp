@@ -1,5 +1,8 @@
 ## Unreleased
 
+Fixes:
+- Fix regression in "lsp-show-message-error" and friends.
+
 ## 15.0.0 - 2023-11-15
 
 Additions:
