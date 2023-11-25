@@ -2,6 +2,7 @@
 
 Additions:
 - Default configuration for Markdown via [marksman](https://github.com/artempyanykh/marksman).
+- Default configuration for Java via [jdtls](https://github.com/eclipse-jdtls/eclipse.jdt.ls).
 
 Fixes:
 - Fix regression in "lsp-show-message-error" and friends.
