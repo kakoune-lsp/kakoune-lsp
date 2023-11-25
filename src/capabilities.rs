@@ -248,6 +248,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                                 "refactor.inline",
                                                 "refactor.rewrite",
                                                 "source",
+                                                "source.fixAll",
                                                 "source.organizeImports",
                                             ]
                                             .iter()
