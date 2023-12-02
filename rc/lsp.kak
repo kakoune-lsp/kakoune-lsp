@@ -509,9 +509,33 @@ tabstop = ${kak_opt_tabstop}
 
 declare-option -hidden str lsp_symbol_kind_completion %{
     symbol_kinds="\
-    File Module Namespace Package Class Method Property Field Constructor Enum Interface
-    Function Variable Constant String Number Boolean Array Object Key Null EnumMember Struct
-    Event Operator TypeParameter"
+        Array
+        Boolean
+        Class
+        Constant
+        Constructor
+        Enum
+        EnumMember
+        Event
+        Field
+        File
+        Function
+        Interface
+        Key
+        Method
+        Module
+        Namespace
+        Null
+        Number
+        Object
+        Operator
+        Package
+        Property
+        String
+        Struct
+        TypeParameter
+        Variable
+    "
     printf '%s\n' ${symbol_kinds}
 }
 
@@ -570,7 +594,7 @@ hover           = $hover
 } -shell-script-candidates %{
     case $# in
         # Search forward or backward?
-        (1) printf '%s\n' previous next ;;
+        (1) printf '%s\n' next previous ;;
         # Show hover info or goto symbol?
         (2) printf '%s\n' hover goto ;;
         # Which symbol types?
@@ -2576,18 +2600,7 @@ define-command -hidden lsp-diagnostics-open-error -params 4 %{
 
 # Deprecated commands.
 
-define-command -hidden lsp -params 1.. -shell-script-candidates %{
-    for cmd in start hover definition references signature-help diagnostics document-symbol\
-    workspace-symbol workspace-symbol-incr rename rename-prompt\
-    capabilities stop formatting formatting-sync highlight-references\
-    inline-diagnostics-enable inline-diagnostics-disable\
-    diagnostic-lines-enable diagnostic-lines-disable auto-hover-enable auto-hover-disable\
-    auto-hover-insert-mode-enable auto-hover-insert-mode-disable auto-signature-help-enable\
-    auto-signature-help-disable stop-on-exit-enable stop-on-exit-disable\
-    find-error implementation;
-        do echo $cmd;
-    done
-} %{ evaluate-commands "lsp-%arg{1}" }
+define-command -hidden lsp -params 1.. %{ evaluate-commands "lsp-%arg{1}" }
 
 
 define-command -hidden lsp-symbols-next-match -docstring 'DEPRECATED, use lsp-next-location. Jump to the next symbols match' %{
