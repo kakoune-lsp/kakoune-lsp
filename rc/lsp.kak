@@ -865,7 +865,9 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
-    nop %sh{ (printf %s "
+    evaluate-commands -draft -save-regs a %{
+        lsp-get-word-regex
+        nop %sh{ (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
@@ -873,11 +875,13 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentHighlight\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
+word_regex = '''${kak_reg_a}'''
 ${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+    }
 }
 
 define-command lsp-rename -params 1 -docstring "lsp-rename <new-name>: rename symbol under the main cursor" %{

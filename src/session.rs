@@ -214,6 +214,18 @@ fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequ
                 editor_quote(word_regex.unwrap()),
                 editor_quote(msg),
             )),
+            request::DocumentHighlightRequest::METHOD => Some(formatdoc!(
+                "evaluate-commands -save-regs a/^ %|
+                     execute-keys -save-regs '' %[\"aZ]
+                     set-register / {}
+                     execute-keys -save-regs '' <percent>s<ret>Z
+                     execute-keys %[\"az<a-z>a]
+                 |
+                 lsp-show-error {}",
+                editor_quote(word_regex.unwrap()).replace('|', "||"),
+                editor_quote(
+                    &format!("{msg}, falling_back to %s{}<ret>", word_regex.unwrap()))
+            )),
             _ => None,
         } {
             format!( "evaluate-commands {}", &editor_quote(&multi_cmds))
