@@ -2316,7 +2316,7 @@ define-command lsp-disable-window -docstring "Disable kak-lsp in the window scop
     lsp-inline-diagnostics-disable window
     lsp-diagnostic-lines-disable window
     try %{ set-option -remove window completers option=lsp_completions }
-    set-option window lsp_fail_if_disabled fail
+    unset-option window lsp_fail_if_disabled
     remove-hooks window lsp
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
