@@ -203,35 +203,35 @@ fn handle_broken_editor_request(
 /// This will cancel any blocking requests and also print an error if the
 /// request was not triggered by an editor hook.
 fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
-        let word_regex = request.meta.word_regex.as_ref();
-        let command =
-        if let Some(multi_cmds) =
-        match request.method.as_str() {
-            _ if request.meta.hook => None,
-            request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
-                "grep {}
+    let word_regex = request.meta.word_regex.as_ref();
+    let command = if let Some(multi_cmds) = match request.method.as_str() {
+        _ if request.meta.hook => None,
+        request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
+            "grep {}
                  lsp-show-error {}",
-                editor_quote(word_regex.unwrap()),
-                editor_quote(msg),
-            )),
-            request::DocumentHighlightRequest::METHOD => Some(formatdoc!(
-                "evaluate-commands -save-regs a/^ %|
+            editor_quote(word_regex.unwrap()),
+            editor_quote(msg),
+        )),
+        request::DocumentHighlightRequest::METHOD => Some(formatdoc!(
+            "evaluate-commands -save-regs a/^ %|
                      execute-keys -save-regs '' %[\"aZ]
                      set-register / {}
                      execute-keys -save-regs '' <percent>s<ret>Z
                      execute-keys %[\"az<a-z>a]
                  |
                  lsp-show-error {}",
-                editor_quote(word_regex.unwrap()).replace('|', "||"),
-                editor_quote(
-                    &format!("{msg}, falling_back to %s{}<ret>", word_regex.unwrap()))
-            )),
-            _ => None,
-        } {
-            format!( "evaluate-commands {}", &editor_quote(&multi_cmds))
-        }else {
-            format!("lsp-show-error {}", editor_quote(msg))
-        };
+            editor_quote(word_regex.unwrap()).replace('|', "||"),
+            editor_quote(&format!(
+                "{msg}, falling_back to %s{}<ret>",
+                word_regex.unwrap()
+            ))
+        )),
+        _ => None,
+    } {
+        format!("evaluate-commands {}", &editor_quote(&multi_cmds))
+    } else {
+        format!("lsp-show-error {}", editor_quote(msg))
+    };
 
     // If editor is expecting a fifo response, give it one, so it won't hang.
     if let Some(ref fifo) = request.meta.fifo {
