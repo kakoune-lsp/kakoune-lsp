@@ -2516,7 +2516,7 @@ print("\n");
     %reg{x}
     update-option window lsp_snippets_placeholders
     # no need to set the NextPlaceholders face yet, select-next-placeholders will take care of that
-    evaluate-commands -itersel %{ set -add window lsp_snippets_placeholders "%val{selections_desc}|SnippetsOtherPlaceholders" }
+    evaluate-commands -itersel %{ set-option -add window lsp_snippets_placeholders "%val{selections_desc}|SnippetsOtherPlaceholders" }
 ]
 
 define-command lsp-snippets-select-next-placeholders %{
