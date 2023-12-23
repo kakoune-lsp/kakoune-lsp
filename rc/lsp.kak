@@ -2439,30 +2439,55 @@ use warnings;
 use Text::ParseWords();
 
 my @sel_content = Text::ParseWords::shellwords($ENV{"kak_quoted_selections"});
+my @existing_placeholder_ids = split(/ /, $ENV{"kak_opt_lsp_snippets_placeholder_groups"});
 
+my @placeholder_defaults;
 my %placeholder_id_to_default;
 my @placeholder_ids;
+my %placeholder_id_to_compacted_id;
 
-print("set-option window lsp_snippets_placeholder_groups");
 for my $i (0 .. $#sel_content) {
     my $sel = $sel_content[$i];
     $sel =~ s/\A\$\{?|\}\Z//g;
     my ($placeholder_id, $placeholder_default) = ($sel =~ /^(\d+)(?::(.*))?$/);
-    if ($placeholder_id eq "0") {
-        $placeholder_id = "9999";
-    }
-    $placeholder_ids[$i] = $placeholder_id;
-    print(" $placeholder_id");
+    $placeholder_ids[$i] = $placeholder_id + 0;
     if (defined($placeholder_default)) {
-        $placeholder_id_to_default{$placeholder_id} = $placeholder_default;
+        $placeholder_defaults[$i] = $placeholder_default;
     }
 }
-print("\n");
+
+my $next_placeholder_id = 0;
+for my $i (0 .. $#sel_content) {
+    my $placeholder_id = $placeholder_ids[$i];
+    if (not exists $placeholder_id_to_compacted_id{$placeholder_id}) {
+        my $id;
+        if ($placeholder_id == 0) {
+            $id = scalar @placeholder_ids - 1;
+        } else {
+            $id = $next_placeholder_id++;
+        }
+        $placeholder_id_to_compacted_id{$placeholder_id} = $id;
+        if (defined($placeholder_defaults[$i])) {
+            $placeholder_id_to_default{$id} = $placeholder_defaults[$i];
+        }
+    }
+}
+
+print("set-option window lsp_snippets_placeholder_groups");
+foreach (@placeholder_ids) {
+    if ($placeholder_id_to_compacted_id{$_} != -1) {
+        print " $placeholder_id_to_compacted_id{$_}";
+    }
+}
+foreach (@existing_placeholder_ids) {
+    print " " . ($_ + scalar @placeholder_ids);
+}
+print "\n";
 
 print("set-register dquote");
-foreach my $i (0 .. $#sel_content) {
-    my $placeholder_id = $placeholder_ids[$i];
+foreach my $placeholder_id (@placeholder_ids) {
     my $def = "";
+    $placeholder_id = $placeholder_id_to_compacted_id{$placeholder_id};
     if (exists $placeholder_id_to_default{$placeholder_id}) {
         $def = $placeholder_id_to_default{$placeholder_id};
         # de-double up closing braces
@@ -2478,7 +2503,7 @@ print("\n");
 '
     ]
     execute-keys R
-    set-option window lsp_snippets_placeholders %val{timestamp}
+    update-option window lsp_snippets_placeholders
     # no need to set the NextPlaceholders face yet, select-next-placeholders will take care of that
     evaluate-commands -itersel %{ set -add window lsp_snippets_placeholders "%val{selections_desc}|SnippetsOtherPlaceholders" }
 ]

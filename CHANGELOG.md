@@ -1,5 +1,8 @@
 ## Unreleased
 
+Fixes:
+- Completion snippets (accessed via `lsp-snippets-select-next-placeholders`) can now be nested, making it possible to cycle through the arguments of nested function calls.
+
 ## 15.0.1 - 2023-12-11
 
 Additions:
