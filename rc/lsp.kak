@@ -2404,7 +2404,7 @@ define-command lsp-snippets-insert -hidden -params 1 %[
         try %[
             # select things that look like placeholders
             # this regex is not as bad as it looks
-            evaluate-commands -draft %[
+            evaluate-commands -save-regs x -draft %[
                 execute-keys s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])*)?)\}))<ret>
                 # tests
                 # $1                - ok
@@ -2432,6 +2432,7 @@ define-command lsp-snippets-insert -hidden -params 1 %[
 ]
 
 define-command -hidden lsp-snippets-insert-perl-impl %[
+    set-register x nop
     evaluate-commands %sh[ # $kak_quoted_selections
         perl -e '
 use strict;
@@ -2462,7 +2463,14 @@ for my $i (0 .. $#sel_content) {
     if (not exists $placeholder_id_to_compacted_id{$placeholder_id}) {
         my $id;
         if ($placeholder_id == 0) {
-            $id = scalar @placeholder_ids - 1;
+            if (scalar @existing_placeholder_ids) {
+                # If we are a recusive snippet there probably already is an end anchor, so
+                # ignore this one.
+                print "set-register x execute-keys %[" . ($i+1) . ")<a-,>]\n";
+                $id = -1;
+            } else {
+                $id = scalar @placeholder_ids - 1;
+            }
         } else {
             $id = $next_placeholder_id++;
         }
@@ -2488,21 +2496,24 @@ print("set-register dquote");
 foreach my $placeholder_id (@placeholder_ids) {
     my $def = "";
     $placeholder_id = $placeholder_id_to_compacted_id{$placeholder_id};
-    if (exists $placeholder_id_to_default{$placeholder_id}) {
-        $def = $placeholder_id_to_default{$placeholder_id};
-        # de-double up closing braces
-        $def =~ s/\}\}/}/g;
-        # double up single-quotes
-        $def =~ s/'\''/'\'''\''/g;
+    if ($placeholder_id != -1) {
+        if (exists $placeholder_id_to_default{$placeholder_id}) {
+            $def = $placeholder_id_to_default{$placeholder_id};
+            # de-double up closing braces
+            $def =~ s/\}\}/}/g;
+            # double up single-quotes
+            $def =~ s/'\''/'\'''\''/g;
+        }
+        # make sure that the placeholder is non-empty so we can select it
+        if (length $def == 0) { $def = " " }
     }
-    # make sure that the placeholder is non-empty so we can select it
-    if (length $def == 0) { $def = " " }
     print(" '\''$def'\''");
 }
 print("\n");
 '
     ]
     execute-keys R
+    %reg{x}
     update-option window lsp_snippets_placeholders
     # no need to set the NextPlaceholders face yet, select-next-placeholders will take care of that
     evaluate-commands -itersel %{ set -add window lsp_snippets_placeholders "%val{selections_desc}|SnippetsOtherPlaceholders" }
