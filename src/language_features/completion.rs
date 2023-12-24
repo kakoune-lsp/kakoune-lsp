@@ -167,9 +167,6 @@ fn editor_completion(
 
                         if range.start.line == params.position.line
                             && range.end.line == params.position.line
-                            // Not sure why this case happens, see #455
-                            && (range.end.column == params.position.column
-                                || range.end.column + 1 == params.position.column)
                         {
                             Some(text_edit.new_text.clone())
                         } else {
