@@ -2369,8 +2369,11 @@ define-command -hidden lsp-snippets-insert-completion -params 1 %{ evaluate-comm
         # Delete the inserted text.
         select %opt{lsp_completion_inserted_ranges}
         execute-keys '<a-;>d'
-        evaluate-commands -draft -verbatim lsp-snippets-insert %opt[lsp_snippet_to_insert]
-        try lsp-snippets-select-next-placeholders
+        evaluate-commands -save-regs y %{
+            set-register y nop
+            evaluate-commands -draft -verbatim lsp-snippets-insert %opt[lsp_snippet_to_insert]
+            try %reg{y}
+        }
     }
 }}
 
@@ -2492,6 +2495,14 @@ foreach (@existing_placeholder_ids) {
 }
 print "\n";
 
+foreach (@placeholder_ids) {
+    if ($placeholder_id_to_compacted_id{$_} != -1) {
+        print "set-register y lsp-snippets-select-next-placeholders\n";
+        last;
+    }
+}
+
+
 print("set-register dquote");
 foreach my $placeholder_id (@placeholder_ids) {
     my $def = "";
@@ -2520,6 +2531,8 @@ print("\n");
 ]
 
 define-command lsp-snippets-select-next-placeholders %{
+    # Make sure to accept any completion, so we consider its placeholders.
+    execute-keys -with-hooks i<backspace>
     update-option window lsp_snippets_placeholders
     evaluate-commands %sh{
         eval set -- "$kak_quoted_opt_lsp_snippets_placeholder_groups"
