@@ -33,7 +33,7 @@ mod workspace;
 use crate::types::*;
 use crate::util::*;
 use clap::ArgMatches;
-use clap::{crate_version, App, Arg, ArgAction};
+use clap::{self, crate_version, Arg, ArgAction};
 use context::meta_for_session;
 use daemonize::Daemonize;
 use editor_transport::send_command_to_editor;
@@ -64,18 +64,20 @@ fn main() {
         let locale = CString::new("").unwrap();
         unsafe { libc::setlocale(libc::LC_ALL, locale.as_ptr()) };
     }
-    let matches = App::new("kak-lsp")
+    let matches = clap::Command::new("kak-lsp")
         .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
         .arg(
             Arg::new("kakoune")
                 .long("kakoune")
+                .action(ArgAction::SetTrue)
                 .help("Generate commands for Kakoune to plug in kak-lsp"),
         )
         .arg(
             Arg::new("request")
                 .long("request")
+                .action(ArgAction::SetTrue)
                 .help("Forward stdin to kak-lsp server"),
         )
         .arg(
@@ -83,13 +85,13 @@ fn main() {
                 .short('c')
                 .long("config")
                 .value_name("FILE")
-                .help("Read config from FILE")
-                .takes_value(true),
+                .help("Read config from FILE"),
         )
         .arg(
             Arg::new("daemonize")
                 .short('d')
                 .long("daemonize")
+                .action(ArgAction::SetTrue)
                 .help("Daemonize kak-lsp process (server only)"),
         )
         .arg(
@@ -98,7 +100,6 @@ fn main() {
                 .long("session")
                 .value_name("SESSION")
                 .help("Session id to communicate via unix socket")
-                .takes_value(true)
                 .required(true),
         )
         .arg(
@@ -106,12 +107,12 @@ fn main() {
                 .short('t')
                 .long("timeout")
                 .value_name("TIMEOUT")
-                .help("Session timeout in seconds (default 1800)")
-                .takes_value(true),
+                .help("Session timeout in seconds (default 1800)"),
         )
         .arg(
             Arg::new("initial-request")
                 .long("initial-request")
+                .action(ArgAction::SetTrue)
                 .help("Read initial request from stdin"),
         )
         .arg(
@@ -124,12 +125,11 @@ fn main() {
             Arg::new("log")
                 .long("log")
                 .value_name("PATH")
-                .help("File to write the log into instead of stderr")
-                .takes_value(true),
+                .help("File to write the log into instead of stderr"),
         )
         .get_matches();
 
-    if matches.is_present("kakoune") {
+    if matches.get_flag("kakoune") {
         return kakoune();
     }
 
@@ -149,7 +149,7 @@ fn main() {
     };
 
     let config_path = matches
-        .value_of("config")
+        .get_one::<String>("config")
         .map(|config| Path::new(&config).to_owned())
         .or_else(|| {
             try_config_dir(
@@ -164,7 +164,7 @@ fn main() {
         config = fs::read_to_string(config_path).expect("Failed to read config");
     }
 
-    let session = String::from(matches.value_of("session").unwrap());
+    let session = String::from(matches.get_one::<String>("session").unwrap());
 
     let mut config: Config = match toml::from_str(&config)
         .map_err(|err| err.to_string())
@@ -210,17 +210,17 @@ fn main() {
 
     config.server.session = session;
 
-    if let Some(timeout) = matches.value_of("timeout") {
+    if let Some(timeout) = matches.get_one::<String>("timeout") {
         config.server.timeout = timeout.parse().unwrap();
     }
 
     let mut input = Vec::new();
-    if matches.is_present("request") || matches.is_present("initial-request") {
+    if matches.get_flag("request") || matches.get_flag("initial-request") {
         stdin()
             .read_to_end(&mut input)
             .expect("Failed to read stdin");
     }
-    if matches.is_present("request") {
+    if matches.get_flag("request") {
         let mut path = util::temp_dir();
         path.push(&config.server.session);
         let connect = || match UnixStream::connect(&path) {
@@ -264,12 +264,12 @@ fn main() {
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
-        let initial_request = if matches.is_present("initial-request") {
+        let initial_request = if matches.get_flag("initial-request") {
             Some(String::from_utf8_lossy(&input).to_string())
         } else {
             None
         };
-        if matches.is_present("daemonize") {
+        if matches.get_flag("daemonize") {
             let mut pid_path = util::temp_dir();
             pid_path.push(format!("{}.pid", config.server.session));
             if let Err(e) = Daemonize::new()
@@ -345,7 +345,7 @@ fn setup_logger(
     };
 
     let mut log_path = Box::default();
-    let logger = if let Some(path) = matches.value_of("log") {
+    let logger = if let Some(path) = matches.get_one::<String>("log") {
         log_path = Box::new({
             let path = PathBuf::from_str(path).unwrap();
             path.parent().and_then(|path| path.canonicalize().ok())
