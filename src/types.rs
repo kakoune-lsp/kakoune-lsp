@@ -96,10 +96,10 @@ impl<'de> Deserialize<'de> for SemanticTokenConfig {
                 A: MapAccess<'de>,
             {
                 let mut faces = None;
-                while let Some(k) = map.next_key()? {
-                    match k {
+                while let Some(k) = map.next_key::<String>()? {
+                    match k.as_str() {
                         "faces" => faces = Some(map.next_value()?),
-                        _ => return Err(A::Error::unknown_field(k, &["faces"])),
+                        _ => return Err(A::Error::unknown_field(&k, &["faces"])),
                     }
                 }
                 let faces = faces.ok_or_else(|| A::Error::missing_field("faces"))?;
