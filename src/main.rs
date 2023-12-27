@@ -158,7 +158,9 @@ fn main() {
                     .or_else(|| dirs::home_dir().map(|h| h.join(".config"))),
             )
         })
-        .or_else(|| try_config_dir(dirs::config_dir()));
+        .or_else(|| try_config_dir(dirs::config_dir())) // Historical value on macOS.
+        .or_else(|| try_config_dir(dirs::preference_dir())) // Historical config dir on macOS.
+        ;
 
     if let Some(config_path) = config_path {
         config = fs::read_to_string(config_path).expect("Failed to read config");
