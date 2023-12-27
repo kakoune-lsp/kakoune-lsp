@@ -339,6 +339,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                     resolve_support: None,
                                 }),
                                 diagnostic: None,
+                                inline_completion: None,
                             }),
                             window: Some(WindowClientCapabilities {
                                 work_done_progress: Some(true),
@@ -400,6 +401,9 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                             version: Some(env!("CARGO_PKG_VERSION").to_string()),
                         }),
                         locale: None,
+                        work_done_progress_params: WorkDoneProgressParams {
+                            work_done_token: None,
+                        },
                     }],
                 )
             },
