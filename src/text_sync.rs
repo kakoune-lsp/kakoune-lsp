@@ -96,14 +96,17 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
     let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
     for server_name in &servers {
         let server = &ctx.language_servers[server_name];
-        let text = match server.capabilities.as_ref().unwrap().text_document_sync {
+        let options = match &server.capabilities.as_ref().unwrap().text_document_sync {
             Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
-                save:
-                    Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
-                        include_text: Some(true),
-                    })),
+                save: Some(opts),
                 ..
-            })) => ctx
+            })) if !matches!(opts, TextDocumentSyncSaveOptions::Supported(false)) => opts,
+            _ => continue, // don't send didSave by default
+        };
+        let text = match options {
+            TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
+                include_text: Some(true),
+            }) => ctx
                 .documents
                 .get(&meta.buffile)
                 .map(|doc| doc.text.to_string()),
