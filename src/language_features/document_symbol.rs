@@ -17,6 +17,7 @@ use serde::Deserialize;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::fmt;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use unicode_width::UnicodeWidthStr;
@@ -206,6 +207,28 @@ fn editor_document_symbol(
     ctx.exec(meta, command);
 }
 
+enum Tree {
+    Child,
+    LastChild,
+    Pipe,
+    Empty,
+}
+
+impl fmt::Display for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Tree::Child => "├── ",
+                Tree::LastChild => "└── ",
+                Tree::Pipe => "│   ",
+                Tree::Empty => "    ",
+            }
+        )
+    }
+}
+
 /// Represent list of symbols as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
 pub fn format_symbol<T: Symbol<T>>(
@@ -215,15 +238,35 @@ pub fn format_symbol<T: Symbol<T>>(
     server: &ServerSettings,
     ctx: &Context,
 ) -> String {
-    fn format_symbol_at_depth<'a, T: Symbol<T>>(
-        output: &mut Vec<(String, String, &'a str)>,
-        items: &'a [T],
+    fn format_symbol_at_depth<T: Symbol<T>>(
+        output: &mut Vec<(String, String)>,
+        items: &[T],
         meta: &EditorMeta,
         server: &ServerSettings,
         ctx: &Context,
-        depth: usize,
+        prefix: &mut Vec<bool>,
     ) {
-        for symbol in items {
+        let length = items.len();
+        let is_root = prefix.is_empty();
+        for (index, symbol) in items.iter().enumerate() {
+            let is_last = index + 1 == length;
+
+            let hierarchy = if is_root {
+                "".to_string()
+            } else {
+                let last_hierarchy_symbol = if is_last {
+                    Tree::LastChild
+                } else {
+                    Tree::Child
+                };
+                let prefixing_hierarchy_symbols = prefix
+                    .iter()
+                    .skip(1)
+                    .map(|&was_child| if was_child { Tree::Empty } else { Tree::Pipe })
+                    .join("");
+                format!("{}{}", prefixing_hierarchy_symbols, last_hierarchy_symbol)
+            };
+            let description = format!("{}{} ({:?})", hierarchy, symbol.name(), symbol.kind());
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, symbol, &mut filename_path);
             let position = get_kakoune_position_with_fallback(
@@ -234,47 +277,40 @@ pub fn format_symbol<T: Symbol<T>>(
             );
             output.push((
                 format!(
-                    "{}{}:{}:{}:",
-                    "  ".repeat(depth),
+                    "{}:{}:{}:",
                     short_file_path(filename, &server.root_path),
                     position.line,
                     position.column,
                 ),
-                format!("{:?}", symbol.kind()),
-                symbol.name(),
+                description,
             ));
-            format_symbol_at_depth(output, symbol.children(), meta, server, ctx, depth + 1)
+
+            let children = symbol.children();
+            prefix.push(is_last);
+            format_symbol_at_depth(output, children, meta, server, ctx, prefix);
+            prefix.pop();
         }
     }
     let mut columns = vec![];
-    format_symbol_at_depth(&mut columns, &items, meta, server, ctx, 0);
+    format_symbol_at_depth(&mut columns, &items, meta, server, ctx, &mut vec![]);
     if align {
-        let Some(width1) = columns
+        let Some(width) = columns
             .iter()
-            .map(|(position, _, _)| UnicodeWidthStr::width(position.as_str()))
+            .map(|(position, _)| UnicodeWidthStr::width(position.as_str()))
             .max()
         else {
             return "".to_string();
         };
-        let width2 = columns
-            .iter()
-            .map(|(_, kind, _)| UnicodeWidthStr::width(kind.as_str()))
-            .max()
-            .unwrap();
         columns
             .into_iter()
-            .map(|(position, kind, description)| {
-                format!(
-                    "{position:width1$} {kind:width2$} {description}\n",
-                    width1 = width1,
-                    width2 = width2
-                )
+            .map(|(position, description)| {
+                format!("{position:width$} {description}\n", width = width)
             })
             .join("")
     } else {
         columns
             .into_iter()
-            .map(|(position, kind, description)| format!("{position} {kind} {description}\n"))
+            .map(|(position, description)| format!("{position} {description}\n"))
             .join("")
     }
 }
