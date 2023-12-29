@@ -235,16 +235,15 @@ pub fn format_symbol<T: Symbol<T>>(
     ctx: &Context,
 ) -> String {
     fn format_symbol_at_depth<'a, T: Symbol<T>>(
-        output: &mut Vec<(String, String, String)>,
+        output: &mut Vec<(String, String)>,
         items: &'a [T],
         meta: &EditorMeta,
         server: &ServerSettings,
         ctx: &Context,
-        depth: usize,
         prefix: &Vec<bool>,
     ) {
         let length = items.len();
-        let is_root = depth == 0;
+        let is_root = prefix.len() == 0;
         for (index, symbol) in items.iter().enumerate() {
             let is_last = index + 1 == length;
 
@@ -261,15 +260,12 @@ pub fn format_symbol<T: Symbol<T>>(
                 };
                 let prefixing_hierarchy_symbols = prefix
                     .iter()
-                    .rev()
-                    .take(depth - 1)
+                    .skip(1)
                     .map(|flag| if *flag { Tree::Empty } else { Tree::Pipe })
-                    .rev()
                     .join("");
                 format!("{}{}", prefixing_hierarchy_symbols, last_hierarchy_symbol)
             };
-            let description = format!("{}{}", hierarchy, symbol.name());
-            let kind = format!("{}{:?}", hierarchy, symbol.kind());
+            let description = format!("{}{} ({:?})", hierarchy, symbol.name(), symbol.kind());
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, symbol, &mut filename_path);
             let position = get_kakoune_position_with_fallback(
@@ -280,54 +276,37 @@ pub fn format_symbol<T: Symbol<T>>(
             );
             output.push((
                 format!(
-                    "{}{}:{}:{}:",
-                    "  ".repeat(depth),
+                    "{}:{}:{}:",
                     short_file_path(filename, &server.root_path),
                     position.line,
                     position.column,
                 ),
                 description,
-                kind,
             ));
             let children = symbol.children();
-            format_symbol_at_depth(output, children, meta, server, ctx, depth + 1, &new_prefix)
+            format_symbol_at_depth(output, children, meta, server, ctx, &new_prefix)
         }
     }
     let mut columns = vec![];
-    format_symbol_at_depth(&mut columns, &items, meta, server, ctx, 0, &vec![]);
+    format_symbol_at_depth(&mut columns, &items, meta, server, ctx, &vec![]);
     if align {
-        let Some(width1) = columns
+        let Some(width) = columns
             .iter()
-            .map(|(position, _, _)| UnicodeWidthStr::width(position.as_str()))
+            .map(|(position, _)| UnicodeWidthStr::width(position.as_str()))
             .max()
         else {
             return "".to_string();
         };
-        let width2 = columns
-            .iter()
-            .map(|(_, description, _)| UnicodeWidthStr::width(description.as_str()))
-            .max()
-            .unwrap();
-        let width3 = columns
-            .iter()
-            .map(|(_, _, kind)| UnicodeWidthStr::width(kind.as_str()))
-            .max()
-            .unwrap();
         columns
             .into_iter()
-            .map(|(position, description, kind)| {
-                format!(
-                    "{position:width1$} {description:width2$} {kind:width3$}\n",
-                    width1 = width1,
-                    width2 = width2,
-                    width3 = width3,
-                )
+            .map(|(position, description)| {
+                format!("{position:width$} {description}\n", width = width,)
             })
             .join("")
     } else {
         columns
             .into_iter()
-            .map(|(position, description, kind)| format!("{position} {description} {kind}\n"))
+            .map(|(position, description)| format!("{position} {description}\n"))
             .join("")
     }
 }
