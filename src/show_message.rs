@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use itertools::Itertools;
 use jsonrpc_core::{Id, MethodCall};
 use lsp_types::{MessageActionItem, MessageType, ShowMessageRequestParams};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     context::Context,
@@ -73,22 +73,22 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
             return;
         }
     };
-    let request_id = editor_quote(
-        toml::to_string(&id)
-            .expect("cannot convert request id to toml")
-            .as_ref(),
-    );
+
+    let mut request_id = String::new();
+    id.serialize(toml::ser::ValueSerializer::new(&mut request_id))
+        .expect("cannot convert request id to toml");
+    let request_id = editor_quote(&request_id);
+
     let option_menu_opts = options
         .iter()
         .flat_map(|item| {
+            let mut toml_quoted_item = String::new();
+            item.serialize(toml::ser::ValueSerializer::new(&mut toml_quoted_item))
+                .expect("cannot convert message action to toml");
             let cmd = editor_quote(&format!(
                 "lsp-show-message-request-respond {} {}",
                 request_id,
-                editor_quote(
-                    toml::to_string(item)
-                        .expect("cannot convert message action to toml")
-                        .as_ref()
-                )
+                editor_quote(&toml_quoted_item)
             ));
             [editor_quote(item.title.as_ref()), cmd]
         })
