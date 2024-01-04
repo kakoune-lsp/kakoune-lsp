@@ -82,13 +82,14 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
     let option_menu_opts = options
         .iter()
         .flat_map(|item| {
-            let mut toml_quoted_item = String::new();
-            item.serialize(toml::ser::ValueSerializer::new(&mut toml_quoted_item))
-                .expect("cannot convert message action to toml");
             let cmd = editor_quote(&format!(
                 "lsp-show-message-request-respond {} {}",
                 request_id,
-                editor_quote(&toml_quoted_item)
+                editor_quote(
+                    toml::to_string(item)
+                        .expect("cannot convert message action to toml")
+                        .as_ref()
+                )
             ));
             [editor_quote(item.title.as_ref()), cmd]
         })
