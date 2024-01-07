@@ -2427,10 +2427,10 @@ define-command lsp-snippets-insert -hidden -params 1 %[
                 lsp-snippets-insert-perl-impl
             ]
         ]
-        try %{
-            # unescape $
-            execute-keys 's\\\$<ret>;d'
-        }
+        try %[
+            # Unescape snippet metacharacters.
+            execute-keys 's\\[$}\\,|]<ret><a-:><a-semicolon><semicolon>d'
+        ]
     ]
 ]
 
