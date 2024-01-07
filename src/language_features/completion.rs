@@ -312,16 +312,7 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
         return;
     }
 
-    let server = &ctx.language_servers[meta.server.as_ref().unwrap()];
-    let resolve_supported = server
-        .capabilities
-        .as_ref()
-        .and_then(|caps| caps.completion_provider.as_ref())
-        .and_then(|compl| compl.resolve_provider)
-        .unwrap_or(false);
-
     let (server_name, item, detail, documentation) = if pager_active {
-        assert!(resolve_supported);
         let (server_name, item) = &ctx.completion_items[completion_item_index as usize];
         // Stop if there is nothing interesting to resolve.
         if item.detail.is_some() && item.documentation.is_some() {
@@ -348,9 +339,7 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
                 apply_text_edits(&server_name, &meta, uri, edits, ctx);
                 return;
             }
-            _ => {
-                assert!(resolve_supported);
-            }
+            _ => (),
         }
 
         (server_name, item, None, None)
