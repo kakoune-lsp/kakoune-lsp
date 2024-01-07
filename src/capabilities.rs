@@ -385,7 +385,14 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                 .map(|s| s.to_string())
                                 .collect(),
                             ),
-                            experimental: None,
+                            experimental: Some(serde_json::json!({
+                                "hoverActions": true,
+                                "commands": {
+                                    "commands": [
+                                        "rust-analyzer.runSingle",
+                                    ]
+                                }
+                            })),
                         },
                         initialization_options: initialization_options[idx].clone(),
                         process_id: Some(process::id()),

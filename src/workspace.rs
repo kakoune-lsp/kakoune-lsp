@@ -198,6 +198,9 @@ pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context
         "rust-analyzer.applySourceChange" => {
             rust_analyzer::apply_source_change(meta, req_params, ctx);
         }
+        "rust-analyzer.runSingle" => {
+            rust_analyzer::run_single(meta, req_params, ctx);
+        }
         _ => {
             ctx.call::<ExecuteCommand, _>(
                 meta,

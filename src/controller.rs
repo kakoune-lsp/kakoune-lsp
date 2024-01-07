@@ -672,6 +672,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         rust_analyzer::ExpandMacroRequest::METHOD => {
             rust_analyzer::expand_macro(meta, params, ctx);
         }
+        "rust-analyzer/runTest" => {
+            rust_analyzer::run_test(meta, params, ctx);
+        }
 
         // texlab
         texlab::Build::METHOD => {
