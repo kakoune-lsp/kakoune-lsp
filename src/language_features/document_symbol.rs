@@ -942,7 +942,7 @@ fn editor_document_symbol_menu(
         }
         None => return,
     };
-    let command = format!("lsp-menu -promiscuous {}", choices);
+    let command = format!("lsp-menu -select-cmds {}", choices);
     ctx.exec(meta, command);
 }
 
@@ -1025,7 +1025,8 @@ fn symbol_menu<T: Symbol<T>>(
                 }
                 _ => (),
             }
-            format!("{} {}", editor_quote(&name), editor_quote(&goto_command))
+            let goto_command = editor_quote(&goto_command);
+            format!("{} {goto_command} {goto_command}", editor_quote(&name))
         })
         .join(" ")
 }

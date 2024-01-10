@@ -181,104 +181,140 @@ define-command -hidden lsp-perform-code-lens -params 1.. -docstring "Called on :
     lsp-menu %arg{@}
 }
 
-define-command -hidden lsp-menu -params 1.. -docstring "Like menu but with prompt completion (including fuzzy search)" %{
-    evaluate-commands -save-regs ^ %{
-        execute-keys -save-regs "" Z
-        try %{
-            evaluate-commands -draft %{prompt -menu '' ''}
-            evaluate-commands %sh{
-                shellquote() {
-                    printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
-                }
-                promiscuous=false
-                restore_position() {
-                    :
-                }
-                if [ "$1" = "-promiscuous" ]; then
-                    promiscuous=true
-                    restore_position() {
-                        printf %s 'evaluate-commands -save-regs ^ %{ # TODO
-                            evaluate-commands %sh{
-                                set -- '"$kak_quoted_reg_caret"'
-                                file=$1
-                                shift
-                                printf %s "set-register ^ %|$(printf %s "$file" | sed "s/|/||/g")| $@"
+define-command -hidden lsp-menu -params 1.. %{
+    evaluate-commands -save-regs a %{
+        set-register a %arg{@}
+        lsp-menu-impl
+    }
+}
+define-command -hidden lsp-menu-impl %{
+    evaluate-commands %sh{
+        echo >$kak_command_fifo "echo -to-file $kak_response_fifo -quoting kakoune -- %reg{a}"
+            perl < $kak_response_fifo -we '
+            use strict;
+            my $Q = "'\''";
+            my @args = ();
+            {
+                my $arg = undef;
+                my $prev_is_quote = 0;
+                my $state = "before-arg";
+                while (not eof(STDIN)) {
+                    my $c = getc(STDIN);
+                    if ($state eq "before-arg") {
+                        ($c eq $Q) or die "bad char: $c";
+                        $state = "in-arg";
+                        $arg = "";
+                    } elsif ($state eq "in-arg") {
+                        if ($prev_is_quote) {
+                            $prev_is_quote = 0;
+                            if ($c eq $Q) {
+                                $arg .= $Q;
+                                next;
                             }
-                            execute-keys -save-regs "" '"$1"'
-                        }'
+                            ($c eq " ") or die "bad char: $c";
+                            push @args, $arg;
+                            $state = "before-arg";
+                            next;
+                        } elsif ($c eq $Q) {
+                            $prev_is_quote = 1;
+                            next;
+                        }
+                        $arg .= $c;
                     }
-                    on_abort=$(printf " -on-abort %%¶%s¶" "$(printf %s "$(restore_position "z<esc>")" | sed s/¶/¶¶/g)")
-                    shift
-                elif [ "$1" = "-on-abort" ]; then
-                    on_abort=$(printf " -on-abort %%¶%s¶" "$(printf %s "$2" | sed s/¶/¶¶/g)")
-                    shift 2
-                fi
-                cases=
-                completion=
-                nl=$(printf '\n.'); nl=${nl%.}
-                while [ $# -gt 0 ]; do
-                    title=$1; shift
-                    command=$1; shift
-                    completion="${completion}${title}${nl}"
-                    cases="${cases}
-                    ($(shellquote "$title" s/¶/¶¶/g))
-                        printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
-                        ;;"
-                done
-                printf "\
-                prompt %%{} %%§
-                    evaluate-commands %%sh¶
-                        case \"\$kak_text\" in%s
-                        (*) echo fail -- no such item: \"'\$(printf %%s \"\$kak_text\" | sed \"s/'/''/g\")'\" ;;
-                        esac
-                    ¶
-                § -on-change %%§
-                    evaluate-commands %%sh¶
-                        $promiscuous || exit
-                        case \"\$kak_text\" in%s
-                        (*) printf %%s %s ;;
-                        esac
-                    ¶
-                §" "$cases" "$cases" "$(shellquote "$(restore_position "<a-semicolon>z")" s/¶/¶¶/g)"
-                printf ' %s' "$on_abort"
-                printf ' -menu -shell-script-candidates %%§
-                    printf %%s %s
-                    §\n' "$(shellquote "$completion")"
+                }
+                ($state eq "in-arg") or die "expected $Q as last char";
+                push @args, $arg;
             }
-        } catch %{
-            evaluate-commands %sh{
-                shellquote() {
-                    printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g; s/§/§§/g; $2")"
+
+            my $auto_single = 0;
+            my $select_cmds = 0;
+            my $on_abort = "";
+            while (defined $args[0] && $args[0] =~ m/^-/) {
+                if ($args[0] eq "-auto-single") {
+                    $auto_single = 1;
+                }
+                if ($args[0] eq "-select-cmds") {
+                    $select_cmds = 1;
+                }
+                if ($args[0] eq "-on-abort") {
+                    if (not defined $args[1]) {
+                        print "fail %{menu: missing argument to -on-abort}";
+                        exit;
+                    }
+                    $on_abort = $args[1];
+                }
+                shift @args;
+                if ($args[0] eq "--") {
+                    last;
                 }
             }
-            if [ "$1" = "-on-abort" ]; then
-                shift 2
-            fi
-            cases=
-            completion=
-            nl=$(printf '\n.'); nl=${nl%.}
-            while [ $# -gt 0 ]; do
-                title=$1; shift
-                command=$1; shift
-                completion="${completion}${title}${nl}"
-                cases="${cases}
-                $(shellquote "$title" s/¶/¶¶/g))
-                    printf '%s\\n' $(shellquote "$command" s/¶/¶¶/g)
-                    ;;"
-            done
-            printf "\
-            define-command -override -hidden lsp-menu-select -params 1 %%§
-                evaluate-commands %%sh¶
-                    case \"\$1\" in%s
-                    *) echo fail -- no such item: \"'\$(printf %%s \"\$1\" | sed \"s/'/''/g\")'\" ;;
-                    esac
-                ¶
-            §" "$cases"
-            printf ' -menu -shell-script-candidates %%§
-                printf %%s %s
-                §\n' "$(shellquote "$completion")"
-            echo 'execute-keys %{: lsp-menu-select <tab>}'
-        }
+            my $stride = 2 + $select_cmds;
+            if (scalar @args == 0 or scalar @args % $stride != 0) {
+                print "fail %{menu: wrong argument count}";
+                exit;
+            }
+            if ($auto_single && scalar @args == $stride) {
+                print $args[$0];
+                exit;
+            }
+
+            sub shellquote {
+                my $arg = shift;
+                $arg =~ s/$Q/$Q\\$Q$Q/g;
+                return "$Q$arg$Q";
+            }
+            sub kakquote {
+                my $arg = shift;
+                $arg =~ s/$Q/$Q$Q/g;
+                return "$Q$arg$Q";
+            }
+
+            my $accept_cases = "";
+            my $select_cases = "";
+            my $completions = "";
+            sub case_clause {
+                my $name = shellquote shift;
+                my $command = shellquote shift;
+                return "($name)\n"
+                     . " printf \"%s\n\" $command ;;\n";
+            }
+            for (my $i = 0; $i < scalar @args; $i += $stride) {
+                my $name = $args[$i];
+                my $command = $args[$i+1];
+                $accept_cases .= case_clause $name, $command;
+                $select_cases .= case_clause $name, $args[$i+2] if $select_cmds;
+                $completions .= "$name\n";
+            }
+            use File::Temp qw(tempdir);
+            my $tmpdir = tempdir;
+            sub put {
+                my $name = shift;
+                my $contents = shift;
+                my $filename = "$tmpdir/$name";
+                open my $fh, ">", "$filename" or die "failed to open $filename: $!";
+                print $fh $contents or die "write: $!";
+                close $fh or die "close: $!";
+                return $filename;
+            };
+            my $on_accept = put "on-accept",
+                "case \"\$kak_text\" in\n" .
+                "$accept_cases" .
+                "(*) echo fail -- no such item: \"$Q\$(printf %s \"\$kak_text\" | sed \"s/$Q/$Q$Q/g\")$Q\";\n" .
+                "esac\n";
+            my $on_change = put "on-change",
+                "case \"\$kak_text\" in\n" .
+                "$select_cases" .
+                "esac\n";
+            my $shell_script_candidates = put "shell-script-candidates", $completions;
+
+            print "prompt %{} %{ evaluate-commands %sh{. $on_accept kak_text; rm -r $tmpdir} }";
+            print  " -on-abort " . kakquote "nop %sh{rm -r $tmpdir}; $on_abort";
+            if ($select_cmds) {
+                print " -on-change %{ evaluate-commands %sh{. $on_change kak_text} }";
+            }
+            print " -menu -shell-script-candidates %{cat $shell_script_candidates}";
+        ' ||
+            echo 'fail menu: encountered an error, see *debug* buffer';
     }
 }
 
