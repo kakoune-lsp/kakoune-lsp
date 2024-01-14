@@ -50,7 +50,7 @@ declare-option -hidden str lsp_extra_word_chars
 # We could avoid this if we are not enabled, but this doesn't trigger that often and that would complicate initialization.
 hook -group lsp-extra-word-chars global WinSetOption extra_word_chars=.* %{
     set-option window lsp_extra_word_chars %sh{
-        eval set -- $kak_quoted_opt_extra_word_chars
+        eval set -- "$kak_quoted_opt_extra_word_chars"
         for char; do
             case "$char" in
                 (-) printf '\\-' ;;
@@ -983,7 +983,7 @@ declare-option -hidden str-list lsp_selection_ranges
 declare-option -hidden int lsp_selection_range_selected
 define-command -hidden lsp-selection-range-show %{
     evaluate-commands %sh{
-        eval set -- $kak_quoted_opt_lsp_selection_ranges
+        eval set -- "$kak_quoted_opt_lsp_selection_ranges"
         if [ $# -eq 1 ]; then
             echo "info 'lsp-selection-range: no parent node'"
         else
@@ -998,7 +998,7 @@ define-command lsp-selection-range-select -params 1 \
 A numeric argument selects by absolute index, where 1 is the innermost child" %{
     evaluate-commands %sh{
         arg=$1
-        eval set -- $kak_quoted_opt_lsp_selection_ranges
+        eval set -- "$kak_quoted_opt_lsp_selection_ranges"
         index=$kak_opt_lsp_selection_range_selected
         case "$arg" in
             (up) [ $index -lt $# ] && index=$(($index + 1)) ;;
@@ -1176,7 +1176,7 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params.settings]
 lsp_config = \"\"\"$(printf %s "${kak_opt_lsp_config}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')\"\"\"
 "
-eval "set -- $kak_quoted_opt_lsp_server_configuration"
+eval set -- "$kak_quoted_opt_lsp_server_configuration"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
@@ -1945,7 +1945,7 @@ define-command -hidden lsp-get-server-initialization-options -params 1 -docstrin
     Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
 } %{
     nop %sh{
-(eval "set -- $kak_quoted_opt_lsp_server_initialization_options"
+(eval set -- "$kak_quoted_opt_lsp_server_initialization_options"
 while [ $# -gt 0 ]; do
     key=${1%%=*}
     value=${1#*=}
