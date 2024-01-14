@@ -152,7 +152,7 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx
         Some(lenses) => lenses,
         None => return,
     };
-    let lenses = lenses
+    let mut lenses = lenses
         .iter()
         .filter(|(server_name, lens)| {
             let ServerSettings {
@@ -163,6 +163,11 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx
         })
         .map(|(a, b)| (a.clone(), b.clone()))
         .collect::<Vec<_>>();
+
+    lenses.sort_by_key(|(_server_name, lens)| {
+        let Range { start, end } = lens.range;
+        end.line - start.line
+    });
 
     if lenses.is_empty() {
         ctx.exec(meta, "lsp-show-error 'no code lens in selection'");
