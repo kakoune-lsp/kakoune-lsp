@@ -1583,24 +1583,6 @@ column   = ${kak_cursor_column}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command rust-analyzer-run-test -docstring %{Run test at cursor
-
-This requires the "cargo" command from https://gitlab.com/Screwtapello/kakoune-cargo
-} %{
-    nop %sh{ (printf %s "
-session  = \"${kak_session}\"
-client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
-filetype = \"${kak_opt_filetype}\"
-version  = ${kak_timestamp:-0}
-method   = \"rust-analyzer/runTest\"
-    $([ -z ${kak_hook_param+x} ] || echo hook = true)
-[params.position]
-line     = ${kak_cursor_line}
-column   = ${kak_cursor_column}
-" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
-}
-
 define-command -hidden rust-analyzer-inlay-hints -docstring "DEPRECATED, use lsp-inlay-hints-enable. request inlay hints" %{
     lsp-inlay-hints
 }

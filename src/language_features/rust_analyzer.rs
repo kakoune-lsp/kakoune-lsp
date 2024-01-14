@@ -1,5 +1,4 @@
 use crate::context::{Context, RequestParams};
-use crate::language_features::code_action::execute_command_editor_command;
 use crate::position::{get_lsp_position, lsp_position_to_kakoune};
 use crate::text_edit::apply_text_edits;
 use crate::types::{EditorMeta, EditorParams, KakounePosition, PositionParams};
@@ -199,96 +198,6 @@ fn editor_expand_macro(meta: EditorMeta, result: &ExpandMacroResponse, ctx: &mut
         editor_escape(&result.name),
         editor_escape(&result.expansion)
     );
-    ctx.exec(meta, command);
-}
-
-#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
-pub struct HoverAction {
-    pub commands: Vec<Command>,
-}
-
-// Same as Hover but with actions.
-#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
-pub struct RustAnalyzerHover {
-    pub contents: HoverContents,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub range: Option<Range>,
-    pub actions: Option<Vec<HoverAction>>,
-}
-
-#[derive(Debug)]
-pub enum RustAnalyzerHoverRequest {}
-
-impl Request for RustAnalyzerHoverRequest {
-    type Params = HoverParams;
-    type Result = Option<RustAnalyzerHover>;
-    const METHOD: &'static str = "textDocument/hover";
-}
-
-pub fn run_test(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
-
-    let req_params = ctx
-        .language_servers
-        .iter()
-        .map(|(server_name, server_settings)| {
-            (
-                server_name.clone(),
-                vec![HoverParams {
-                    text_document_position_params: TextDocumentPositionParams {
-                        text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
-                        },
-                        position: get_lsp_position(
-                            server_settings,
-                            &meta.buffile,
-                            &params.position,
-                            ctx,
-                        )
-                        .unwrap(),
-                    },
-                    work_done_progress_params: WorkDoneProgressParams {
-                        work_done_token: None,
-                    },
-                }],
-            )
-        })
-        .collect();
-
-    ctx.call::<RustAnalyzerHoverRequest, _>(
-        meta,
-        RequestParams::Each(req_params),
-        move |ctx: &mut Context, meta, results| {
-            if let Some((_server_name, result)) = results.into_iter().next() {
-                editor_run_test(meta, ctx, result);
-            }
-        },
-    );
-}
-
-fn editor_run_test(meta: EditorMeta, ctx: &mut Context, result: Option<RustAnalyzerHover>) {
-    let Some(hover) = result else {
-        return;
-    };
-
-    let Some(actions) = hover.actions else {
-        ctx.exec(meta, "lsp-show-error: no test at cursor");
-        return;
-    };
-
-    if actions.len() != 1 {
-        error!("Unsupported number of hover actions: {}", actions.len());
-        return;
-    }
-
-    let commands = &actions[0].commands;
-
-    if commands.len() != 1 {
-        error!("Unsupported number of commands: {}", commands.len());
-        return;
-    }
-
-    let command = execute_command_editor_command(&commands[0], false);
     ctx.exec(meta, command);
 }
 

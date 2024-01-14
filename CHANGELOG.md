@@ -2,7 +2,7 @@
 
 Additions:
 - `lsp-document-symbols` now renders symbols in a tree.
-- `rust-analyzer-run-test` to run test at cursor.
+- `lsp-code-lens` can now run tests with `rust-analyzer`, provided https://gitlab.com/Screwtapello/kakoune-cargo is installed.
 Fixes:
 - Completion snippets (accessed via `lsp-snippets-select-next-placeholders`) can now be nested, making it possible to cycle through the arguments of nested function calls.
 - `completionItem.additionalTextEdits` are now applied also when the server does not support `completionItem/resolve`.

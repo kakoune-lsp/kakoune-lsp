@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use super::code_action::execute_command_editor_command;
 use crate::capabilities::CAPABILITY_CODE_LENS;
-use crate::capabilities::CAPABILITY_EXECUTE_COMMANDS;
 use crate::context::*;
 use crate::diagnostics::gather_line_flags;
 use crate::position::*;
@@ -22,10 +21,7 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .language_servers
         .iter()
-        .filter(|(_, server)| {
-            server_has_capability(server, CAPABILITY_CODE_LENS)
-                && server_has_capability(server, CAPABILITY_EXECUTE_COMMANDS)
-        })
+        .filter(|(_, server)| server_has_capability(server, CAPABILITY_CODE_LENS))
         .collect();
     if eligible_servers.is_empty() {
         return;
