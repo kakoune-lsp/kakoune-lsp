@@ -167,6 +167,19 @@ pub fn start(
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
+                if !msg.meta.buffile.starts_with("/") {
+                    debug!(
+                        "Unsupported scratch buffer, ignoring request from buffer '{}'",
+                        msg.meta.buffile
+                    );
+                    let command = if msg.meta.hook {
+                        "nop"
+                    } else {
+                        "lsp-show-error 'unsupported scratch buffer'"
+                    };
+                    ctx.exec(msg.meta, command);
+                    continue;
+                }
                 // initialize request must be first request from client to language server
                 // initialized response contains capabilities which we save for future use
                 // capabilities also serve as a marker of completing initialization
