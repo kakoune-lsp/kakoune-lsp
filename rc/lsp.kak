@@ -230,6 +230,10 @@ define-command -hidden lsp-menu-impl %{
             my $select_cmds = 0;
             my $on_abort = "";
             while (defined $args[0] && $args[0] =~ m/^-/) {
+                if ($args[0] eq "--") {
+                    shift @args;
+                    last;
+                }
                 if ($args[0] eq "-auto-single") {
                     $auto_single = 1;
                 }
@@ -245,9 +249,6 @@ define-command -hidden lsp-menu-impl %{
                     shift @args;
                 }
                 shift @args;
-                if ($args[0] eq "--") {
-                    last;
-                }
             }
             my $stride = 2 + $select_cmds;
             if (scalar @args == 0 or scalar @args % $stride != 0) {
