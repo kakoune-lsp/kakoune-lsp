@@ -242,6 +242,7 @@ define-command -hidden lsp-menu-impl %{
                         exit;
                     }
                     $on_abort = $args[1];
+                    shift @args;
                 }
                 shift @args;
                 if ($args[0] eq "--") {
