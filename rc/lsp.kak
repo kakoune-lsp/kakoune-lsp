@@ -335,7 +335,7 @@ declare-option -hidden int lsp_completions_timestamp -1
 declare-option -hidden int lsp_completions_selected_item
 declare-option -hidden range-specs lsp_inline_diagnostics
 declare-option -hidden line-specs lsp_diagnostic_lines 0 '0| '
-declare-option -hidden range-specs lsp_inlay_diagnostics
+declare-option -hidden line-specs lsp_inlay_diagnostics
 declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
@@ -2135,9 +2135,9 @@ define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-enable -params 1 -docstring "lsp-inlay-diagnostics-enable <scope>: Enable inlay diagnostics highlighting for <scope>" %{
-    add-highlighter "%arg{1}/lsp_inlay_diagnostics" replace-ranges lsp_inlay_diagnostics
+    add-highlighter "%arg{1}/lsp_inlay_diagnostics" flag-lines -after Default lsp_inlay_diagnostics
 	hook %arg{1} -group lsp-inlay-diagnostics ModeChange (push|pop):.*:insert "remove-highlighter %arg{1}/lsp_inlay_diagnostics"
-	hook %arg{1} -group lsp-inlay-diagnostics ModeChange (push|pop):insert:.* "add-highlighter %arg{1}/lsp_inlay_diagnostics replace-ranges lsp_inlay_diagnostics"
+	hook %arg{1} -group lsp-inlay-diagnostics ModeChange (push|pop):insert:.* "add-highlighter %arg{1}/lsp_inlay_diagnostics flag-lines -after Default lsp_inlay_diagnostics"
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-diagnostics-disable <scope>: Disable inlay diagnostics highlighting for <scope>"  %{

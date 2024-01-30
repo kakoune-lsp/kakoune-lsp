@@ -107,19 +107,17 @@ pub fn publish_diagnostics(server_name: &ServerName, params: Params, ctx: &mut C
     // Assemble ranges based on the lines
     let inlay_diagnostics = lines_with_diagnostics
         .iter()
-        .map(|(line_number, (server_name, line_diagnostics))| {
+        .map(|(_, (server_name, line_diagnostics))| {
             let server = &ctx.language_servers[server_name];
-            let line_text = get_line(*line_number as usize, &document.text);
-            let mut pos = lsp_position_to_kakoune(
+            let pos = lsp_position_to_kakoune(
                 &line_diagnostics.range_end,
                 &document.text,
                 server.offset_encoding,
             );
-            pos.column = std::cmp::max(line_text.len_bytes() as u32, 1);
 
             format!(
-                "\"{}+0|%opt[lsp_inlay_diagnostic_gap]{} {{{}}}{}\"",
-                pos,
+                "\"{}|%opt[lsp_inlay_diagnostic_gap]{} {{{}}}{}\"",
+                pos.line,
                 line_diagnostics.symbols,
                 line_diagnostics.text_face,
                 editor_escape_double_quotes(&escape_tuple_element(&escape_kakoune_markup(
