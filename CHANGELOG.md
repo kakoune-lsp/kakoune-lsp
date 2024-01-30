@@ -2,11 +2,13 @@
 
 Additions:
 - `lsp-document-symbols` now renders symbols in a tree.
-- `lsp-code-lens` can now run tests with `rust-analyzer`, provided https://gitlab.com/Screwtapello/kakoune-cargo is installed.
+- `lsp-code-lens` can now run the test at cursor with `rust-analyzer`, provided https://gitlab.com/Screwtapello/kakoune-cargo is installed.
 Fixes:
 - Completion snippets (accessed via `lsp-snippets-select-next-placeholders`) can now be nested, making it possible to cycle through the arguments of nested function calls.
+- In some cases, completions provided by `rust-analyzer` would be inserted as label (like `self.some_method(…)`) which has been fixed.
 - `completionItem.additionalTextEdits` are now applied also when the server does not support `completionItem/resolve`.
-- Unescape snippet metacharacters, removing spurious backslashes from inserted completions.
+- Snippet metacharacters are now properly escaped, removing spurious backslashes from inserted completions.
+- `lsp-inlay-diagnostics` no longer jump around when the cursor is moved around the diagnostics. To use this feature, use Kakoune version >= 2024 (#604).
 
 ## 15.0.1 - 2023-12-11
 

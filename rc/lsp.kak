@@ -2136,8 +2136,6 @@ define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic
 
 define-command lsp-inlay-diagnostics-enable -params 1 -docstring "lsp-inlay-diagnostics-enable <scope>: Enable inlay diagnostics highlighting for <scope>" %{
     add-highlighter "%arg{1}/lsp_inlay_diagnostics" flag-lines -after Default lsp_inlay_diagnostics
-	hook %arg{1} -group lsp-inlay-diagnostics ModeChange (push|pop):.*:insert "remove-highlighter %arg{1}/lsp_inlay_diagnostics"
-	hook %arg{1} -group lsp-inlay-diagnostics ModeChange (push|pop):insert:.* "add-highlighter %arg{1}/lsp_inlay_diagnostics flag-lines -after Default lsp_inlay_diagnostics"
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-diagnostics-disable <scope>: Disable inlay diagnostics highlighting for <scope>"  %{
