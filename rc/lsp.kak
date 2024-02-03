@@ -33,6 +33,9 @@ set-face global ReferenceBind +u@Reference
 # Face for inlay hints.
 set-face global InlayHint cyan+d
 set-face global InlayCodeLens cyan+d
+# Face for indent guides
+set-face global IndentGuide +f@comment
+set-face global IndentGuideFocused +f@MatchingChar
 
 # Options for tuning LSP behaviour.
 
@@ -161,6 +164,9 @@ Capture groups must be:
     3: optional column
     4: optional message
 } regex lsp_location_format ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
+
+declare-option -docstring "Number of indent levels to skip" int lsp_indent_guides_skip 1
+declare-option -docstring "Indent guides characters" str-list lsp_indent_guides_characters "│" "┆" "┊" "⸽"
 
 # Callback functions. May override these.
 
@@ -340,6 +346,7 @@ declare-option -hidden range-specs cquery_semhl
 declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
 declare-option -hidden range-specs lsp_semantic_tokens
+declare-option -hidden range-specs lsp_indent_guides
 declare-option -hidden range-specs lsp_inlay_hints
 declare-option -hidden range-specs lsp_inlay_code_lenses
 declare-option -hidden line-specs lsp_code_lenses 0 '0| '
@@ -1415,6 +1422,37 @@ incomingOrOutgoing = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command -hidden lsp-indent-guides-request -docstring "request updating lsp_indent_guides for the buffer" %{
+  nop %sh{
+    eval set -- "$kak_quoted_opt_lsp_indent_guides_characters"
+    # also remove the trailing comma
+    indent_guides_characters="[ $(printf "'%s', " "$@" | rev | cut -c2- | rev) ]"
+
+    (printf %s "
+session  = \"${kak_session}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"kakoune/indent-guides\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+[params]
+skip = $kak_opt_lsp_indent_guides_skip
+characters = $indent_guides_characters
+position_line = $kak_cursor_line
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command lsp-indent-guides-enable -params 1 -docstring "lsp-indent-guides-enable <scope>: enable indent guides for <scope>" %{
+  add-highlighter -override "%arg{1}/lsp_indent_guides" replace-ranges lsp_indent_guides
+  hook -group lsp-indent-guides %arg{1} BufReload .* lsp-indent-guides-request
+  hook -group lsp-indent-guides %arg{1} NormalIdle .* lsp-indent-guides-request
+  hook -group lsp-indent-guides %arg{1} InsertIdle .* lsp-indent-guides-request
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
+
+define-command lsp-indent-guides-disable -params 1 -docstring "lsp-indent-guides-disable <scope>: disable indent guides for <scope>" %{
+  remove-highlighter "%arg{1}/lsp_indent_guides"
+  remove-hooks %arg{1} lsp-indent-guides
+} -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inlay hints" %{
     declare-option -hidden int lsp_inlay_hints_timestamp -1
