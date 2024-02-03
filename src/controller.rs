@@ -603,6 +603,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         request::DocumentSymbolRequest::METHOD => {
             document_symbol::text_document_document_symbol(meta, ctx);
         }
+        "kakoune/indent-guides" => {
+            document_symbol::indent_guides(meta, params, ctx);
+        }
         "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params, ctx);
         }
