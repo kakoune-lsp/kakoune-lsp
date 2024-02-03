@@ -3,8 +3,9 @@ use crate::language_features::goto::edit_at_range;
 use crate::language_features::hover::editor_hover;
 use crate::markup::escape_kakoune_markup;
 use crate::position::{
-    get_kakoune_position_with_fallback, get_kakoune_range_with_fallback, get_lsp_position,
-    kakoune_position_to_lsp, lsp_range_to_kakoune, parse_kakoune_range,
+    get_kakoune_position_with_fallback, get_kakoune_range, get_kakoune_range_with_fallback,
+    get_lsp_position, kakoune_position_to_lsp, lsp_position_to_kakoune, lsp_range_to_kakoune,
+    parse_kakoune_range,
 };
 use crate::types::*;
 use crate::util::*;
@@ -15,7 +16,7 @@ use lsp_types::request::*;
 use lsp_types::*;
 use serde::Deserialize;
 use std::any::TypeId;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Write;
@@ -23,9 +24,201 @@ use std::path::{Path, PathBuf};
 use unicode_width::UnicodeWidthStr;
 use url::Url;
 
-pub fn indent_guides(_: EditorMeta, _: EditorParams, _: &mut Context) {
-    todo!()
+pub fn indent_guides(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+    let eligible_servers: Vec<_> = ctx
+        .language_servers
+        .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .collect();
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_name, _)| {
+            (
+                server_name.clone(),
+                vec![DocumentSymbolParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    partial_result_params: Default::default(),
+                    work_done_progress_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
+    let params = IndentGuidesParams::deserialize(editor_params).unwrap();
+    ctx.call::<DocumentSymbolRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| {
+            match results.into_iter().find(|(_, v)| v.is_some()) {
+                Some((server_name, Some(DocumentSymbolResponse::Nested(symbols))))
+                    if !symbols.is_empty() =>
+                {
+                    let server = &ctx.language_servers[&server_name];
+                    let mut line_indents = LineIndents::default();
+                    indent_guides_calc_range_specs(
+                        &symbols,
+                        &params,
+                        &meta,
+                        ctx,
+                        server,
+                        0,
+                        &mut line_indents,
+                    );
+                    let range_specs = line_indents.render();
+                    let version = meta.version;
+                    let command =
+                        formatdoc!("set-option buffer lsp_indent_guides {version} {range_specs}");
+                    let command = format!(
+                        "evaluate-commands -buffer {} -- {}",
+                        editor_quote(&meta.buffile),
+                        editor_quote(&command)
+                    );
+                    ctx.exec(meta, command);
+                }
+                Some((_, Some(DocumentSymbolResponse::Nested(_)))) => {
+                    return;
+                }
+                Some((_, Some(DocumentSymbolResponse::Flat(_)))) => {
+                    return;
+                }
+                Some((_, None)) => {
+                    return;
+                }
+                None => {
+                    return;
+                }
+            };
+        },
+    );
 }
+
+#[derive(Default, Debug)]
+struct LineIndents {
+    repr: BTreeMap<usize, BTreeMap<usize, (String, bool)>>,
+}
+
+impl LineIndents {
+    fn add(self: &mut LineIndents, line: usize, column: usize, char: String, focused: bool) {
+        match self.repr.get_mut(&line) {
+            Some(line_repr) => {
+                line_repr.insert(column, (char, focused));
+            }
+            None => {
+                let mut line_repr = BTreeMap::default();
+                line_repr.insert(column, (char, focused));
+                self.repr.insert(line, line_repr);
+            }
+        }
+    }
+
+    fn render(self: &LineIndents) -> String {
+        let mut accumulator = String::default();
+        for (line, line_repr) in &self.repr {
+            let max_column = (*line_repr.last_key_value().unwrap().0) as i32;
+            let mut spec = String::default();
+            spec.push_str(format!("{}.1+{}|", line, 0).as_str());
+            for c in (1)..=max_column {
+                match line_repr.get(&(c as usize)) {
+                    Some((indent_character, focused)) => {
+                        let face = if *focused {
+                            "IndentGuideFocused"
+                        } else {
+                            "IndentGuide"
+                        };
+                        let tuple = format!(
+                            "{{{}}}{}{{default}}",
+                            face,
+                            escape_tuple_element(indent_character)
+                        );
+                        spec.push_str(tuple.as_str());
+                    }
+                    None => {
+                        spec.push(' ');
+                    }
+                }
+            }
+            let spec = editor_quote(spec.as_str());
+            accumulator.push_str(spec.as_str());
+            accumulator.push(' ');
+        }
+        return accumulator;
+    }
+}
+
+fn indent_guides_calc_range_specs(
+    symbols: &[DocumentSymbol],
+    params: &IndentGuidesParams,
+    meta: &EditorMeta,
+    ctx: &Context,
+    server: &ServerSettings,
+    level: usize,
+    line_indents: &mut LineIndents,
+) {
+    for symbol in symbols {
+        let should_skip = level < params.skip;
+
+        let mut filename_path = PathBuf::default();
+        let filename = symbol_filename(meta, symbol, &mut filename_path).to_string();
+        let range = get_kakoune_range(server, filename.as_str(), &symbol.range, ctx).unwrap();
+
+        let children = symbol.children();
+
+        if !should_skip {
+            let is_not_in_child = children
+                .iter()
+                .find(|child| {
+                    let mut filename_path = PathBuf::default();
+                    let filename = symbol_filename(meta, *child, &mut filename_path).to_string();
+                    let range =
+                        get_kakoune_range(server, filename.as_str(), &child.range, ctx).unwrap();
+                    range.start.line <= params.position_line
+                        && params.position_line <= range.end.line
+                })
+                .is_none();
+
+            let is_inside =
+                range.start.line <= params.position_line && params.position_line <= range.end.line;
+            let is_focused = is_not_in_child && is_inside;
+
+            let adjusted_level = level - params.skip;
+            let indent_character = params
+                .characters
+                .get(adjusted_level)
+                .or(params.characters.last())
+                .unwrap();
+
+            let document = ctx.documents.get(filename.as_str()).unwrap();
+            let rope = &document.text;
+            let offset_encoding = server.offset_encoding;
+            // Ignoring one-line indents.
+            let symbol_line =
+                lsp_position_to_kakoune(&symbol.selection_range.end, rope, offset_encoding).line;
+            if range.end.line - symbol_line > 1 {
+                // We want to ignore putting indentation on signatures and comments,
+                // thus starting from `selection_range`.
+                for line in symbol_line..=(range.end.line) {
+                    line_indents.add(
+                        line as usize,
+                        range.start.column as usize,
+                        indent_character.to_string(),
+                        is_focused,
+                    );
+                }
+            }
+        };
+        indent_guides_calc_range_specs(
+            children,
+            params,
+            meta,
+            ctx,
+            server,
+            level + 1,
+            line_indents,
+        );
+    }
+}
+
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .language_servers
