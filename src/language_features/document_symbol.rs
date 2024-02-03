@@ -22,6 +22,10 @@ use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use url::Url;
 
+pub fn sticky_contexts(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+    todo!()
+}
+
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .language_servers
