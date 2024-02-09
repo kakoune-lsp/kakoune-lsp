@@ -89,7 +89,7 @@ test_sleep_until()
 		i=$((i + 1))
 	done
 	if [ $i -eq 100 ]; then
-		printf %s\\n "timeout wating for $1" >&2
+		printf %s\\n "timeout waiting for $1" >&2
 		return 1
 	else
 		eval "$1"
