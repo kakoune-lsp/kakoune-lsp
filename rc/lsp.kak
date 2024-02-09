@@ -77,6 +77,8 @@ declare-option -docstring "Automatically highlight references with Reference fac
 declare-option -docstring "Show available code actions (default: a 💡 in the modeline)" bool lsp_auto_show_code_actions false
 # Set it to a positive number to limit the size of the lsp-hover output. Use 0 to disable the limit.
 declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_lines 20
+declare-option -docstring "Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_info_lines 20
+declare-option -docstring "Set it to a positive number to limit the diagnostics in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_diagnostic_lines 20
 
 declare-option -docstring "Dynamic TOML configuration string. Currently supports
 - [language.<filetype>.settings]
@@ -113,40 +115,180 @@ info=$lsp_info \
     diagnostics=$lsp_diagnostics \
     code_lenses=$lsp_code_lenses \
     awk 'BEGIN {
-        info = ENVIRON["info"]
-        diagnostics = ENVIRON["diagnostics"];
-        code_lenses = ENVIRON["code_lenses"];
-        max_lines = ENVIRON["kak_opt_lsp_hover_max_lines"];
+        diagnostic_data = ENVIRON["diagnostics"]
+        code_lenses = ENVIRON["code_lenses"]
+        code_actions = ENVIRON["kak_opt_lsp_modeline_code_actions"]
+        message_requests = ENVIRON["kak_opt_lsp_modeline_message_requests"]
+        max_lines = ENVIRON["kak_opt_lsp_hover_max_lines"]
+        max_info_lines = ENVIRON["kak_opt_lsp_hover_max_info_lines"]
+        max_diagnostic_lines = ENVIRON["kak_opt_lsp_hover_max_diagnostic_lines"]
 
-        r = ""
-        lines = 0
-        if (diagnostics) {
-            r = r "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):\n" diagnostics "\n"
-            diagnostics_lines = split(diagnostics, _, /\n/)
-            lines += 1 + diagnostics_lines
+        info_data_lines = split(ENVIRON["info"], info_data_line, /\n/)
+
+        # Will the info lines need to be truncated
+        info_truncated = max_info_lines > 0 &&
+           info_data_lines > max_info_lines
+
+        # How many info lines do we want to output
+        info_lines = info_truncated ?
+           max_info_lines : info_data_lines
+
+        diagnostic_data_lines = split(diagnostic_data, diagnostic_data_line, /\n/)
+
+        # Will the diagnostic lines need to be truncated
+        diagnostics_truncated = max_diagnostic_lines > 0 &&
+            diagnostic_data_lines > max_diagnostic_lines
+
+        # How many diagnostic lines do we want to output
+        diagnostic_lines = diagnostics_truncated ?
+            max_diagnostic_lines : diagnostic_data_lines
+
+        # If there is a max_lines for the entire hover then we see if we need
+        # to truncate the info and/or diagnostic lines to fit everything
+        # (including the static lines) in the hover.
+        # NOTE: We prioritize displaing diagnostic lines, truncating all of the
+        # info lines before truncating any diagnostic lines.
+        if(max_lines > 0) {
+            # Entire amount of lines available for output in the hover box.
+            # Remove two lines for the top and bottom boarders of the hover box.
+            available_lines = max_lines > 2 ? max_lines - 2 : 0
+
+            # How many static lines will be in the hover box regardless the amount
+            # of info and diagnostic lines.
+            static_lines = 0
+
+            # A line for the "Hover info truncated" message
+            if (info_truncated == 1) static_lines++
+            # A line for the "Diagnostics (shortcut e):" message
+            if (diagnostic_data) static_lines++
+            # A line for the "Hover diagnostics truncated" message
+            if (diagnostics_truncated == 1) static_lines++
+            # A line for the "Code Lenses available" message
+            if (code_lenses) static_lines++
+            # A line for the "Code Actions available" message
+            if (code_actions) static_lines++
+            # A line for the "There are unread messages" message
+            if (message_requests) static_lines++
+
+            # How many lines are available for dynamic outputs (info and diagnostics)
+            available_dynamic_lines = available_lines > static_lines ?
+                available_lines - static_lines : 0
+
+            # How many total lines of info and diagnostics do we want to output
+            requested_dynamic_lines = info_lines + diagnostic_lines
+
+            # How many more requested_dynamic_lines are their to
+            # available_dynamic_lines.
+            extra_dynamic_lines = requested_dynamic_lines > available_dynamic_lines ?
+                requested_dynamic_lines - available_dynamic_lines : 0
+
+            # If there are extra_dynamic_lines requested we start by removing as
+            # many as needed from the info.
+            if (extra_dynamic_lines > 0) {
+                # If the info has not already been maked to be truncated we mark
+                # it to be truncated, add a static line for the "Info
+                # truncated" message, update the available_dynamic_lines and
+                # extra_dynamic_lines.
+                if (info_truncated == 0) {
+                    info_truncated = 1
+                    static_lines++
+
+                    available_dynamic_lines = available_lines > static_lines ?
+                        available_lines - static_lines : 0
+                    extra_dynamic_lines = requested_dynamic_lines > available_dynamic_lines ?
+                        requested_dynamic_lines - available_dynamic_lines : 0
+                }
+
+                # Remove as many of info_lines for the extra_dynamic_lines as
+                # possible.
+                info_lines = info_lines > extra_dynamic_lines ?
+                    info_lines - extra_dynamic_lines : 0
+
+                # Update the requested_dynamic_lines and the extra_dynamic_lines
+                requested_dynamic_lines = info_lines + diagnostic_lines
+                extra_dynamic_lines = requested_dynamic_lines > available_dynamic_lines ?
+                    requested_dynamic_lines - available_dynamic_lines : 0
+            }
+
+            # If there are still extra_dynamic_lines requested we remove as many
+            # as needed from diagnostics.
+            if (extra_dynamic_lines < 0) {
+                # If the diagnostics has not already been maked to be truncated
+                # we mark it to be truncated, add a static line for the
+                # "Diagnostics truncated" message, update the
+                # available_dynamic_lines and extra_dynamic_lines.
+                if (diagnostics_truncated == 0) {
+                    diagnostics_truncated = 1
+                    static_lines++
+
+                    available_dynamic_lines = available_lines > static_lines ?
+                        available_lines - static_lines : 0
+                    extra_dynamic_lines = requested_dynamic_lines > available_dynamic_lines ?
+                        requested_dynamic_lines - available_dynamic_lines : 0
+                }
+
+                diagnostic_lines = diagnostic_lines > extra_dynamic_lines ?
+                    diagnostic_lines - extra_dynamic_lines : 0
+
+                requested_dynamic_lines = info_lines + diagnostic_lines
+                extra_dynamic_lines = requested_dynamic_lines > available_dynamic_lines ?
+                    requested_dynamic_lines - available_dynamic_lines : 0
+            }
         }
+
+        # Track if there is anything in the hover, so we know when to insert
+        # a new-line character.
+        output_in_hover = 0
+
+        if (info_lines) {
+            printf info_data_line[1]
+            for (i = 2; i <= info_lines; i++) {
+                printf "%s%s", "\n", info_data_line[i]
+            }
+            output_in_hover = 1
+        }
+
+        if (info_truncated == 1) {
+            if (output_in_hover == 1) printf "\n"
+            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full hover info"
+            output_in_hover = 1
+        }
+
+        if (diagnostic_data) {
+            if (output_in_hover == 1) printf "\n"
+            printf "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):"
+
+            if (diagnostic_lines) {
+                printf "\n"
+                printf diagnostic_data_line[1]
+                for (i = 2; i <= diagnostic_lines; i++) {
+                    printf "%s%s", "\n", diagnostic_data_line[i]
+                }
+            }
+
+            if (diagnostics_truncated == 1) {
+                printf "\n"
+                printf "{+i@InfoDefault}Hover diagnostics truncated, use lsp-hover-buffer (shortcut H) for full hover info"
+            }
+
+            output_in_hover = 1
+        }
+
         if (code_lenses) {
-            r = r "Code Lenses available (shortcut l)\n"
-            lines++
+            if (output_in_hover == 1) printf "\n"
+            printf "Code Lenses available (shortcut l)"
+            output_in_hover = 1
         }
-        if (ENVIRON["kak_opt_lsp_modeline_code_actions"]) {
-            r = r "Code Actions available (shortcut a)\n"
-            lines++
+        if (code_actions) {
+            if (output_in_hover == 1) printf "\n"
+            printf "Code Actions available (shortcut a)"
+            output_in_hover = 1
         }
-
-        if (ENVIRON["kak_opt_lsp_modeline_message_requests"]) {
-            r = r "There are unread messages (use lsp-show-message-request-next to read)\n"
-            lines++
+        if (message_requests) {
+            if (output_in_hover == 1) printf "\n"
+            printf "There are unread messages (use lsp-show-message-request-next to read)"
+            output_in_hover = 1
         }
-
-        info_lines = split(info, info_line, /\n/)
-        for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+2 <= max_lines); i++)
-            print info_line[i]
-        if (i < info_lines || r)
-            printf "\n"
-        if (i < info_lines)
-            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full info\n"
-        printf "%s", r
     }'
 }
 # If you want to see only hover info, try
@@ -1653,7 +1795,7 @@ define-command -hidden lsp-show-hover -params 4 -docstring %{
     lsp_info=$2
     lsp_diagnostics=$3
     lsp_code_lenses=$4
-    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_modeline_code_actions kak_opt_lsp_modeline_message_requests
+    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_hover_max_info_lines kak_opt_lsp_hover_max_diagnostic_lines kak_opt_lsp_modeline_code_actions kak_opt_lsp_modeline_message_requests
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
 

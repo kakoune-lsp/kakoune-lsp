@@ -1,8 +1,13 @@
 ## Unreleased
 
+Breaking changes:
+- `lsp_hover_max_lines` now limits the size of the hover box spawned by `lsp-hover`, limiting lines of diagnostics as well as lines of information.
+
 Additions:
 - `lsp-document-symbols` now renders symbols in a tree.
 - `lsp-code-lens` can now run the test at cursor with `rust-analyzer`, provided https://gitlab.com/Screwtapello/kakoune-cargo is installed.
+- `lsp-hover-max_info_lines` defaults to 20, which limit the information in the lsp hover output box spawned by `lsp-hover`.
+- `lsp_hover_max_diagnostic_lines` defaults to 20, which limits the diagnostics in the lsp hover output box spawned by `lsp-hover`.
 Fixes:
 - Completion snippets (accessed via `lsp-snippets-select-next-placeholders`) can now be nested, making it possible to cycle through the arguments of nested function calls.
 - In some cases, completions provided by `rust-analyzer` would be inserted as label (like `self.some_method(…)`) which has been fixed.
