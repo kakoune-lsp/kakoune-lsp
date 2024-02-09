@@ -40,8 +40,8 @@ jobs:
         kakoune_version:
           # Empty ref to use the repo's default branch
           # - ''
-          # Latest release
-          - 'v2021.08.28'
+          # Oldest supported release
+          - 'v2022.10.31'
     steps:
     - uses: actions/checkout@v2
 
