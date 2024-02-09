@@ -2,13 +2,16 @@
 
 # REQUIRES: command -v rust-analyzer
 
+user_home=$HOME
+
 . test/lib.sh
 
 cat > .config/kak-lsp/kak-lsp.toml << EOF
 [language.rust]
 filetypes = ["rust"]
 roots = ["Cargo.toml"]
-command = "rust-analyzer"
+command = "sh"
+args = ["-c", "RUSTUP_HOME=$user_home/.rustup rust-analyzer"]
 EOF
 
 cat >> .config/kak/kakrc << EOF

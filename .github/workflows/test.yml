@@ -108,16 +108,10 @@ jobs:
         go install golang.org/x/tools/gopls@v0.7.1
         sudo ln "$HOME/go/bin/gopls" /usr/local/bin/
 
-    - name: Download rust-analyzer
-      if: matrix.os == 'ubuntu-latest'
-      run: curl -L -o rust-analyzer.gz https://github.com/rust-analyzer/rust-analyzer/releases/download/2021-10-18/rust-analyzer-x86_64-unknown-linux-gnu.gz
-
     - name: Install rust-analyzer
-      if: matrix.os == 'ubuntu-latest'
       run: |
-        gunzip rust-analyzer.gz
-        chmod +x rust-analyzer
-        sudo mv rust-analyzer /usr/local/bin/
+        rustup default stable
+        rustup component add rust-analyzer
 
     - name: Install typescript-language-server
       run: sudo npm install -g typescript@4.4.4 typescript-language-server@0.6.4
