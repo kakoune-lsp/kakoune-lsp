@@ -32,8 +32,7 @@ command = "clangd"
 filetypes = ["clojure"]
 roots = ["project.clj", ".git", ".hg"]
 command = "clojure-lsp"
-settings_section = "_"
-[language_server.clojure-lsp.settings._]
+[language_server.clojure-lsp.settings]
 # See https://clojure-lsp.io/settings/#all-settings
 # source-paths-ignore-regex = ["resources.*", "target.*"]
 
@@ -76,8 +75,7 @@ filetypes = ["scala"]
 roots = ["build.sbt", ".scala-build"]
 command = "metals"
 args = ["-Dmetals.extensions=false"]
-settings_section = "metals"
-[language_server.metals.settings.metals]
+[language_server.metals.settings]
 icons = "unicode"
 isHttpEnabled = true
 statusBarProvider = "log-message"
@@ -113,8 +111,7 @@ command = "jdtls"
 filetypes = ["elixir"]
 roots = ["mix.exs"]
 command = "elixir-ls"
-settings_section = "elixirLS"
-[language_server.elixir-ls.settings.elixirLS]
+[language_server.elixir-ls.settings]
 # See https://github.com/elixir-lsp/elixir-ls/blob/master/apps/language_server/lib/language_server/server.ex
 # dialyzerEnable = true
 
@@ -123,8 +120,7 @@ filetypes = ["elm"]
 roots = ["elm.json"]
 command = "elm-language-server"
 args = ["--stdio"]
-settings_section = "elmLS"
-[language_server.elm-language-server.settings.elmLS]
+[language_server.elm-language-server.settings]
 # See https://github.com/elm-tooling/elm-language-server#server-settings
 runtime = "node"
 elmPath = "elm"
@@ -148,7 +144,7 @@ command = "erlang_ls"
 filetypes = ["go"]
 roots = ["Gopkg.toml", "go.mod", ".git", ".hg"]
 command = "gopls"
-[language_server.gopls.settings.gopls]
+[language_server.gopls.settings]
 # See https://github.com/golang/tools/blob/master/gopls/doc/settings.md
 # "build.buildFlags" = []
 
@@ -157,8 +153,7 @@ filetypes = ["haskell"]
 roots = ["hie.yaml", "cabal.project", "Setup.hs", "stack.yaml", "*.cabal"]
 command = "haskell-language-server-wrapper"
 args = ["--lsp"]
-settings_section = "_"
-[language_server.haskell-language-server.settings._]
+[language_server.haskell-language-server.settings]
 # See https://haskell-language-server.readthedocs.io/en/latest/configuration.html
 # haskell.formattingProvider = "ormolu"
 
@@ -167,8 +162,7 @@ filetypes = ["html"]
 roots = ["package.json"]
 command = "vscode-html-languageserver"
 args = ["--stdio"]
-settings_section = "_"
-[language_server.html-language-server.settings._]
+[language_server.html-language-server.settings]
 # quotePreference = "single"
 # javascript.format.semicolons = "insert"
 
@@ -177,8 +171,7 @@ filetypes = ["php"]
 roots = [".htaccess", "composer.json"]
 command = "intelephense"
 args = ["--stdio"]
-settings_section = "intelephense"
-[language_server.intelephense.settings.intelephense]
+[language_server.intelephense.settings]
 storagePath = "/tmp/intelephense"
 
 [language_server.json-language-server]
@@ -228,18 +221,17 @@ args = [
 [language_server.julia-language-server.settings]
 # See https://github.com/julia-vscode/LanguageServer.jl/blob/master/src/requests/workspace.jl
 # Format options. See https://github.com/julia-vscode/DocumentFormat.jl/blob/master/src/DocumentFormat.jl
-# "julia.format.indent" = 4
+# "format.indent" = 4
 # Lint options. See https://github.com/julia-vscode/StaticLint.jl/blob/master/src/linting/checks.jl
-# "julia.lint.call" = true
+# "lint.call" = true
 # Other options, see https://github.com/julia-vscode/LanguageServer.jl/blob/master/src/requests/workspace.jl
-# "julia.lint.run" = "true"
+# "lint.run" = "true"
 
 [language_server.lua-language-server]
 filetypes = ["lua"]
 roots = [".git", ".hg"]
 command = "lua-language-server"
-settings_section = "Lua"
-[language_server.lua-language-server.settings.Lua]
+[language_server.lua-language-server.settings]
 # See https://github.com/sumneko/vscode-lua/blob/master/setting/schema.json
 # diagnostics.enable = true
 
@@ -275,8 +267,7 @@ args = ["--stdio"]
 filetypes = ["python"]
 roots = ["requirements.txt", "setup.py", ".git", ".hg"]
 command = "pylsp"
-settings_section = "_"
-[language_server.pylsp.settings._]
+[language_server.pylsp.settings]
 # See https://github.com/python-lsp/python-lsp-server#configuration
 # pylsp.configurationSources = ["flake8"]
 pylsp.plugins.jedi_completion.include_params = true
@@ -291,8 +282,7 @@ pylsp.plugins.jedi_completion.include_params = true
 # filetypes = ["python"]
 # roots = ["requirements.txt", "setup.py", ".git", ".hg"]
 # command = "ruff-lsp"
-# settings_section = "_"
-# [language_server.ruff.settings._.globalSettings]
+# [language_server.ruff.settings.globalSettings]
 # organizeImports = true
 # fixAll = true
 
@@ -351,7 +341,7 @@ args = [
         fi
     """,
 ]
-[language_server.rust-analyzer.settings.rust-analyzer]
+[language_server.rust-analyzer.settings]
 # See https://rust-analyzer.github.io/manual.html#configuration
 hoverActions.enable = false # kak-lsp doesn't support this at the moment
 # cargo.features = []
@@ -361,8 +351,7 @@ filetypes = ["ruby"]
 roots = ["Gemfile"]
 command = "solargraph"
 args = ["stdio"]
-settings_section = "_"
-[language_server.solargraph.settings._]
+[language_server.solargraph.settings]
 # See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
 # diagnostics = false
 
@@ -371,7 +360,7 @@ filetypes = ["terraform"]
 roots = ["*.tf"]
 command = "terraform-ls"
 args = ["serve"]
-[language_server.terraform-ls.settings.terraform-ls]
+[language_server.terraform-ls.settings]
 # See https://github.com/hashicorp/terraform-ls/blob/main/docs/SETTINGS.md
 # rootModulePaths = []
 
@@ -379,7 +368,7 @@ args = ["serve"]
 filetypes = ["latex"]
 roots = [".git", ".hg"]
 command = "texlab"
-[language_server.texlab.settings.texlab]
+[language_server.texlab.settings]
 # See https://github.com/latex-lsp/texlab/wiki/Configuration
 #
 # Preview configuration for zathura with SyncTeX search.
@@ -408,8 +397,7 @@ filetypes = ["javascript", "typescript"]
 roots = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
 command = "typescript-language-server"
 args = ["--stdio"]
-settings_section = "_"
-[language_server.typescript-language-server.settings._]
+[language_server.typescript-language-server.settings]
 # quotePreference = "double"
 # typescript.format.semicolons = "insert"
 
@@ -419,7 +407,7 @@ roots = [".git", ".hg"]
 command = "yaml-language-server"
 args = ["--stdio"]
 settings_section = "yaml"
-[language_server.yaml-language-server.settings.yaml]
+[language_server.yaml-language-server.settings]
 # See https://github.com/redhat-developer/yaml-language-server#language-server-settings
 # Defaults are at https://github.com/redhat-developer/yaml-language-server/blob/master/src/yamlSettings.ts
 # format.enable = true
