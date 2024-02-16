@@ -88,7 +88,7 @@ impl<'de> Deserialize<'de> for SemanticTokenConfig {
             type Value = SemanticTokenConfig;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A valid semantic-tokens configuration. See https://github.com/kak-lsp/kak-lsp#semantic-tokens for the new configuration syntax for semantic tokens")
+                formatter.write_str("A valid semantic-tokens configuration. See https://github.com/kakoune-lsp/kakoune-lsp#semantic-tokens for the new configuration syntax for semantic tokens")
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>

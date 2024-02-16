@@ -84,8 +84,8 @@ pub fn start(
                         continue 'event_loop;
                     }
                 };
-                // editor explicitely asked us to stop kak-lsp session
-                // (and we stop, even if other editor sessions are using this kak-lsp session)
+                // editor explicitely asked us to stop kakoune-lsp session
+                // (and we stop, even if other editor sessions are using this kakoune-lsp session)
                 if request.method == "stop" {
                     break 'event_loop;
                 }
@@ -267,9 +267,9 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
             for route in routes {
                 info!("Exit {} in project {}", route.server_name, route.root);
             }
-            // to notify kak-lsp about editor session end we use the same `exit` notification as
-            // used in LSP spec to notify language server to exit, thus we can just clone request
-            // and pass it along
+            // to notify kakoune-lsp about editor session end we use the same `exit` notification
+            // as used in LSP spec to notify language server to exit, thus we can just clone
+            // request and pass it along
             if controller.worker.sender().send(request.clone()).is_err() {
                 error!("Failed to send stop message to language server");
             }

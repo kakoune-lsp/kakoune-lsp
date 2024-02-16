@@ -1,11 +1,15 @@
 [package]
-name = "kak-lsp"
+name = "kakoune-lsp"
 description = "Kakoune Language Server Protocol Client"
 version = "15.0.1-snapshot"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>", "Johannes Altmanninger <aclopte@gmail.com>"]
 edition = "2018"
 license = "Unlicense/MIT"
-repository = "https://github.com/kak-lsp/kak-lsp"
+repository = "https://github.com/kakoune-lsp/kakoune-lsp"
+
+[[bin]]
+name = "kak-lsp"
+path = "src/main.rs"
 
 [dependencies]
 clap = {version = "4.4.11", features = ["cargo"] }

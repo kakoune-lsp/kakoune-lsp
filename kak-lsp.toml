@@ -7,7 +7,7 @@ verbosity = 2
 timeout = 1800 # seconds = 30 minutes
 
 # This section overrides language IDs.
-# By default, kak-lsp use filetypes for the IDs.
+# By default, kakoune-lsp uses filetypes for the IDs.
 # See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem
 [language_ids]
 c = "c_cpp"

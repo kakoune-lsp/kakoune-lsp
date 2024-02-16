@@ -1,5 +1,9 @@
 ## Unreleased
 
+Breaking changes:
+
+- The kak-lsp project has been renamed to kakoune-lsp. The binary name is still kak-lsp. Distributors are encouraged to update the package name.
+
 Additions:
 - `lsp-document-symbols` now renders symbols in a tree.
 - `lsp-code-lens` can now run the test at cursor with `rust-analyzer`, provided https://gitlab.com/Screwtapello/kakoune-cargo is installed.
@@ -36,10 +40,10 @@ Fixes:
 Additions:
 - Default configuration for CMake.
 - If there are no code actions in the main selection, `lsp-code-actions` will show code actions from anywhere on a selected line, to make it easier to perform quick-fixes.
-- If requested by the language server, kak-lsp will recursively watch the entire root directory for file changes and forward them to the server via `workspace/didChangeWatchedFiles` (#649).
-- kak-lsp now asks the server to cancel stale requests (#666).
+- If requested by the language server, kakoune-lsp will recursively watch the entire root directory for file changes and forward them to the server via `workspace/didChangeWatchedFiles` (#649).
+- kakoune-lsp now asks the server to cancel stale requests (#666).
 - `lsp-did-change` is async again, which can improve performance (#667).
-- kak-lsp is published to crates.io for easy installation (#660).
+- kakoune-lsp is published to crates.io for easy installation (#660).
 
 Fixes:
 - Fix race conditions when spinning up a new server in "kak-lsp --request" (#654), and in "lsp-hover-buffer" (#664).
@@ -62,7 +66,7 @@ Fixes:
 - `lsp-rename` will now write hidden buffers that are affected by the rename, to give the language server and other external tools a more consistent view of affected files.
 - Suppress "language server not initialized" errors that originate from hooks.
 - Fix a glitch when a line has both a code lens and an inline diagnostic.
-- When talking to servers that don't support UTF-8 byte-offsets, `kak-lsp` now adheres to the LSP specification by treating column-offsets as UTF-16 Code Units instead of Unicode Code Points.
+- When talking to servers that don't support UTF-8 byte-offsets, kakoune-lsp now adheres to the LSP specification by treating column-offsets as UTF-16 Code Units instead of Unicode Code Points.
 
 ## 14.0.0 - 2022-08-29
 
@@ -97,7 +101,7 @@ Fixes:
 - Completions with snippets now interact properly with Kakoune's completion engine (#616).
 - Fixed default configuration for HTML/CSS/JSON following the upstream renaming of the binaries.
 - `lsp-enable-window` no longer adds a redundant global `NormalKey` hook (introduced in 12.1.0)
-- kak-lsp now avoids sending unsupported requests to the server.
+- kakoune-lsp now avoids sending unsupported requests to the server.
 
 ## 12.2.1 - 2022-05-08
 
@@ -131,20 +135,20 @@ Additions:
 - New mappings for Kakoune's object mode allow to select adjacent/surrounding symbols like functions or types (#598).
 - New mapping for the `lsp` user mode, `<c-o>`, spawns a menu to jump to buffer symbol (#584).
 - `lsp-formatting` used to spawn several shell processes for each modification, which caused noticable delays when formatting many lines. This has been remedied by avoiding shell calls (88f52f0c).
-- kak-lsp is now compatible with the proposed changes to P and <a-x> (see Kakoune's `breaking-cleanups` branch).
-- The documentation now communicates that kak-lsp appends to the global modeline at load time (eb54d378).
+- kakoune-lsp is now compatible with the proposed changes to P and <a-x> (see Kakoune's `breaking-cleanups` branch).
+- The documentation now communicates that kakoune-lsp appends to the global modeline at load time (eb54d378).
 - New experimental command `lsp-connect` allows to handle certain LSP responses messages with a custom command (#584).
 
 Bug fixes:
 - `lsp_auto_show_code_actions` has been fixed to actually hide the lightbulb when no code action is available (76cff5f2).
-- Loading kak-lsp no longer leaves around a scratch buffer (#593).
+- Loading kakoune-lsp no longer leaves around a scratch buffer (#593).
 - Code actions are now offered for the main selection's range, instead of just the cursor position. This unlocks an "extract to function" refactoring from rust-analyzer. (#594).
 - The *-sync commands now automatically restart the server instead of showing an error if the server is down (b54ec807).
 
 ## 12.0.1 - 2022-01-29
 
 Bug fixes:
-- Fix regression in 12.0.0 where kak-lsp would panic when applying text edits that span until the buffer end, such as from `lsp-formatting` with zls (#589).
+- Fix regression in 12.0.0 where kakoune-lsp would panic when applying text edits that span until the buffer end, such as from `lsp-formatting` with zls (#589).
 - Diagnostics no longer break when a diagnostic's message contains `%` (#590).
 
 ## 12.0.0 - 2022-01-26
@@ -160,7 +164,7 @@ Additions:
 - New command `lsp-code-action-sync` is the synchronous variant of `lsp-code-action`, suitable for use in `BufWritePre` hooks (#582).
 - The default configuration for `semantic_tokens` now uses a more condensed syntax (#587).
 - Some systems' C libraries ship old Unicode databases, but terminals often bundle newer versions. To avoid graphical glitches, emoji are only used if they are assigned display width 2 by the C library's `wcwidth(3)` (73c2d1a, c3aeb0d).
-- The [clangd protocol extension for offset encoding negotiation](https://clangd.llvm.org/extensions.html#utf-8-offsets) is now supported, which means kak-lsp now uses UTF-8 offsets if the server supports them (#485).
+- The [clangd protocol extension for offset encoding negotiation](https://clangd.llvm.org/extensions.html#utf-8-offsets) is now supported, which means kakoune-lsp now uses UTF-8 offsets if the server supports them (#485).
 
 Bug fixes:
 - `lsp-formatting-sync` now works again with `texlab` instead of blocking forever (regressed in 11.0.0) (a12831a).
@@ -258,7 +262,7 @@ Breaking changes:
 Additions:
 - `lsp-rename-prompt` is added to to the `lsp` user mode, mapped to `R` (#441).
 - Default configuration for CSS variants "less" and "scss" (#473).
-- `kak-lsp` sends the configured offset encoding to the language server (see https://clangd.llvm.org/extensions.html#utf-8-offsets), which still defaults to `utf-16`.
+- kakoune-lsp sends the configured offset encoding to the language server (see https://clangd.llvm.org/extensions.html#utf-8-offsets), which still defaults to `utf-16`.
 - `lua-language-server` was added as default language server for Lua.
 
 Bug fixes:
@@ -269,6 +273,6 @@ Bug fixes:
 - Fix `lsp-rename` with `pyright` (#468).
 - Treat snippets containing `<` literally, instead of as Kakoune key names (#470)
 - Nested entries in `lsp_server_initialization_options` like `a.b=1` are sent to language servers as `{"a":{"b":1}}` instead of `{"a.b":1}`, matching the treatment of `lsp_server_configuration` (#480).
-- Fix a case where `lua-language-server` would hang (#479) because `kak-lsp` didn't support `workspace/configuration`; basic support has been added.
+- Fix a case where `lua-language-server` would hang (#479) because kakoune-lsp didn't support `workspace/configuration`; basic support has been added.
 
-For release notes on v9.0.0 and older see <https://github.com/kak-lsp/kak-lsp/releases>.
+For release notes on v9.0.0 and older see <https://github.com/kakoune-lsp/kakoune-lsp/releases>.

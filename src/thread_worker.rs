@@ -52,7 +52,7 @@ pub struct Worker<I, O> {
     // Note that a potential problem here is that we might drop some messages
     // from receiver on the floor. This is ok for rust-analyzer: we have only a
     // single client, so, if we are shutting down, nobody is interested in the
-    // unfinished work anyway! (It's okay for kak-lsp too).
+    // unfinished work anyway! (It's okay for kakoune-lsp too).
     sender: Sender<I>,
     _thread: ScopedThread,
     receiver: Receiver<O>,

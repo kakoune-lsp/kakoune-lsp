@@ -1,15 +1,15 @@
 = Kakoune Language Server Protocol Client
 
-kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for http://kakoune.org[Kakoune] implemented in https://www.rust-lang.org[Rust].
+This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for https://kakoune.org[Kakoune] implemented in https://www.rust-lang.org[Rust].
 
 == Quick Start
 
-1. <<Install kak-lsp>>
+1. <<Installing>>
 2. <<Install language servers for your desired languages>>
-3. <<Configure Kakoune to enable kak-lsp>>
+3. <<Configure Kakoune to enable LSP>>
 4. <<Configure mappings>>
 
-=== Install kak-lsp
+=== Installing
 
 ==== Pre-built binaries
 
@@ -19,15 +19,15 @@ kak-lsp is a https://microsoft.github.io/language-server-protocol/[Language Serv
 
 [source,sh]
 ----
-brew install kak-lsp/kak-lsp/kak-lsp
+brew install kakoune-lsp/kakoune-lsp/kakoune-lsp
 ----
 
 ====== Manual
 
 [source,sh]
 ----
-curl -O -L https://github.com/kak-lsp/kak-lsp/releases/download/v15.0.1/kak-lsp-v15.0.1-x86_64-apple-darwin.tar.gz
-tar xzvf kak-lsp-v15.0.1-x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v15.0.1/kak-lsp-v15.0.1-x86_64-apple-darwin.tar.gz
+tar xzvf kakoune-lsp-v15.0.1-x86_64-apple-darwin.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
@@ -49,7 +49,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 [source,sh]
 ----
-wget https://github.com/kak-lsp/kak-lsp/releases/download/v15.0.1/kak-lsp-v15.0.1-x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v15.0.1/kak-lsp-v15.0.1-x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp-v15.0.1-x86_64-unknown-linux-musl.tar.gz
 
 # replace `~/.local/bin/` with something on your `$PATH`
@@ -62,12 +62,12 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 ==== From source
 
-Generally, you need the latest stable version of Rust to build kak-lsp.
+Generally, you need the latest stable version of Rust to build kakoune-lsp.
 
 [source,sh]
 ----
-git clone https://github.com/kak-lsp/kak-lsp
-cd kak-lsp
+git clone https://github.com/kakoune-lsp/kakoune-lsp
+cd kakoune-lsp
 
 # this installs the kak-lsp binary to ~/.cargo/bin, which must be in your `$PATH`
 cargo install --locked --force --path .
@@ -79,12 +79,12 @@ cp kak-lsp.toml ~/.config/kak-lsp/
 
 ==== With plug.kak
 
-If you don't mind using a plugin manager, you can install kak-lsp
+If you don't mind using a plugin manager, you can install kakoune-lsp
 via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
 
 [source,kak]
 ----
-plug "kak-lsp/kak-lsp" do %{
+plug "kakoune-lsp/kakoune-lsp" do %{
     cargo install --locked --force --path .
     # optional: if you want to use specific language servers
     mkdir -p ~/.config/kak-lsp
@@ -96,16 +96,16 @@ plug "kak-lsp/kak-lsp" do %{
 Alternatively, you can replace `cargo install` with `cargo build --release && ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
 where `~/.local/bin/` can be replaced with something in your `$PATH`.
 
-Examples of configuration with plug.kak can be found at https://github.com/kak-lsp/kak-lsp/wiki/Usage-with-plug.kak[Wiki].
+Examples of configuration with plug.kak can be found at https://github.com/kakoune-lsp/kakoune-lsp/wiki/Usage-with-plug.kak[Wiki].
 
 === Install language servers for your desired languages
 
-kak-lsp doesn't manage installation of language servers, please install them
-by yourself for the languages you plan to use kak-lsp with. Please consult the
-https://github.com/kak-lsp/kak-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
-quick installation of language servers supported by kak-lsp out of the box.
+kakoune-lsp doesn't manage installation of language servers, please install them
+by yourself for the languages you plan to use kakoune-lsp with. Please consult the
+https://github.com/kakoune-lsp/kakoune-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
+quick installation of language servers supported by kakoune-lsp out of the box.
 
-=== Configure Kakoune to enable kak-lsp
+=== Configure Kakoune to enable LSP
 
 To enable LSP support for configured languages (see <<Configuration>>) just add the following
 commands to your `kakrc`:
@@ -116,7 +116,7 @@ eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with pl
 lsp-enable
 ----
 
-A bit more involved but recommended way is to enable kak-lsp only for specific filetypes you need
+A bit more involved but recommended way is to enable LSP only for specific filetypes you need
 via `lsp-enable-window`, e.g.:
 
 [source,kak]
@@ -208,7 +208,7 @@ hook global WinSetOption filetype=rust %{
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
 * An hourglass character (⌛) in the modeline whenever the language server indicates it's busy.
 ** To customize this behavior, override `lsp-handle-progress`.
-** To implement this, kak-lsp adds `%opt{lsp_modeline} ` to the left of your global `modelinefmt` at load time.
+** To implement this, kakoune-lsp adds `%opt{lsp_modeline} ` to the front of your global `modelinefmt` at load time.
 * If `lsp_auto_show_code_actions` is `true`, a lightbulb (💡) in the modeline whenever code actions are available at the main cursor position
 ** To customize the lightbulb, you can override `lsp-show-code-actions` and `lsp-hide-code-actions`
 * `lsp-code-actions` to open a menu to choose a code action to run
@@ -261,17 +261,17 @@ would spin up a fresh server if it is down.
 | } | lsp-next-symbol
 |===
 
-To know which subset of kak-lsp commands is backed by the current buffer's filetype's language server use
+To know which subset of LSP commands is backed by the current buffer's filetype's language server use
 `lsp-capabilities` command.
 
 == Configuration
 
-kak-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration.
+kakoune-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration.
 
-=== Configuring kak-lsp
+=== Configuring kakoune-lsp
 
-kak-lsp is configured via a configuration file in https://github.com/toml-lang/toml[TOML] format. By
-default kak-lsp tries to read `$XDG_CONFIG_HOME/kak-lsp/kak-lsp.toml` (which defaults to
+kakoune-lsp is configured via a configuration file in https://github.com/toml-lang/toml[TOML] format. By
+default it tries to read `$XDG_CONFIG_HOME/kak-lsp/kak-lsp.toml` (which defaults to
 `~/.config/kak-lsp/kak-lsp.toml`) but you can override it with command-line option `--config`.
 Look into the default link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
 If you don't need to change configuration then feel free to skip copying it anywhere as the
@@ -283,14 +283,14 @@ overrides it. This means that if you want to customize any of the configuration,
 
 In the language section of `kak-lsp.toml`, the `roots` parameter is a list of file globs.
 Whenever your editor session wants to send an LSP request, the first glob that matches a file
-in any of the current buffer's parent directories will cause `kak-lsp` to set the project root
+in any of the current buffer's parent directories will cause kakoune-lsp to set the project root
 to that parent directory.
 
 You can define an environment variable like `KAK_LSP_PROJECT_ROOT_RUST=/my/project` to always
 use `/my/project` as root for Rust files inside `/my/project`.  Substitute `RUST` with another
 capitalized language ID to do the same for other file types.
 
-The environment variable `KAK_LSP_FORCE_PROJECT_ROOT=/my/project` will make `kak-lsp` always
+The environment variable `KAK_LSP_FORCE_PROJECT_ROOT=/my/project` will make kakoune-lsp always
 use `/my/project` as project root, even for files outside this directory. This avoids starting
 separate language servers for files outside `/my/project`, and ensures that your language server
 is aware of your project's build configuration even when navigating library code.
@@ -316,10 +316,10 @@ settings_section = "gopls" # Optional, defaults to server name.
 "formatting.gofumpt" = true
 ----
 
-During server initialization, kak-lsp sends either the section specified by `settings_section`.
+During server initialization, kakoune-lsp sends either the section specified by `settings_section`,
 or the section with same name as the server; in this case `{"formatting.gofumpt":true}`.
 Whenever you change the Kakoune option `lsp_config`, the same section is sent via
-`workspace/didChangeConfiguration`.  Additionally, kak-lsp will send arbitrary sections that
+`workspace/didChangeConfiguration`.  Additionally, kakoune-lsp will send arbitrary sections that
 are requested by the server in `workspace/configuration`.
 
 ==== Language ID ("languageId")
@@ -355,14 +355,14 @@ editor = {}
 
 === Configuring Kakoune
 
-kak-lsp's Kakoune integration declares the following options:
+kakoune-lsp declares the following Kakoune options:
 
-* `lsp_completion_trigger` (str): This option is set to a Kakoune command, which is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a completion request to the language server.
-* `lsp_diagnostic_line_error_sign`, `lsp_diagnostic_line_hint_sign`, `lsp_diagnostic_line_info_sign`, and `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an error or another diagnostic, kak-lsp will add a flag to the left-most column of the window, using this string and one of the corresponding faces `LineFlagError`, `LineFlagHint`, `LineFlagInfo` or `LineFlagWarning`.
+* `lsp_completion_trigger` (str): This option is set to a Kakoune command, which is executed every time the user pauses in insert mode. If the command succeeds, kakoune-lsp will send a completion request to the language server.
+* `lsp_diagnostic_line_error_sign`, `lsp_diagnostic_line_hint_sign`, `lsp_diagnostic_line_info_sign`, and `lsp_diagnostic_line_warning_sign` (str): When using `lsp-diagnostic-lines-enable` and the language server detects an error or another diagnostic, kakoune-lsp will add a flag to the left-most column of the window, using this string and one of the corresponding faces `LineFlagError`, `LineFlagHint`, `LineFlagInfo` or `LineFlagWarning`.
 * `lsp_hover_anchor` (bool): When using `lsp-hover` or `lsp-auto-hover-enable`, if this option is `true` then the hover information will be displayed next to the active selection. Otherwise, the information will be displayed in a box in the lower-right corner.
 * `lsp_hover_max_lines` (int): If greater than 0 then limit rendered hover information to the given number of lines. Default is 20.
-* `lsp_hover_insert_mode_trigger` (str): This option is set to a Kakoune command. When using `lsp-auto-hover-insert-mode-enable`, this command is executed every time the user pauses in insert mode. If the command succeeds, kak-lsp will send a hover-information request for the text selected by the command.
-* `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kak-lsp will ask the language server to indent with spaces rather than tabs.
+* `lsp_hover_insert_mode_trigger` (str): This option is set to a Kakoune command. When using `lsp-auto-hover-insert-mode-enable`, this command is executed every time the user pauses in insert mode. If the command succeeds, kakoune-lsp will send a hover-information request for the text selected by the command.
+* `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kakoune-lsp will ask the language server to indent with spaces rather than tabs.
 * `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time the user pauses in normal mode.
 * `lsp_auto_show_code_actions` (bool): If this option is `true` then `lsp-code-actions` is executed every time the user pauses in normal mode.
 * `lsp_config` (str): This is a TOML string of the same format as `kak-lsp.toml`, except it currently only supports one kind of configuration value:
@@ -380,7 +380,7 @@ set-option global lsp_config %{
 
 == Inlay hints
 
-Inlay hints are a feature proposed for LSP 3.17 to show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it in kak-lsp, add the following to your `kakrc`:
+Inlay hints are a feature proposed for LSP 3.17 to show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it, add the following to your `kakrc`:
 
 [source,kak]
 ----
@@ -391,7 +391,7 @@ You can change the hints' face with `set-face global InlayHint <face>`.
 
 == Semantic Tokens
 
-kak-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:
+kakoune-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:
 
 [source,kak]
 ----
@@ -418,7 +418,7 @@ faces = [
 where `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config), `token` is the token's name as reported by the language server (see `lsp-capabilities`) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` may be omitted, but `token` and `face` are required.
 
 You may create any arbitrary number of definitions with permutations between the token names and modifiers reported by the server. For an entry to match a token, all the entry's modifiers must exist on the token. However, the token may have additional modifiers not assigned in the config entry. +
-`kak-lsp` will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple matching entries have the same number of modifiers, the one that was defined last in the configuration wins.
+kakoune-lsp will find the most specific matching configuration to apply, where specificity is defined as the number of matching modifiers. If multiple matching entries have the same number of modifiers, the one that was defined last in the configuration wins.
 
 *Example:*
 
@@ -434,7 +434,7 @@ faces = [
 ]
 ----
 
-`kak-lsp` will perform these mappings:
+kakoune-lsp will perform these mappings:
 
 [cols="1,1,2,5"]
 |===
@@ -469,7 +469,7 @@ faces = [
 
 == Inlay Diagnostics
 
-kak-lsp supports showing diagnostics inline after their respective line, but this behavior can be somewhat buggy and must be enabled explicitly:
+kakoune-lsp supports showing diagnostics inline after their respective line, but this behavior can be somewhat buggy and must be enabled explicitly:
 
 [source,kak]
 ----
@@ -478,9 +478,9 @@ lsp-inlay-diagnostics-enable global
 
 == Markdown rendering in info box
 
-kak-lsp shows some additional information provided by the language server in an info box. This information includes documentation for the token under the cursor (`lsp-hover`) and documentation for completion candidates. In both cases, the Language Server Protocol allows for both plain text and Markdown, and most servers do implement Markdown.
+kakoune-lsp shows some additional information provided by the language server in an info box. This information includes documentation for the token under the cursor (`lsp-hover`) and documentation for completion candidates. In both cases, the Language Server Protocol allows for both plain text and Markdown, and most servers do implement Markdown.
 
-To make use of Markdown, kak-lsp transpiles it into Kakoune's markup language, utilizing various faces for styling.
+To make use of Markdown, kakoune-lsp transpiles it into Kakoune's markup language, utilizing various faces for styling.
 These faces all default to the `Information` face, to ensure that the text in the info box works with any color scheme.
 
 To enable Markdown highlighting, define some of the following faces in your theme or `kakrc`:
@@ -587,7 +587,7 @@ Snippet support can be disabled by setting `snippet_support = false` at the top 
 
 === Encoding
 
-kak-lsp works best with UTF-8 documents.
+kakoune-lsp works best with UTF-8 documents.
 
 === `Position.character` interpretation
 
@@ -595,13 +595,13 @@ The LSP spec says that column offsets (`Position.character`) are to be
 interpreted as UTF-16 code units. Many servers violate the spec. Please refer to
 https://github.com/Microsoft/language-server-protocol/issues/376 for some background.
 
-kak-lsp adheres to the spec but will prefer UTF-8 offsets if the server advertises
+kakoune-lsp adheres to the spec but will prefer UTF-8 offsets if the server advertises
 support for UTF-8 offsets via client capabilities `general.positionEncodings` or
 https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol extension].
 
 == Troubleshooting
 
-If kak-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
+If kakoune-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
 [source,kak]
 ----
 set global lsp_cmd "kak-lsp -s %val{session} -vvv --log /tmp/kak-lsp.log"
@@ -609,12 +609,12 @@ set global lsp_cmd "kak-lsp -s %val{session} -vvv --log /tmp/kak-lsp.log"
 
 to enable debug logging.
 
-If it does not give enough insight to fix the problem or if the problem is a bug in kak-lsp itself
+If it does not give enough insight to fix the problem or if the problem is a bug in kakoune-lsp itself
 please don't hesitate to raise an issue.
 
 === Default configuration
 
-Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific settings in your `~/.config/kak-lsp/kak-lsp.toml` and/or `~/.config/kak/`. Use this command to start Kakoune with kak-lsp enabled, both with pristine settings.
+Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific settings in your `~/.config/kak-lsp/kak-lsp.toml` and/or `~/.config/kak/`. Use this command to start Kakoune with kakoune-lsp enabled, both with pristine settings.
 
 [source,sh]
 ----
@@ -624,17 +624,17 @@ HOME=$(mktemp -d) kak -e '
     lsp-enable'
 ----
 
-NOTE: Some Kakoune plugins could interfere with kak-lsp, particularly completions providers.
+NOTE: Some Kakoune plugins could interfere with kakoune-lsp, particularly completions providers.
 E.g. `racer.kak` competes for autocompletion in Rust files.
 
 === Crashes
 
-For troubleshooting crashes, you might like to run kak-lsp outside of
+For troubleshooting crashes, you might like to run kakoune-lsp outside of
 Kakoune.
 
 To do this:
 
-. *Before launching Kakoune*, run kak-lsp with an arbitrary session ID (here `foobar`):
+. *Before launching Kakoune*, run kakoune-lsp with an arbitrary session ID (here `foobar`):
 
   kak-lsp -s foobar
 
@@ -644,7 +644,7 @@ To do this:
 
 == Versioning
 
-kak-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we
+kakoune-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we
 don't use 0 major version to indicate that product is not yet reached stability. Even for non-stable
 and not feature-complete product user should be clearly informed about breaking change. Therefore we
 start with major version 1 and increment it each time when upgrade requires user's attention.

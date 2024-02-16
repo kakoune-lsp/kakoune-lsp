@@ -34,7 +34,7 @@ set-face global ReferenceBind +u@Reference
 set-face global InlayHint cyan+d
 set-face global InlayCodeLens cyan+d
 
-# Options for tuning kak-lsp behaviour.
+# Options for tuning LSP behaviour.
 
 # Display hover info anchored to the hovered position.
 declare-option -docstring "Display hover info anchored to the hovered position" bool lsp_hover_anchor false
@@ -162,7 +162,7 @@ Capture groups must be:
     4: optional message
 } regex lsp_location_format ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
 
-# Callback functions. Override these to tune kak-lsp's behavior.
+# Callback functions. May override these.
 
 declare-option -hidden str lsp_code_action_indicator
 define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
@@ -320,7 +320,7 @@ define-command -hidden lsp-menu-impl %{
     }
 }
 
-# Options for information exposed by kak-lsp.
+# Options for information exposed by kakoune-lsp.
 
 # Count of diagnostics published for the current buffer.
 declare-option -docstring "Number of errors" int lsp_diagnostic_error_count 0
@@ -353,7 +353,7 @@ set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 ### Requests ###
 
-define-command lsp-start -docstring "Start kak-lsp session" %{ nop %sh{ (eval "${kak_opt_lsp_cmd}") > /dev/null 2>&1 < /dev/null & } }
+define-command lsp-start -docstring "Start kakoune-lsp session" %{ nop %sh{ (eval "${kak_opt_lsp_cmd}") > /dev/null 2>&1 < /dev/null & } }
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{ try %{
     evaluate-commands %sh{
@@ -432,7 +432,7 @@ try %{
 
     # Kakoune requires completions to point fragment start rather than cursor position.
     # We try to detect it and put into lsp_completion_offset and then pass via completion.offset
-    # parameter to the kak-lsp server so it can use it when sending completions back.
+    # parameter to the kakoune-lsp server so it can use it when sending completions back.
     declare-option -hidden str lsp_completion_offset
 
     set-option window lsp_completion_offset %val{cursor_column}
@@ -620,7 +620,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
-method   = \"kak-lsp/next-or-previous-symbol\"
+method   = \"kakoune/next-or-previous-symbol\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 position.line   = ${kak_cursor_line}
@@ -671,7 +671,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
-method   = \"kak-lsp/object\"
+method   = \"kakoune/object\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 count           = $kak_count
@@ -835,7 +835,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
-method   = \"kak-lsp/textDocument/codeLens\"
+method   = \"kakoune/textDocument/codeLens\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
@@ -1068,7 +1068,7 @@ client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
 filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
-method   = \"kak-lsp/goto-document-symbol\"
+method   = \"kakoune/goto-document-symbol\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${kak_opt_lsp_connect_fifo}\
 [params]
@@ -1166,7 +1166,7 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 }
 
 define-command -hidden lsp-did-change-config %{
-    echo -debug "kak-lsp: config-change detected:" %opt{lsp_config}
+    echo -debug "LSP: config-change detected:" %opt{lsp_config}
     nop %sh{ ((printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
@@ -1192,7 +1192,7 @@ done
 ) | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kak-lsp session running" %{
+define-command -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kakoune-lsp session running" %{
     remove-hooks global lsp
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
@@ -1272,7 +1272,7 @@ edit     = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-stop -docstring "Stop kak-lsp session" %{
+define-command lsp-stop -docstring "Stop kakoune-lsp session" %{
     remove-hooks global lsp
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
@@ -1670,8 +1670,8 @@ define-command -hidden lsp-show-hover -params 4 -docstring %{
 }}
 
 define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
-    echo -debug "kak-lsp:" %arg{1}
-    info "kak-lsp: %arg{1}"
+    echo -debug "LSP:" %arg{1}
+    info "LSP: %arg{1}"
 }
 
 define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
@@ -1844,9 +1844,9 @@ define-command -hidden lsp-show-message-error -params 2 -docstring %{
     lsp-show-message-error <message>
     Render language server message of the "error" level.
 } %{
-    echo -debug "kak-lsp: error from server %arg{1}: %arg{2}"
+    echo -debug "LSP: error from server %arg{1}: %arg{2}"
     evaluate-commands -try-client %opt{toolsclient} %{
-        info "kak-lsp: error from server %arg{1}: %arg{2}"
+        info "LSP: error from server %arg{1}: %arg{2}"
     }
 }
 
@@ -1854,9 +1854,9 @@ define-command -hidden lsp-show-message-warning -params 2 -docstring %{
     lsp-show-message-warning <message>
     Render language server message of the "warning" level.
 } %{
-    echo -debug "kak-lsp: warning from server %arg{1}: %arg{2}"
+    echo -debug "LSP: warning from server %arg{1}: %arg{2}"
     evaluate-commands -try-client %opt{toolsclient} %{
-        echo "kak-lsp: warning from server %arg{1}: %arg{2}"
+        echo "LSP: warning from server %arg{1}: %arg{2}"
     }
 }
 
@@ -1864,9 +1864,9 @@ define-command -hidden lsp-show-message-info -params 2 -docstring %{
     lsp-show-message-info <message>
     Render language server message of the "info" level.
 } %{
-    echo -debug "kak-lsp: info from server %arg{1}: %arg{2}"
+    echo -debug "LSP: info from server %arg{1}: %arg{2}"
     evaluate-commands -try-client %opt{toolsclient} %{
-        echo "kak-lsp: info from server %arg{1}: %arg{2}"
+        echo "LSP: info from server %arg{1}: %arg{2}"
     }
 }
 
@@ -1874,7 +1874,7 @@ define-command -hidden lsp-show-message-log -params 2 -docstring %{
     lsp-show-message-log <message>
     Render language server message of the "log" level.
 } %{
-    echo -debug "kak-lsp: log from %arg{1}: %arg{2}"
+    echo -debug "LSP: log from %arg{1}: %arg{2}"
 }
 
 define-command -hidden lsp-show-message-request -params 4.. -docstring %{
@@ -2186,11 +2186,11 @@ define-command lsp-auto-signature-help-disable -docstring "Disable auto-requesti
     remove-hooks global lsp-auto-signature-help
 }
 
-define-command lsp-stop-on-exit-enable -docstring "End kak-lsp session on Kakoune session end" %{
+define-command lsp-stop-on-exit-enable -docstring "End kakoune-lsp session on Kakoune session end" %{
     alias global lsp-exit lsp-stop
 }
 
-define-command lsp-stop-on-exit-disable -docstring "Don't end kak-lsp session on Kakoune session end" %{
+define-command lsp-stop-on-exit-disable -docstring "Don't end kakoune-lsp session on Kakoune session end" %{
     alias global lsp-exit lsp-exit-editor-session
 }
 
@@ -2263,7 +2263,7 @@ map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
 
 ### Default integration ###
 
-define-command lsp-enable -docstring "Default integration with kak-lsp" %{
+define-command lsp-enable -docstring "Default LSP integration" %{
     try %{
         add-highlighter global/cquery_semhl ranges cquery_semhl
     } catch %{
@@ -2307,7 +2307,7 @@ define-command lsp-enable -docstring "Default integration with kak-lsp" %{
     lsp-did-change-config
 }
 
-define-command lsp-disable -docstring "Disable kak-lsp" %{
+define-command lsp-disable -docstring "Disable LSP" %{
     remove-highlighter global/cquery_semhl
     remove-highlighter global/lsp_references
     remove-highlighter global/lsp_semantic_tokens
@@ -2323,7 +2323,7 @@ define-command lsp-disable -docstring "Disable kak-lsp" %{
     lsp-exit
 }
 
-define-command lsp-enable-window -docstring "Default integration with kak-lsp in the window scope" %{
+define-command lsp-enable-window -docstring "Default LSP integration in the window scope" %{
     try %{
         add-highlighter window/cquery_semhl ranges cquery_semhl
     } catch %{
@@ -2365,7 +2365,7 @@ define-command lsp-enable-window -docstring "Default integration with kak-lsp in
     lsp-did-change-config
 }
 
-define-command lsp-disable-window -docstring "Disable kak-lsp in the window scope" %{
+define-command lsp-disable-window -docstring "Disable LSP in the window scope" %{
     remove-highlighter window/cquery_semhl
     remove-highlighter window/lsp_references
     remove-highlighter window/lsp_semantic_tokens

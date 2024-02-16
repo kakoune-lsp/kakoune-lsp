@@ -5,9 +5,9 @@ use std::{env, fs, io, path};
 
 pub fn temp_dir() -> path::PathBuf {
     let mut path = env::temp_dir();
-    path.push("kak-lsp");
+    path.push("kakoune-lsp");
     let old_mask = unsafe { libc::umask(0) };
-    // Ignoring possible error during $TMPDIR/kak-lsp creation to have a chance to restore umask.
+    // Ignoring possible error during $TMPDIR/kakoune-lsp creation to have a chance to restore umask.
     let _ = fs::DirBuilder::new()
         .recursive(true)
         .mode(0o1777)

@@ -17,7 +17,7 @@ command -v tmux >/dev/null
 # Export a fresh HOME, so Kakoune runs without user configuration.
 HOME=$(mktemp -d)
 cd "$HOME"
-export TMPDIR=$HOME # Avoid interfering with other kak-lsp processes.
+export TMPDIR=$HOME # Avoid interfering with other kakoune-lsp processes.
 env=$(env)
 if printf %s "$env" | grep -q ^XDG_CONFIG_HOME=; then
 	XDG_CONFIG_HOME=$HOME/.config

@@ -28,7 +28,7 @@ cp MIT $stage
 cp UNLICENSE $stage
 
 cd $stage
-tar czf $src/kak-lsp-$version-$target.tar.gz *
+tar czf $src/kakoune-lsp-$version-$target.tar.gz *
 cd $src
 
 rm -rf $stage

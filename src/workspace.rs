@@ -79,7 +79,7 @@ pub fn configuration(
         .iter()
         .map(|item| {
             // There's also a `scopeUri`, which lists the file/folder
-            // that the config should apply to. But kak-lsp doesn't
+            // that the config should apply to. But kakoune-lsp doesn't
             // have a concept of per-file configuration and workspaces
             // are separated by kak-lsp processes.
             item.section

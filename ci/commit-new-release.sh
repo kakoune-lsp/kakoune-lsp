@@ -35,6 +35,6 @@ cat <<EOF
 Release checklist:
 - Push the tag v$new
 - Wait for the CI to create the release draft with release artifacts, then
-  edit release notes and make the release at https://github.com/kak-lsp/kak-lsp/releases
-- Update the Homebrew formula at https://github.com/kak-lsp/homebrew-kak-lsp
+  edit release notes and make the release at https://github.com/kakoune-lsp/kakoune-lsp/releases
+- Update the Homebrew formula at https://github.com/kakoune-lsp/homebrew-kakoune-lsp
 EOF

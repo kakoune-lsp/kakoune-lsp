@@ -356,7 +356,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                     version: None,
                                 }),
                                 markdown: Some(MarkdownClientCapabilities {
-                                    parser: "kak-lsp".to_string(),
+                                    parser: "kakoune-lsp".to_string(),
                                     version: Some(env!("CARGO_PKG_VERSION").to_string()),
                                     allowed_tags: None,
                                 }),
@@ -690,7 +690,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     }
 
     let command = formatdoc!(
-        "info 'kak-lsp commands supported by language servers ({}):
+        "info 'LSP commands supported by language servers ({}):
 
          {}'",
         editor_escape(&ctx.language_servers.keys().join(", ")),

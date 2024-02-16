@@ -603,16 +603,16 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         request::DocumentSymbolRequest::METHOD => {
             document_symbol::text_document_document_symbol(meta, ctx);
         }
-        "kak-lsp/next-or-previous-symbol" => {
+        "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params, ctx);
         }
-        "kak-lsp/object" => {
+        "kakoune/object" => {
             document_symbol::object(meta, params, ctx);
         }
-        "kak-lsp/goto-document-symbol" => {
+        "kakoune/goto-document-symbol" => {
             document_symbol::document_symbol_menu(meta, params, ctx);
         }
-        "kak-lsp/textDocument/codeLens" => {
+        "kakoune/textDocument/codeLens" => {
             code_lens::resolve_and_perform_code_lens(meta, params, ctx);
         }
         request::Formatting::METHOD => {
@@ -817,13 +817,13 @@ fn dispatch_server_notification(
 
 /// Ensure that textDocument/didOpen is sent for the given buffer before any other request, if possible.
 ///
-/// kak-lsp tries to not bother Kakoune side of the plugin with bookkeeping status of kak-lsp server
-/// itself and lsp servers run by it. It is possible that kak-lsp server or lsp server dies at some
-/// point while Kakoune session is still running. That session can send a request for some already
-/// open (opened before kak-lsp/lsp exit) buffer. In this case, kak-lsp/lsp server will be restarted
-/// by the incoming request. `ensure_did_open` tries to sneak in `textDocument/didOpen` request for
-/// this buffer then as the specification requires to send such request before other requests for
-/// the file.
+/// kakoune-lsp tries to not bother Kakoune side of the plugin with bookkeeping status of
+/// kakoune-lsp server itself and lsp servers run by it. It is possible that kakoune-lsp server
+/// or lsp server dies at some point while Kakoune session is still running. That session can
+/// send a request for some already open (opened before kakoune-lsp/lsp exit) buffer. In this
+/// case, kakoune-lsp/lsp server will be restarted by the incoming request. `ensure_did_open`
+/// tries to sneak in `textDocument/didOpen` request for this buffer then as the specification
+/// requires to send such request before other requests for the file.
 ///
 /// In a normal situation, such extra request is not required, and `ensure_did_open` short-circuits
 /// most of the time in `if buffile.is_empty() || ctx.documents.contains_key(buffile)` condition.

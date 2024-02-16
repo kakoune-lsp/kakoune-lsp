@@ -601,7 +601,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kak-lsp"
+name = "kakoune-lsp"
 version = "15.0.1-snapshot"
 dependencies = [
  "clap",
