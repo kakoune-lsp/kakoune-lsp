@@ -89,7 +89,18 @@ pub fn configuration(
                 // Tests indicate the former.
                 .map(|section| match &settings {
                     None => Value::Null,
-                    Some(settings) => settings.get(section).unwrap_or(&Value::Null).clone(),
+                    Some(settings) => {
+                        if ctx
+                            .config
+                            .language_server
+                            .get(server_name)
+                            .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
+                            && section.is_empty()
+                        {
+                            return settings.clone();
+                        }
+                        settings.get(section).unwrap_or(&Value::Null).clone()
+                    }
                 })
                 .unwrap_or(Value::Null)
         })

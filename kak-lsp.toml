@@ -412,6 +412,24 @@ settings_section = "_"
 # quotePreference = "double"
 # typescript.format.semicolons = "insert"
 
+# [language_server.eslint]
+# filetypes = ["javascript", "typescript"]
+# roots = [".eslintrc", ".eslintrc.json"]
+# command = "eslint-language-server"
+# args = ["--stdio"]
+# workaround_eslint = true
+# [language_server.eslint.settings]
+# codeActionsOnSave = { mode = "all", "source.fixAll.eslint" = true }
+# format = { enable = true }
+# quiet = false
+# rulesCustomizations = []
+# run = "onType"
+# validate = "on"
+# experimental = {}
+# problems = { shortenToSingleLine = false }
+# codeAction.disableRuleComment = { enable = true, location = "separateLine" }
+# codeAction.showDocumentation = { enable = false }
+
 [language_server.yaml-language-server]
 filetypes = ["yaml"]
 roots = [".git", ".hg"]

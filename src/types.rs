@@ -64,6 +64,7 @@ pub struct LanguageServerConfig {
     pub offset_encoding: Option<OffsetEncoding>,
     // This does nothing, but is kept so we can still parse old configs.
     pub workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
+    pub workaround_eslint: Option<bool>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
