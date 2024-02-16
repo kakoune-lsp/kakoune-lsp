@@ -89,7 +89,14 @@ pub fn configuration(
                 // Tests indicate the former.
                 .map(|section| match &settings {
                     None => Value::Null,
-                    Some(settings) => settings.get(section).unwrap_or(&Value::Null).clone(),
+                    Some(settings) => {
+                        // if the section is empty, return the whole settings
+                        if section.is_empty() {
+                            settings.clone()
+                        } else {
+                            settings.get(section).unwrap_or(&Value::Null).clone()
+                        }
+                    }
                 })
                 .unwrap_or(Value::Null)
         })
