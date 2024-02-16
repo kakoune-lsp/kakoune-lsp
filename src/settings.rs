@@ -59,7 +59,14 @@ pub fn configured_section(
             .language_server
             .get(server_name)
             .and_then(|cfg| cfg.settings_section.as_ref())
-            .and_then(|section| settings.get(section).cloned())
+            // if settings_section is not set, return the whole settings object
+            .and_then(|section| {
+                if section.is_empty() {
+                    Some(settings.clone())
+                } else {
+                    settings.get(section).cloned()
+                }
+            })
     })
 }
 
