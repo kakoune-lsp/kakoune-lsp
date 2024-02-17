@@ -30,7 +30,7 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
             uri: Url::from_file_path(&meta.buffile).unwrap(),
             language_id: ctx.language_id.clone(),
             version: meta.version,
-            text: params.draft.clone(),
+            text: params.draft,
         },
     };
     let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
