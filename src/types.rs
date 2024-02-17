@@ -283,6 +283,12 @@ pub struct NextOrPrevSymbolParams {
     pub hover: bool,
 }
 
+#[derive(Clone, Default, Deserialize, Debug)]
+#[serde(default)]
+pub struct BreadcrumbsParams {
+    pub position_line: u32,
+}
+
 #[derive(Clone, Deserialize, Debug)]
 pub struct GotoSymbolParams {
     pub goto_symbol: Option<String>,

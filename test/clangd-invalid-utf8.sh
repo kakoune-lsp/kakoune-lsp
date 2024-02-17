@@ -26,4 +26,4 @@ test_tmux capture-pane -p
 # CHECK: ~
 # CHECK: ~
 # CHECK: ~
-# CHECK: callee.c 1:4 [+] 1 sel - client0@[session]
+# CHECK: {{(callee )?}} callee.c 1:4 [+] 1 sel - client0@[session]

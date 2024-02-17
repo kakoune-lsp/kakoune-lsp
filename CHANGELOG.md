@@ -5,6 +5,7 @@ Breaking changes:
 - The kak-lsp project has been renamed to kakoune-lsp. The binary name is still kak-lsp. Distributors are encouraged to update the package name.
 
 Additions:
+- Breadcrumbs in the modeline (including terminal title) indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).
 - `lsp-document-symbols` now renders symbols in a tree.
 - `lsp-code-lens` can now run the test at cursor with `rust-analyzer`.
 Fixes:

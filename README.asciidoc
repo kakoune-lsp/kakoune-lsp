@@ -206,9 +206,10 @@ hook global WinSetOption filetype=rust %{
 * `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
 * `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
+* Breadcrumbs in the modeline indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).
+** To implement this, kakoune-lsp adds `%opt{lsp_modeline} ` to the front of your global `modelinefmt` at load time.
 * An hourglass character (⌛) in the modeline whenever the language server indicates it's busy.
 ** To customize this behavior, override `lsp-handle-progress`.
-** To implement this, kakoune-lsp adds `%opt{lsp_modeline} ` to the front of your global `modelinefmt` at load time.
 * If `lsp_auto_show_code_actions` is `true`, a lightbulb (💡) in the modeline whenever code actions are available at the main cursor position
 ** To customize the lightbulb, you can override `lsp-show-code-actions` and `lsp-hide-code-actions`
 * `lsp-code-actions` to open a menu to choose a code action to run
