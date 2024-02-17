@@ -1,3 +1,5 @@
+use crate::capabilities::attempt_server_capability;
+use crate::capabilities::CAPABILITY_COMPLETION;
 use crate::context::*;
 use crate::markup::*;
 use crate::position::*;
@@ -17,10 +19,15 @@ use unicode_width::UnicodeWidthStr;
 use url::Url;
 
 pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = TextDocumentCompletionParams::deserialize(params).unwrap();
-    let req_params = ctx
+    let eligible_servers: Vec<_> = ctx
         .language_servers
         .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_COMPLETION))
+        .collect();
+
+    let params = TextDocumentCompletionParams::deserialize(params).unwrap();
+    let req_params = eligible_servers
+        .into_iter()
         .map(|(server_name, server_settings)| {
             (
                 server_name.clone(),
