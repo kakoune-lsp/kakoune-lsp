@@ -1,23 +1,23 @@
 ## Unreleased
 
-The kak-lsp project has been renamed to kakoune-lsp. The binary and config file paths are unchanged. Distributors are encouraged to update the package name.
+Both the kak-lsp project and GitHub organization have been renamed to kakoune-lsp. The binary and config file paths are unchanged. Distributors are encouraged to update the package name.
 
 Breaking changes:
 - kakoune-lsp now requires Kakoune version >= v2022.10.31 for commands that use a menu, like code actions.
-- `lsp_auto_show_code_actions` (which renders a lightbulb in the modeline) now defaults to true.
 
 Additions:
-- Breadcrumbs in the modeline (including terminal title) indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).
+- The modeline shows breadcrumbs like `somemodule > someclass > somefunction` to indicate the symbol around the main cursor.
 - `lsp-document-symbols` now renders symbols in a tree.
+- `lsp_auto_show_code_actions` (which renders a lightbulb in the modeline) now defaults to true.
 - `lsp-code-lens` can now run the test at cursor with `rust-analyzer`.
 Fixes:
-- When LSP integration was enabled, then disabled and enabled again during a Kakoune session, kakoune-lsp did not request the server to exit, which has been fixed.
+- `lsp-inlay-diagnostics` no longer jump around when the cursor is moved over the diagnostics. To use this feature, use Kakoune version >= 2024 (not yet release, consider building from source).
+- When LSP integration is enabled, then disabled and enabled again, the `KakEnd` hook failed to ask the server to exit, which has been fixed.
+- `lsp-auto-hover-enable` now only re-renders hover info when the main selection changes. This means that `:info` is no longer shadowed immediately by auto hover.
 - Completion snippets (accessed via `lsp-snippets-select-next-placeholders`) can now be nested, making it possible to cycle through the arguments of nested function calls.
-- In some cases, completions provided by `rust-analyzer` would be inserted as label (like `self.some_method(…)`) which has been fixed.
+- In some cases, selecting completions provided by `rust-analyzer` would labels with extra characters (like `self.some_method(…)`) which has been fixed.
 - `completionItem.additionalTextEdits` are now applied also when the server does not support `completionItem/resolve`.
 - Snippet metacharacters are now properly escaped, removing spurious backslashes from inserted completions.
-- `lsp-auto-hover-enable` now only shows hover info when the main selection changes. This means that `:info` no longer be immediately shadowed by auto hover.
-- `lsp-inlay-diagnostics` no longer jump around when the cursor is moved around the diagnostics. To use this feature, use Kakoune version >= 2024 (#604).
 
 ## 15.0.1 - 2023-12-11
 
