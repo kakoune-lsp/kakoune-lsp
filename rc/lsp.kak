@@ -2292,6 +2292,8 @@ define-command lsp-disable-window -docstring "Disable LSP in the window scope" %
     lsp-disable-impl window
 }
 
+define-command lsp-on-exit nop
+
 define-command -hidden lsp-enable-impl -params 1 %{
     try "
         add-highlighter %arg{1}/cquery_semhl ranges cquery_semhl
@@ -2325,6 +2327,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
     hook -group lsp %arg{1} NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
         set-option window lsp_object_mode %val{hook_param}
     }
+    define-command -override lsp-on-exit lsp-exit
 }
 
 define-command -hidden lsp-disable-impl -params 1 %{
@@ -2340,6 +2343,7 @@ define-command -hidden lsp-disable-impl -params 1 %{
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
+    define-command -override lsp-on-exit nop
     lsp-exit
 }
 
@@ -2349,7 +2353,7 @@ define-command -hidden lsp-require-enabled -params 1 %{
 }
 
 lsp-stop-on-exit-enable
-hook -always -group lsp global KakEnd .* lsp-exit
+hook -always global KakEnd .* lsp-on-exit
 
 # SNIPPETS
 # This is a slightly modified version of occivink/kakoune-snippets
