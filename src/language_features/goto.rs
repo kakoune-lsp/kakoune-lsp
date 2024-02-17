@@ -1,3 +1,7 @@
+use crate::capabilities::{
+    attempt_server_capability, CAPABILITY_DEFINITION, CAPABILITY_IMPLEMENTATION,
+    CAPABILITY_REFERENCES, CAPABILITY_TYPE_DEFINITION,
+};
 use crate::context::{Context, RequestParams, ServerSettings};
 use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams, ServerName};
@@ -6,7 +10,7 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::{
     GotoDeclaration, GotoDefinition, GotoImplementation, GotoTypeDefinition,
-    GotoTypeDefinitionResponse, References,
+    GotoTypeDefinitionResponse, References, Request,
 };
 use lsp_types::*;
 use serde::Deserialize;
@@ -139,9 +143,21 @@ pub fn text_document_definition(
     ctx: &mut Context,
 ) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = ctx
+    let eligible_servers: Vec<_> = ctx
         .language_servers
         .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DEFINITION))
+        .collect();
+    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+        let cmd = format!(
+            "lsp-show-error %[no server supports {}]",
+            request::GotoDefinition::METHOD
+        );
+        ctx.exec(meta, cmd);
+        return;
+    }
+    let req_params = eligible_servers
+        .into_iter()
         .map(|(server_name, server_settings)| {
             (
                 server_name.clone(),
@@ -180,9 +196,21 @@ pub fn text_document_definition(
 
 pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = ctx
+    let eligible_servers: Vec<_> = ctx
         .language_servers
         .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_IMPLEMENTATION))
+        .collect();
+    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+        let cmd = format!(
+            "lsp-show-error %[no server supports {}]",
+            request::GotoImplementation::METHOD
+        );
+        ctx.exec(meta, cmd);
+        return;
+    }
+    let req_params = eligible_servers
+        .into_iter()
         .map(|(server_name, server_settings)| {
             (
                 server_name.clone(),
@@ -214,9 +242,21 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
 
 pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = ctx
+    let eligible_servers: Vec<_> = ctx
         .language_servers
         .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_TYPE_DEFINITION))
+        .collect();
+    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+        let cmd = format!(
+            "lsp-show-error %[no server supports {}]",
+            request::GotoTypeDefinition::METHOD
+        );
+        ctx.exec(meta, cmd);
+        return;
+    }
+    let req_params = eligible_servers
+        .into_iter()
         .map(|(server_name, server_settings)| {
             (
                 server_name.clone(),
@@ -248,9 +288,21 @@ pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx
 
 pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
-    let req_params = ctx
+    let eligible_servers: Vec<_> = ctx
         .language_servers
         .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_REFERENCES))
+        .collect();
+    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+        let cmd = format!(
+            "lsp-show-error %[no server supports {}]",
+            request::References::METHOD
+        );
+        ctx.exec(meta, cmd);
+        return;
+    }
+    let req_params = eligible_servers
+        .into_iter()
         .map(|(server_name, server_settings)| {
             (
                 server_name.clone(),
