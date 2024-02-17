@@ -6,7 +6,7 @@ Breaking changes:
 
 Additions:
 - `lsp-document-symbols` now renders symbols in a tree.
-- `lsp-code-lens` can now run the test at cursor with `rust-analyzer`, provided https://gitlab.com/Screwtapello/kakoune-cargo is installed.
+- `lsp-code-lens` can now run the test at cursor with `rust-analyzer`.
 Fixes:
 - When LSP integration was enabled, then disabled and enabled again during a Kakoune session, kakoune-lsp did not request the server to exit, which has been fixed.
 - Completion snippets (accessed via `lsp-snippets-select-next-placeholders`) can now be nested, making it possible to cycle through the arguments of nested function calls.

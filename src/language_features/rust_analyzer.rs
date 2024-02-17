@@ -235,13 +235,18 @@ pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut 
         return;
     }
 
-    let mut cmd = vec!["cargo".to_string()];
-    cmd.extend(argument.args.cargo_args);
-    cmd.extend(argument.args.cargo_extra_args);
-    cmd.push("--".to_string());
-    cmd.extend(argument.args.executable_args);
+    let mut args = vec![];
+    args.extend(argument.args.cargo_args);
+    args.extend(argument.args.cargo_extra_args);
+    args.push("--".to_string());
+    args.extend(argument.args.executable_args);
 
-    let cmd = cmd.into_iter().map(|arg| editor_quote(&arg)).join(" ");
+    let args = args.into_iter().map(|arg| editor_quote(&arg)).join(" ");
+    let cmd = format!(
+        "try {} catch {}",
+        editor_quote(&format!("cargo {}", args)),
+        editor_quote(&format!("lsp-with-option makecmd cargo make {}", args))
+    );
     ctx.exec(
         meta.clone(),
         format!(
