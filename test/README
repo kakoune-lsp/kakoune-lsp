@@ -1,0 +1,9 @@
+Run a tests like
+
+	test/run [test/path-to-test.sh...]
+
+Each individual test is a shell script.  You can insert a "test_tmux attach"
+command and run the scripts without test/run to debug them interactively.
+
+Test assertions are written using
+https://github.com/ridiculousfish/littlecheck
