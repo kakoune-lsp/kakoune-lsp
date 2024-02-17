@@ -1,8 +1,8 @@
 ## Unreleased
 
-Breaking changes:
+The kak-lsp project has been renamed to kakoune-lsp. The binary and config file paths are unchanged. Distributors are encouraged to update the package name.
 
-- The kak-lsp project has been renamed to kakoune-lsp. The binary name is still kak-lsp. Distributors are encouraged to update the package name.
+Breaking changes:
 - kakoune-lsp now requires Kakoune version >= v2022.10.31 for commands that use a menu, like code actions.
 - `lsp_auto_show_code_actions` (which renders a lightbulb in the modeline) now defaults to true.
 
