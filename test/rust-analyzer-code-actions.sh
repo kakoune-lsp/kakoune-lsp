@@ -35,8 +35,8 @@ EOF
 test_tmux_kak_start 'edit main.rs'
 
 test_tmux send-keys j/foo Enter vtj
-test_sleep_until 'test_tmux capture-pane -p | grep -E "(💡|\[A\]) "'
-# CHECK: {{💡|\[A\]}} main.rs 7:11  1 sel - client0@[session]
+test_sleep_until 'test_tmux capture-pane -p | grep -E "main\(\) (💡|\[A\]) "'
+# CHECK: main() {{💡|\[A\]}} main.rs 7:11  1 sel - client0@[session]
 
 test_tmux send-keys :lsp-code-actions Enter
 test_sleep_until 'test_tmux capture-pane -p | grep Replace'
@@ -53,7 +53,7 @@ test_tmux capture-pane -p
 # CHECK:     }
 # CHECK: }
 # CHECK: ~
-# CHECK: {{💡|\[A\]}} main.rs 7:27 [+] 1 sel - client0@[session]
+# CHECK: main() {{💡|\[A\]}} main.rs 7:27 [+] 1 sel - client0@[session]
 
 test_tmux send-keys :lsp-code-actions Enter
 test_sleep_until 'test_tmux capture-pane -p | grep Replace'
@@ -70,4 +70,4 @@ test_tmux capture-pane -p
 # CHECK:          _ => (),
 # CHECK:      }
 # CHECK: }
-# CHECK: {{💡|\[A\]}} main.rs 7:14 [+] 1 sel - client0@[session]
+# CHECK: main() {{💡|\[A\]}} main.rs 7:14 [+] 1 sel - client0@[session]

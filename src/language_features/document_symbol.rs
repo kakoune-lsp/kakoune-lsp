@@ -3,8 +3,8 @@ use crate::language_features::goto::edit_at_range;
 use crate::language_features::hover::editor_hover;
 use crate::markup::escape_kakoune_markup;
 use crate::position::{
-    get_kakoune_position_with_fallback, get_kakoune_range_with_fallback, get_lsp_position,
-    kakoune_position_to_lsp, lsp_range_to_kakoune, parse_kakoune_range,
+    get_kakoune_position_with_fallback, get_kakoune_range, get_kakoune_range_with_fallback,
+    get_lsp_position, kakoune_position_to_lsp, lsp_range_to_kakoune, parse_kakoune_range,
 };
 use crate::types::*;
 use crate::util::*;
@@ -1062,4 +1062,111 @@ fn symbol_search<T: Symbol<T>>(
         }
     }
     navigate_cmd
+}
+
+pub fn breadcrumbs(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+    let eligible_servers: Vec<_> = ctx
+        .language_servers
+        .iter()
+        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .collect();
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_name, _)| {
+            (
+                server_name.clone(),
+                vec![DocumentSymbolParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    partial_result_params: Default::default(),
+                    work_done_progress_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
+    let params = BreadcrumbsParams::deserialize(editor_params).unwrap();
+    ctx.call::<DocumentSymbolRequest, _>(
+        meta,
+        RequestParams::Each(req_params),
+        move |ctx: &mut Context, meta, results| {
+            let Some(result) = results.into_iter().find(|(_, v)| v.is_some()) else {
+                return;
+            };
+            let (server_name, Some(symbols)) = result else {
+                return;
+            };
+            match symbols {
+                DocumentSymbolResponse::Nested(symbols) => {
+                    editor_breadcrumbs(symbols, ctx, server_name, meta, params)
+                }
+                DocumentSymbolResponse::Flat(symbols) => {
+                    editor_breadcrumbs(symbols, ctx, server_name, meta, params)
+                }
+            };
+        },
+    );
+}
+
+fn editor_breadcrumbs<T: Symbol<T>>(
+    symbols: Vec<T>,
+    ctx: &mut Context,
+    server_name: String,
+    meta: EditorMeta,
+    params: BreadcrumbsParams,
+) {
+    if symbols.is_empty() {
+        return;
+    }
+    let server = &ctx.language_servers[&server_name];
+    let mut filename_path = PathBuf::default();
+    let filename = symbol_filename(&meta, &symbols[0], &mut filename_path).to_string();
+    let mut breadcrumbs = Vec::default();
+    breadcrumbs_calc(&symbols, &params, ctx, server, &filename, &mut breadcrumbs);
+    if breadcrumbs.is_empty() {
+        if meta.fifo.is_some() {
+            ctx.exec(meta, "nop".to_string());
+        }
+        return;
+    }
+
+    let breadcrumbs = breadcrumbs.join(" > ") + " ";
+    let command = format!(
+        "buffer {}; set-option window lsp_modeline_breadcrumbs {}",
+        editor_quote(&meta.buffile),
+        editor_quote(&breadcrumbs)
+    );
+    let command = format!(
+        "evaluate-commands -draft -client {} -- {}",
+        meta.client.as_ref().unwrap(),
+        editor_quote(&command)
+    );
+    ctx.exec(meta, command);
+}
+
+fn breadcrumbs_calc<T: Symbol<T>>(
+    symbols: &[T],
+    params: &BreadcrumbsParams,
+    ctx: &Context,
+    server: &ServerSettings,
+    filename: &str,
+    acc: &mut Vec<String>,
+) {
+    for symbol in symbols {
+        let symbol_range = get_kakoune_range(server, filename, &symbol.range(), ctx).unwrap();
+        let symbol_lines = symbol_range.start.line..=symbol_range.end.line;
+        let is_inside = symbol_lines.contains(&params.position_line);
+        if is_inside {
+            match symbol.kind() {
+                SymbolKind::FUNCTION | SymbolKind::METHOD => {
+                    acc.push(symbol.name().to_owned() + "()");
+                }
+                _ => {
+                    acc.push(symbol.name().to_owned());
+                }
+            }
+            breadcrumbs_calc(symbol.children(), params, ctx, server, filename, acc);
+            break;
+        }
+    }
 }

@@ -165,6 +165,7 @@ Capture groups must be:
 # Callback functions. May override these.
 
 declare-option -hidden str lsp_code_action_indicator
+
 define-command -hidden lsp-show-code-actions -params 1.. -docstring "Called when code actions are available for the main cursor position" %{
     set-option buffer lsp_modeline_code_actions %opt{lsp_code_action_indicator}
 }
@@ -345,10 +346,11 @@ declare-option -hidden range-specs lsp_inlay_code_lenses
 declare-option -hidden line-specs lsp_code_lenses 0 '0| '
 declare-option -hidden str lsp_project_root
 
+declare-option -hidden str lsp_modeline_breadcrumbs ""
 declare-option -hidden str lsp_modeline_code_actions
 declare-option -hidden str lsp_modeline_progress ""
 declare-option -hidden str lsp_modeline_message_requests ""
-declare-option -hidden str lsp_modeline '%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
+declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 ### Requests ###
@@ -1415,6 +1417,20 @@ incomingOrOutgoing = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
+define-command -hidden lsp-breadcrumbs-request -docstring "request updating modeline breadcrumbs for the window" %{
+  nop %sh{
+    (printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+version  = ${kak_timestamp:-0}
+method   = \"kakoune/breadcrumbs\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+[params]
+position_line = $kak_cursor_line
+" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+}
 
 define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inlay hints" %{
     declare-option -hidden int lsp_inlay_hints_timestamp -1
@@ -2327,6 +2343,9 @@ define-command -hidden lsp-enable-impl -params 1 %{
     hook -group lsp %arg{1} NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
         set-option window lsp_object_mode %val{hook_param}
     }
+    hook -group lsp-breadcrumbs %arg{1} BufReload .* lsp-breadcrumbs-request
+    hook -group lsp-breadcrumbs %arg{1} NormalIdle .* lsp-breadcrumbs-request
+    hook -group lsp-breadcrumbs %arg{1} InsertIdle .* lsp-breadcrumbs-request
     define-command -override lsp-on-exit lsp-exit
 }
 
@@ -2340,6 +2359,7 @@ define-command -hidden lsp-disable-impl -params 1 %{
     try %{ set-option -remove %arg{1} completers option=lsp_completions }
     set-option %arg{1} lsp_fail_if_disabled fail
     remove-hooks %arg{1} lsp
+    remove-hooks %arg{1} lsp-breadcrumbs
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
