@@ -2264,117 +2264,79 @@ map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
 ### Default integration ###
 
 define-command lsp-enable -docstring "Default LSP integration" %{
-    try %{
-        add-highlighter global/cquery_semhl ranges cquery_semhl
-    } catch %{
-        fail 'lsp-enable: already enabled'
-    }
-    add-highlighter global/lsp_references ranges lsp_references
-    add-highlighter global/lsp_semantic_tokens ranges lsp_semantic_tokens
-    add-highlighter global/lsp_snippets_placeholders ranges lsp_snippets_placeholders
-    lsp-inline-diagnostics-enable global
-    lsp-diagnostic-lines-enable global
-
-    set-option global completers option=lsp_completions %opt{completers}
-    set-option global lsp_fail_if_disabled nop
-
+    lsp-enable-impl global
+    hook -group lsp %arg{1} BufClose .* lsp-did-close
+    hook -group lsp %arg{1} BufSetOption lsp_config=.* lsp-did-change-config
+    hook -group lsp %arg{1} BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global BufCreate .* %{
         lsp-did-open
         lsp-did-change-config
     }
-    hook -group lsp global BufClose .* lsp-did-close
-    hook -group lsp global BufWritePost .* lsp-did-save
-    hook -group lsp global BufSetOption lsp_config=.* lsp-did-change-config
-    hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
-    hook -group lsp global InsertIdle .* %{ lsp-did-change; lsp-completion }
-    hook -group lsp global ModeChange pop:insert:.* %{
-        set-option window lsp_snippets_placeholders
-        set-option window lsp_snippets_placeholder_groups
-    }
-    # A non-empty hook parameter means some completion was inserted.
-    hook -group lsp global InsertCompletionHide .+ lsp-completion-accepted
-    hook -group lsp global NormalIdle .* %{
-        lsp-did-change
-        evaluate-commands %sh{
-            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
-            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false"; fi
-        }
-    }
-    hook -group lsp global NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
-        set-option window lsp_object_mode %val{hook_param}
-    }
-
     lsp-did-change-config
 }
 
 define-command lsp-disable -docstring "Disable LSP" %{
-    remove-highlighter global/cquery_semhl
-    remove-highlighter global/lsp_references
-    remove-highlighter global/lsp_semantic_tokens
-    remove-highlighter global/lsp_snippets_placeholders
-    lsp-inline-diagnostics-disable global
-    lsp-diagnostic-lines-disable global
-    try %{ set-option -remove global completers option=lsp_completions }
-    set-option global lsp_fail_if_disabled fail
-    remove-hooks global lsp
-    remove-hooks global lsp-auto-hover
-    remove-hooks global lsp-auto-hover-insert-mode
-    remove-hooks global lsp-auto-signature-help
-    lsp-exit
+    lsp-disable-impl global
 }
 
 define-command lsp-enable-window -docstring "Default LSP integration in the window scope" %{
-    try %{
-        add-highlighter window/cquery_semhl ranges cquery_semhl
-    } catch %{
-        fail 'lsp-enable-window: already enabled'
-    }
-    add-highlighter window/lsp_references ranges lsp_references
-    add-highlighter window/lsp_semantic_tokens ranges lsp_semantic_tokens
-    add-highlighter window/lsp_snippets_placeholders ranges lsp_snippets_placeholders
-
-    set-option window completers option=lsp_completions %opt{completers}
-    set-option window lsp_fail_if_disabled nop
-
-    lsp-inline-diagnostics-enable window
-    lsp-diagnostic-lines-enable window
-
+    lsp-enable-impl window
     hook -group lsp window WinClose .* lsp-did-close
-    hook -group lsp window BufWritePost .* lsp-did-save
     hook -group lsp window WinSetOption lsp_config=.* lsp-did-change-config
     hook -group lsp window WinSetOption lsp_server_configuration=.* lsp-did-change-config
-    hook -group lsp window InsertIdle .* %{ lsp-did-change; lsp-completion }
-    hook -group lsp window ModeChange pop:insert:.* %{
-        set-option window lsp_snippets_placeholders
-        set-option window lsp_snippets_placeholder_groups
-    }
-    # A non-empty hook parameter means some completion was inserted.
-    hook -group lsp window InsertCompletionHide .+ lsp-completion-accepted
-    hook -group lsp window NormalIdle .* %{
-        lsp-did-change
-        evaluate-commands %sh{
-            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
-            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false"; fi
-        }
-    }
-    hook -group lsp window NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
-        set-option window lsp_object_mode %val{hook_param}
-    }
-
     lsp-did-open
     lsp-did-change-config
 }
 
 define-command lsp-disable-window -docstring "Disable LSP in the window scope" %{
-    remove-highlighter window/cquery_semhl
-    remove-highlighter window/lsp_references
-    remove-highlighter window/lsp_semantic_tokens
-    remove-highlighter window/lsp_snippets_placeholders
-    lsp-inline-diagnostics-disable window
-    lsp-diagnostic-lines-disable window
-    try %{ set-option -remove window completers option=lsp_completions }
-    unset-option window lsp_fail_if_disabled
-    remove-hooks window lsp
+    lsp-disable-impl window
+}
+
+define-command -hidden lsp-enable-impl -params 1 %{
+    try "
+        add-highlighter %arg{1}/cquery_semhl ranges cquery_semhl
+    " catch "
+        fail 'LSP already enabled at %arg{1} scope'
+    "
+    add-highlighter "%arg{1}/lsp_references" ranges lsp_references
+    add-highlighter "%arg{1}/lsp_semantic_tokens" ranges lsp_semantic_tokens
+    add-highlighter "%arg{1}/lsp_snippets_placeholders" ranges lsp_snippets_placeholders
+    lsp-inline-diagnostics-enable %arg{1}
+    lsp-diagnostic-lines-enable %arg{1}
+
+    set-option %arg{1} completers option=lsp_completions %opt{completers}
+    set-option %arg{1} lsp_fail_if_disabled nop
+
+    hook -group lsp %arg{1} BufWritePost .* lsp-did-save
+    hook -group lsp %arg{1} InsertIdle .* %{ lsp-did-change; lsp-completion }
+    hook -group lsp %arg{1} ModeChange pop:insert:.* %{
+        set-option window lsp_snippets_placeholders
+        set-option window lsp_snippets_placeholder_groups
+    }
+    # A non-empty hook parameter means some completion was inserted.
+    hook -group lsp %arg{1} InsertCompletionHide .+ lsp-completion-accepted
+    hook -group lsp %arg{1} NormalIdle .* %{
+        lsp-did-change
+        evaluate-commands %sh{
+            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false"; fi
+        }
+    }
+    hook -group lsp %arg{1} NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
+        set-option window lsp_object_mode %val{hook_param}
+    }
+}
+
+define-command -hidden lsp-disable-impl -params 1 %{
+    remove-highlighter "%arg{1}/cquery_semhl"
+    remove-highlighter "%arg{1}/lsp_references"
+    remove-highlighter "%arg{1}/lsp_semantic_tokens"
+    remove-highlighter "%arg{1}/lsp_snippets_placeholders"
+    lsp-inline-diagnostics-disable %arg{1}
+    lsp-diagnostic-lines-disable %arg{1}
+    try %{ set-option -remove %arg{1} completers option=lsp_completions }
+    set-option %arg{1} lsp_fail_if_disabled fail
+    remove-hooks %arg{1} lsp
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
