@@ -16,6 +16,7 @@ Fixes:
 - In some cases, completions provided by `rust-analyzer` would be inserted as label (like `self.some_method(…)`) which has been fixed.
 - `completionItem.additionalTextEdits` are now applied also when the server does not support `completionItem/resolve`.
 - Snippet metacharacters are now properly escaped, removing spurious backslashes from inserted completions.
+- `lsp-auto-hover-enable` now only shows hover info when the main selection changes. This means that `:info` no longer be immediately shadowed by auto hover.
 - `lsp-inlay-diagnostics` no longer jump around when the cursor is moved around the diagnostics. To use this feature, use Kakoune version >= 2024 (#604).
 
 ## 15.0.1 - 2023-12-11
