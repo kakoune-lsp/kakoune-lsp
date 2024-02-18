@@ -2181,6 +2181,15 @@ define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-dia
     remove-hooks %arg{1} lsp-inlay-diagnostics
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
+declare-option -hidden range-specs lsp_auto_hover_selection
+define-command -hidden lsp-check-auto-hover -params 1 %{
+  eval %sh{
+    [ "$kak_selection_desc" = "$kak_opt_lsp_auto_hover_selection" ] && exit
+    echo "$1"
+    echo "set window lsp_auto_hover_selection %{$kak_selection_desc}"
+  }
+}
+
 define-command lsp-auto-hover-enable -params 0..1 -client-completion \
     -docstring "lsp-auto-hover-enable [<client>]: enable auto-requesting hover info for current position
 
@@ -2188,7 +2197,7 @@ If a client is given, show hover in a scratch buffer in that client instead of t
     evaluate-commands %sh{
         hover=lsp-hover
         [ $# -eq 1 ] && hover="lsp-hover-buffer $1"
-        printf %s "hook -group lsp-auto-hover global NormalIdle .* %{ $hover }"
+        printf %s "hook -group lsp-auto-hover global NormalIdle .* %{ lsp-check-auto-hover '$hover' }"
     }
 }
 
