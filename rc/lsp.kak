@@ -78,6 +78,7 @@ declare-option -docstring "Show available code actions (default: a 💡 in the m
 # Set it to a positive number to limit the size of the lsp-hover output. Use 0 to disable the limit.
 declare-option -docstring "Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_info_lines 20
 declare-option -hidden -docstring "DEPRECATED, use %opt{lsp_hover_max_info_lines}. Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit. Use -1 to use lsp_hover_max_info_lines instead." int lsp_hover_max_lines -1
+declare-option -docstring "Set it to a positive number to limit the diagnostics in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_diagnostic_lines 20
 
 declare-option -docstring "Dynamic TOML configuration string. Currently supports
 - [language.<filetype>.settings]
@@ -127,7 +128,7 @@ info=$lsp_info \
         info_truncated = 0
 
         # Will the info lines need to be truncated
-        if(max_info_lines > 0 && info_lines > max_info_lines) {
+        if(is_truncated(max_info_lines, info_lines)) {
             # Only output max_info_lines amount of info lines
             info_lines = max_info_lines
             info_truncated = 1
@@ -138,27 +139,42 @@ info=$lsp_info \
         output_in_hover = 0
 
         if (info_lines) {
-            printf info_line[1]
-            for (i = 2; i <= info_lines; i++) {
-                printf "%s%s", "\n", info_line[i]
-            }
-            output_in_hover = 1
-        }
-
-        if (info_truncated == 1) {
-            if (output_in_hover == 1) printf "\n"
-            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full hover info"
+            print_at_least_one_line(info_line, info_lines)
             output_in_hover = 1
         }
 
         diagnostics = ENVIRON["diagnostics"]
 
+        diagnostics_truncated = 0
+
         if (diagnostics) {
             if (output_in_hover == 1) printf "\n"
-            printf "%s%s" "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):\n" diagnostics
+            printf "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):"
+
+            max_diagnostic_lines = ENVIRON["kak_opt_lsp_hover_max_diagnostic_lines"]
+
+            diagnostic_lines = split(diagnostics, diagnostic_line, /\n/)
+
+            # Will the diagnostic lines need to be truncated
+            if(is_truncated(max_diagnostic_lines, diagnostic_lines)) {
+                # Only output max_diagnostic_lines amount of diagnostic lines
+                diagnostic_lines = max_diagnostic_lines
+                diagnostics_truncated = 1
+            }
+
+            if (diagnostic_lines) {
+                printf "\n"
+                print_at_least_one_line(diagnostic_line, diagnostic_lines)
+            }
+
             output_in_hover = 1
         }
 
+        if (info_truncated == 1 || diagnostics_truncated == 1) {
+            if (output_in_hover == 1) printf "\n"
+            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full hover info"
+            output_in_hover = 1
+        }
         if (ENVIRON["code_lenses"]) {
             if (output_in_hover == 1) printf "\n"
             printf "Code Lenses available (shortcut l)"
@@ -175,6 +191,17 @@ info=$lsp_info \
             printf "There are unread messages (use lsp-show-message-request-next to read)"
             output_in_hover = 1
         }
+    }
+
+    function print_at_least_one_line(data, lines) {
+        printf data[1]
+        for (i = 2; i <= lines; i++) {
+            printf "%s%s", "\n", data[i]
+        }
+    }
+
+    function is_truncated(max, lines) {
+        return max > 0 && lines > max
     }'
 }
 # If you want to see only hover info, try
@@ -1719,7 +1746,7 @@ define-command -hidden lsp-show-hover -params 4 -docstring %{
     lsp_info=$2
     lsp_diagnostics=$3
     lsp_code_lenses=$4
-    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_hover_max_info_lines kak_opt_lsp_modeline_code_actions kak_opt_lsp_modeline_message_requests
+    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_hover_max_info_lines kak_opt_lsp_hover_max_diagnostic_lines kak_opt_lsp_modeline_code_actions kak_opt_lsp_modeline_message_requests
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
 
