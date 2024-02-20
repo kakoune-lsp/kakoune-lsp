@@ -1,4 +1,4 @@
-name: Test kak-lsp
+name: Test kakoune-lsp
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
 
     - uses: Swatinem/rust-cache@v1.3.0
 
-    - name: Build kak-lsp
+    - name: Build kakoune-lsp
       run: cargo test --no-run --locked --release
 
     - name: Run unit tests
@@ -47,7 +47,7 @@ jobs:
 
     - uses: Swatinem/rust-cache@v1.3.0
 
-    - name: Build kak-lsp
+    - name: Build kakoune-lsp
       run: cargo build --locked --release
 
     - name: Fetch Kakoune

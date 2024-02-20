@@ -1,4 +1,4 @@
-name: Release kak-lsp
+name: Release kakoune-lsp
 
 on:
   push:
@@ -49,6 +49,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.draft_release.outputs.upload_url }}
-        asset_path: kak-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
-        asset_name: kak-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
+        asset_path: kakoune-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
+        asset_name: kakoune-lsp-${{ steps.tag.outputs.TAG }}-${{ matrix.target }}.tar.gz
         asset_content_type: application/gzip
