@@ -76,7 +76,7 @@ declare-option -docstring "Automatically highlight references with Reference fac
 # Set to true to highlight when code actions are available.
 declare-option -docstring "Show available code actions (default: a 💡 in the modeline)" bool lsp_auto_show_code_actions true
 # Set it to a positive number to limit the size of the lsp-hover output. Use 0 to disable the limit.
-declare-option -docstring "Set it to a positive number to limit the size of the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_lines 20
+declare-option -docstring "Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_lines 20
 
 declare-option -docstring "Dynamic TOML configuration string. Currently supports
 - [language.<filetype>.settings]
@@ -113,40 +113,61 @@ info=$lsp_info \
     diagnostics=$lsp_diagnostics \
     code_lenses=$lsp_code_lenses \
     awk 'BEGIN {
-        info = ENVIRON["info"]
-        diagnostics = ENVIRON["diagnostics"];
-        code_lenses = ENVIRON["code_lenses"];
-        max_lines = ENVIRON["kak_opt_lsp_hover_max_lines"];
+        max_info_lines = ENVIRON["kak_opt_lsp_hover_max_lines"]
 
-        r = ""
-        lines = 0
-        if (diagnostics) {
-            r = r "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):\n" diagnostics "\n"
-            diagnostics_lines = split(diagnostics, _, /\n/)
-            lines += 1 + diagnostics_lines
+        info_lines = split(ENVIRON["info"], info_line, /\n/)
+
+        info_truncated = 0
+
+        # Will the info lines need to be truncated
+        if(max_info_lines > 0 && info_lines > max_info_lines) {
+            # Only output max_info_lines amount of info lines
+            info_lines = max_info_lines
+            info_truncated = 1
         }
-        if (code_lenses) {
-            r = r "Code Lenses available (shortcut l)\n"
-            lines++
+
+        # Track if there is anything in the hover, so we know when to insert
+        # a new-line character.
+        output_in_hover = 0
+
+        if (info_lines) {
+            printf info_line[1]
+            for (i = 2; i <= info_lines; i++) {
+                printf "%s%s", "\n", info_line[i]
+            }
+            output_in_hover = 1
+        }
+
+        if (info_truncated == 1) {
+            if (output_in_hover == 1) printf "\n"
+            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full hover info"
+            output_in_hover = 1
+        }
+
+        diagnostics = ENVIRON["diagnostics"]
+
+        if (diagnostics) {
+            if (output_in_hover == 1) printf "\n"
+            printf "%s%s" "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):\n" diagnostics
+            output_in_hover = 1
+        }
+
+        if (ENVIRON["code_lenses"]) {
+            if (output_in_hover == 1) printf "\n"
+            printf "Code Lenses available (shortcut l)"
+            output_in_hover = 1
         }
         if (ENVIRON["kak_opt_lsp_modeline_code_actions"]) {
-            r = r "Code Actions available (shortcut a)\n"
-            lines++
+            if (output_in_hover == 1) printf "\n"
+            printf "Code Actions available (shortcut a)"
+            output_in_hover = 1
         }
 
         if (ENVIRON["kak_opt_lsp_modeline_message_requests"]) {
-            r = r "There are unread messages (use lsp-show-message-request-next to read)\n"
-            lines++
+            if (output_in_hover == 1) printf "\n"
+            printf "There are unread messages (use lsp-show-message-request-next to read)"
+            output_in_hover = 1
         }
-
-        info_lines = split(info, info_line, /\n/)
-        for (i = 1; i <= info_lines && (max_lines <= 0 || i+lines+2 <= max_lines); i++)
-            print info_line[i]
-        if (i < info_lines || r)
-            printf "\n"
-        if (i < info_lines)
-            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full info\n"
-        printf "%s", r
     }'
 }
 # If you want to see only hover info, try
