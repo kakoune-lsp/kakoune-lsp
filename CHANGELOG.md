@@ -1,3 +1,5 @@
+## Unreleased
+
 ## 16.0.0 - 2024-02-20
 
 Both the kak-lsp project and GitHub organization have been renamed to kakoune-lsp. The binary and config file paths are unchanged. Distributors are encouraged to update the package name.
