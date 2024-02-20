@@ -76,7 +76,8 @@ declare-option -docstring "Automatically highlight references with Reference fac
 # Set to true to highlight when code actions are available.
 declare-option -docstring "Show available code actions (default: a 💡 in the modeline)" bool lsp_auto_show_code_actions true
 # Set it to a positive number to limit the size of the lsp-hover output. Use 0 to disable the limit.
-declare-option -docstring "Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_lines 20
+declare-option -docstring "Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit" int lsp_hover_max_info_lines 20
+declare-option -hidden -docstring "DEPRECATED, use %opt{lsp_hover_max_info_lines}. Set it to a positive number to limit the information in the lsp hover output. Use 0 to disable the limit. Use -1 to use lsp_hover_max_info_lines instead." int lsp_hover_max_lines -1
 
 declare-option -docstring "Dynamic TOML configuration string. Currently supports
 - [language.<filetype>.settings]
@@ -114,6 +115,12 @@ info=$lsp_info \
     code_lenses=$lsp_code_lenses \
     awk 'BEGIN {
         max_info_lines = ENVIRON["kak_opt_lsp_hover_max_lines"]
+
+        # If lsp_hover_max_info_lines is a sentanal value (e.g. -1) then it is
+        # likely the user has not set the value themselfs, use the value of the
+        # new lsp_hover_max_info_lines.
+        if (max_info_lines < 0)
+            max_info_lines = ENVIRON["kak_opt_lsp_hover_max_info_lines"]
 
         info_lines = split(ENVIRON["info"], info_line, /\n/)
 
@@ -1712,7 +1719,7 @@ define-command -hidden lsp-show-hover -params 4 -docstring %{
     lsp_info=$2
     lsp_diagnostics=$3
     lsp_code_lenses=$4
-    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_modeline_code_actions kak_opt_lsp_modeline_message_requests
+    content=$(eval "${kak_opt_lsp_show_hover_format}") # kak_opt_lsp_hover_max_lines kak_opt_lsp_hover_max_info_lines kak_opt_lsp_modeline_code_actions kak_opt_lsp_modeline_message_requests
     # remove leading whitespace characters
     content="${content#"${content%%[![:space:]]*}"}"
 
