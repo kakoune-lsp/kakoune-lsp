@@ -6,21 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  draft_release:
-    name: Draft release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release_draft.outputs.upload_url }}
-    steps:
-      - name: Create a Release
-        id: create_release_draft
-        uses: shogo82148/actions-create-release@v1
-        with:
-          draft: true
-          overwrite: true
-  build_release:
-    name: Build release
-    needs: draft_release
+  release:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -31,14 +17,15 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0 # for git describe --tags
       - name: Build
         run: ci/build-release.sh
-      - name: Upload build
-        uses: shogo82148/actions-upload-release-asset@v1
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ needs.draft_release.outputs.upload_url }}
-          asset_path: kakoune-lsp-*-*.tar.gz
-          asset_content_type: application/gzip
+          draft: true
+          files: kakoune-lsp-*-*.tar.gz
+
