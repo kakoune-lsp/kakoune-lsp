@@ -1922,9 +1922,12 @@ define-command -hidden lsp-show-message-request -params 4.. -docstring %{
     evaluate-commands -try-client %opt{toolsclient} %{
         info -title "From language server" %arg{1}
         evaluate-commands %sh{
-            on_abort="$2"
-            shift 2
-            echo lsp-menu -on-abort "$on_abort" "$@"
+            shift
+            printf "lsp-menu -on-abort"
+            for arg
+            do
+                printf " '%s'" "$(printf %s "$arg" | sed "s/'/''/g")"
+            done
         }
     }
 }
