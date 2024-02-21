@@ -366,6 +366,12 @@ settings_section = "_"
 # See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
 # diagnostics = false
 
+[language_server.taplo]
+filetypes = ["toml"]
+roots = [".git", ".hg"]
+command = "taplo"
+args = ["lsp", "stdio"]
+
 [language_server.terraform-ls]
 filetypes = ["terraform"]
 roots = ["*.tf"]
