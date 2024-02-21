@@ -192,7 +192,7 @@ define-command -hidden lsp-menu -params 1.. %{
 define-command -hidden lsp-menu-impl %{
     evaluate-commands %sh{
         echo >$kak_command_fifo "echo -to-file $kak_response_fifo -quoting kakoune -- %reg{a}"
-            perl < $kak_response_fifo -we '
+        perl < $kak_response_fifo -we '
             use strict;
             my $Q = "'\''";
             my @args = ();
