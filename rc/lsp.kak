@@ -2728,7 +2728,7 @@ define-command -hidden lsp-make-register-relative-to-root %{
     evaluate-commands -save-regs / %{
         try %{
             # Is it an absolute path?
-            execute-keys s\A/.*<ret>
+            execute-keys <a-k>\A/<ret>
         } catch %{
             set-register a "%opt{lsp_project_root}%reg{a}"
         }
