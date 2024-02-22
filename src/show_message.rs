@@ -86,22 +86,23 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
                 "lsp-show-message-request-respond {} {}",
                 request_id,
                 editor_quote(
-                    toml::to_string(item)
-                        .expect("cannot convert message action to toml")
-                        .as_ref()
+                    &toml::to_string(item).expect("cannot convert message action to toml")
                 )
             ));
             [editor_quote(item.title.as_ref()), cmd]
         })
-        .map(|v| editor_quote(v.as_ref())) // double quoting for request passing
+        .map(|v| editor_quote(&v)) // double quoting for request passing
         .join(" ");
     // send the command to the editor
     ctx.exec(
         meta.clone(),
         format!(
             "lsp-show-message-request {} {} {}",
-            editor_quote(params.message.as_ref()),
-            editor_quote(format!("%{{lsp-show-message-request-respond {}}}", request_id).as_ref()),
+            editor_quote(&params.message),
+            editor_quote(&format!(
+                "%{{lsp-show-message-request-respond {}}}",
+                request_id
+            )),
             option_menu_opts
         ),
     );
@@ -139,7 +140,7 @@ fn update_modeline(meta: EditorMeta, ctx: &Context) {
         meta,
         format!(
             "set-option global lsp_modeline_message_requests {}",
-            editor_quote(modeline.as_ref()),
+            editor_quote(&modeline),
         ),
     );
 }
