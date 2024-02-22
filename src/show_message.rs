@@ -89,7 +89,11 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
                     &toml::to_string(item).expect("cannot convert message action to toml")
                 )
             ));
-            [editor_quote(item.title.as_ref()), cmd]
+            let mut title: &str = &item.title;
+            if let Some((head, _)) = title.split_once('\n') {
+                title = head;
+            }
+            [editor_quote(title), cmd]
         })
         .map(|v| editor_quote(&v)) // double quoting for request passing
         .join(" ");
