@@ -8,6 +8,8 @@ declare-option -docstring 'name of the client in which documentation is to be di
 
 try %{
     require-module jump
+    # TODO backport
+    set-option global jump_buffers "%opt{jump_buffers}|\*(callers|callees|goto|symbols)\b.*\*"
 } catch %{
     declare-option -docstring "name of the client in which all source code jumps will be executed" \
         str jumpclient
@@ -1793,7 +1795,7 @@ define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
 
 define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch *diagnostics*
+        edit! -scratch -unique *diagnostics-|*
         set-option buffer filetype lsp-goto
         set-option buffer jump_current_line 0
         set-option buffer lsp_project_root "%arg{1}/"
@@ -1805,7 +1807,7 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
 
 define-command -hidden lsp-show-goto-buffer -params 3 %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch %arg{1}
+        edit! -scratch -unique %sh{echo "${1%\*}-|*"}
         set-option buffer filetype lsp-goto
         set-option buffer jump_current_line 0
         set-option buffer lsp_project_root "%arg{2}/"
@@ -2699,6 +2701,8 @@ define-command -hidden lsp-jump -docstring %{
             set-option buffer jump_current_line %val{cursor_line}
             evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing -- %reg{a} %reg{b} %reg{c}
             try %{ focus %opt{jumpclient} }
+        } catch %{
+            echo -debug lsp-jump: %val{error}
         }
     }
 }
