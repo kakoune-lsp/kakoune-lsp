@@ -404,7 +404,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                             name: root_path.to_string(),
                         }]),
                         client_info: Some(ClientInfo {
-                            name: env!("CARGO_PKG_NAME").to_string(),
+                            name: "kakoune-lsp".to_string(),
                             version: Some(env!("CARGO_PKG_VERSION").to_string()),
                         }),
                         locale: None,
