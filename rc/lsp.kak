@@ -128,19 +128,14 @@ info=$lsp_info \
         info_truncated = 0
 
         # Will the info lines need to be truncated
-        if(is_truncated(max_info_lines, info_lines)) {
+        if (is_truncated(max_info_lines, info_lines)) {
             # Only output max_info_lines amount of info lines
             info_lines = max_info_lines
             info_truncated = 1
         }
 
-        # Track if there is anything in the hover, so we know when to insert
-        # a new-line character.
-        output_in_hover = 0
-
         if (info_lines) {
             print_at_least_one_line(info_line, info_lines)
-            output_in_hover = 1
         }
 
         diagnostics = ENVIRON["diagnostics"]
@@ -148,55 +143,37 @@ info=$lsp_info \
         diagnostics_truncated = 0
 
         if (diagnostics) {
-            if (output_in_hover == 1) printf "\n"
-            printf "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):"
+            print "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):"
 
             max_diagnostic_lines = ENVIRON["kak_opt_lsp_hover_max_diagnostic_lines"]
 
             diagnostic_lines = split(diagnostics, diagnostic_line, /\n/)
 
             # Will the diagnostic lines need to be truncated
-            if(is_truncated(max_diagnostic_lines, diagnostic_lines)) {
+            if (is_truncated(max_diagnostic_lines, diagnostic_lines)) {
                 # Only output max_diagnostic_lines amount of diagnostic lines
                 diagnostic_lines = max_diagnostic_lines
                 diagnostics_truncated = 1
             }
 
             if (diagnostic_lines) {
-                printf "\n"
                 print_at_least_one_line(diagnostic_line, diagnostic_lines)
             }
-
-            output_in_hover = 1
         }
 
-        if (info_truncated == 1 || diagnostics_truncated == 1) {
-            if (output_in_hover == 1) printf "\n"
-            printf "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full hover info"
-            output_in_hover = 1
-        }
-        if (ENVIRON["code_lenses"]) {
-            if (output_in_hover == 1) printf "\n"
-            printf "Code Lenses available (shortcut l)"
-            output_in_hover = 1
-        }
-        if (ENVIRON["kak_opt_lsp_modeline_code_actions"]) {
-            if (output_in_hover == 1) printf "\n"
-            printf "Code Actions available (shortcut a)"
-            output_in_hover = 1
-        }
-
-        if (ENVIRON["kak_opt_lsp_modeline_message_requests"]) {
-            if (output_in_hover == 1) printf "\n"
-            printf "There are unread messages (use lsp-show-message-request-next to read)"
-            output_in_hover = 1
-        }
+        if (info_truncated == 1 || diagnostics_truncated == 1)
+            print "{+i@InfoDefault}Hover info truncated, use lsp-hover-buffer (shortcut H) for full hover info"
+        if (ENVIRON["code_lenses"])
+            print "Code Lenses available (shortcut l)"
+        if (ENVIRON["kak_opt_lsp_modeline_code_actions"])
+            print "Code Actions available (shortcut a)"
+        if (ENVIRON["kak_opt_lsp_modeline_message_requests"])
+            print "There are unread messages (use lsp-show-message-request-next to read)"
     }
 
     function print_at_least_one_line(data, lines) {
-        printf "%s", data[1]
-        for (i = 2; i <= lines; i++) {
-            printf "%s%s", "\n", data[i]
+        for (i = 1; i <= lines; i++) {
+            print data[i]
         }
     }
 
