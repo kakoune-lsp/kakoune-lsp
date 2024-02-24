@@ -1,5 +1,12 @@
 ## Unreleased
 
+Breaking changes:
+- `lsp_hover_max_lines` now more directly controls the lines of information in the hover box.
+- `lsp_hover_max_lines` has been deprecated for `lsp_hover_max_info_lines`. `lsp_hover_max_lines` now defaults to `-1` and when it is `-1` `lsp_hover_max_info_lines` is used to control lines of information in the hover box.
+
+Additions:
+- `lsp_hover_max_diagnostic_lines` now defaults to 20 which limits the diagnostic lines in the hover box.
+
 ## 16.0.0 - 2024-02-20
 
 Both the kak-lsp project and GitHub organization have been renamed to kakoune-lsp. The binary and config file paths are unchanged. Distributors are encouraged to update the package name.
