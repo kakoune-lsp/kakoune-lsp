@@ -117,8 +117,8 @@ info=$lsp_info \
     awk 'BEGIN {
         max_info_lines = ENVIRON["kak_opt_lsp_hover_max_lines"]
 
-        # If lsp_hover_max_info_lines is a sentanal value (e.g. -1) then it is
-        # likely the user has not set the value themselfs, use the value of the
+        # If lsp_hover_max_info_lines is a sentinel value (e.g. -1) then it is
+        # likely the user has not set the value themselves, use the value of the
         # new lsp_hover_max_info_lines.
         if (max_info_lines < 0)
             max_info_lines = ENVIRON["kak_opt_lsp_hover_max_info_lines"]
@@ -194,7 +194,7 @@ info=$lsp_info \
     }
 
     function print_at_least_one_line(data, lines) {
-        printf data[1]
+        printf "%s", data[1]
         for (i = 2; i <= lines; i++) {
             printf "%s%s", "\n", data[i]
         }
