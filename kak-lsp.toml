@@ -326,9 +326,9 @@ command = "ocamllsp"
 #     "-c",
 #     """
 #         if path=$(rustup which rls 2>/dev/null); then
-#             "$path"
+#             exec "$path"
 #         else
-#             rls
+#             exec rls
 #         fi
 #     """,
 # ]
@@ -346,9 +346,9 @@ args = [
     "-c",
     """
         if path=$(rustup which rust-analyzer 2>/dev/null); then
-            "$path"
+            exec "$path"
         else
-            rust-analyzer
+            exec rust-analyzer
         fi
     """,
 ]
