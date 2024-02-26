@@ -99,7 +99,7 @@ command = "dls"
 filetypes = ["dart"]
 roots = ["pubspec.yaml", ".git", ".hg"]
 command = "sh"
-args = ["-c", "dart $(dirname $(command -v dart))/snapshots/analysis_server.dart.snapshot --lsp"]
+args = ["-c", "exec dart $(dirname $(command -v dart))/snapshots/analysis_server.dart.snapshot --lsp"]
 
 [language_server.jdtls]
 filetypes = ["java"]
@@ -321,9 +321,9 @@ command = "ocamllsp"
 #     "-c",
 #     """
 #         if path=$(rustup which rls 2>/dev/null); then
-#             "$path"
+#             exec "$path"
 #         else
-#             rls
+#             exec rls
 #         fi
 #     """,
 # ]
@@ -345,9 +345,9 @@ args = [
     "-c",
     """
         if path=$(rustup which rust-analyzer 2>/dev/null); then
-            "$path"
+            exec "$path"
         else
-            rust-analyzer
+            exec rust-analyzer
         fi
     """,
 ]
