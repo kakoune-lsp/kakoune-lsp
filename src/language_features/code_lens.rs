@@ -65,7 +65,7 @@ fn editor_code_lens(
         }
     };
     let version = document.version;
-    let range_specs = lenses
+    let line_specs = lenses
         .iter()
         .map(|(server_name, lens)| {
             let server = &ctx.language_servers[server_name];
@@ -73,14 +73,13 @@ fn editor_code_lens(
             let position =
                 lsp_position_to_kakoune(&lens.range.start, &document.text, server.offset_encoding);
             let line = position.line;
-            let column = position.column;
             lazy_static! {
                 static ref CODE_LENS_INDICATOR: &'static str =
                     wcwidth::expected_width_or_fallback("🔎", 2, "[L]");
             }
 
             editor_quote(&format!(
-                "{line}.{column}+0|{{InlayCodeLens}}[{} {}] ",
+                "{line}|{{InlayCodeLens}}[{} {}] ",
                 *CODE_LENS_INDICATOR,
                 escape_tuple_element(&escape_kakoune_markup(label))
             ))
@@ -92,7 +91,7 @@ fn editor_code_lens(
     let line_flags = gather_line_flags(ctx, buffile).0;
     let command = formatdoc!(
          "evaluate-commands \"set-option buffer lsp_diagnostic_lines {version} {line_flags} '0|%opt[lsp_diagnostic_line_error_sign]'\"
-          set-option buffer lsp_inlay_code_lenses {version} {range_specs}",
+          set-option buffer lsp_inlay_code_lenses {version} {line_specs}",
     );
     let command = format!(
         "evaluate-commands -buffer {} %§{}§",

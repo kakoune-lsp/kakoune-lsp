@@ -419,7 +419,7 @@ declare-option -hidden int lsp_timestamp -1
 declare-option -hidden range-specs lsp_references
 declare-option -hidden range-specs lsp_semantic_tokens
 declare-option -hidden range-specs lsp_inlay_hints
-declare-option -hidden range-specs lsp_inlay_code_lenses
+declare-option -hidden line-specs lsp_inlay_code_lenses
 declare-option -hidden line-specs lsp_code_lenses 0 '0| '
 declare-option -hidden str lsp_project_root
 
@@ -2310,7 +2310,7 @@ define-command lsp-inlay-hints-disable -params 1 -docstring "lsp-inlay-hints-dis
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-code-lenses-enable -params 1 -docstring "lsp-inlay-code-lenses-enable <scope>: enable inlay code lenses for <scope>" %{
-    add-highlighter "%arg{1}/lsp_inlay_code_lenses" replace-ranges lsp_inlay_code_lenses
+    add-highlighter "%arg{1}/lsp_inlay_code_lenses" flag-lines -after Default lsp_inlay_code_lenses
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-code-lenses-disable -params 1 -docstring "lsp-inlay-code-lenses-disable <scope>: disable inlay code lenses for <scope>"  %{
