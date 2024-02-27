@@ -83,6 +83,11 @@ isHttpEnabled = true
 statusBarProvider = "log-message"
 compilerOptions = { overrideDefFormat = "unicode" }
 
+[language_server.nil]
+filetypes = ["nix"]
+command = "nil"
+roots = ["flake.nix", "shell.nix", ".git", ".hg"]
+
 [language_server.scss-language-server]
 filetypes = ["scss"]
 roots = ["package.json", ".git", ".hg"]
