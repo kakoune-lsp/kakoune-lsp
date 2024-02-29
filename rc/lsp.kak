@@ -223,6 +223,10 @@ define-command -hidden lsp-menu -params 1.. %{
 }
 define-command -hidden lsp-menu-impl %{
     evaluate-commands %sh{
+        if ! command -v perl > /dev/null; then
+            printf "fail %{'perl' must be installed to use the 'lsp-menu' command}"
+            exit
+        fi
         echo >$kak_command_fifo "echo -to-file $kak_response_fifo -quoting kakoune -- %reg{a}"
         perl < $kak_response_fifo -we '
             use strict;
@@ -2465,8 +2469,8 @@ define-command -hidden lsp-snippets-insert-completion -params 1 %{ evaluate-comm
 
 define-command lsp-snippets-insert -hidden -params 1 %[
     evaluate-commands %sh{
-        if ! command -v perl > /dev/null 2>&1; then
-            printf "fail '''perl'' must be installed to use the ''snippets-insert'' command'"
+        if ! command -v perl > /dev/null; then
+            printf "fail %{'perl' must be installed to use the 'lsp-snippets-insert' command'}"
         fi
     }
     evaluate-commands -draft -save-regs '^"' %[
