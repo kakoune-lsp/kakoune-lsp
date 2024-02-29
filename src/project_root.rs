@@ -21,7 +21,7 @@ pub fn find_project_root(language_id: &LanguageId, markers: &[String], path: &st
     }
 }
 
-pub fn roots_by_marker(roots: &[String], path: &str) -> String {
+fn roots_by_marker(roots: &[String], path: &str) -> String {
     let mut src = PathBuf::from(path);
     // For scratch buffers we get a bare filename.
     if !src.is_absolute() {
@@ -52,10 +52,10 @@ pub fn roots_by_marker(roots: &[String], path: &str) -> String {
             }
         }
     }
-    return src.to_str().unwrap().to_string();
+    src.to_str().unwrap().to_string()
 }
 
-pub fn gather_env_roots(language_id: &LanguageId) -> HashSet<PathBuf> {
+fn gather_env_roots(language_id: &LanguageId) -> HashSet<PathBuf> {
     let prefix = format!("KAK_LSP_PROJECT_ROOT_{}", language_id.to_uppercase());
     debug!("Searching for vars starting with {}", prefix);
     env::vars()
@@ -64,7 +64,7 @@ pub fn gather_env_roots(language_id: &LanguageId) -> HashSet<PathBuf> {
         .collect()
 }
 
-pub fn roots_by_env(roots: &HashSet<PathBuf>, path: &str) -> Option<String> {
+fn roots_by_env(roots: &HashSet<PathBuf>, path: &str) -> Option<String> {
     let p = PathBuf::from(path);
     let pwd = if p.is_file() {
         p.parent().unwrap().to_path_buf()
