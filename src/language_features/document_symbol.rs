@@ -126,7 +126,7 @@ fn symbol_filename<'a, T: Symbol<T>>(
 
 impl Symbol<SymbolInformation> for SymbolInformation {
     fn name(&self) -> &str {
-        &self.name
+        self.name.split('\n').next().unwrap()
     }
     fn kind(&self) -> SymbolKind {
         self.kind
@@ -150,7 +150,7 @@ impl Symbol<SymbolInformation> for SymbolInformation {
 
 impl Symbol<DocumentSymbol> for DocumentSymbol {
     fn name(&self) -> &str {
-        &self.name
+        self.name.split('\n').next().unwrap()
     }
     fn kind(&self) -> SymbolKind {
         self.kind
