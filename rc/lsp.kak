@@ -361,7 +361,7 @@ define-command -hidden lsp-with-option -params 3.. -docstring %{
     lsp-with-option <option_name> <new_value> <command> [<arguments>]: evaluate a command with a modified option
 } %{
     evaluate-commands -save-regs s %{
-        evaluate-commands set-register s %exp{%%opt{%arg{1}}}
+        evaluate-commands set-register s "%%opt{%arg{1}}"
         set-option current %arg{1} %arg{2}
         try %{
             evaluate-commands %sh{
@@ -745,7 +745,7 @@ symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
 
 define-command -hidden lsp-get-word-regex %{
     try %{
-        execute-keys %exp{<a-i>c\A|[^\w%opt{lsp_extra_word_chars}],\z|[^\w%opt{lsp_extra_word_chars}]<ret>}
+        execute-keys "<a-i>c\A|[^\w%opt{lsp_extra_word_chars}],\z|[^\w%opt{lsp_extra_word_chars}]<ret>"
         execute-keys %{"a*}
     } catch %{
         set-register a %{}
