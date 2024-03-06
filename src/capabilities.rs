@@ -89,7 +89,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                         dynamic_registration: Some(false),
                                     },
                                 ),
-                                did_change_watched_files: Some(
+                                did_change_watched_files: ctx.config.file_watch_support.then_some(
                                     DidChangeWatchedFilesClientCapabilities {
                                         dynamic_registration: Some(true),
                                         relative_pattern_support: Some(true),

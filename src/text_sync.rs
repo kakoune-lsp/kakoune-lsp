@@ -252,6 +252,13 @@ pub fn register_workspace_did_change_watched_files(
     options: Option<Value>,
     ctx: &mut Context,
 ) {
+    if !ctx.config.file_watch_support {
+        error!(
+            "file watch support is disabled, ignoring spurious {} server request",
+            notification::DidChangeWatchedFiles::METHOD
+        );
+        return;
+    }
     let options = options.unwrap();
     let options = DidChangeWatchedFilesRegistrationOptions::deserialize(options).unwrap();
     assert!(ctx.pending_file_watchers.is_empty());

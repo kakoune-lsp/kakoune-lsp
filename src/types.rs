@@ -30,6 +30,8 @@ pub struct Config {
     #[serde(default = "default_true")]
     pub snippet_support: bool,
     #[serde(default)]
+    pub file_watch_support: bool,
+    #[serde(default)]
     pub semantic_tokens: SemanticTokenConfig,
     #[serde(default)]
     pub language_ids: HashMap<String, LanguageId>,

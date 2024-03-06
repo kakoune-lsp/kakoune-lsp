@@ -1,3 +1,4 @@
+file_watch_support = false
 snippet_support = true
 verbosity = 2
 

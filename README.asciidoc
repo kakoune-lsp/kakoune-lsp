@@ -1,6 +1,6 @@
 = Kakoune Language Server Protocol Client
 
-This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for https://kakoune.org[Kakoune].
+This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for the https://kakoune.org[Kakoune] editor.
 
 == Quick Start
 
@@ -586,6 +586,9 @@ hook global InsertCompletionHide .* %{
 Snippet support can be disabled by setting `snippet_support = false` at the top level of the config.
 
 == Limitations
+
+https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles[`workspace/didChangeWatchedFiles`]
+is disabled by default; use `watch_file_support = true` to enable it.
 
 === Encoding
 
