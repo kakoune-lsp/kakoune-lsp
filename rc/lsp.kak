@@ -2216,7 +2216,11 @@ define-command lsp-diagnostic-lines-disable -params 1 -docstring "lsp-diagnostic
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-enable -params 1 -docstring "lsp-inlay-diagnostics-enable <scope>: Enable inlay diagnostics highlighting for <scope>" %{
-    add-highlighter "%arg{1}/lsp_inlay_diagnostics" flag-lines -after Default lsp_inlay_diagnostics
+    try %{
+        add-highlighter "%arg{1}/lsp_inlay_diagnostics" flag-lines -after Default lsp_inlay_diagnostics
+    } catch %{
+        fail -- "%val{error} (NOTE: lsp-inlay-diagnostics-enable requires Kakoune >= 2024)"
+    }
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-diagnostics-disable -params 1 -docstring "lsp-inlay-diagnostics-disable <scope>: Disable inlay diagnostics highlighting for <scope>"  %{
@@ -2297,7 +2301,11 @@ define-command lsp-inlay-hints-disable -params 1 -docstring "lsp-inlay-hints-dis
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-code-lenses-enable -params 1 -docstring "lsp-inlay-code-lenses-enable <scope>: enable inlay code lenses for <scope>" %{
-    add-highlighter "%arg{1}/lsp_inlay_code_lenses" flag-lines -after Default lsp_inlay_code_lenses
+    try %{
+        add-highlighter "%arg{1}/lsp_inlay_code_lenses" flag-lines -after Default lsp_inlay_code_lenses
+    } catch %{
+        fail -- "%val{error} (NOTE: lsp-inlay-code-lenses-enable requires Kakoune >= 2024)"
+    }
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-code-lenses-disable -params 1 -docstring "lsp-inlay-code-lenses-disable <scope>: disable inlay code lenses for <scope>"  %{
