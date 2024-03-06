@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use crate::context::*;
@@ -11,7 +12,11 @@ use crossbeam_channel::{Receiver, Sender};
 use jsonrpc_core::Value;
 use lsp_types::notification::*;
 use lsp_types::*;
-use notify::{RecursiveMode, Watcher};
+use notify_debouncer_full::{
+    new_debouncer,
+    notify::{self, RecursiveMode, Watcher},
+    DebounceEventResult,
+};
 use ropey::Rope;
 use serde::Deserialize;
 use url::Url;
@@ -131,35 +136,48 @@ pub fn spawn_file_watcher(
         "File system change watcher",
         1024, // arbitrary
         move |receiver: Receiver<()>, sender: Sender<Vec<FileEvent>>| {
-            let mut watchers = Vec::new();
+            let mut debouncers = Vec::new();
             for ((_, root_path, path), path_watch_requests) in watch_requests {
                 let sender = sender.clone();
-                let callback = move |res: notify::Result<notify::Event>| {
+                let callback = move |res: DebounceEventResult| {
                     match res {
-                        Ok(event) => {
-                            let file_changes =
-                                event_file_changes(log_path, &path_watch_requests, event);
+                        Ok(debounced_events) => {
+                            let mut file_changes = vec![];
+                            for debounced_event in debounced_events {
+                                event_file_changes(
+                                    &mut file_changes,
+                                    log_path,
+                                    &path_watch_requests,
+                                    debounced_event.event,
+                                );
+                            }
                             if !file_changes.is_empty() {
                                 if let Err(err) = sender.send(file_changes) {
                                     error!("{}", err);
                                 }
                             }
                         }
-                        Err(e) => error!("{}", e),
+                        Err(errors) => {
+                            for e in errors {
+                                error!("{}", e)
+                            }
+                        }
                     };
                 };
-                let mut watcher = match notify::recommended_watcher(callback) {
-                    Ok(watcher) => watcher,
+
+                let mut debouncer = match new_debouncer(Duration::from_secs(1), None, callback) {
+                    Ok(debouncer) => debouncer,
                     Err(err) => {
                         error!("{}", err);
                         return;
                     }
                 };
+
                 let path = path.as_deref().unwrap_or_else(|| Path::new(&root_path));
-                if let Err(err) = watcher.watch(path, RecursiveMode::Recursive) {
+                if let Err(err) = debouncer.watcher().watch(path, RecursiveMode::Recursive) {
                     error!("{:?}: {}", path, err);
                 }
-                watchers.push(watcher);
+                debouncers.push(debouncer);
             }
             if let Err(err) = receiver.recv() {
                 error!("{}", err);
@@ -169,12 +187,11 @@ pub fn spawn_file_watcher(
 }
 
 fn event_file_changes(
+    file_changes: &mut Vec<FileEvent>,
     log_path: &'static Option<PathBuf>,
     watch_requests: &Vec<CompiledFileSystemWatcher>,
     event: notify::Event,
-) -> Vec<FileEvent> {
-    let mut file_changes = vec![];
-
+) {
     for path in &event.paths {
         if log_path.as_ref().map_or(false, |log_path| path == log_path) {
             continue;
@@ -213,7 +230,6 @@ fn event_file_changes(
             }
         }
     }
-    file_changes
 }
 
 pub fn workspace_did_change_watched_files(

@@ -143,7 +143,7 @@ pub fn start(
                     if fw.pending_file_events.is_empty() {
                         None
                     } else {
-                        Some(tick(Duration::from_millis(500)))
+                        Some(tick(Duration::from_secs(1)))
                     }
                 },
             )
