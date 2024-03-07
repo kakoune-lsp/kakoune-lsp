@@ -623,7 +623,7 @@ Please also try to reproduce the issue with a minimal configuration. Sometimes t
 
 [source,sh]
 ----
-HOME=$(mktemp -d) kak -e '
+env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
     eval %sh{kak-lsp --kakoune -s $kak_session}
     set global lsp_cmd "kak-lsp -s %val{session} -vvvv --log /tmp/kak-lsp.log"
     lsp-enable'
