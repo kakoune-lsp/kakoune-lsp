@@ -8,12 +8,17 @@ declare-option -docstring 'name of the client in which documentation is to be di
 declare-option -docstring 'name of the client in which all source code jumps will be executed' str jumpclient
 declare-option -docstring 'name of the client in which utilities display information' str toolsclient
 
-declare-option -hidden str lsp_current_line
+declare-option -hidden str lsp_current_line jump_current_line
 try %{
     nop %opt{jump_current_line}
-    set-option global lsp_current_line jump_current_line
 } catch %{
-    set-option global lsp_current_line grep_current_line
+    try %{
+        nop %opt{grep_current_line}
+        set-option global lsp_current_line grep_current_line
+    } catch %{
+        echo -debug "lsp.kak: option not found: jump_current_line . Make sure that jump.kak is in your autoload"
+        declare-option -hidden int jump_current_line 0
+    }
 }
 
 # Faces
