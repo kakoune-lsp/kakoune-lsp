@@ -2720,13 +2720,13 @@ hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{
 define-command -hidden lsp-select-next %{
         set-register / ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
         evaluate-commands "
-            execute-keys %%opt{%opt{lsp_current_line}}ggl /<ret>
+            execute-keys ge %%opt{%opt{lsp_current_line}}g<a-l> /<ret>
         "
 }
 define-command -hidden lsp-select-previous %{
         set-register / ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
         evaluate-commands "
-            execute-keys %%opt{%opt{lsp_current_line}}g <a-/><ret>
+            execute-keys ge %%opt{%opt{lsp_current_line}}g<a-h> <a-/><ret>
         "
 }
 
