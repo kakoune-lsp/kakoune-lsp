@@ -2,6 +2,7 @@
 
 Breaking changes:
 - New default server for Nix, [`nil`](https://github.com/oxalica/nil), replacing `rnix-lsp`.
+- Our `gopls` `usePlaceholders` setting now defaults to true in the default config, make sure to add a mapping for `lsp-snippets-select-next-placeholders` or disable snippets.
 - Support for watching files (`workspace/didChangeWatchedFiles`) is now disabled by default to avoid performance problems.
 - Inlay code lenses (used by OCaml and Haskell language servers) are now shown after the referenced line. This requires Kakoune version >= 2024.
 - `lsp_hover_max_lines` now more directly controls the lines of information in the hover box.

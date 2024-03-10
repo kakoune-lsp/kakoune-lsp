@@ -157,6 +157,7 @@ command = "gopls"
 [language_server.gopls.settings.gopls]
 # See https://github.com/golang/tools/blob/master/gopls/doc/settings.md
 # "build.buildFlags" = []
+"ui.completion.usePlaceholders" = true
 
 [language_server.haskell-language-server]
 filetypes = ["haskell"]
