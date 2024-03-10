@@ -1123,12 +1123,6 @@ fn editor_breadcrumbs<T: Symbol<T>>(
     let filename = symbol_filename(&meta, &symbols[0], &mut filename_path).to_string();
     let mut breadcrumbs = Vec::default();
     breadcrumbs_calc(&symbols, &params, ctx, server, &filename, &mut breadcrumbs);
-    if breadcrumbs.is_empty() {
-        if meta.fifo.is_some() {
-            ctx.exec(meta, "nop".to_string());
-        }
-        return;
-    }
 
     let breadcrumbs = breadcrumbs.join(" > ") + " ";
     let command = format!(
