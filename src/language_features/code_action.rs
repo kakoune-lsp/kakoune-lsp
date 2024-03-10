@@ -218,7 +218,10 @@ fn editor_code_actions(
             }
             _ => fail + " 'multiple matching actions'",
         };
-        ctx.exec(meta, command);
+        ctx.exec(
+            meta,
+            format!("evaluate-commands -- {}", &editor_quote(&command)),
+        );
         return;
     }
 
@@ -365,7 +368,7 @@ pub fn text_document_code_action_resolve(
         move |ctx: &mut Context, meta, results| {
             if let Some((_, result)) = results.first() {
                 let cmd = code_action_to_editor_command(result, false, false);
-                ctx.exec(meta, cmd)
+                ctx.exec(meta, format!("evaluate-commands -- {}", editor_quote(&cmd)))
             }
         },
     );

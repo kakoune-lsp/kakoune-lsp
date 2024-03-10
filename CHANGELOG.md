@@ -10,6 +10,10 @@ Breaking changes:
 
 Additions:
 - `lsp_hover_max_diagnostic_lines` now defaults to 20 which limits the diagnostic lines in the hover box.
+- Various improvements to the compatibility with old Kakoune.
+
+Fixes:
+- Fix `gopls` code actions.
 
 ## 16.0.0 - 2024-02-20
 
