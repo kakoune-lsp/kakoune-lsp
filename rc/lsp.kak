@@ -1757,7 +1757,7 @@ define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnos
         set-option buffer lsp_project_root "%arg{1}/"
         alias buffer jump lsp-diagnostics-jump
         set-register '"' %arg{2}
-        execute-keys Pgg
+        execute-keys Rgg
     }
 }
 
@@ -1768,7 +1768,7 @@ define-command -hidden lsp-show-goto-buffer -params 3 %{
         set-option buffer %opt{lsp_current_line} 0
         set-option buffer lsp_project_root "%arg{2}/"
         set-register '"' %arg{3}
-        execute-keys Pgg
+        execute-keys Rgg
     }
 }
 
