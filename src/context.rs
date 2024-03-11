@@ -378,7 +378,6 @@ pub fn meta_for_session(session: String, client: Option<String>) -> EditorMeta {
         version: 0,
         fifo: None,
         command_fifo: None,
-        write_response_to_fifo: false,
         hook: false,
         server: None,
         word_regex: None,

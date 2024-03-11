@@ -27,7 +27,6 @@ use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
-use serde::Serialize;
 
 /// Start controller.
 ///
@@ -88,7 +87,6 @@ pub fn start(
     let mut initial_request_meta = initial_request.meta.clone();
     initial_request_meta.buffile = "".to_string();
     initial_request_meta.fifo = None;
-    initial_request_meta.write_response_to_fifo = false;
 
     let mut ctx = Context::new(ContextBuilder {
         initial_request,
@@ -299,10 +297,6 @@ pub fn start(
                                         meta.client.clone(),
                                         &success.id,
                                     );
-                                    if meta.write_response_to_fifo {
-                                        write_response_to_fifo(meta, &success);
-                                        continue;
-                                    }
                                     if let Some((mut vals, callback)) =
                                         ctx.batches.remove(&batch_id)
                                     {
@@ -340,10 +334,6 @@ pub fn start(
                                         "Error response from server {}: {:?}",
                                         server_name, failure
                                     );
-                                    if meta.write_response_to_fifo {
-                                        write_response_to_fifo(meta, failure);
-                                        continue;
-                                    }
                                     if let Some((vals, callback)) = ctx.batches.remove(&batch_id) {
                                         if let Some(mut batch_seq) =
                                             ctx.batch_sizes.remove(&batch_id)
@@ -430,12 +420,6 @@ pub fn start(
             });
         }
     }
-}
-
-pub fn write_response_to_fifo<T: Serialize>(meta: EditorMeta, response: T) {
-    let json = serde_json::to_string_pretty(&response).unwrap();
-    let fifo = meta.fifo.expect("Need fifo to write response to");
-    std::fs::write(fifo, (json + "\n").as_bytes()).expect("Failed to write JSON response to fifo");
 }
 
 pub fn dispatch_pending_editor_requests(ctx: &mut Context) {

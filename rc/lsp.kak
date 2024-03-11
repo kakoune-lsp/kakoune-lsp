@@ -653,7 +653,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/hover\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 $hover_buffer_args
 selectionDesc = \"${kak_selection_desc}\"
@@ -820,7 +819,6 @@ version  = ${kak_timestamp:-0}
 method   = \"textDocument/definition\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 word_regex = '''${kak_reg_a}'''
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
 column    = ${kak_cursor_column}
@@ -837,7 +835,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/declaration\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line      = ${kak_cursor_line}
 column    = ${kak_cursor_column}
@@ -853,7 +850,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/implementation\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -869,7 +865,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/typeDefinition\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -915,7 +910,7 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/codeAction\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${fifo:-${kak_opt_lsp_connect_fifo}}\
+${fifo}\
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
 performCodeAction = $1
@@ -1010,7 +1005,6 @@ version  = ${kak_timestamp:-0}
 method   = \"textDocument/references\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 word_regex = '''${kak_reg_a}'''
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1030,7 +1024,6 @@ version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentHighlight\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 word_regex = '''${kak_reg_a}'''
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1089,7 +1082,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/selectionRange\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 position.line = ${kak_cursor_line}
 position.column = ${kak_cursor_column}
@@ -1140,7 +1132,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/signatureHelp\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params.position]
 line     = ${kak_cursor_line}
 column   = ${kak_cursor_column}
@@ -1156,7 +1147,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/diagnostics\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1170,7 +1160,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"textDocument/documentSymbol\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -1186,7 +1175,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"kakoune/goto-document-symbol\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 $([ \"\" = \"${1:-}\" ] || echo goto_symbol = \"${1}\")
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1211,7 +1199,6 @@ filetype = \"${2}\"
 version  = ${3}
 method   = \"workspace/symbol\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 query    = \"${4}\"
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
@@ -1846,70 +1833,6 @@ define-command -hidden lsp-show-outgoing-calls -params 2 -docstring "Render call
     lsp-show-goto-buffer *callees* %arg{@}
 }
 
-declare-option -hidden str lsp_connect_fifo
-define-command lsp-connect -params 2.. \
-    -docstring %{lsp-connect <handler> <request> [<params>...]: send request to language server and forward response to custom handler
-
-<handler> is called with one argument, the file containing the language server's response.
-<request> is a function that makes an LSP request. It is called with <params>.
-} %{
-    lsp-require-enabled lsp-connect
-    evaluate-commands -save-regs t %{
-        set-register p %sh{
-            tmp=$(mktemp -q -d -t 'kak-lsp-connect.XXXXXX' 2>/dev/null || mktemp -q -d)
-            pipe=${tmp}/fifo
-            mkfifo ${pipe}
-            echo ${pipe}
-        }
-        set-option global lsp_connect_fifo "write_response_to_fifo = true
-fifo = ""%reg{p}""
-"
-        evaluate-commands %sh{
-            shift
-            for arg
-            do
-                printf "'%s' " "$(printf %s "$arg" | sed "s/'/''/")"
-            done
-        }
-        try %{
-            evaluate-commands %sh{
-                response=$(cat "$kak_reg_p")
-                if expr match "$response" ^lsp-show-error >/dev/null; then
-                    printf %s\\n "$response"
-                else
-                    ( printf %s "$response" >"$kak_reg_p" 2>/dev/null & ) >/dev/null 2>&1 </dev/null
-                    echo fail
-                fi
-            }
-        } catch %{
-            %arg{1} %reg{p}
-        }
-        set-option global lsp_connect_fifo ""
-        evaluate-commands %sh{
-            rm ${kak_reg_p}
-            rmdir ${kak_reg_p%fifo}
-        }
-    }
-} -shell-script-candidates %{
-    [ $kak_token_to_complete -eq 1 ] || exit
-    commands="
-    lsp-capabilities
-    lsp-code-actions
-    lsp-definition
-    lsp-diagnostics
-    lsp-document-symbol
-    lsp-highlight-references
-    lsp-hover
-    lsp-implementation
-    lsp-references
-    lsp-selection-range
-    lsp-signature-help
-    lsp-type-definition
-    lsp-workspace-symbol
-    "
-    printf '%s\n' $commands
-}
-
 define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
     evaluate-commands -save-regs '"' %{
         set-option buffer lsp_project_root "%arg{1}/"
@@ -1993,7 +1916,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"window/showMessageRequest/showNext\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
@@ -2007,7 +1929,6 @@ filetype = \"${kak_opt_filetype}\"
 version  = ${kak_timestamp:-0}
 method   = \"window/showMessageRequest/respond\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_connect_fifo}\
 [params]
 message_request_id = $1
 [params.item]

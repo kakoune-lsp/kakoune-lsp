@@ -1,5 +1,4 @@
 use crate::context::*;
-use crate::controller::write_response_to_fifo;
 use crate::markup::escape_kakoune_markup;
 use crate::position::*;
 use crate::types::*;
@@ -215,10 +214,6 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
 }
 
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
-    if meta.write_response_to_fifo {
-        write_response_to_fifo(meta, &ctx.diagnostics);
-        return;
-    }
     let (_, main_settings) = ctx.language_servers.first_key_value().unwrap();
     let content = ctx
         .diagnostics

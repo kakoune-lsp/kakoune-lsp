@@ -7,6 +7,7 @@ Breaking changes:
 - Inlay code lenses (used by OCaml and Haskell language servers) are now shown after the referenced line. This requires Kakoune version >= 2024.
 - `lsp_hover_max_lines` now more directly controls the lines of information in the hover box.
 - `lsp_hover_max_lines` has been deprecated for `lsp_hover_max_info_lines`. `lsp_hover_max_lines` now defaults to `-1` and when it is `-1` `lsp_hover_max_info_lines` is used to control lines of information in the hover box.
+- Removed `lsp-connect` experimental command.
 
 Additions:
 - `lsp-document-symbol` no longer renders the same filename in every single line. Commands like `jump-next` and `<ret>` still work as before.
