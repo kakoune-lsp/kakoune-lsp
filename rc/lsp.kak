@@ -10,13 +10,13 @@ declare-option -docstring 'name of the client in which utilities display informa
 
 declare-option -hidden str lsp_current_line jump_current_line
 try %{
-    nop %opt{jump_current_line}
+    require-module jump
 } catch %{
     try %{
         nop %opt{grep_current_line}
         set-option global lsp_current_line grep_current_line
     } catch %{
-        echo -debug "lsp.kak: option not found: jump_current_line . Make sure that jump.kak is in your autoload"
+        echo -debug "lsp.kak: no such module: 'jump'. Make sure that jump.kak is in your autoload"
         declare-option -hidden int jump_current_line 0
     }
 }
