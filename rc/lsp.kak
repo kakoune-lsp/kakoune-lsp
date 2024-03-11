@@ -480,6 +480,7 @@ declare-option -hidden range-specs lsp_inlay_hints
 declare-option -hidden line-specs lsp_inlay_code_lenses
 declare-option -hidden line-specs lsp_code_lenses 0 '0| '
 declare-option -hidden str lsp_project_root
+declare-option -hidden str lsp_buffile
 
 declare-option -hidden str lsp_modeline_breadcrumbs ""
 declare-option -hidden str lsp_modeline_code_actions
@@ -1852,8 +1853,11 @@ define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto c
     lsp-show-goto-buffer *goto* %arg{@}
 }
 
-define-command -hidden lsp-show-document-symbol -params 2 -docstring "Render document symbols" %{
-    lsp-show-goto-buffer *goto* %arg{@}
+define-command -hidden lsp-show-document-symbol -params 3 -docstring "Render document symbols" %{
+    lsp-show-goto-buffer *goto* %arg{1} %arg{3}
+    set-option -add buffer path %arg{1} # for gf on the file name
+    set-option buffer lsp_buffile %arg{2}
+    alias buffer jump lsp-document-symbol-jump
 }
 
 define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render callers" %{
@@ -1941,7 +1945,7 @@ define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render wo
     evaluate-commands %sh{
         if [ "${kak_buffile}" = "*symbols*" ];
         then echo 'lsp-update-workspace-symbol %arg{1} %arg{2}';
-        else echo 'lsp-show-document-symbol %arg{1} %arg{2}';
+        else echo 'lsp-show-goto-buffer *goto* %arg{1} %arg{2}';
         fi
     }
 }
@@ -2790,6 +2794,24 @@ define-command -hidden lsp-jump -docstring %{
             }
             set-option buffer jump_current_line %val{cursor_line}
             evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing -- %reg{a} %reg{b} %reg{c}
+            try %{ focus %opt{jumpclient} }
+        }
+    }
+}
+
+define-command -hidden lsp-document-symbol-jump -docstring %{
+    Same as lsp-jump except this uses a buffer-scoped filename option
+} %{
+    evaluate-commands -save-regs bc %{
+        try %{
+            evaluate-commands -draft -save-regs / %{
+                set-register / ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
+                execute-keys <semicolon>xs<ret>
+                set-register b "%reg{2}"
+                set-register c "%reg{3}"
+            }
+            set-option buffer jump_current_line %val{cursor_line}
+            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing -- %opt{lsp_buffile} %reg{b} %reg{c}
             try %{ focus %opt{jumpclient} }
         }
     }

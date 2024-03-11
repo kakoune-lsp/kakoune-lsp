@@ -9,6 +9,7 @@ Breaking changes:
 - `lsp_hover_max_lines` has been deprecated for `lsp_hover_max_info_lines`. `lsp_hover_max_lines` now defaults to `-1` and when it is `-1` `lsp_hover_max_info_lines` is used to control lines of information in the hover box.
 
 Additions:
+- `lsp-document-symbol` no longer renders the filename in every single line. Commands like `jump-next` and `<ret>` still work as before.
 - `lsp_hover_max_diagnostic_lines` now defaults to 20 which limits the diagnostic lines in the hover box.
 - Various improvements to the compatibility with old Kakoune.
 
