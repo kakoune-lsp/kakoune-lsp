@@ -20,7 +20,6 @@ use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
-use unicode_width::UnicodeWidthStr;
 use url::Url;
 
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
@@ -199,10 +198,17 @@ fn editor_document_symbol(
             return;
         }
     };
+    let bufname = meta
+        .buffile
+        .as_str()
+        .strip_prefix(&server.root_path)
+        .and_then(|p| p.strip_prefix('/'))
+        .unwrap_or(&meta.buffile);
     let command = format!(
-        "lsp-show-document-symbol {} {}",
+        "lsp-show-document-symbol {} {} {}",
         editor_quote(&server.root_path),
-        editor_quote(&content),
+        editor_quote(&meta.buffile),
+        editor_quote(&(bufname.to_owned() + "\n" + &content)),
     );
     ctx.exec(meta, command);
 }
@@ -233,7 +239,7 @@ impl fmt::Display for Tree {
 /// Paths are converted into relative to project root.
 pub fn format_symbol<T: Symbol<T>>(
     items: Vec<T>,
-    align: bool,
+    single_file: bool,
     meta: &EditorMeta,
     server: &ServerSettings,
     ctx: &Context,
@@ -244,6 +250,7 @@ pub fn format_symbol<T: Symbol<T>>(
         meta: &EditorMeta,
         server: &ServerSettings,
         ctx: &Context,
+        single_file: bool,
         prefix: &mut Vec<bool>,
     ) {
         let length = items.len();
@@ -278,7 +285,11 @@ pub fn format_symbol<T: Symbol<T>>(
             output.push((
                 format!(
                     "{}:{}:{}:",
-                    short_file_path(filename, &server.root_path),
+                    if single_file {
+                        "%"
+                    } else {
+                        short_file_path(filename, &server.root_path)
+                    },
                     position.line,
                     position.column,
                 ),
@@ -287,16 +298,29 @@ pub fn format_symbol<T: Symbol<T>>(
 
             let children = symbol.children();
             prefix.push(is_last);
-            format_symbol_at_depth(output, children, meta, server, ctx, prefix);
+            format_symbol_at_depth(output, children, meta, server, ctx, single_file, prefix);
             prefix.pop();
         }
     }
     let mut columns = vec![];
-    format_symbol_at_depth(&mut columns, &items, meta, server, ctx, &mut vec![]);
-    if align {
+    format_symbol_at_depth(
+        &mut columns,
+        &items,
+        meta,
+        server,
+        ctx,
+        single_file,
+        &mut vec![],
+    );
+    if single_file {
+        // Align symbol names (first column is %:line:col).
         let Some(width) = columns
             .iter()
-            .map(|(position, _)| UnicodeWidthStr::width(position.as_str()))
+            .map(|(position, _)| {
+                assert!(position.chars().all(|c| c.is_ascii_graphic()));
+                // Every byte is a width-1 character.
+                position.len()
+            })
             .max()
         else {
             return "".to_string();
