@@ -245,7 +245,10 @@ pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut 
     let cmd = format!(
         "try {} catch {}",
         editor_quote(&format!("cargo {}", args)),
-        editor_quote(&format!("lsp-with-option makecmd cargo make {}", args))
+        editor_quote(&format!(
+            "try %[require-module make]; lsp-with-option makecmd cargo make {}",
+            args
+        ))
     );
     ctx.exec(
         meta.clone(),
