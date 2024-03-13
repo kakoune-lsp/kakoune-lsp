@@ -23,7 +23,10 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         .iter()
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_CODE_ACTIONS))
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
+        if meta.fifo.is_some() {
+            ctx.exec(meta, "nop");
+        }
         return;
     }
 

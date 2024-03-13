@@ -24,7 +24,10 @@ pub fn text_document_range_formatting(meta: EditorMeta, params: EditorParams, ct
             }
         })
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
+        if meta.fifo.is_some() {
+            ctx.exec(meta, "nop");
+        }
         return;
     }
 
