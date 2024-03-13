@@ -23,7 +23,12 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
             }
         })
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+
+    if eligible_servers.is_empty() {
+        if meta.fifo.is_some() {
+            ctx.exec(meta, "nop");
+        }
+
         return;
     }
 
