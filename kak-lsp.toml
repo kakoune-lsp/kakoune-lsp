@@ -51,7 +51,7 @@ command = "crystalline"
 [language_server.css-language-server]
 filetypes = ["css"]
 roots = ["package.json", ".git", ".hg"]
-command = "vscode-css-languageserver"
+command = "vscode-css-language-server"
 args = ["--stdio"]
 
 # [language_server.deno-lsp]
@@ -67,7 +67,7 @@ args = ["--stdio"]
 [language_server.less-language-server]
 filetypes = ["less"]
 roots = ["package.json", ".git", ".hg"]
-command = "vscode-css-languageserver"
+command = "vscode-css-language-server"
 args = ["--stdio"]
 
 
@@ -92,7 +92,7 @@ roots = ["flake.nix", "shell.nix", ".git", ".hg"]
 [language_server.scss-language-server]
 filetypes = ["scss"]
 roots = ["package.json", ".git", ".hg"]
-command = "vscode-css-languageserver"
+command = "vscode-css-language-server"
 args = ["--stdio"]
 
 [language_server.dls]
@@ -179,7 +179,7 @@ settings_section = "_"
 [language_server.html-language-server]
 filetypes = ["html"]
 roots = ["package.json"]
-command = "vscode-html-languageserver"
+command = "vscode-html-language-server"
 args = ["--stdio"]
 settings_section = "_"
 [language_server.html-language-server.settings._]
@@ -198,7 +198,7 @@ storagePath = "/tmp/intelephense"
 [language_server.json-language-server]
 filetypes = ["json"]
 roots = ["package.json"]
-command = "vscode-json-languageserver"
+command = "vscode-json-language-server"
 args = ["--stdio"]
 
 # Requires Julia package "LanguageServer"
