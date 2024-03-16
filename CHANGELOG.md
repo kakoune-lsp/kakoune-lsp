@@ -2,23 +2,23 @@
 
 Breaking changes:
 - New default server for Nix, [`nil`](https://github.com/oxalica/nil), replacing `rnix-lsp`.
-- Our `gopls` `usePlaceholders` setting now defaults to true in the default config, make sure to add a mapping for `lsp-snippets-select-next-placeholders` or disable snippets.
-- `gopls` default config has been changed so inlay (type) hints require fewer configuration knobs to turn on. As with other servers, inlay hints are only requested when `lsp-inlay-hints-enabled` is used.
+- Our `gopls` `usePlaceholders` setting now defaults to true in the default config, make sure to either add a mapping for `lsp-snippets-select-next-placeholders` or disable snippets.
+- `gopls` default config has been changed so inlay (type) hints require no gopls-specific knobs to turn on. As with other servers, inlay hints are only requested when `lsp-inlay-hints-enabled` is used.
 - The default config for HTML/CSS/JSON has been updated to use `vscode-{html,css,json}-language-server` as server command instead of `vscode-{html,css,json}-languageserver`.
 - Support for watching files (`workspace/didChangeWatchedFiles`) is now disabled by default to avoid performance problems.
 - Inlay code lenses (used by OCaml and Haskell language servers) are now shown after the referenced line. This requires Kakoune version >= 2024.
-- `lsp-auto-hover-enable` no longer takes an argument, that functionality has been moved to `lsp-auto-hover-buffer-enable`.
-- `lsp_hover_max_lines` now more directly controls the lines of information in the hover box.
-- `lsp_hover_max_lines` has been deprecated for `lsp_hover_max_info_lines`. `lsp_hover_max_lines` now defaults to `-1` and when it is `-1` `lsp_hover_max_info_lines` is used to control lines of information in the hover box.
+- `lsp-auto-hover-enable` no longer takes an argument; that functionality has been moved to `lsp-auto-hover-buffer-enable`, and it no longer magically spawns a client.
 - Removed `lsp-connect` experimental command.
 
 Additions:
+- New commands `jump-{next,previous}` (which have also been added to Kakoune) replace and deprecate `lsp-{next,previous}`.
 - `lsp-document-symbol` no longer renders the same filename in every single line. Commands like `jump-next` and `<ret>` still work as before.
-- `lsp_hover_max_diagnostic_lines` now defaults to 20 which limits the diagnostic lines in the hover box.
-- Various improvements to the compatibility with old Kakoune.
+- New option `lsp_hover_max_info_lines` replaces and deprecates `lsp_hover_max_lines` which now defaults to `-1` which means `lsp_hover_max_info_lines` is used to control lines of information in the hover box.
+- New option `lsp_hover_max_diagnostic_lines` to limit the lines for diagnostics in the hover box.
 
 Fixes:
-- Fix `gopls` code actions.
+- Fix `gopls` code actions like "Extract function".
+- Various improvements to compatibility with old Kakoune.
 
 ## 16.0.0 - 2024-02-20
 
