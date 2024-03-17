@@ -1818,11 +1818,17 @@ define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto c
     lsp-show-goto-buffer *goto* %arg{@}
 }
 
+define-command -hidden lsp-symbols-highlight %{
+    add-highlighter buffer/lsp-symbols-kind regex \([\w+]+\)$ 0:+di@type
+    add-highlighter buffer/lsp-symbols-tree regex [├└─│] 0:comment
+}
+
 define-command -hidden lsp-show-document-symbol -params 3 -docstring "Render document symbols" %{
     lsp-show-goto-buffer *goto* %arg{1} %arg{3}
     set-option -add buffer path %arg{1} # for gf on the file name
     set-option buffer lsp_buffile %arg{2}
     alias buffer jump lsp-document-symbol-jump
+    lsp-symbols-highlight
 }
 
 define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render callers" %{
@@ -1849,6 +1855,7 @@ define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render wo
         else echo 'lsp-show-goto-buffer *symbols* %arg{1} %arg{2}';
         fi
     }
+    lsp-symbols-highlight
 }
 
 define-command -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
