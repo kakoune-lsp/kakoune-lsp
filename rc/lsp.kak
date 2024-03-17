@@ -1846,7 +1846,7 @@ define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render wo
     evaluate-commands %sh{
         if [ "${kak_buffile}" = "*symbols*" ];
         then echo 'lsp-update-workspace-symbol %arg{1} %arg{2}';
-        else echo 'lsp-show-goto-buffer *goto* %arg{1} %arg{2}';
+        else echo 'lsp-show-goto-buffer *symbols* %arg{1} %arg{2}';
         fi
     }
 }
@@ -2113,9 +2113,7 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
     declare-option -hidden int lsp_ws_timestamp %val{timestamp}
     declare-option -hidden str lsp_ws_query
     evaluate-commands -try-client %opt[toolsclient] %{
-        edit! -scratch *symbols*
-        set-option buffer filetype lsp-goto
-        set-option buffer jump_current_line 0
+        lsp-show-goto-buffer *symbols* %{} %{}
         prompt -on-change %{ try %{
             # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
             # the following check prevents it
