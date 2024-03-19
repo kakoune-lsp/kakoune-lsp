@@ -228,13 +228,13 @@ fn editor_completion(
                 // There's some issue with multiline insert texts, and they also don't work well in the UI, so display on one line
                 let insert_text = insert_text.replace('\n', "");
 
-                let command = formatdoc!(
+                let on_select = formatdoc!(
                     "{on_select}
                      lsp-snippets-insert-completion {}",
                     editor_quote(&snippet)
                 );
 
-                completion_entry(&insert_text, &command, &entry)
+                completion_entry(&insert_text, &on_select, &entry)
             } else {
                 // Due to implementation reasons, we currently do not support filter text
                 // with snippets.
