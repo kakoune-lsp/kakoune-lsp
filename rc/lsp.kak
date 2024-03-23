@@ -1791,52 +1791,35 @@ define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
     info "LSP: %arg{1}"
 }
 
-define-command -hidden lsp-show-diagnostics -params 2 -docstring "Render diagnostics" %{
-    evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
-        edit! -scratch *diagnostics*
-        set-option buffer filetype lsp-goto
-        set-option buffer jump_current_line 0
-        set-option buffer lsp_project_root "%arg{1}/"
-        alias buffer jump lsp-diagnostics-jump
-        set-register '"' %arg{2}
-        execute-keys Rgg
-    }
-}
-
-define-command -hidden lsp-show-goto-buffer -params 3 %{
+define-command -hidden lsp-show-goto-buffer -params 4 %{
     evaluate-commands -save-regs '"' -try-client %opt[toolsclient] %{
         edit! -scratch %arg{1}
-        set-option buffer filetype lsp-goto
+        set-option buffer filetype %arg{2}
         set-option buffer jump_current_line 0
-        set-option buffer lsp_project_root "%arg{2}/"
-        set-register '"' %arg{3}
+        set-option buffer lsp_project_root "%arg{3}/"
+        set-register '"' %arg{4}
         execute-keys Rgg
     }
 }
 
 define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto choices" %{
-    lsp-show-goto-buffer *goto* %arg{@}
-}
-
-define-command -hidden lsp-symbols-highlight %{
-    add-highlighter buffer/lsp-symbols-kind regex \([\w+]+\)$ 0:+di@type
-    add-highlighter buffer/lsp-symbols-tree regex [├└─│] 0:comment
+    lsp-show-goto-buffer *goto* lsp-goto %arg{@}
 }
 
 define-command -hidden lsp-show-document-symbol -params 3 -docstring "Render document symbols" %{
-    lsp-show-goto-buffer *goto* %arg{1} %arg{3}
-    set-option -add buffer path %arg{1} # for gf on the file name
-    set-option buffer lsp_buffile %arg{2}
-    alias buffer jump lsp-document-symbol-jump
-    lsp-symbols-highlight
+    lsp-show-goto-buffer *goto* lsp-document-symbol %arg{1} %arg{3}
+    evaluate-commands -try-client %opt[toolsclient] %{
+        set-option -add buffer path %arg{1} # for gf on the file name
+        set-option buffer lsp_buffile %arg{2}
+    }
 }
 
 define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render callers" %{
-    lsp-show-goto-buffer *callers* %arg{@}
+    lsp-show-goto-buffer *callers* lsp-goto %arg{@}
 }
 
 define-command -hidden lsp-show-outgoing-calls -params 2 -docstring "Render callees" %{
-    lsp-show-goto-buffer *callees* %arg{@}
+    lsp-show-goto-buffer *callees* lsp-goto %arg{@}
 }
 
 define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update workspace symbols buffer" %{
@@ -1852,10 +1835,9 @@ define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render wo
     evaluate-commands %sh{
         if [ "${kak_buffile}" = "*symbols*" ];
         then echo 'lsp-update-workspace-symbol %arg{1} %arg{2}';
-        else echo 'lsp-show-goto-buffer *symbols* %arg{1} %arg{2}';
+        else echo 'lsp-show-goto-buffer *symbols* lsp-goto %arg{1} %arg{2}';
         fi
     }
-    lsp-symbols-highlight
 }
 
 define-command -hidden lsp-show-signature-help -params 2 -docstring "Render signature help" %{
@@ -2120,7 +2102,7 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
     declare-option -hidden int lsp_ws_timestamp %val{timestamp}
     declare-option -hidden str lsp_ws_query
     evaluate-commands -try-client %opt[toolsclient] %{
-        lsp-show-goto-buffer *symbols* %{} %{}
+        lsp-show-goto-buffer *symbols* lsp-goto %{} %{}
         prompt -on-change %{ try %{
             # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
             # the following check prevents it
@@ -2643,11 +2625,20 @@ define-command lsp-snippets-select-next-placeholders %{
     execute-keys '<a-;>d'
 }
 
-hook -group lsp-goto-highlight global WinSetOption filetype=lsp-goto %{
-    add-highlighter window/lsp-goto group
-    add-highlighter window/lsp-goto/ regex ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+)) 1:cyan 2:green 3:green
-    add-highlighter window/lsp-goto/ line %{%opt{jump_current_line}} default+b
-    hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/lsp-goto }
+hook -group lsp-goto-highlight global WinSetOption filetype=(lsp-(?:diagnostics|document-symbol|goto)) %{
+    add-highlighter "window/%val{hook_param_capture_1}" group
+    add-highlighter "window/%val{hook_param_capture_1}/" regex ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+)) 1:cyan 2:green 3:green
+    add-highlighter "window/%val{hook_param_capture_1}/" line %{%opt{jump_current_line}} default+b
+    hook -once -always window WinSetOption filetype=.* "remove-highlighter window/%val{hook_param_capture_1}"
+}
+
+hook -group lsp-document-symbol-highlight global WinSetOption filetype=lsp-document-symbol %{
+    add-highlighter window/lsp-symbols-kind regex \([\w+]+\)$ 0:+di@type
+    add-highlighter window/lsp-symbols-tree regex [├└─│] 0:comment
+    hook -once -always window WinSetOption filetype=.* %{
+        remove-highlighter window/lsp-symbols-kind
+        remove-highlighter window/lsp-symbols-tree
+    }
 }
 
 define-command -hidden lsp-select-next %{
@@ -2659,12 +2650,12 @@ define-command -hidden lsp-select-previous %{
         execute-keys ge %opt{jump_current_line}g<a-h> <a-/><ret>
 }
 
-hook global WinSetOption filetype=lsp-goto %{
-    map window normal <ret> ':jump # lsp-goto<ret>'
-    hook -always -once window WinSetOption filetype=.* %{
-        unmap window normal <ret> ':jump # lsp-goto<ret>'
-    }
-    alias buffer jump lsp-jump
+hook global WinSetOption filetype=(lsp-(?:diagnostics|document-symbol|goto)) %{
+    map window normal <ret> ":jump # %val{hook_param_capture_1}<ret>"
+    hook -always -once window WinSetOption filetype=.* "
+        unmap window normal <ret> ':jump # %val{hook_param_capture_1}<ret>'
+    "
+    alias buffer jump "%val{hook_param_capture_1}-jump"
     alias buffer jump-select-next lsp-select-next
     alias buffer jump-select-previous lsp-select-previous
 }
@@ -2680,7 +2671,7 @@ define-command -hidden lsp-make-register-relative-to-root %{
     }
 }
 
-define-command -hidden lsp-jump -docstring %{
+define-command -hidden lsp-goto-jump -docstring %{
     Same as jump except
 
     1. apply lsp_project_root to relative paths
@@ -2704,7 +2695,7 @@ define-command -hidden lsp-jump -docstring %{
 }
 
 define-command -hidden lsp-document-symbol-jump -docstring %{
-    Same as lsp-jump except this uses a buffer-scoped filename option
+    Same as lsp-goto-jump except this uses a buffer-scoped filename option
 } %{
     evaluate-commands -save-regs bc %{
         try %{

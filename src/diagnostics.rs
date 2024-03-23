@@ -259,7 +259,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
         })
         .join("\n");
     let command = format!(
-        "lsp-show-diagnostics {} {}",
+        "lsp-show-goto-buffer *diagnostics* lsp-diagnostics {} {}",
         editor_quote(&main_settings.root_path),
         editor_quote(&content),
     );
