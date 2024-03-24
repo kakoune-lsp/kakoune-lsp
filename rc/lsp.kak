@@ -2114,6 +2114,7 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
             }
             lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_filetype} %opt{lsp_ws_timestamp} %val{text}
         }} -on-abort %{execute-keys ga} 'Query: ' nop
+        focus %val{client}
     }
 }
 
