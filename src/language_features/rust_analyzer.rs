@@ -235,7 +235,7 @@ pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut 
         return;
     }
 
-    let mut args = vec![];
+    let mut args = vec!["cargo".to_string()];
     args.extend(argument.args.cargo_args);
     args.extend(argument.args.cargo_extra_args);
     args.push("--".to_string());
@@ -243,19 +243,9 @@ pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut 
 
     let args = args.into_iter().map(|arg| editor_quote(&arg)).join(" ");
     let cmd = format!(
-        "try {} catch {}",
-        editor_quote(&format!("cargo {}", args)),
-        editor_quote(&format!(
-            "try %[require-module make]; lsp-with-option makecmd cargo make {}",
-            args
-        ))
-    );
-    ctx.exec(
-        meta.clone(),
-        format!(
-            "echo -debug rust-analyzer-run-test: running {}",
-            editor_quote(&cmd)
-        ),
+        "set-register : {}; execute-keys -client {} :<c-p>",
+        editor_quote(&args),
+        meta.client.as_ref().unwrap()
     );
     ctx.exec(meta, cmd);
 }

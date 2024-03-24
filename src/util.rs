@@ -58,6 +58,11 @@ pub fn editor_escape_double_quotes(s: &str) -> String {
     s.replace('"', "\"\"").replace('%', "%%")
 }
 
+#[allow(dead_code)]
+pub fn editor_escape_keys(s: &str) -> String {
+    s.replace('<', "<lt>")
+}
+
 /// Convert to Kakoune string by wrapping into quotes and escaping
 pub fn editor_quote(s: &str) -> String {
     if !s.is_empty() && s.chars().all(|c| c.is_alphanumeric() || "-_".contains(c)) {
