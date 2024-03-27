@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -42,11 +43,26 @@ pub fn start(
     config: Config,
     log_path: &'static Option<PathBuf>,
 ) {
+    let mut initial_request_meta = initial_request.meta.clone();
+    initial_request_meta.buffile = "".to_string();
+    initial_request_meta.fifo = None;
+
+    let mut ctx = Context::new(ContextBuilder {
+        initial_request,
+        editor_tx: to_editor,
+        config,
+        language_id: language_id.clone(),
+    });
+
+    if check_scratch_buffer(&ctx.pending_requests[0], &ctx) == ControlFlow::Break(()) {
+        return;
+    }
+
     let mut language_servers = BTreeMap::new();
     for route in routes {
         {
             // should be fine to unwrap because request was already routed which means language is configured
-            let server_config = &config.language_server[&route.server_name];
+            let server_config = &ctx.config.language_server[&route.server_name];
             let server_transport = match language_server_transport::start(
                 &route.server_name,
                 &server_config.command,
@@ -58,14 +74,15 @@ pub fn start(
                     error!("failed to start language server: {}", err);
                     // If the server command isn't from a hook (e.g. auto-hover),
                     // then send a prominent error to the editor.
-                    if !initial_request.meta.hook {
+                    if !initial_request_meta.hook {
                         let command = format!(
                             "lsp-show-error {}",
                             editor_quote(&format!("failed to start language server: {}", err)),
                         );
-                        if to_editor
+                        if ctx
+                            .editor_tx
                             .send(EditorResponse {
-                                meta: initial_request.meta,
+                                meta: initial_request_meta,
                                 command: Cow::from(command),
                             })
                             .is_err()
@@ -84,34 +101,24 @@ pub fn start(
         }
     }
 
-    let mut initial_request_meta = initial_request.meta.clone();
-    initial_request_meta.buffile = "".to_string();
-    initial_request_meta.fifo = None;
+    ctx.language_servers = routes
+        .iter()
+        .map(|route| {
+            let (transport, offset_encoding) = &language_servers[&route.server_name];
+            let tx = transport.to_lang_server.sender().clone();
 
-    let mut ctx = Context::new(ContextBuilder {
-        initial_request,
-        editor_tx: to_editor,
-        config,
-        language_id: language_id.clone(),
-        language_servers: routes
-            .iter()
-            .map(|route| {
-                let (transport, offset_encoding) = &language_servers[&route.server_name];
-                let tx = transport.to_lang_server.sender().clone();
-
-                (
-                    route.server_name.clone(),
-                    ServerSettings {
-                        root_path: route.root.clone(),
-                        offset_encoding: offset_encoding.unwrap_or_default(),
-                        preferred_offset_encoding: *offset_encoding,
-                        capabilities: None,
-                        tx,
-                    },
-                )
-            })
-            .collect(),
-    });
+            (
+                route.server_name.clone(),
+                ServerSettings {
+                    root_path: route.root.clone(),
+                    offset_encoding: offset_encoding.unwrap_or_default(),
+                    preferred_offset_encoding: *offset_encoding,
+                    capabilities: None,
+                    tx,
+                },
+            )
+        })
+        .collect();
 
     initialize(initial_request_meta.clone(), &mut ctx);
 
@@ -165,17 +172,7 @@ pub fn start(
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
-                if !msg.meta.buffile.starts_with('/') {
-                    debug!(
-                        "Unsupported scratch buffer, ignoring request from buffer '{}'",
-                        msg.meta.buffile
-                    );
-                    let command = if msg.meta.hook {
-                        "nop"
-                    } else {
-                        "lsp-show-error 'unsupported scratch buffer'"
-                    };
-                    ctx.exec(msg.meta, command);
+                if check_scratch_buffer(&msg, &ctx) == ControlFlow::Break(()) {
                     continue;
                 }
                 // initialize request must be first request from client to language server
@@ -420,6 +417,23 @@ pub fn start(
             });
         }
     }
+}
+
+fn check_scratch_buffer(msg: &EditorRequest, ctx: &Context) -> ControlFlow<()> {
+    if msg.meta.buffile.starts_with('/') {
+        return ControlFlow::Continue(());
+    }
+    debug!(
+        "Unsupported scratch buffer, ignoring request from buffer '{}'",
+        msg.meta.buffile
+    );
+    let command = if msg.meta.hook {
+        "nop"
+    } else {
+        "lsp-show-error 'unsupported scratch buffer'"
+    };
+    ctx.exec(msg.meta.clone(), command);
+    ControlFlow::Break(())
 }
 
 pub fn dispatch_pending_editor_requests(ctx: &mut Context) {
