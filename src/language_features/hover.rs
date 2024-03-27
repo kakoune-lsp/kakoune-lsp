@@ -359,25 +359,22 @@ fn show_hover_in_hover_client(
         if is_markdown { "markdown" } else { "''" },
     );
 
-    let command = formatdoc!(
-        "set-register dquote {}
-         try %[ delete-buffer! *hover* ]
-         try %[
+    let command = if hover_client.is_empty() {
+        format!("lsp-show-error %[lsp-hover-buffer: empty client given, did you set a docsclient?]")
+    } else {
+        let command = formatdoc!(
+            "set-register dquote {}
+             try %[ delete-buffer! *hover* ]
              evaluate-commands -client {hover_client} {command}
-         ] catch %[
-             new %[
-                 rename-client {hover_client}
-                 evaluate-commands {command}
-                 focus {}
-             ]
-         ]",
-        editor_quote(&contents),
-        meta.client.as_ref().unwrap(),
-    );
+             focus {}",
+            editor_quote(&contents),
+            meta.client.as_ref().unwrap(),
+        );
 
-    let command = format!(
-        "evaluate-commands -save-regs '\"' {}",
-        &editor_quote(&command)
-    );
+        format!(
+            "evaluate-commands -save-regs '\"' {}",
+            &editor_quote(&command)
+        )
+    };
     ctx.exec(meta, command);
 }

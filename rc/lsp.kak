@@ -641,7 +641,7 @@ define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover 
     evaluate-commands %sh{
         hover_buffer_args=""
         if [ $# -eq 1 ] || [ -n "${kak_opt_docsclient}" ]; then
-            hover_client=${1:-"${kak_opt_docsclient:-"$kak_client"}"}
+            hover_client=${1:"${kak_opt_docsclient:-"$kak_client"}"}
             hover_buffer_args="hoverClient = \"${hover_client}\""
         fi
 
@@ -2158,23 +2158,25 @@ define-command -hidden lsp-check-auto-hover -params 1 %{
   }
 }
 
-define-command lsp-auto-hover-enable -params 0..1 -client-completion \
-    -docstring "lsp-auto-hover-enable [<client>]: enable auto-requesting hover info for current position
-
-If a client is given, show hover in a scratch buffer in that client instead of the info box" %{
-    evaluate-commands %sh{
-        hover=lsp-hover
-        [ $# -eq 1 ] && hover="lsp-hover-buffer $1"
-        printf %s "hook -group lsp-auto-hover global NormalIdle .* %{ lsp-check-auto-hover '$hover' }"
-    }
+define-command lsp-auto-hover-enable -docstring "enable auto-requesting hover info box for current position" %{
+    hook -group lsp-auto-hover global NormalIdle .* %{ lsp-check-auto-hover lsp-hover }
 }
 
 define-command lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
     remove-hooks global lsp-auto-hover
 }
 
+define-command lsp-auto-hover-buffer-enable \
+    -docstring "lsp-auto-hover-buffer-enable: enable auto-requesting hover info in docsclient for current position" %{
+    hook -group lsp-auto-hover-buffer global NormalIdle .* %{ lsp-check-auto-hover %{lsp-hover-buffer %opt{docsclient}} }
+}
+
+define-command lsp-auto-hover-buffer-disable -docstring "Disable auto-requesting hover info in docsclient for current position" %{
+    remove-hooks global lsp-auto-hover-buffer
+}
+
 define-command lsp-auto-hover-insert-mode-enable -params 0..1 -client-completion \
-    -docstring "lsp-auto-hover-enable [<client>]: enable auto-requesting hover info for current function in insert mode
+    -docstring "lsp-auto-hover-insert-mode-enable [<client>]: enable auto-requesting hover info for current function in insert mode
 
 If a client is given, show hover in a scratch buffer in that client instead of the info box" %{
     evaluate-commands %sh{
