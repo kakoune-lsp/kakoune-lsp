@@ -7,7 +7,7 @@ pub fn request_dynamic_configuration_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<()> {
-    let fifo = temp_fifo()?;
+    let fifo = temp_fifo();
     ctx.exec(
         meta.clone(),
         format!("lsp-get-config {}", editor_quote(&fifo.path)),
@@ -88,7 +88,7 @@ pub fn request_legacy_initialization_options_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<Value> {
-    let fifo = temp_fifo()?;
+    let fifo = temp_fifo();
     ctx.exec(
         meta.clone(),
         format!(

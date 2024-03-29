@@ -5,9 +5,9 @@ use crate::capabilities::CAPABILITY_HOVER;
 use crate::context::*;
 use crate::diagnostics::format_related_information;
 use crate::markup::*;
+use crate::mkfifo;
 use crate::position::*;
 use crate::types::*;
-use crate::util::editor_quote;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
@@ -350,31 +350,28 @@ fn show_hover_in_hover_client(
         )
     };
 
+    // Use a fifo buffer instead of a plain scratch buffer so Kakoune will keep the existing
+    // buffer alive, keeping it visible in any clients.
+    let fifo = mkfifo();
+
     let command = format!(
-        "%[ edit! -scratch *hover*; \
+        "%[
+             edit! -fifo {fifo} *hover*; \
+             hook -once buffer BufCloseFifo .* %[ nop %sh[ rm {fifo} ] ]
              set-option buffer=*hover* filetype {}; \
-             try %[ add-highlighter buffer/lsp_wrap wrap -word ]; \
-             execute-keys Rgk \
+             try %[ add-highlighter buffer/lsp_wrap wrap -word ] \
          ]",
         if is_markdown { "markdown" } else { "''" },
     );
 
-    let command = if hover_client.is_empty() {
-        format!("lsp-show-error %[lsp-hover-buffer: empty client given, did you set a docsclient?]")
-    } else {
-        let command = formatdoc!(
-            "set-register dquote {}
-             try %[ delete-buffer! *hover* ]
+    let command = formatdoc!(
+        "try %[
              evaluate-commands -client {hover_client} {command}
-             focus {}",
-            editor_quote(&contents),
-            meta.client.as_ref().unwrap(),
-        );
+         ] catch %[
+             evaluate-commands -draft {command}
+         ]",
+    );
 
-        format!(
-            "evaluate-commands -save-regs '\"' {}",
-            &editor_quote(&command)
-        )
-    };
     ctx.exec(meta, command);
+    let _ = std::fs::write(&fifo, &contents);
 }

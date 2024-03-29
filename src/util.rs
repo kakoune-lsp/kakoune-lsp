@@ -28,18 +28,25 @@ pub struct TempFifo {
     pub path: String,
 }
 
-pub fn temp_fifo() -> Option<TempFifo> {
+pub fn mkfifo() -> String {
     let mut path = temp_dir();
-    path.push(format!("{:x}", rand::random::<u64>()));
-    let path = path.to_str().unwrap().to_string();
-    let fifo_result = unsafe {
-        let path = std::ffi::CString::new(path.clone()).unwrap();
-        libc::mkfifo(path.as_ptr(), 0o600)
-    };
-    if fifo_result != 0 {
-        return None;
+    for attempt in 0..10 {
+        path.push(format!("{:x}", rand::random::<u64>()));
+        let path = path.to_str().unwrap().to_string();
+        let mkfifo_result = unsafe {
+            let path = std::ffi::CString::new(path.clone()).unwrap();
+            libc::mkfifo(path.as_ptr(), 0o600)
+        };
+        if mkfifo_result == 0 {
+            return path;
+        }
+        error!("mkfifo attempt {attempt} failed, retrying");
     }
-    Some(TempFifo { path })
+    panic!("failed to create fifo");
+}
+
+pub fn temp_fifo() -> TempFifo {
+    TempFifo { path: mkfifo() }
 }
 
 impl Drop for TempFifo {

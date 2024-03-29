@@ -160,7 +160,7 @@ If you have followed above steps you get
 * `lsp-definition` command to go to definition, mapped to `gd` by default
 * `lsp-hover` command to show hover info (including relevant diagnostics when available) in the info box.
 ** `lsp-hover-buffer` command to show the same in a scratch buffer.
-** to automatically show hover when you move around, use `lsp-auto-hover-enable`
+** to automatically show hover when you move around, use `lsp-auto-hover-enable` or `lsp-auto-hover-buffer-enable`.
 ** to show hover anchored to hovered position, use `set global lsp_hover_anchor true`
 ** to exclude diagnostics, use `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'`
 * `lsp-declaration` command to jump to the declaration of the symbol under the main cursor

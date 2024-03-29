@@ -633,16 +633,16 @@ define-command lsp-hover -docstring "Request hover info for the main cursor posi
 define-command lsp-hover-buffer -params 0..1 -client-completion \
     -docstring "lsp-hover-buffer [<client>]: request hover info for the main cursor position in a scratch buffer.
 
-If a client name argument is given use that client. Create it with :new if it doesn't exist." %{
-    lsp-hover-request "%arg{1}"
+The hover buffer is activated in the given client, or the client referred to by the 'docsclient' option, or the current client.
+" %{
+    lsp-hover-request %sh{echo ${1-"${kak_opt_docsclient:-"$kak_client"}"}}
 }
 
 define-command -hidden lsp-hover-request -params 0..1 -docstring "Request hover info for the main cursor position" %{
     evaluate-commands %sh{
         hover_buffer_args=""
-        if [ $# -eq 1 ] || [ -n "${kak_opt_docsclient}" ]; then
-            hover_client=${1:"${kak_opt_docsclient:-"$kak_client"}"}
-            hover_buffer_args="hoverClient = \"${hover_client}\""
+        if [ $# -eq 1 ]; then
+            hover_buffer_args="hoverClient = \"${1}\""
         fi
 
         (printf %s "
@@ -2167,7 +2167,9 @@ define-command lsp-auto-hover-disable -docstring "Disable auto-requesting hover 
 }
 
 define-command lsp-auto-hover-buffer-enable \
-    -docstring "lsp-auto-hover-buffer-enable: enable auto-requesting hover info in docsclient for current position" %{
+    -docstring "lsp-auto-hover-buffer-enable: enable auto-requesting hover info buffer for current position
+
+The hover buffer is activated in the given client, or the client referred to by the 'docsclient' option, or the current client." %{
     hook -group lsp-auto-hover-buffer global NormalIdle .* %{ lsp-check-auto-hover %{lsp-hover-buffer %opt{docsclient}} }
 }
 
