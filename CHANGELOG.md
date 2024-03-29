@@ -13,6 +13,7 @@ Breaking changes:
 - Removed `lsp-connect` experimental command.
 
 Additions:
+- New `lsp-sticky-contexts-enable` command to render sticky contexts at the top of the viewport window.
 - `lsp-document-symbol` no longer renders the same filename in every single line. Commands like `jump-next` and `<ret>` still work as before.
 - `lsp_hover_max_diagnostic_lines` now defaults to 20 which limits the diagnostic lines in the hover box.
 - Various improvements to the compatibility with old Kakoune.

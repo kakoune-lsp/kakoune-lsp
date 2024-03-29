@@ -604,6 +604,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         "kakoune/breadcrumbs" => {
             document_symbol::breadcrumbs(meta, params, ctx);
         }
+        "kakoune/sticky-contexts" => {
+            document_symbol::sticky_contexts(meta, params, ctx);
+        }
         "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params, ctx);
         }
