@@ -89,6 +89,7 @@ pub struct Context {
 
 pub struct ContextBuilder {
     pub language_id: LanguageId,
+    pub language_servers: BTreeMap<ServerName, ServerSettings>,
     pub initial_request: EditorRequest,
     pub editor_tx: Sender<EditorResponse>,
     pub config: Config,
@@ -111,7 +112,7 @@ impl Context {
             dynamic_config: DynamicConfig::default(),
             editor_tx: params.editor_tx,
             language_id: params.language_id,
-            language_servers: BTreeMap::default(),
+            language_servers: params.language_servers,
             outstanding_requests: HashMap::default(),
             pending_requests: vec![params.initial_request],
             pending_message_requests: VecDeque::new(),
