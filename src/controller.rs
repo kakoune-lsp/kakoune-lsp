@@ -590,6 +590,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         "kakoune/breadcrumbs" => {
             document_symbol::breadcrumbs(meta, params, ctx);
         }
+        "kakoune/indent-guides" => {
+            document_symbol::indent_guides(meta, params, ctx);
+        }
         "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params, ctx);
         }
