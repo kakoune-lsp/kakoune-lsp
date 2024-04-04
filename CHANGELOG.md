@@ -1,4 +1,4 @@
-## Unreleased
+## 17.0.0 - 2024-04-04
 
 Breaking changes:
 - New default server for Nix, [`nil`](https://github.com/oxalica/nil), replacing `rnix-lsp`.
