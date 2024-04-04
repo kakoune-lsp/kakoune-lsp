@@ -2169,7 +2169,8 @@ define-command lsp-auto-hover-disable -docstring "Disable auto-requesting hover 
 define-command lsp-auto-hover-buffer-enable \
     -docstring "lsp-auto-hover-buffer-enable: enable auto-requesting hover info buffer for current position
 
-The hover buffer is activated in the given client, or the client referred to by the 'docsclient' option, or the current client." %{
+This will continuously update the '*hover*' buffer, keeping it visible.
+Additionally, the buffer will be activated in the client referred to by the 'docsclient' option." %{
     hook -group lsp-auto-hover-buffer global NormalIdle .* %{ lsp-check-auto-hover %{lsp-hover-buffer %opt{docsclient}} }
 }
 
