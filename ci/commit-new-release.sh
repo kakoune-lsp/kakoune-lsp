@@ -9,6 +9,12 @@ if ! git diff HEAD --quiet; then
 	exit 1
 fi
 
+untracked=$(git ls-files --exclude-standard --others)
+if [ -n "$untracked" ] then
+	echo "$0: must not have untracked files (cargo limitation), found: $untracked"
+	exit 1
+fi
+
 old=$(git describe --tags | sed 's/^v//;s/-.*//')
 
 if git tag | grep -qxF "v$new"; then
