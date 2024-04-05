@@ -23,9 +23,11 @@ jobs:
           fetch-depth: 0 # for git describe --tags
       - name: Build
         run: ci/build-release.sh
+      - name: Extract release notes
+        run: ci/latest-changelog.sh > latest-changelog.md
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          draft: true
           files: kakoune-lsp-*-*.tar.gz
+          body_path: latest-changelog.md
 
