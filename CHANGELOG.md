@@ -1,5 +1,10 @@
 ## Unreleased
 
+Small patch release to fix a regression.
+
+Fixes:
+- Fix startup error when both lsp.kak and Kakoune's jump.kak are autoloaded.
+
 ## 17.0.0 - 2024-04-04
 
 Breaking changes:
