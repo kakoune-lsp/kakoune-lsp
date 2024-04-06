@@ -1,4 +1,4 @@
-## Unreleased
+## 17.0.1 - 2024-04-06
 
 Small patch release to fix a regression.
 
