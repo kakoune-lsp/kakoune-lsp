@@ -52,6 +52,7 @@ do
 done
 sha=$(sha256sum "$archive")
 sha=${sha%% *}
+rm "$archive"
 (
 	cd ../homebrew-kakoune-lsp/
 	sed 4c"  url \"$url\"" -i Formula/kakoune-lsp.rb
