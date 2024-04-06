@@ -10,7 +10,7 @@ if ! git diff HEAD --quiet; then
 fi
 
 untracked=$(git ls-files --exclude-standard --others)
-if [ -n "$untracked" ] then
+if [ -n "$untracked" ]; then
 	echo "$0: must not have untracked files (cargo limitation), found: $untracked"
 	exit 1
 fi
