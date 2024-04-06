@@ -3,7 +3,7 @@ use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use jsonrpc_core::{self, Call, Output};
 use std::collections::HashMap;
-use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Write};
 use std::process::{Command, Stdio};
 
 pub struct LanguageServerTransport {
@@ -55,21 +55,22 @@ pub fn start(
     let errors = Worker::spawn(
         "Language server errors",
         channel_capacity,
-        move |receiver, _| loop {
+        move |receiver, _| {
             if let Err(TryRecvError::Disconnected) = receiver.try_recv() {
                 return;
             }
-            let mut buf = String::new();
-            match stderr.read_to_string(&mut buf) {
-                Ok(_) => {
-                    if buf.is_empty() {
+            let mut line = String::new();
+            loop {
+                line.clear();
+                match stderr.read_line(&mut line) {
+                    Ok(0) => return,
+                    Ok(_n) => {
+                        error!("Language server stderr: {}", line.trim_end_matches('\n'));
+                    }
+                    Err(e) => {
+                        error!("Failed to read from language server stderr: {}", e);
                         return;
                     }
-                    error!("Language server error: {}", buf);
-                }
-                Err(e) => {
-                    error!("Failed to read from language server stderr: {}", e);
-                    return;
                 }
             }
         },

@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- The language server stderr is logged eagerly instead of only after server exit; (useful for when servers like rust-analyzer crash).
+
 ## 17.0.1 - 2024-04-06
 
 Small patch release to fix a regression.
