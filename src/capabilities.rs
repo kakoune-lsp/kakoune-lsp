@@ -295,7 +295,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                     dynamic_registration: None,
                                 }),
                                 semantic_tokens: Some(SemanticTokensClientCapabilities {
-                                    dynamic_registration: Some(false),
+                                    dynamic_registration: Some(true),
                                     requests: SemanticTokensClientCapabilitiesRequests {
                                         range: Some(false),
                                         full: Some(SemanticTokensFullOptions::Bool(true)),

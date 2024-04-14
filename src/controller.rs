@@ -717,6 +717,34 @@ fn dispatch_server_request(
                         // "workspace/didChangeWorkspaceFolders" anyway, so let's not issue a warning.
                         continue;
                     }
+                    "textDocument/semanticTokens" => {
+                        let Some(options) = registration.register_options else {
+                            warn!("semantic tokens registration without options");
+                            continue;
+                        };
+                        let semantic_tokens_options: SemanticTokensOptions =
+                            serde_json::from_value(options).unwrap();
+                        let semantic_tokens_server_capabilities =
+                            SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
+                                SemanticTokensRegistrationOptions {
+                                    text_document_registration_options:
+                                        TextDocumentRegistrationOptions {
+                                            document_selector: None,
+                                        },
+                                    semantic_tokens_options,
+                                    static_registration_options: StaticRegistrationOptions {
+                                        id: Some(registration.id),
+                                    },
+                                },
+                            );
+                        ctx.language_servers
+                            .get_mut(server_name)
+                            .unwrap()
+                            .capabilities
+                            .as_mut()
+                            .unwrap()
+                            .semantic_tokens_provider = Some(semantic_tokens_server_capabilities);
+                    }
                     _ => warn!("Unsupported registration: {}", registration.method),
                 }
             }

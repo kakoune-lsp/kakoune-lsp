@@ -2,6 +2,7 @@
 
 Additions:
 - The language server stderr is logged eagerly instead of only after server exit; (useful for when servers like rust-analyzer crash).
+- Support dynamic for registration semantic tokens via `textDocument/semanticTokens`.
 
 ## 17.0.1 - 2024-04-06
 
