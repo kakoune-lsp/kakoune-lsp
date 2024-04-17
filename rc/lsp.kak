@@ -281,7 +281,7 @@ define-command -hidden lsp-menu -params 1.. %{
 define-command -hidden lsp-menu-impl %{
     evaluate-commands %sh{
         if ! command -v perl > /dev/null; then
-            printf "fail %{'perl' must be installed to use the 'lsp-menu' command}"
+            echo "lsp-show-error %{'perl' must be installed to use the 'lsp-menu' command}"
             exit
         fi
         echo >$kak_command_fifo "echo -to-file $kak_response_fifo -quoting kakoune -- %reg{a}"
@@ -411,7 +411,7 @@ define-command -hidden lsp-menu-impl %{
             }
             print " -menu -shell-script-candidates %{cat $shell_script_candidates}";
         ' ||
-            echo 'fail menu: encountered an error, see *debug* buffer';
+            echo 'lsp-show-error %{lsp-menu: encountered an error, see *debug* buffer}';
     }
 }
 define-command -hidden lsp-with-option -params 3.. -docstring %{
