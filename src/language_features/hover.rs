@@ -373,5 +373,5 @@ fn show_hover_in_hover_client(
     );
 
     ctx.exec(meta, command);
-    let _ = std::fs::write(&fifo, &contents);
+    let _ = std::fs::write(&fifo, contents);
 }
