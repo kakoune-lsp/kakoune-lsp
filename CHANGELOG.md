@@ -5,6 +5,7 @@ Additions:
 - Support dynamic for registration semantic tokens via `textDocument/semanticTokens`.
 - `lsp-code-actions` has learned to filter by code action kind.
   This should obsolete the `lsp-code-action` command which has been hidden and deprecated.
+- `lsp-code-actions` learned the `-auto-single` switch to instantly run if there is only one matching code action.
 
 ## 17.0.1 - 2024-04-06
 

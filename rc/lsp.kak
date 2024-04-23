@@ -874,13 +874,15 @@ column   = ${kak_cursor_column}
 }
 
 define-command lsp-code-actions -params 0.. -docstring %{
-    lsp-code-actions [<code-action-kinds>...]: Perform code actions for the main cursor position
+    lsp-code-actions [-auto-single] [<code-action-kinds>...]: Perform code actions for the main cursor position
 
     If <code-action-kinds> is given, only show matching code actions.
+    With -auto-single instantly validate if only one code action is available.
 } %{
     lsp-code-actions-request true false only %arg{@}
 } -shell-script-candidates %{
 cat <<EOF
+-auto-single
 quickfix
 refactor
 refactor.extract
@@ -935,6 +937,7 @@ command_fifo = \"$kak_command_fifo\"
 "
     fi
 
+    auto_single=false
     only=
     code_action_pattern=
     if [ $# -gt 3 ]; then
@@ -942,7 +945,13 @@ command_fifo = \"$kak_command_fifo\"
         shift 3
         case "$filter_mode" in
             (only)
-                only="only = \"$(printf %s "$*" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
+                if [ "$1" = -auto-single ]; then
+                    auto_single=true
+                    shift
+                fi
+                if [ $# -gt 0 ]; then
+                    only="only = \"$(printf %s "$*" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
+                fi
                 ;;
             (matching)
                 code_action_pattern="codeActionPattern = \"$(printf %s "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
@@ -962,6 +971,7 @@ ${fifo}\
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
 performCodeAction = $do_perform
+autoSingle = $auto_single
 $only
 $code_action_pattern
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &

@@ -255,21 +255,27 @@ fn editor_code_actions(
             _ => 7,
         }
     });
-    let titles_and_commands = actions
-        .iter()
-        .map(|(server_name, c)| {
-            let mut title: &str = match c {
-                CodeActionOrCommand::Command(command) => &command.title,
-                CodeActionOrCommand::CodeAction(action) => &action.title,
-            };
-            if let Some((head, _)) = title.split_once('\n') {
-                title = head
-            }
-            let may_resolve = may_resolve.contains(server_name);
-            let select_cmd = code_action_or_command_to_editor_command(c, false, may_resolve);
-            format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
-        })
-        .join(" ");
+    let titles_and_commands = if params.auto_single {
+        "-auto-single "
+    } else {
+        ""
+    }
+    .to_string()
+        + &actions
+            .iter()
+            .map(|(server_name, c)| {
+                let mut title: &str = match c {
+                    CodeActionOrCommand::Command(command) => &command.title,
+                    CodeActionOrCommand::CodeAction(action) => &action.title,
+                };
+                if let Some((head, _)) = title.split_once('\n') {
+                    title = head
+                }
+                let may_resolve = may_resolve.contains(server_name);
+                let select_cmd = code_action_or_command_to_editor_command(c, false, may_resolve);
+                format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
+            })
+            .join(" ");
 
     #[allow(clippy::collapsible_else_if)]
     let command = if params.perform_code_action {
