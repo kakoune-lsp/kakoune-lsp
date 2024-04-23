@@ -95,7 +95,11 @@ fn code_actions_for_ranges(
                     range: *range,
                     context: CodeActionContext {
                         diagnostics: diagnostics.remove(server_name).unwrap_or_default(),
-                        only: None,
+                        only: params.only.as_ref().map(|only| {
+                            only.split(' ')
+                                .map(|s| CodeActionKind::from(s.to_string()))
+                                .collect()
+                        }),
                         trigger_kind: Some(if meta.hook {
                             CodeActionTriggerKind::AUTOMATIC
                         } else {
@@ -181,41 +185,45 @@ fn editor_code_actions(
         .map(|(server_name, _)| server_name)
         .collect();
 
-    if let Some(pattern) = params.code_action_pattern.as_ref() {
-        let regex = match regex::Regex::new(pattern) {
-            Ok(regex) => regex,
-            Err(error) => {
-                let command = format!(
-                    "lsp-show-error 'invalid pattern: {}'",
-                    &editor_escape(&error.to_string())
-                );
-                ctx.exec(meta, command);
-                return;
-            }
+    let sync = meta.fifo.is_some();
+    if sync || params.code_action_pattern.is_some() {
+        let actions = if let Some(pattern) = params.code_action_pattern.as_ref() {
+            let regex = match regex::Regex::new(pattern) {
+                Ok(regex) => regex,
+                Err(error) => {
+                    let command = format!(
+                        "lsp-show-error 'invalid pattern: {}'",
+                        &editor_escape(&error.to_string())
+                    );
+                    ctx.exec(meta, command);
+                    return;
+                }
+            };
+            actions
+                .into_iter()
+                .filter(|(_, c)| {
+                    let title = match c {
+                        CodeActionOrCommand::Command(command) => &command.title,
+                        CodeActionOrCommand::CodeAction(action) => &action.title,
+                    };
+                    regex.is_match(title)
+                })
+                .collect::<Vec<_>>()
+        } else {
+            actions
         };
-        let matches = actions
-            .iter()
-            .filter(|(_, c)| {
-                let title = match c {
-                    CodeActionOrCommand::Command(command) => &command.title,
-                    CodeActionOrCommand::CodeAction(action) => &action.title,
-                };
-                regex.is_match(title)
-            })
-            .collect::<Vec<_>>();
-        let sync = meta.fifo.is_some();
         let fail = if sync {
             // We might be running from a hook, so let's allow silencing errors with a "try".
             // Also, prefix with the (presumable) function name, to reduce confusion.
-            "fail lsp-code-action:"
+            "fail lsp-code-actions:"
         } else {
             "lsp-show-error"
         }
         .to_string();
-        let command = match matches.len() {
+        let command = match actions.len() {
             0 => fail + " 'no matching action available'",
             1 => {
-                let (server_name, cmd) = matches[0];
+                let (server_name, cmd) = &actions[0];
                 let may_resolve = may_resolve.contains(server_name);
                 code_action_or_command_to_editor_command(cmd, sync, may_resolve)
             }

@@ -252,6 +252,7 @@ pub struct CallHierarchyParams {
 pub struct CodeActionsParams {
     pub selection_desc: String,
     pub perform_code_action: bool,
+    pub only: Option<String>,
     pub code_action_pattern: Option<String>,
 }
 

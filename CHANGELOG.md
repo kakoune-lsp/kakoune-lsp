@@ -3,6 +3,8 @@
 Additions:
 - The language server stderr is logged eagerly instead of only after server exit; (useful for when servers like rust-analyzer crash).
 - Support dynamic for registration semantic tokens via `textDocument/semanticTokens`.
+- `lsp-code-actions` has learned to filter by code action kind.
+  This should obsolete the `lsp-code-action` command which has been hidden and deprecated.
 
 ## 17.0.1 - 2024-04-06
 

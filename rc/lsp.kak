@@ -873,26 +873,57 @@ column   = ${kak_cursor_column}
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-code-actions -docstring "Perform code actions for the main cursor position" %{
-    lsp-code-actions-request true
+define-command lsp-code-actions -params 0.. -docstring %{
+    lsp-code-actions [<code-action-kinds>...]: Perform code actions for the main cursor position
+
+    If <code-action-kinds> is given, only show matching code actions.
+} %{
+    lsp-code-actions-request true false only %arg{@}
+} -shell-script-candidates %{
+cat <<EOF
+quickfix
+refactor
+refactor.extract
+refactor.inline
+refactor.rewrite
+refactor.rewrite
+source
+source.fixAll
+source.organizeImports
+EOF
 }
 
-define-command lsp-code-action -params 1 -docstring "lsp-code-action <pattern>: perform the code action that matches the given regex" %{
-    lsp-code-actions-request true %arg{1} false
+define-command lsp-code-actions-sync -params 0.. -docstring %{
+    lsp-code-actions-sync [<code-action-kinds>...]: Perform the matching code action for the main cursor position, blocking Kakoune session until done.
+} %{
+    lsp-code-actions-request true true only %arg{@}
+} -shell-script-candidates %{
+cat <<EOF
+quickfix
+refactor
+refactor.extract
+refactor.inline
+refactor.rewrite
+refactor.rewrite
+source
+source.fixAll
+source.organizeImports
+EOF
 }
 
-define-command lsp-code-action-sync -params 1 -docstring "lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
+define-command -hidden lsp-code-action -params 1 -docstring "DEPRECATED lsp-code-action <pattern>: perform the code action that matches the given regex" %{
+    lsp-code-actions-request true false matching %arg{1}
+}
+
+define-command -hidden lsp-code-action-sync -params 1 -docstring "DEPRECATED lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
     lsp-require-enabled lsp-code-action-sync
     lsp-did-change-sync
-    lsp-code-actions-request true %arg{1} true
+    lsp-code-actions-request true true matching %arg{1}
 }
 
-define-command -hidden lsp-code-actions-request -params 1..3 -docstring "Request code actions for the main cursor position" %{ evaluate-commands -no-hooks %sh{
-    code_action_pattern=""
-    if [ $# -ge 2 ]; then
-        code_action_pattern="codeActionPattern = \"$(printf %s "$2" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
-    fi
-    sync=${3:-false}
+define-command -hidden lsp-code-actions-request -params 1.. -docstring "Request code actions for the main cursor position" %{ evaluate-commands -no-hooks %sh{
+    do_perform=$1
+    sync=$2
     fifo=""
     if "$sync"; then
         tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
@@ -902,6 +933,21 @@ define-command -hidden lsp-code-actions-request -params 1..3 -docstring "Request
 fifo         = \"${pipe}\"
 command_fifo = \"$kak_command_fifo\"
 "
+    fi
+
+    only=
+    code_action_pattern=
+    if [ $# -gt 3 ]; then
+        filter_mode=$3
+        shift 3
+        case "$filter_mode" in
+            (only)
+                only="only = \"$(printf %s "$*" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
+                ;;
+            (matching)
+                code_action_pattern="codeActionPattern = \"$(printf %s "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')\""
+                ;;
+        esac
     fi
 
     (printf %s "
@@ -915,7 +961,8 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 ${fifo}\
 [params]
 selectionDesc    = \"${kak_selection_desc}\"
-performCodeAction = $1
+performCodeAction = $do_perform
+$only
 $code_action_pattern
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null &
 
@@ -2347,7 +2394,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
         lsp-did-change
         evaluate-commands %sh{
             if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
-            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false"; fi
+            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-request false false"; fi
         }
     }
     hook -group lsp %arg{1} NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{

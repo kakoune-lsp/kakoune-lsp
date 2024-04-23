@@ -6,7 +6,7 @@
 
 cat >> .config/kak/kakrc << EOF
 hook global BufWritePre .*[.]go %{
-	try %{ lsp-code-action-sync '^Organize Imports$' }
+	try %{ lsp-code-actions-sync source.organizeImports }
 	lsp-formatting-sync
 }
 EOF
