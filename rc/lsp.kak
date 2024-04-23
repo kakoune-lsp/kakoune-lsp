@@ -324,7 +324,7 @@ define-command -hidden lsp-menu-impl %{
             my $auto_single = 0;
             my $select_cmds = 0;
             my $on_abort = "";
-            while (defined $args[0] && $args[0] =~ m/^-/) {
+            while (defined $args[0] and $args[0] =~ m/^-/) {
                 if ($args[0] eq "--") {
                     shift @args;
                     last;
@@ -350,8 +350,8 @@ define-command -hidden lsp-menu-impl %{
                 print "fail %{menu: wrong argument count}";
                 exit;
             }
-            if ($auto_single && scalar @args == $stride) {
-                print $args[$0];
+            if ($auto_single and scalar @args == $stride) {
+                print $args[1];
                 exit;
             }
 
