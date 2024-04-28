@@ -6,7 +6,6 @@ use crate::context::{Context, RequestParams, ServerSettings};
 use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams, ServerName};
 use crate::util::{editor_quote, short_file_path};
-use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::{
     GotoDeclaration, GotoDefinition, GotoImplementation, GotoTypeDefinition,
@@ -67,10 +66,8 @@ pub fn goto(
 
 pub fn edit_at_range(buffile: &str, range: KakouneRange, in_normal_mode: bool) -> String {
     let normal = if in_normal_mode { "" } else { "<a-semicolon>" };
-    formatdoc!(
-        "edit -existing {}
-         select {}
-         execute-keys {normal}<c-s>{normal}vv",
+    format!(
+        "edit -existing {}; select {}; execute-keys {normal}<c-s>{normal}vv",
         editor_quote(buffile),
         range,
     )
