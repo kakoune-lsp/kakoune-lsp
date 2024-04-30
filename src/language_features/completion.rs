@@ -146,59 +146,56 @@ fn editor_completion(
                 None => escape_kakoune_markup(&x.label),
             };
 
-            let specified_insert_text = || x.insert_text.clone().unwrap_or_else(|| x.label.clone());
-            let is_snippet = ctx.config.snippet_support
-                && x.insert_text_format == Some(InsertTextFormat::SNIPPET);
-            let insert_text = is_snippet.then(specified_insert_text).or_else(|| {
-                x.text_edit.as_ref().and_then(|cte| {
-                    let document = match ctx.documents.get(&meta.buffile) {
-                        Some(doc) => doc,
-                        None => {
-                            warn!("No document in context for file: {}", &meta.buffile);
-                            return None;
-                        }
-                    };
-
-                    match cte {
-                        CompletionTextEdit::Edit(text_edit) => {
-                            // The generic textEdit property is not supported yet (#40).  However,
-                            // we can support simple text edits that only replace the token left
-                            // of the cursor. Kakoune will do this very edit if we simply pass it
-                            // the replacement string as completion.
-                            let range = lsp_range_to_kakoune(
-                                &text_edit.range,
-                                &document.text,
-                                server.offset_encoding,
-                            );
-
-                            if can_infer_offset {
-                                match inferred_offset {
-                                    None => inferred_offset = Some(range.start.column),
-                                    Some(offset) if offset != range.start.column => {
-                                        can_infer_offset = false;
-                                        inferred_offset = None
-                                    }
-                                    _ => (),
-                                }
-                            };
-
-                            if range.start.line == params.position.line
-                                && range.end.line == params.position.line
-                            {
-                                Some(text_edit.new_text.clone())
-                            } else {
-                                None
-                            }
-                        }
-                        CompletionTextEdit::InsertAndReplace(_) => None,
+            let is_simple_text_edit = x.text_edit.as_ref().is_some_and(|cte| {
+                let document = match ctx.documents.get(&meta.buffile) {
+                    Some(doc) => doc,
+                    None => {
+                        warn!("No document in context for file: {}", &meta.buffile);
+                        return false;
                     }
-                })
+                };
+
+                match cte {
+                    CompletionTextEdit::Edit(text_edit) => {
+                        // The generic textEdit property is not supported yet (#40).  However,
+                        // we can support simple text edits that only replace the token left
+                        // of the cursor. Kakoune will do this very edit if we simply pass it
+                        // the replacement string as completion.
+                        let range = lsp_range_to_kakoune(
+                            &text_edit.range,
+                            &document.text,
+                            server.offset_encoding,
+                        );
+
+                        if can_infer_offset {
+                            match inferred_offset {
+                                None => inferred_offset = Some(range.start.column),
+                                Some(offset) if offset != range.start.column => {
+                                    can_infer_offset = false;
+                                    inferred_offset = None
+                                }
+                                _ => (),
+                            }
+                        };
+                        range.start.line == params.position.line
+                            && range.end.line == params.position.line
+                    }
+                    CompletionTextEdit::InsertAndReplace(_) => false,
+                }
             });
-            if insert_text.is_none() {
+            if !is_simple_text_edit {
                 can_infer_offset = false;
                 inferred_offset = None;
             }
-            let insert_text = insert_text.unwrap_or_else(specified_insert_text);
+            let specified_insert_text = x.insert_text.as_ref().unwrap_or(&x.label);
+            let eventual_insert_text = x
+                .text_edit
+                .as_ref()
+                .map(|cte| match cte {
+                    CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
+                    CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
+                })
+                .unwrap_or(specified_insert_text);
 
             fn completion_entry(insert_text: &str, on_select: &str, menu: &str) -> String {
                 editor_quote(&format!(
@@ -209,23 +206,16 @@ fn editor_completion(
                 ))
             }
 
-            let eventual_insert_text = x
-                .text_edit
-                .as_ref()
-                .map(|cte| match cte {
-                    CompletionTextEdit::Edit(text_edit) => &text_edit.new_text,
-                    CompletionTextEdit::InsertAndReplace(text_edit) => &text_edit.new_text,
-                })
-                .or(x.insert_text.as_ref())
-                .unwrap_or(&x.label);
-
             // If snippet support is both enabled and provided by the server,
             // we'll need to perform some transformations on the completion commands.
-            if is_snippet {
+            if ctx.config.snippet_support && x.insert_text_format == Some(InsertTextFormat::SNIPPET)
+            {
                 lazy_static! {
                     static ref SNIPPET_TABSTOP_RE: Regex = Regex::new(r"\$(?P<i>\d+)").unwrap();
+                    // {
                     static ref SNIPPET_PLACEHOLDER_RE: Regex =
                         Regex::new(r"\$\{(?P<i>\d+):?(?P<placeholder>[^}]+)\}").unwrap();
+                        // {
                     static ref SNIPPET_ESCAPED_METACHARACTERS_RE: Regex =
                         Regex::new(r"\\([$}\\,|])").unwrap();
                 }
@@ -233,7 +223,8 @@ fn editor_completion(
                 if !snippet.contains("$0") && !snippet.contains("${0") {
                     snippet += "$0";
                 }
-                let insert_text = SNIPPET_TABSTOP_RE.replace_all(&insert_text, "");
+                let insert_text = specified_insert_text;
+                let insert_text = SNIPPET_TABSTOP_RE.replace_all(insert_text, "");
                 let insert_text = SNIPPET_PLACEHOLDER_RE.replace_all(&insert_text, "$placeholder");
                 // Unescape metacharacters.
                 let insert_text = SNIPPET_ESCAPED_METACHARACTERS_RE.replace_all(&insert_text, "$1");
@@ -257,11 +248,11 @@ fn editor_completion(
                     let on_select = formatdoc!(
                         "{on_select}
                          lsp-snippets-insert-completion {}",
-                        editor_quote(&(insert_text + "$0"))
+                        editor_quote(&(eventual_insert_text.to_string() + "$0"))
                     );
                     (specified_filter_text, on_select)
                 } else {
-                    (&insert_text, on_select)
+                    (eventual_insert_text, on_select)
                 };
                 completion_entry(insert_text, &on_select, &entry)
             }
