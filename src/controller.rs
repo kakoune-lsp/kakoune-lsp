@@ -49,6 +49,7 @@ pub fn start(
             let server_config = &config.language_server[&route.server_name];
             let server_transport = match language_server_transport::start(
                 &route.server_name,
+                &route.root,
                 &server_config.command,
                 &server_config.args,
                 &server_config.envs,
