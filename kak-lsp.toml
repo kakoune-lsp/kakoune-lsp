@@ -81,7 +81,7 @@ settings_section = "metals"
 [language_server.metals.settings.metals]
 icons = "unicode"
 isHttpEnabled = true
-statusBarProvider = "log-message"
+statusBarProvider = "show-message"
 compilerOptions = { overrideDefFormat = "unicode" }
 inlayHints.hintsInPatternMatch.enable = true
 inlayHints.implicitArguments.enable = true
