@@ -83,6 +83,11 @@ icons = "unicode"
 isHttpEnabled = true
 statusBarProvider = "log-message"
 compilerOptions = { overrideDefFormat = "unicode" }
+inlayHints.hintsInPatternMatch.enable = true
+inlayHints.implicitArguments.enable = true
+inlayHints.implicitConversions.enable = true
+inlayHints.inferredTypes.enable = true
+inlayHints.typeParameters.enable = true
 
 [language_server.nil]
 filetypes = ["nix"]
