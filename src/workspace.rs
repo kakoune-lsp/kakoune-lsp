@@ -46,7 +46,8 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
                 Value::Object(explode_string_table(raw_settings))
             } else {
                 let server = ctx.config.language_server.get(server_name).unwrap();
-                configured_section(ctx, server_name, server.settings.as_ref()).unwrap_or_default()
+                configured_section(ctx, server_name, server.settings.as_ref())
+                    .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
             }
         });
 
