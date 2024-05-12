@@ -189,7 +189,7 @@ fn main() {
                         }
                     }
                     cfg.language_server
-                        .insert(language.command.clone(), language);
+                        .insert(format!("{}:{}", language_id, language.command), language);
                 }
             }
             Ok(cfg)
