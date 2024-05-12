@@ -64,12 +64,12 @@ jobs:
       id: kakoune-commit-id
       run: echo "::set-output name=id::$(git -C $GITHUB_WORKSPACE/kakoune rev-parse HEAD)"
 
-    - name: Install gcc 10 via homebrew
-      if: matrix.kakoune_version == '' && matrix.os == 'macos-latest'
-      run: brew install gcc@10
+    - name: Install clang via homebrew
+      if: matrix.os == 'macos-latest'
+      run: brew install llvm@13
 
     - name: Install gcc 10 via apt
-      if: matrix.kakoune_version == '' && matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends gcc-10
@@ -90,8 +90,10 @@ jobs:
     - name: Build Kakoune
       working-directory: ${{ github.workspace }}/kakoune/src
       run: |
-        if [ "${{ matrix.kakoune_version }}" = "" ]; then
-          export CXX=g++-10
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          CXX=/opt/homebrew/opt/llvm@13/bin/clang++
+        else
+          CXX=g++-10
         fi
         if [ "${{ steps.cache-kakoune.outputs.cache-hit }}" ]; then
           # The source files created by actions/checkout are newer than the
@@ -99,13 +101,17 @@ jobs:
           # to tell "make install" that they are indeed up-to-date.
           make -t
         else
-          make -j$([ "${{ matrix.os }}" = "macos-latest" ] && sysctl -n hw.logicalcpu || nproc)
+          make CXX=$CXX -j$([ "${{ matrix.os }}" = "macos-latest" ] && sysctl -n hw.logicalcpu || nproc)
         fi
-        sudo --preserve-env=CXX make install
+        sudo make CXX=$CXX install
+
+    - name: Install Go via homebrew
+      if: matrix.os == 'macos-latest'
+      run: brew install go
 
     - name: Install gopls
       run: |
-        go install golang.org/x/tools/gopls@v0.7.1
+        go install golang.org/x/tools/gopls@v0.9.3
         sudo ln "$HOME/go/bin/gopls" /usr/local/bin/
 
     - name: Install rust-analyzer
