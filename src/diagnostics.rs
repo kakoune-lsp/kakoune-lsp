@@ -273,32 +273,35 @@ pub fn format_related_information(
     main_settings: &ServerSettings,
     ctx: &Context,
 ) -> Option<String> {
-    d.related_information.as_ref().map(|infos| {
-        "\n".to_string()
-            + &infos
-                .iter()
-                .map(|info| {
-                    let path = info.location.uri.to_file_path().unwrap();
-                    let filename = path.to_str().unwrap();
-                    let p = get_kakoune_position_with_fallback(
-                        server,
-                        filename,
-                        info.location.range.start,
-                        ctx,
-                    );
-                    format!(
-                        "{}:{}:{}: {}{}",
-                        short_file_path(filename, &main_settings.root_path),
-                        p.line,
-                        p.column,
-                        &if ctx.language_servers.len() > 1 {
-                            format!("[{server_name}] ")
-                        } else {
-                            "".to_string()
-                        },
-                        info.message
-                    )
-                })
-                .join("\n")
-    })
+    d.related_information
+        .as_ref()
+        .filter(|infos| !infos.is_empty())
+        .map(|infos| {
+            "\n".to_string()
+                + &infos
+                    .iter()
+                    .map(|info| {
+                        let path = info.location.uri.to_file_path().unwrap();
+                        let filename = path.to_str().unwrap();
+                        let p = get_kakoune_position_with_fallback(
+                            server,
+                            filename,
+                            info.location.range.start,
+                            ctx,
+                        );
+                        format!(
+                            "{}:{}:{}: {}{}",
+                            short_file_path(filename, &main_settings.root_path),
+                            p.line,
+                            p.column,
+                            &if ctx.language_servers.len() > 1 {
+                                format!("[{server_name}] ")
+                            } else {
+                                "".to_string()
+                            },
+                            info.message
+                        )
+                    })
+                    .join("\n")
+        })
 }
