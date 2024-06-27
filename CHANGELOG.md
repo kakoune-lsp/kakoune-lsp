@@ -6,6 +6,11 @@ Additions:
 - `lsp-code-actions` has learned to filter by code action kind.
   This should obsolete the `lsp-code-action` command which has been hidden and deprecated.
 - `lsp-code-actions` learned the `-auto-single` switch to instantly run if there is only one matching code action.
+- The default config now enables inlay hints also for recent version of Scala Metals.
+
+Fixes:
+- Fixed a case where a legacy `kak-lsp.toml` specifying the same server for multiple languages would drop all but one language.
+- Some hover info had extra trailing whitespace, which is now trimmed properly.
 
 ## 17.0.1 - 2024-04-06
 
