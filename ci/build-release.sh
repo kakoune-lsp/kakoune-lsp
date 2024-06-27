@@ -14,6 +14,7 @@ curl -LSfs https://japaric.github.io/trust/install.sh |
     sh -s -- --force --git rust-embedded/cross --tag v0.2.1 --target $target
 command -v cross || PATH=~/.cargo/bin:$PATH
 
+rustup target add $target
 cross build --target $target --release
 cross test  --target $target --release
 
