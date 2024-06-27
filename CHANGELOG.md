@@ -1,4 +1,4 @@
-## Unreleased
+## 17.1.1 - 2024-06-27
 
 Additions:
 - Default configuration for Svelte via [svelte-language-server](https://github.com/sveltejs/language-tools).
