@@ -446,6 +446,12 @@ settings_section = "_"
 # quotePreference = "double"
 # typescript.format.semicolons = "insert"
 
+# [language_server.biome]
+# filetypes = ["typescript", "javascript"]
+# roots = ["biome.json", "package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+# command = "biome"
+# args = ["lsp-proxy"]
+
 # [language_server.eslint]
 # filetypes = ["javascript", "typescript"]
 # roots = [".eslintrc", ".eslintrc.json"]
