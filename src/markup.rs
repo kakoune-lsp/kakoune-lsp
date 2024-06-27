@@ -35,6 +35,8 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
     let mut is_codeblock = false;
     // State to indicate a block quote
     let mut is_blockquote = false;
+    // State to indicate a table
+    let mut is_table = false;
     // State to indicate that at least one text line in a block quote
     // has been emitted
     let mut has_blockquote_text = false;
@@ -181,6 +183,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
                 tag => warn!("Unsupported Markdown tag: {:?}", tag),
             },
             Event::Text(text) => {
+                is_table = text.starts_with('|');
                 if is_blockquote {
                     has_blockquote_text = true;
                     markup.push_str("> ")
@@ -208,7 +211,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(markdown: S) -> String {
             // Soft breaks should be kept in `<pre>`-style blocks.
             // Anywhere else, let the renderer handle line breaks.
             Event::SoftBreak => {
-                if is_blockquote || is_codeblock {
+                if is_blockquote || is_codeblock || is_table {
                     markup.push('\n')
                 } else {
                     markup.push(' ')

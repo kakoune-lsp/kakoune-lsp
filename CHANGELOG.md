@@ -11,6 +11,7 @@ Additions:
 Fixes:
 - Fixed a case where a legacy `kak-lsp.toml` specifying the same server for multiple languages would drop all but one language.
 - Some hover info had extra trailing whitespace, which is now trimmed properly.
+- Hover info containing ASCII-art tables as popular in some flavors of Markdown is now rendered properly.
 
 ## 17.0.1 - 2024-04-06
 
