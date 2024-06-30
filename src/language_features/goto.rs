@@ -100,7 +100,7 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerName, Location)], ctx: &
     let main_root_path = root_path.clone();
     let select_location = locations
         .iter()
-        .group_by(|(_, Location { uri, .. })| uri.to_file_path().unwrap())
+        .chunk_by(|(_, Location { uri, .. })| uri.to_file_path().unwrap())
         .into_iter()
         .map(|(path, locations)| {
             let path_str = path.to_str().unwrap();
