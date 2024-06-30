@@ -72,7 +72,7 @@ fn code_actions_for_ranges(
     {
         buff_diags
             .iter()
-            .filter(|(server_name, d)| ranges_overlap(d.range, ranges[server_name]))
+            .filter(|(server_name, d)| ranges.get(server_name).is_some_and(|r| ranges_overlap(d.range, *r)))
             .cloned()
             .fold(HashMap::new(), |mut m, v| {
                 let (server_name, diagnostic) = v;
