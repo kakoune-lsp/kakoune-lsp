@@ -18,12 +18,13 @@ pub struct LanguageServerTransport {
 
 pub fn start(
     server_name: &str,
+    root: &str,
     cmd: &str,
     args: &[String],
     envs: &HashMap<String, String>,
 ) -> Result<LanguageServerTransport, String> {
     info!(
-        "Starting Language server {server_name} as `{} {}`",
+        "Starting Language server {server_name} as `{} {}` in dir {root}",
         cmd,
         args.join(" ")
     );
@@ -33,6 +34,7 @@ pub fn start(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        .current_dir(root)
         .spawn()
     {
         Ok(c) => c,
