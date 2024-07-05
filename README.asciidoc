@@ -1,4 +1,6 @@
 = Kakoune Language Server Protocol Client
+:toc: preamble
+:toclevels: 3
 
 This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for the https://kakoune.org[Kakoune] editor.
 
