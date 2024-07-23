@@ -81,8 +81,13 @@ settings_section = "metals"
 [language_server.metals.settings.metals]
 icons = "unicode"
 isHttpEnabled = true
-statusBarProvider = "log-message"
+statusBarProvider = "show-message"
 compilerOptions = { overrideDefFormat = "unicode" }
+inlayHints.hintsInPatternMatch.enable = true
+inlayHints.implicitArguments.enable = true
+inlayHints.implicitConversions.enable = true
+inlayHints.inferredTypes.enable = true
+inlayHints.typeParameters.enable = true
 
 [language_server.nil]
 filetypes = ["nix"]
@@ -263,6 +268,12 @@ roots = [".marksman.toml"]
 command = "marksman"
 args = ["server"]
 
+# [language_server.zk]
+# filetypes = ["markdown"]
+# roots = [".zk"]
+# command = "zk"
+# args = ["lsp"]
+
 [language_server.nimlsp]
 filetypes = ["nim"]
 roots = ["*.nimble", ".git", ".hg"]
@@ -376,6 +387,12 @@ settings_section = "_"
 # See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
 # diagnostics = false
 
+[language_server.svelte-language-server]
+filetypes = ["svelte"]
+roots = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+command = "svelteserver"
+args = ["--stdio"]
+
 [language_server.taplo]
 filetypes = ["toml"]
 roots = [".git", ".hg"]
@@ -428,6 +445,12 @@ settings_section = "_"
 [language_server.typescript-language-server.settings._]
 # quotePreference = "double"
 # typescript.format.semicolons = "insert"
+
+# [language_server.biome]
+# filetypes = ["typescript", "javascript"]
+# roots = ["biome.json", "package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+# command = "biome"
+# args = ["lsp-proxy"]
 
 # [language_server.eslint]
 # filetypes = ["javascript", "typescript"]

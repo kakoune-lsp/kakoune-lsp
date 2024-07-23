@@ -63,3 +63,5 @@ rm "$archive"
 	git commit -am "v$new"
 	git push
 )
+
+git push origin

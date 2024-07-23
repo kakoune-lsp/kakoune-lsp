@@ -101,6 +101,7 @@ test_cleanup() {
 	test_sleep_until "! kak -c $test_kak_session -ui dummy -e quit >/dev/null 2>&1"
 	sleep .1
 	test_tmux kill-server >/dev/null 2>&1
+	sleep .1
 	rm -rf "$HOME"
 }
 trap test_cleanup EXIT
