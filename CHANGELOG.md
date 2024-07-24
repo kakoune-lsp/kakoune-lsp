@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- Experimental LSP client capabilities can now be enabled via `kak-lsp.toml`.
+
 ## 17.1.1 - 2024-06-27
 
 Additions:

@@ -385,14 +385,21 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                 .map(|s| s.to_string())
                                 .collect(),
                             ),
-                            experimental: Some(serde_json::json!({
-                                "hoverActions": true,
-                                "commands": {
-                                    "commands": [
-                                        "rust-analyzer.runSingle",
-                                    ]
-                                }
-                            })),
+                            experimental: ctx
+                                .config
+                                .language_server
+                                .get(server_name)
+                                .and_then(|cfg| cfg.experimental.clone())
+                                .or_else(|| {
+                                    (meta.filetype == "rust").then_some(serde_json::json!({
+                                        "hoverActions": true,
+                                        "commands": {
+                                            "commands": [
+                                                "rust-analyzer.runSingle",
+                                            ]
+                                        }
+                                    }))
+                                }),
                         },
                         initialization_options: initialization_options[idx].clone(),
                         process_id: Some(process::id()),
