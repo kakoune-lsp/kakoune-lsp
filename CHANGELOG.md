@@ -3,6 +3,9 @@
 Additions:
 - Experimental LSP client capabilities can now be enabled via `kak-lsp.toml`.
 
+Fixes:
+- Fix crash on multiplie language servers when one server doesn't support code actions.
+
 ## 17.1.1 - 2024-06-27
 
 Additions:
