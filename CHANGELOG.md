@@ -4,7 +4,8 @@ Additions:
 - Experimental LSP client capabilities can now be enabled via `kak-lsp.toml`.
 
 Fixes:
-- Fix crash on multiplie language servers when one server doesn't support code actions.
+- Fix crash on multiple language servers when one server doesn't support code actions.
+- For consistency with our `root_path` project detection mechanism, the default config for Julia no longer supports the `JULIA_PROJECT` environment variable nor falls back on the global Julia environment.
 
 ## 17.1.1 - 2024-06-27
 
