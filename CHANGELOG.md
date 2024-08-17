@@ -6,6 +6,7 @@ Additions:
 Fixes:
 - Fix crash on multiple language servers when one server doesn't support code actions.
 - For consistency with our `root_path` project detection mechanism, the default config for Julia no longer supports the `JULIA_PROJECT` environment variable nor falls back on the global Julia environment.
+- Fix build on Rust 1.80.
 
 ## 17.1.1 - 2024-06-27
 
