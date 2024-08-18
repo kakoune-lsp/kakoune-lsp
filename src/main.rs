@@ -101,8 +101,8 @@ fn main() {
                 .short('s')
                 .long("session")
                 .value_name("SESSION")
-                .help("Session id to communicate via unix socket")
-                .required(true),
+                .required_unless_present("kakoune")
+                .help("Session id to communicate via unix socket"),
         )
         .arg(
             Arg::new("timeout")
@@ -302,15 +302,19 @@ fn kakoune() -> i32 {
         .skip(1)
         .filter(|arg| arg != "--kakoune")
         .join(" ");
-    let cmd = env::current_exe().unwrap();
-    let cmd = cmd.to_str().unwrap();
-    let lsp_cmd = format!(
-        "set-option global lsp_cmd '{} {}'",
-        editor_escape(cmd),
-        editor_escape(&args)
-    );
+    let lsp_cmd = if args.is_empty() {
+        "".to_string()
+    } else {
+        let cmd = env::current_exe().unwrap();
+        let cmd = cmd.to_str().unwrap();
+        format!(
+            "set-option global lsp_cmd '{} {}'\n",
+            editor_escape(cmd),
+            editor_escape(&args)
+        )
+    };
     if unsafe { libc::isatty(STDOUT_FILENO) } == 0 {
-        println!("{}\n{}", script, lsp_cmd);
+        println!("{}{}", script, lsp_cmd);
         return 0;
     }
     let pager = env::var_os("PAGER").unwrap_or("less".into());
@@ -321,7 +325,7 @@ fn kakoune() -> i32 {
             return 1;
         }
     };
-    match write!(child.stdin.as_mut().unwrap(), "{}\n{}", script, lsp_cmd) {
+    match write!(child.stdin.as_mut().unwrap(), "{}{}", script, lsp_cmd) {
         Ok(()) => (),
         Err(err) if err.kind() == io::ErrorKind::BrokenPipe => (),
         Err(err) => {

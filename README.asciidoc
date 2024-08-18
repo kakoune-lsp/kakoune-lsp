@@ -112,7 +112,7 @@ commands to your `kakrc`:
 
 [source,kak]
 ----
-eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with plug.kak.
+eval %sh{kak-lsp --kakoune}  # Not needed if you load it with plug.kak.
 lsp-enable
 ----
 
@@ -121,7 +121,7 @@ via `lsp-enable-window`, e.g.:
 
 [source,kak]
 ----
-eval %sh{kak-lsp --kakoune -s $kak_session}  # Not needed if you load it with plug.kak.
+eval %sh{kak-lsp --kakoune}  # Not needed if you load it with plug.kak.
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
     lsp-enable-window
 }
@@ -623,7 +623,7 @@ Please also try to reproduce the issue with a minimal configuration. Sometimes t
 [source,sh]
 ----
 env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
-    eval %sh{kak-lsp --kakoune -s $kak_session}
+    eval %sh{kak-lsp --kakoune}
     set global lsp_cmd "kak-lsp -s %val{session} -vvvv --log /tmp/kak-lsp.log"
     lsp-enable'
 ----
