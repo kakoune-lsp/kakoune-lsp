@@ -162,13 +162,21 @@ fn main() {
         .or_else(|| try_config_dir(dirs::preference_dir())) // Historical config dir on macOS.
         ;
 
-    if let Some(config_path) = config_path {
+    if let Some(config_path) = config_path.as_ref() {
         config = fs::read_to_string(config_path).expect("Failed to read config");
     }
 
     let session = String::from(matches.get_one::<String>("session").unwrap());
 
+    let mut raw_request = Vec::new();
+    if matches.get_flag("request") || matches.get_flag("initial-request") {
+        stdin()
+            .read_to_end(&mut raw_request)
+            .expect("Failed to read stdin");
+    }
+
     #[allow(deprecated)]
+    #[allow(clippy::blocks_in_conditions)]
     let mut config: Config = match toml::from_str(&config)
         .map_err(|err| err.to_string())
         .and_then(|mut cfg: Config| {
@@ -197,17 +205,15 @@ fn main() {
         }) {
         Ok(cfg) => cfg,
         Err(err) => {
-            let command = format!(
-                "lsp-show-error {}",
-                editor_quote(&format!("failed to parse config file: {}", err)),
+            report_config_error(
+                &session,
+                &raw_request,
+                format!(
+                    "failed to parse config file {}: {}",
+                    config_path.unwrap().display(),
+                    err
+                ),
             );
-            if let Err(err) = send_command_to_editor(EditorResponse {
-                meta: meta_for_session(session, None),
-                command: command.into(),
-            }) {
-                println!("Failed to send lsp-show-error command to editor: {}", err);
-            }
-            panic!("invalid configuration: {}", err)
         }
     };
 
@@ -217,19 +223,13 @@ fn main() {
         config.server.timeout = timeout.parse().unwrap();
     }
 
-    let mut input = Vec::new();
-    if matches.get_flag("request") || matches.get_flag("initial-request") {
-        stdin()
-            .read_to_end(&mut input)
-            .expect("Failed to read stdin");
-    }
     if matches.get_flag("request") {
         let mut path = util::temp_dir();
         path.push(&config.server.session);
         let connect = || match UnixStream::connect(&path) {
             Ok(mut stream) => {
                 stream
-                    .write_all(&input)
+                    .write_all(&raw_request)
                     .expect("Failed to send stdin to server");
                 true
             }
@@ -248,7 +248,7 @@ fn main() {
             }
         };
         if lockfile.try_lock_exclusive().is_ok() {
-            spin_up_server(&input);
+            spin_up_server(&raw_request);
             if let Err(err) = lockfile.unlock() {
                 println!("Failed to unlock lock file: {:?}", err);
                 goodbye(&config.server.session, 1);
@@ -268,7 +268,7 @@ fn main() {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
         let initial_request = if matches.get_flag("initial-request") {
-            Some(String::from_utf8_lossy(&input).to_string())
+            Some(String::from_utf8_lossy(&raw_request).to_string())
         } else {
             None
         };
@@ -309,7 +309,24 @@ fn kakoune() {
     println!("{}\n{}", script, lsp_cmd);
 }
 
-fn spin_up_server(input: &[u8]) {
+fn report_config_error(session: &str, raw_request: &[u8], error_message: String) -> ! {
+    let editor_request: Option<EditorRequest> =
+        toml::from_str(&String::from_utf8_lossy(raw_request)).ok();
+    let command = format!("lsp-show-error {}", &editor_quote(&error_message));
+    if let Err(err) = send_command_to_editor(EditorResponse {
+        meta: meta_for_session(
+            session.to_string(),
+            editor_request.and_then(|req| req.meta.client),
+        ),
+        command: command.into(),
+    }) {
+        println!("Failed to send lsp-show-error command to editor: {}", err);
+    }
+    println!("{}", error_message);
+    process::exit(1);
+}
+
+fn spin_up_server(raw_request: &[u8]) {
     let args = env::args()
         .filter(|arg| arg != "--request")
         .collect::<Vec<_>>();
@@ -324,7 +341,7 @@ fn spin_up_server(input: &[u8]) {
         .stdin
         .as_mut()
         .unwrap()
-        .write_all(input)
+        .write_all(raw_request)
         .expect("Failed to write initial request");
     child.wait().expect("Failed to daemonize server");
 }
