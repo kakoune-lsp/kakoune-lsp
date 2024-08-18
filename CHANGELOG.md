@@ -1,5 +1,9 @@
 ## Unreleased
 
+Additions:
+- The `--session` option is no longer required when using `--kakoune`, simplifying the recommended configuration.
+- `kak-lsp --kakoune` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
+
 ## 17.1.2 - 2024-08-17
 
 Additions:
