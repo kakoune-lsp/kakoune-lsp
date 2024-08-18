@@ -41,7 +41,7 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 
 ====== Package managers
 
-* Arch Linux: `pacman -S kakoune-lsp` or https://aur.archlinux.org/packages/kak-lsp-git/[AUR/kak-lsp-git]
+* Arch Linux: `pacman -S kakoune-lsp` or https://aur.archlinux.org/packages/kak-lsp-git/[AUR/kakoune-lsp-git]
 * Fedora https://copr.fedorainfracloud.org/coprs/atim/kakoune/[Copr]: `sudo dnf copr enable atim/kakoune -y && sudo dnf install kakoune-lsp`
 * Void Linux: `xbps-install -S kak-lsp`
 
