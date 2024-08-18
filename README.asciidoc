@@ -6,8 +6,8 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 
 1. <<Installing>>
 2. <<Install language servers for your desired languages>>
-3. <<Configure Kakoune to enable LSP>>
-4. <<Configure mappings>>
+3. <<Configure Kakoune to enable LSP integration>>
+4. <<Configure key mappings>>
 
 === Installing
 
@@ -105,7 +105,7 @@ by yourself for the languages you plan to use kakoune-lsp with. Please consult t
 https://github.com/kakoune-lsp/kakoune-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
 quick installation of language servers supported by kakoune-lsp out of the box.
 
-=== Configure Kakoune to enable LSP
+=== Configure Kakoune to enable LSP integration
 
 To enable LSP support for configured languages (see <<Configuration>>) just add the following
 commands to your `kakrc`:
@@ -127,7 +127,7 @@ hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %
 }
 ----
 
-=== Configure mappings
+=== Configure key mappings
 
 There are three default mappings in goto-mode: `gd` (`lsp-definition`), `gy`
 (`lsp-type-definition`) and `gr` (`lsp-references`).  You can override them in your kakrc after
