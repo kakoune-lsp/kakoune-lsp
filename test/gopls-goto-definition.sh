@@ -23,4 +23,4 @@ test_tmux capture-pane -p
 # CHECK: func bar() { foo(); }
 # CHECK: ~
 # CHECK: ~
-# CHECK: {{(foo )?}} main.go 3:9 [+] 1 sel - client0@[session]
+# CHECK: {{(saved 1 selections\s*)?}}{{(foo )?}}{{(💡|\[A\])?}} main.go 3:9 [+] 1 sel - client0@[session]

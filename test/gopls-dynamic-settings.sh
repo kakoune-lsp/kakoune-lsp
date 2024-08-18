@@ -25,7 +25,7 @@ test_tmux capture-pane -p
 # CHECK:
 # CHECK: }
 # CHECK:
-# CHECK: main.go 1:1  1 sel - client0@[session]
+# CHECK: {{((💡|\[A\]) )?}}main.go 1:1  1 sel - client0@[session]
 
 echo '
 set global lsp_config %{
@@ -42,4 +42,4 @@ test_tmux capture-pane -p
 # CHECK: 	println("spurious blank line")
 # CHECK: }
 # CHECK: ~
-# CHECK: main.go 1:1 [+] 1 sel - client0@[session]
+# CHECK: {{((💡|\[A\]) )?}}main.go 1:1 [+] 1 sel - client0@[session]

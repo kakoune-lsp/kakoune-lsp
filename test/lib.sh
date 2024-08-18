@@ -102,6 +102,9 @@ test_cleanup() {
 	sleep .1
 	test_tmux kill-server >/dev/null 2>&1
 	sleep .1
+	if [ -d "$HOME/go" ]; then
+		chmod +w "$HOME/go" -R
+	fi
 	rm -rf "$HOME"
 }
 trap test_cleanup EXIT
