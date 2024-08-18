@@ -111,6 +111,7 @@ fn main() {
         )
         .arg(
             Arg::new("initial-request")
+                .hide(true)
                 .long("initial-request")
                 .action(ArgAction::SetTrue)
                 .help("Read initial request from stdin"),
