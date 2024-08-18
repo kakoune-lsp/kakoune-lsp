@@ -168,6 +168,7 @@ fn main() {
 
     let session = String::from(matches.get_one::<String>("session").unwrap());
 
+    #[allow(deprecated)]
     let mut config: Config = match toml::from_str(&config)
         .map_err(|err| err.to_string())
         .and_then(|mut cfg: Config| {

@@ -20,7 +20,7 @@ const fn default_true() -> bool {
 pub struct Config {
     #[serde(default)]
     pub language_server: HashMap<ServerName, LanguageServerConfig>,
-    // Deprecated.
+    #[deprecated(note = "use language_server")]
     #[serde(default)]
     pub language: HashMap<LanguageId, LanguageServerConfig>,
     #[serde(default)]
