@@ -628,9 +628,6 @@ env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
     lsp-enable'
 ----
 
-NOTE: Some Kakoune plugins could interfere with kakoune-lsp, particularly completions providers.
-E.g. `racer.kak` competes for autocompletion in Rust files.
-
 === Crashes
 
 For troubleshooting crashes, you might like to run kakoune-lsp outside of
