@@ -39,6 +39,7 @@ use daemonize::Daemonize;
 use editor_transport::send_command_to_editor;
 use fs4::FileExt;
 use itertools::Itertools;
+use libc::STDOUT_FILENO;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
@@ -46,6 +47,7 @@ use sloggers::Build;
 use std::env;
 use std::ffi::CString;
 use std::fs;
+use std::io;
 use std::io::stderr;
 use std::io::stdout;
 use std::io::{stdin, Read, Write};
@@ -131,7 +133,7 @@ fn main() {
         .get_matches();
 
     if matches.get_flag("kakoune") {
-        return kakoune();
+        process::exit(kakoune());
     }
 
     let mut config = include_str!("../kak-lsp.toml").to_string();
@@ -294,7 +296,7 @@ fn main() {
     }
 }
 
-fn kakoune() {
+fn kakoune() -> i32 {
     let script = include_str!("../rc/lsp.kak");
     let args = env::args()
         .skip(1)
@@ -307,7 +309,39 @@ fn kakoune() {
         editor_escape(cmd),
         editor_escape(&args)
     );
-    println!("{}\n{}", script, lsp_cmd);
+    if unsafe { libc::isatty(STDOUT_FILENO) } == 0 {
+        println!("{}\n{}", script, lsp_cmd);
+        return 0;
+    }
+    let pager = env::var_os("PAGER").unwrap_or("less".into());
+    let mut child = match process::Command::new(&pager).stdin(Stdio::piped()).spawn() {
+        Ok(child) => child,
+        Err(err) => {
+            println!("failed to run pager {}: {}", pager.to_string_lossy(), err);
+            return 1;
+        }
+    };
+    match write!(child.stdin.as_mut().unwrap(), "{}\n{}", script, lsp_cmd) {
+        Ok(()) => (),
+        Err(err) if err.kind() == io::ErrorKind::BrokenPipe => (),
+        Err(err) => {
+            println!(
+                "failed to run write to pager {}: {}",
+                pager.to_string_lossy(),
+                err
+            );
+            panic!();
+        }
+    };
+    if let Err(err) = child.wait() {
+        println!(
+            "failed to wait for pager {}: {}",
+            pager.to_string_lossy(),
+            err
+        );
+        return 1;
+    }
+    0
 }
 
 fn report_config_error(session: &str, raw_request: &[u8], error_message: String) -> ! {
