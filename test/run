@@ -1,5 +1,7 @@
 #!/bin/sh
 
+rc=0
+
 test="$(dirname "$0")"
 for file in $(
 	find "${@:-"$test"}" -type f -name '*.sh' | grep -v '/lib.sh$'
@@ -7,8 +9,10 @@ for file in $(
 do
 	echo "$file"
 	"$test"/littlecheck.py "$file"
-	rc=$?
-	if [ $rc -ne 0 ] && [ $rc -ne 125 ]; then
-		exit $rc
-	fi
+	case $? in
+		(0|125) ;;
+		(*) rc=$?
+	esac
 done
+
+exit $rc
