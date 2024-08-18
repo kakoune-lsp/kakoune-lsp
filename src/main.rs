@@ -200,8 +200,14 @@ fn main() {
                                 .insert(filetype.clone(), language_id.clone());
                         }
                     }
-                    cfg.language_server
-                        .insert(format!("{}:{}", language_id, language.command), language);
+                    cfg.language_server.insert(
+                        format!(
+                            "{}:{}",
+                            language_id,
+                            language.command.as_ref().unwrap_or(&"".to_string())
+                        ),
+                        language,
+                    );
                 }
             }
             Ok(cfg)

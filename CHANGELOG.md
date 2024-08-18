@@ -3,6 +3,7 @@
 Additions:
 - The `--session` option is no longer required when using `--kakoune`, simplifying the recommended configuration.
 - `kak-lsp --kakoune` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
+- When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
 
 ## 17.1.2 - 2024-08-17
 

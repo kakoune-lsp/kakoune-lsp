@@ -56,7 +56,7 @@ pub struct ServerConfig {
 pub struct LanguageServerConfig {
     pub filetypes: Vec<String>,
     pub roots: Vec<String>,
-    pub command: String,
+    pub command: Option<String>,
     #[serde(default)]
     pub args: Vec<String>,
     #[serde(default)]
