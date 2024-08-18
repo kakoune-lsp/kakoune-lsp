@@ -62,11 +62,11 @@ jobs:
     # need to rebuild when code changes.
     - name: Get Kakoune commit id
       id: kakoune-commit-id
-      run: echo "::set-output name=id::$(git -C $GITHUB_WORKSPACE/kakoune rev-parse HEAD)"
+      run: echo "id=$(git -C $GITHUB_WORKSPACE/kakoune rev-parse HEAD)" >> $GITHUB_OUTPUT
 
     - name: Install clang via homebrew
       if: matrix.os == 'macos-latest'
-      run: brew install llvm@13
+      run: brew install llvm@15
 
     - name: Install gcc 10 via apt
       if: matrix.os == 'ubuntu-latest'
@@ -91,7 +91,7 @@ jobs:
       working-directory: ${{ github.workspace }}/kakoune/src
       run: |
         if [ "${{ matrix.os }}" = "macos-latest" ]; then
-          CXX=/opt/homebrew/opt/llvm@13/bin/clang++
+          CXX=/opt/homebrew/opt/llvm@15/bin/clang++
         else
           CXX=g++-10
         fi
