@@ -91,7 +91,7 @@ fn editor_completion(
     ctx.completion_items_timestamp = version;
     let items = &ctx.completion_items;
     if ctx.completion_last_client != meta.client {
-        ctx.completion_last_client = meta.client.clone();
+        ctx.completion_last_client.clone_from(&meta.client);
     }
 
     if items.is_empty() {
