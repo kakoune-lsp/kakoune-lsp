@@ -285,7 +285,7 @@ args = ["--stdio"]
 
 [language_server.pylsp]
 filetypes = ["python"]
-roots = ["requirements.txt", "setup.py", ".git", ".hg"]
+roots = ["requirements.txt", "setup.py", "pyproject.toml", ".git", ".hg"]
 command = "pylsp"
 settings_section = "_"
 [language_server.pylsp.settings._]
@@ -295,13 +295,13 @@ pylsp.plugins.jedi_completion.include_params = true
 
 # [language_server.pyright]
 # filetypes = ["python"]
-# roots = ["requirements.txt", "setup.py", "pyrightconfig.json", ".git", ".hg"]
+# roots = ["requirements.txt", "setup.py", "pyproject.toml", "pyrightconfig.json", ".git", ".hg"]
 # command = "pyright-langserver"
 # args = ["--stdio"]
 
 # [language_server.ruff]
 # filetypes = ["python"]
-# roots = ["requirements.txt", "setup.py", ".git", ".hg"]
+# roots = ["requirements.txt", "setup.py", "pyproject.toml", ".git", ".hg"]
 # command = "ruff-lsp"
 # settings_section = "_"
 # [language_server.ruff.settings._.globalSettings]
