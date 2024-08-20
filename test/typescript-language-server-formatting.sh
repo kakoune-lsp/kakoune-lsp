@@ -8,7 +8,6 @@ cat > .config/kak-lsp/kak-lsp.toml << EOF
 [language.typescript]
 filetypes = ["typescript"]
 roots = ["main.ts"]
-command = "typescript-language-server"
 args = ["--stdio"]
 EOF
 

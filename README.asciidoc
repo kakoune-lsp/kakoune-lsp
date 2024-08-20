@@ -338,16 +338,14 @@ set up TSServer and TailwindCSS to use in React projects:
 javascript = "javascriptreact"
 typescript = "typescriptreact"
 
-[language_server.tsserver]
+[language_server.typescript-language-server]
 filetypes = ["javascript", "typescript"]
 roots = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
-command = "typescript-language-server"
 args = ["--stdio"]
 
-[language_server.tailwindcss]
+[language_server.tailwindcss-language-server]
 filetypes = ["javascript", "typescript"]
 roots = ["tailwind.config.ts", "tailwind.config.js"]
-command = "tailwindcss-language-server"
 args = ["--stdio"]
 [language_server.tailwindcss.settings.tailwindcss]
 editor = {}
