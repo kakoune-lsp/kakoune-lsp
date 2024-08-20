@@ -222,8 +222,16 @@ fn main() {
 
     config.server.session = session;
 
-    if let Some(timeout) = matches.get_one::<String>("timeout") {
-        config.server.timeout = timeout.parse().unwrap();
+    if let Some(timeout) = matches.get_one::<String>("timeout").map(|s| {
+        s.parse().unwrap_or_else(|err| {
+            report_config_error(
+                &config.server.session,
+                &raw_request,
+                format!("failed to parse --timeout parameter: {err}"),
+            )
+        })
+    }) {
+        config.server.timeout = timeout;
     }
 
     if matches.get_flag("request") {
