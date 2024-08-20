@@ -28,13 +28,8 @@ brew install kakoune-lsp/kakoune-lsp/kakoune-lsp
 ----
 curl -O -L https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v17.1.2/kakoune-lsp-v17.1.2-x86_64-apple-darwin.tar.gz
 tar xzvf kakoune-lsp-v17.1.2-x86_64-apple-darwin.tar.gz
-
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
-
-# optional: if you want to use specific language servers
-mkdir -p ~/.config/kak-lsp
-mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 ===== Linux
@@ -51,13 +46,8 @@ mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v17.1.2/kakoune-lsp-v17.1.2-x86_64-unknown-linux-musl.tar.gz
 tar xzvf kak-lsp-v17.1.2-x86_64-unknown-linux-musl.tar.gz
-
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
-
-# optional: if you want to use specific language servers
-mkdir -p ~/.config/kak-lsp
-mv kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 ==== From source
@@ -71,10 +61,6 @@ cd kakoune-lsp
 
 # this installs the kak-lsp binary to ~/.cargo/bin, which must be in your `$PATH`
 cargo install --locked --force --path .
-
-# optional: if you want to use specific language servers
-mkdir -p ~/.config/kak-lsp
-cp kak-lsp.toml ~/.config/kak-lsp/
 ----
 
 ==== With plug.kak
@@ -86,9 +72,6 @@ via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kak
 ----
 plug "kakoune-lsp/kakoune-lsp" do %{
     cargo install --locked --force --path .
-    # optional: if you want to use specific language servers
-    mkdir -p ~/.config/kak-lsp
-    cp -n kak-lsp.toml ~/.config/kak-lsp/
 }
 ----
 
@@ -222,9 +205,10 @@ hook global WinSetOption filetype=rust %{
 * Commands starting with either of `ccls-`, `clangd-`, `ejdtls-`, `texlab-` or `rust-analyzer-`, that provide server specific features.
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
-even if the Kakoune session is still up and running. Change `server.timeout` in `kak-lsp.toml`
-to tweak this duration, or set it to 0 to disable this behavior. In any scenario,  a new request
-would spin up a fresh server if it is down.
+even if the Kakoune session is still up and running. Change the `lsp_timeout` option and restart
+kak-lsp to tweak this duration, or set it to 0 to disable this behavior. In any scenario,
+a new request would spin up a fresh server if it is down. Hence, one way to restart kak-lsp is
+to kill the process and then use any LSP feature. Another way is to run `lsp-disable; nop %sh{sleep .3}; lsp-enable`.
 
 * `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode] with the following default mappings:
 
@@ -266,92 +250,80 @@ To know which subset of LSP commands is backed by the current buffer's filetype'
 
 == Configuration
 
-kakoune-lsp itself has configuration, but it also adds configuration options to Kakoune that affect the Kakoune integration.
+kakoune-lsp uses Kakoune options to customize its behavior.
 
-=== Configuring kakoune-lsp
+The `lsp_servers` option is a https://github.com/toml-lang/toml[TOML] table that specifies the list
+of servers to use for the current buffer.  By default, this option is populated by hooks such as:
 
-kakoune-lsp is configured via a configuration file in https://github.com/toml-lang/toml[TOML] format. By
-default it tries to read `$XDG_CONFIG_HOME/kak-lsp/kak-lsp.toml` (which defaults to
-`~/.config/kak-lsp/kak-lsp.toml`) but you can override it with command-line option `--config`.
-Look into the default link:kak-lsp.toml[`kak-lsp.toml`], it should be quite self-explanatory.
-If you don't need to change configuration then feel free to skip copying it anywhere as the
-default configuration is embedded into the kak-lsp binary.
+[source,kak]
+----
+hook -group lsp-filetype-clangd global BufSetOption filetype=(?:c|cpp) %{
+    set-option buffer lsp_servers %exp{
+        [clangd]
+        root = "%sh{eval "$kak_opt_lsp_find_root" compile_commands.json .clangd .git .hg $(: kak_buffile)}"
+    }
+}
+----
 
-*Important*: The configuration file does *not* extend the default configuration, but rather
-overrides it. This means that if you want to customize any of the configuration, you must copy the
-*entire* default configuration and then edit it.
+See `kak-lsp --kakoune` for the default set of servers and some commented-out alternatives.
 
-In the language section of `kak-lsp.toml`, the `roots` parameter is a list of file globs.
-Whenever your editor session wants to send an LSP request, the first glob that matches a file
-in any of the current buffer's parent directories will cause kakoune-lsp to set the project root
-to that parent directory.
-
-You can define an environment variable like `KAK_LSP_PROJECT_ROOT_RUST=/my/project` to always
-use `/my/project` as root for Rust files inside `/my/project`.  Substitute `RUST` with another
-capitalized language ID to do the same for other file types.
-
-The environment variable `KAK_LSP_FORCE_PROJECT_ROOT=/my/project` will make kakoune-lsp always
-use `/my/project` as project root, even for files outside this directory. This avoids starting
-separate language servers for files outside `/my/project`, and ensures that your language server
-is aware of your project's build configuration even when navigating library code.
-
-If you are setting any server options via cli, do not forget to append them to
-`%sh{kak-lsp --kakoune ...}` in your `kakrc`. It's not needed if you change options in
-`~/.config/kak-lsp/kak-lsp.toml`.
+To use different servers, add the corresponding hooks to your `kakrc`.
+To remove the defaults, you can use `remove-hooks global lsp-filetype-.*` in your `kakrc`.
 
 Please let us know if you have any ideas about how to make the default config more sensible.
 
-==== Server-specific configuration
+=== Server-specific configuration
 
 Many servers accept configuration options that are not part of the LSP spec.  The TOML table
-`[language_server.<server_name>.settings]` holds those configuration options.  It has the same structure
-as the corresponding fragments from VSCode's `settings.json`. For example:
+`[<server_name>.settings]` holds those configuration options.  It has the same structure as
+the corresponding fragments from VSCode's `settings.json`. For example:
 
 [source,toml]
 ----
-[language_server.gopls]
-...
-settings_section = "gopls"
-[language_server.gopls.settings.gopls]
-"formatting.gofumpt" = true
+hook global BufSetOption filetype=go %{
+    set-option buffer lsp_servers %exp{
+        [gopls]
+        root = "%sh{eval "$kak_opt_lsp_find_root" Gopkg.toml go.mod .git .hg $(: kak_buffile)}"
+        settings_section = "gopls"
+        [gopls.settings.gopls]
+        "formatting.gofumpt" = true
+    }
+}
 ----
 
-During server initialization, kakoune-lsp sends the sub-table of `settings` specified by
-`settings_section`; in this case `{"formatting.gofumpt":true}`.
-Whenever you change the Kakoune option `lsp_config`, the same section is sent via
-`workspace/didChangeConfiguration`.  Additionally, kakoune-lsp will send arbitrary sections that
-are requested by the server in `workspace/configuration`.
+kakoune-lsp sends the section specified by `settings_section`, in this
+case `{"formatting.gofumpt":true}` as part of `initializationOptions` and
+`workspace/didChangeConfiguration`.  Additionally, kakoune-lsp will send any sections requested
+by the server in `workspace/configuration`.
 
-==== Language ID ("languageId")
+=== Language ID ("languageId")
 
-By default, the Kakoune filetype is sent to the server as LSP language ID.
-To send a different identifier for a given filetype, use the `[language_ids]` config option, see the example below.
+The current buffer's `lsp_language_id` option value is sent to the language server as `languageId`.
+By default it's usually the same as Kakoune's filetype option but depending on the language server it may need to be different.
+See `kak-lsp --kakoune` for the default set of exceptions.
 
-==== Multiple language servers
+=== Multiple language servers
 
 It is possible to map more than one language server to a filetype. For example, if you want to
 set up TSServer and TailwindCSS to use in React projects:
 
-[source,toml]
+[source,kak]
 ----
-[language_ids]
-javascript = "javascriptreact"
-typescript = "typescriptreact"
-
-[language_server.typescript-language-server]
-filetypes = ["javascript", "typescript"]
-roots = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
-args = ["--stdio"]
-
-[language_server.tailwindcss-language-server]
-filetypes = ["javascript", "typescript"]
-roots = ["tailwind.config.ts", "tailwind.config.js"]
-args = ["--stdio"]
-[language_server.tailwindcss.settings.tailwindcss]
-editor = {}
+hook global BufSetOption filetype=(?:javascript|typescript) %{
+    set-option buffer lsp_servers %exp{
+        [typescript-language-server]
+        root = "%sh{eval "$kak_opt_lsp_find_root" tailwind.config.ts tailwind.config.js $(: kak_buffile)}"
+        args = ["--stdio"]
+        [tailwindcss-language-server]
+        root = "%sh{eval "$kak_opt_lsp_find_root" package.json tsconfig.json jsconfig.json .git .hg $(: kak_buffile)}"
+        args = ["--stdio"]
+        [tailwindcss-language-server.settings.tailwindcss]
+        editor = {}
+    }
+}
 ----
 
-=== Configuring Kakoune
+== Other configuration options
 
 kakoune-lsp declares the following Kakoune options:
 
@@ -364,22 +336,12 @@ kakoune-lsp declares the following Kakoune options:
 * `lsp_insert_spaces` (bool): When using `lsp-formatting`, if this option is `true`, kakoune-lsp will ask the language server to indent with spaces rather than tabs.
 * `lsp_auto_highlight_references` (bool): If this option is `true` then `lsp-highlight-references` is executed every time the user pauses in normal mode.
 * `lsp_auto_show_code_actions` (bool): If this option is `true` then `lsp-code-actions` is executed every time the user pauses in normal mode.
-* `lsp_config` (str): This is a TOML string of the same format as `kak-lsp.toml`, except it currently only supports one kind of configuration value:
-** `[language_server.<server_name>.settings]`: this works just like the static configuration of the same name in `kak-lsp.toml`, see the section about server-specific configuration. This will override the static configuration of the given language server.
-
-For example, you can toggle an option dynamically with a command like this:
-
-[source,kak]
-----
-set-option global lsp_config %{
-    [language_server.gopls.settings.gopls]
-    "formatting.gofumpt" = true
-}
-----
+* `lsp_snippet_support` (bool): toggles snippet support (completions with placeholders), see <<Snippets>>
+* `lsp_file_watch_support` (bool): toggles file watch support, see <<Limitations>>
 
 == Inlay hints
 
-Inlay hints are a feature proposed for LSP 3.17 to show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it, add the following to your `kakrc`:
+Inlay hints are used to show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it, add the following to your `kakrc`:
 
 [source,kak]
 ----
@@ -404,14 +366,15 @@ hook global WinSetOption filetype=<language> %{
 }
 ----
 
-The faces used for semantic tokens and modifiers can be modified in `kak-lsp.toml`, using the `semantic_tokens.faces` array, for example:
+The faces used for semantic tokens and modifiers are defined via the `lsp_semantic_tokens` option, for example:
 
-[source,toml]
+[source,kak]
 ----
-[semantic_tokens]
-faces = [
-    {face="const_variable_declaration", token="variable", modifiers=["constant", "declaration"]},
-]
+hook global BufSetOption filetype=<language> %{
+    [
+        {face="const_variable_declaration", token="variable", modifiers=["constant", "declaration"]},
+    ]
+}
 ----
 
 where `face` is the face that will be applied in Kakoune (you'll want to define these in your theme/config), `token` is the token's name as reported by the language server (see `lsp-capabilities`) and `modifiers` is an array of modifier names (also reported by the language server). `modifiers` may be omitted, but `token` and `face` are required.
@@ -423,14 +386,15 @@ kakoune-lsp will find the most specific matching configuration to apply, where s
 
 Assuming the following configuration,
 
-[source,toml]
+[source,kak]
 ----
-[semantic_tokens]
-faces = [
-    {face="const_variable_declaration", token="variable", modifiers=["constant","declaration"]},
-    {face="const_variable", token="variable", modifiers=["constant"]},
-    {face="variable", token="variable"},
-]
+set-option global lsp_semantic_tokens %{
+    [
+        {face="const_variable_declaration", token="variable", modifiers=["constant","declaration"]},
+        {face="const_variable", token="variable", modifiers=["constant"]},
+        {face="variable", token="variable"},
+    ]
+}
 ----
 
 kakoune-lsp will perform these mappings:
@@ -580,12 +544,12 @@ hook global InsertCompletionHide .* %{
 }
 ----
 
-Snippet support can be disabled by setting `snippet_support = false` at the top level of the config.
+Snippet support can be disabled via `set-option global lsp_snippet_support false` and restarting kak-lsp.
 
 == Limitations
 
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles[`workspace/didChangeWatchedFiles`]
-is disabled by default; use `watch_file_support = true` to enable it.
+is disabled by default; use `set-option global lsp_file_watch_support true` and restart kak-lsp to enable it.
 
 === Encoding
 
@@ -616,7 +580,7 @@ please don't hesitate to raise an issue.
 
 === Default configuration
 
-Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific settings in your `~/.config/kak-lsp/kak-lsp.toml` and/or `~/.config/kak/`. Use this command to start Kakoune with kakoune-lsp enabled, both with pristine settings.
+Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific `lsp*` settings in your `~/.config/kak/*`. Use this command to start Kakoune with kakoune-lsp enabled, both with pristine settings.
 
 [source,sh]
 ----

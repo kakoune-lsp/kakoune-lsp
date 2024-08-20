@@ -108,7 +108,9 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
             // editor is blocked waiting for response via fifo.
             None => ctx.exec(meta, "nop"),
         }
-    } else if let Err(e) = apply_text_edits_to_file(server_name, &uri, edits, ctx) {
+    } else if let Err(e) =
+        apply_text_edits_to_file(server_name, &uri, edits, &meta.language_id, ctx)
+    {
         error!("Failed to apply edits to file {} ({})", &uri, e);
     }
 }
@@ -117,6 +119,7 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     server_name: &ServerName,
     uri: &Url,
     text_edits: Vec<T>,
+    language_id: &LanguageId,
     ctx: &mut Context,
 ) -> std::io::Result<()> {
     let path = uri.to_file_path().unwrap();
@@ -221,7 +224,7 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
             let params = DidOpenTextDocumentParams {
                 text_document: TextDocumentItem {
                     uri: uri.clone(),
-                    language_id: ctx.language_id.clone(),
+                    language_id: language_id.clone(),
                     version: 1,
                     text: String::from_utf8_lossy(&updated_text).to_string(),
                 },

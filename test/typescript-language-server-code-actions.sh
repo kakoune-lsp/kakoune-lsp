@@ -4,15 +4,17 @@
 
 . test/lib.sh
 
-cat > .config/kak-lsp/kak-lsp.toml << EOF
-[language_server.typescript-language-server]
-filetypes = ["typescript"]
-roots = ["*.ts"]
-args = ["--stdio"]
-EOF
-
-cat >> .config/kak/kakrc << EOF
+cat >> .config/kak/kakrc << 'EOF'
 set-option global lsp_auto_show_code_actions true
+
+hook global BufSetOption filetype=typescript %{
+	set-option buffer lsp_servers "
+		[typescript-language-server]
+		root = ""%sh{eval ""$kak_opt_lsp_find_root"" '*.ts' $(: kak_buffile)}""
+		command = ""typescript-language-server""
+		args = [""--stdio""]
+	"
+}
 EOF
 
 cat > main.ts << EOF

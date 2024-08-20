@@ -35,7 +35,6 @@ use lsp_types::*;
 pub fn start(
     to_editor: Sender<EditorResponse>,
     from_editor: Receiver<EditorRequest>,
-    language_id: &LanguageId,
     routes: &[Route],
     initial_request: EditorRequest,
     config: Config,
@@ -45,7 +44,7 @@ pub fn start(
     for route in routes {
         {
             // should be fine to unwrap because request was already routed which means language is configured
-            let server_config = &config.language_server[&route.server_name];
+            let server_config = &server_configs(&config, &initial_request.meta)[&route.server_name];
             let server_transport = match language_server_transport::start(
                 &route.server_name,
                 server_config.command.as_ref().unwrap_or(&route.server_name),
@@ -91,7 +90,6 @@ pub fn start(
         initial_request,
         editor_tx: to_editor,
         config,
-        language_id: language_id.clone(),
         language_servers: routes
             .iter()
             .map(|route| {
@@ -105,6 +103,7 @@ pub fn start(
                         offset_encoding: offset_encoding.unwrap_or_default(),
                         preferred_offset_encoding: *offset_encoding,
                         capabilities: None,
+                        settings: None,
                         tx,
                     },
                 )
@@ -761,7 +760,7 @@ fn dispatch_server_request(
             progress::work_done_progress_create(request.params, ctx)
         }
         request::WorkspaceConfiguration::METHOD => {
-            workspace::configuration(request.params, server_name, ctx)
+            workspace::configuration(meta, request.params, server_name, ctx)
         }
         request::ShowMessageRequest::METHOD => {
             return show_message::show_message_request(meta, server_name, request, ctx);

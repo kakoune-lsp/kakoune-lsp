@@ -562,7 +562,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
                 ctx,
                 &filename,
                 symbol_position,
-                unadorned_name(&ctx.language_id, symbol.name()),
+                unadorned_name(&meta.language_id, symbol.name()),
             )
             .unwrap_or(symbol_position);
         }

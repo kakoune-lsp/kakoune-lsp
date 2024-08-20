@@ -84,6 +84,7 @@ fn main() {
         )
         .arg(
             Arg::new("config")
+                .hide(true)
                 .short('c')
                 .long("config")
                 .value_name("FILE")
@@ -105,10 +106,11 @@ fn main() {
         )
         .arg(
             Arg::new("timeout")
+                .hide(true)
                 .short('t')
                 .long("timeout")
                 .value_name("TIMEOUT")
-                .help("Session timeout in seconds (default 1800)"),
+                .help("Session timeout in seconds (default is 1800 seconds)"),
         )
         .arg(
             Arg::new("initial-request")
@@ -134,8 +136,6 @@ fn main() {
     if matches.get_flag("kakoune") {
         process::exit(kakoune());
     }
-
-    let mut config = include_str!("../kak-lsp.toml").to_string();
 
     let try_config_dir = |config_dir: Option<PathBuf>| {
         let config_dir = match config_dir {
@@ -164,10 +164,6 @@ fn main() {
         .or_else(|| try_config_dir(dirs::preference_dir())) // Historical config dir on macOS.
         ;
 
-    if let Some(config_path) = config_path.as_ref() {
-        config = fs::read_to_string(config_path).expect("Failed to read config");
-    }
-
     let session = env_var("kak_session");
     let lsp_session = matches.get_one::<String>("session").map(String::from);
     if lsp_session.is_none() && session.is_none() {
@@ -192,53 +188,29 @@ fn main() {
             .expect("Failed to read stdin");
     }
 
+    let mut verbosity;
     #[allow(deprecated)]
-    #[allow(clippy::blocks_in_conditions)]
-    let mut config: Config = match toml::from_str(&config)
-        .map_err(|err| err.to_string())
-        .and_then(|mut cfg: Config| {
-            // Translate legacy config.
-            if !cfg.language.is_empty()
-                && (!cfg.language_server.is_empty() || !cfg.language_ids.is_empty())
-            {
-                return Err(
-                    "incompatible options: language_server/language_id and legacy language"
-                        .to_string(),
-                );
-            }
-            if cfg.language_server.is_empty() {
-                for (language_id, language) in cfg.language.drain() {
-                    for filetype in &language.filetypes {
-                        if filetype != &language_id {
-                            cfg.language_ids
-                                .insert(filetype.clone(), language_id.clone());
-                        }
-                    }
-                    cfg.language_server.insert(
-                        format!(
-                            "{}:{}",
-                            language_id,
-                            language.command.as_ref().unwrap_or(&"".to_string())
-                        ),
-                        language,
-                    );
-                }
-            }
-            Ok(cfg)
-        }) {
-        Ok(cfg) => cfg,
-        Err(err) => {
-            report_config_error(
-                &session,
-                &raw_request,
-                format!(
-                    "failed to parse config file {}: {}",
-                    config_path.unwrap().display(),
-                    err
-                ),
-            );
+    let mut config = if let Some(config_path) = config_path {
+        let config = parse_legacy_config(&config_path, &raw_request, &session);
+        verbosity = config.verbosity;
+        config
+    } else {
+        let mut config = Config::default();
+        verbosity = 2;
+        config.server.timeout = 1800;
+        if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support") {
+            config.snippet_support = snippet_support != "false";
         }
+        if let Some(file_watch_support) = env_var("kak_opt_lsp_file_watch_support") {
+            config.file_watch_support = file_watch_support != "false";
+        }
+        config
     };
+
+    let vs = matches.get_count("v");
+    if vs != 0 {
+        verbosity = vs;
+    }
 
     if let Some(timeout) = matches.get_one::<String>("timeout").map(|s| {
         s.parse().unwrap_or_else(|err| {
@@ -315,7 +287,7 @@ fn main() {
         }
         // Setting up the logger after potential daemonization,
         // otherwise it refuses to work properly.
-        let (_guard, log_path) = setup_logger(&config, &matches);
+        let (_guard, log_path) = setup_logger(&matches, verbosity);
         let log_path = Box::leak(log_path);
         let code = session::start(session, &lsp_session, &config, log_path, initial_request);
         goodbye(&lsp_session, code);
@@ -336,7 +308,10 @@ fn env_var(name: &str) -> Option<String> {
 }
 
 fn kakoune() -> i32 {
-    let script = include_str!("../rc/lsp.kak");
+    let script = concat!(
+        include_str!("../rc/lsp.kak"),
+        include_str!("../rc/servers.kak")
+    );
     let args = env::args()
         .skip(1)
         .filter(|arg| arg != "--kakoune")
@@ -404,6 +379,49 @@ fn report_config_error(session: &SessionId, raw_request: &[u8], error_message: S
     process::exit(1);
 }
 
+fn parse_legacy_config(config_path: &PathBuf, raw_request: &[u8], session: &SessionId) -> Config {
+    let raw_config = fs::read_to_string(config_path).expect("Failed to read config");
+    #[allow(deprecated)]
+    #[allow(clippy::blocks_in_conditions)]
+    match toml::from_str(&raw_config)
+        .map_err(|err| err.to_string())
+        .and_then(|mut cfg: Config| {
+            // Translate legacy config.
+            if !cfg.language.is_empty()
+                && (!cfg.language_server.is_empty() || !cfg.language_ids.is_empty())
+            {
+                return Err(
+                    "incompatible options: language_server/language_id and legacy language"
+                        .to_string(),
+                );
+            }
+            if cfg.language_server.is_empty() {
+                for (language_id, language) in cfg.language.drain() {
+                    cfg.language_server.insert(
+                        format!(
+                            "{}:{}",
+                            language_id,
+                            language.command.as_ref().unwrap_or(&"".to_string())
+                        ),
+                        language,
+                    );
+                }
+            }
+            Ok(cfg)
+        }) {
+        Ok(cfg) => cfg,
+        Err(err) => report_config_error(
+            session,
+            raw_request,
+            format!(
+                "failed to parse config file {}: {}",
+                config_path.display(),
+                err
+            ),
+        ),
+    }
+}
+
 fn spin_up_server(raw_request: &[u8]) {
     let args = env::args()
         .filter(|arg| arg != "--request")
@@ -425,15 +443,9 @@ fn spin_up_server(raw_request: &[u8]) {
 }
 
 fn setup_logger(
-    config: &Config,
     matches: &ArgMatches,
+    verbosity: u8,
 ) -> (slog_scope::GlobalLoggerGuard, Box<Option<PathBuf>>) {
-    let mut verbosity = matches.get_count("v");
-
-    if verbosity == 0 {
-        verbosity = config.verbosity
-    }
-
     let level = match verbosity {
         0 => Severity::Error,
         1 => Severity::Warning,

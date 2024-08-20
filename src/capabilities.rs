@@ -300,20 +300,14 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                         range: Some(false),
                                         full: Some(SemanticTokensFullOptions::Bool(true)),
                                     },
-                                    token_types: ctx
-                                        .config
-                                        .semantic_tokens
-                                        .faces
+                                    token_types: semantic_tokens_config(&ctx.config, &meta)
                                         .iter()
                                         .map(|token_config| token_config.token.clone().into())
                                         // Collect into set first to remove duplicates
                                         .collect::<HashSet<SemanticTokenType>>()
                                         .into_iter()
                                         .collect(),
-                                    token_modifiers: ctx
-                                        .config
-                                        .semantic_tokens
-                                        .faces
+                                    token_modifiers: semantic_tokens_config(&ctx.config, &meta)
                                         .iter()
                                         // Get all modifiers used in token definitions
                                         .flat_map(|token_config| token_config.modifiers.clone())
@@ -385,13 +379,11 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                 .map(|s| s.to_string())
                                 .collect(),
                             ),
-                            experimental: ctx
-                                .config
-                                .language_server
+                            experimental: server_configs(&ctx.config, &meta)
                                 .get(server_name)
                                 .and_then(|cfg| cfg.experimental.clone())
                                 .or_else(|| {
-                                    (meta.filetype == "rust").then_some(serde_json::json!({
+                                    (meta.language_id == "rust").then_some(serde_json::json!({
                                         "hoverActions": true,
                                         "commands": {
                                             "commands": [

@@ -22,7 +22,6 @@ src=$PWD
 stage=$(mktemp -d)
 
 cp target/$target/release/kak-lsp $stage
-cp kak-lsp.toml $stage
 cp README.asciidoc $stage
 cp COPYING $stage
 cp MIT $stage

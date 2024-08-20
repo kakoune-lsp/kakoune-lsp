@@ -6,16 +6,17 @@ user_home=$HOME
 
 . test/lib.sh
 
-cat > .config/kak-lsp/kak-lsp.toml << EOF
-[language_server.rust-analyzer]
-filetypes = ["rust"]
-roots = ["Cargo.toml"]
-command = "sh"
-args = ["-c", "RUSTUP_HOME=$user_home/.rustup rust-analyzer"]
-EOF
-
 cat >> .config/kak/kakrc << EOF
 set-option global lsp_auto_show_code_actions true
+
+hook global BufSetOption filetype=rust %{
+	set-option buffer lsp_servers "
+		[rust-analyzer]
+		root = ""%sh{eval ""\$kak_opt_lsp_find_root"" Cargo.toml \$(: ""\$kak_buffile"")}""
+		command = ""sh""
+		args = [""-c"", ""RUSTUP_HOME=$user_home/.rustup rust-analyzer""]
+	"
+}
 EOF
 
 cat > main.rs << EOF

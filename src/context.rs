@@ -47,6 +47,7 @@ pub struct ServerSettings {
     pub offset_encoding: OffsetEncoding,
     pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub capabilities: Option<ServerCapabilities>,
+    pub settings: Option<Value>,
     pub tx: Sender<ServerMessage>,
 }
 
@@ -72,7 +73,6 @@ pub struct Context {
     pub documents: HashMap<String, Document>,
     pub dynamic_config: DynamicConfig,
     pub editor_tx: Sender<EditorResponse>,
-    pub language_id: LanguageId,
     pub language_servers: BTreeMap<ServerName, ServerSettings>,
     pub outstanding_requests:
         HashMap<(ServerName, &'static str, String, Option<String>), OutstandingRequests>,
@@ -88,7 +88,6 @@ pub struct Context {
 }
 
 pub struct ContextBuilder {
-    pub language_id: LanguageId,
     pub language_servers: BTreeMap<ServerName, ServerSettings>,
     pub initial_request: EditorRequest,
     pub editor_tx: Sender<EditorResponse>,
@@ -111,7 +110,6 @@ impl Context {
             documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
             editor_tx: params.editor_tx,
-            language_id: params.language_id,
             language_servers: params.language_servers,
             outstanding_requests: HashMap::default(),
             pending_requests: vec![params.initial_request],
@@ -370,15 +368,19 @@ impl Context {
 }
 
 pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMeta {
+    #[allow(deprecated)]
     EditorMeta {
         session,
         client,
         buffile: "".to_string(),
-        filetype: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
+        language_id: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
+        filetype: "".to_string(),
         version: 0,
         fifo: None,
         command_fifo: None,
         hook: false,
+        language_server: HashMap::new(),
+        semantic_tokens: SemanticTokenConfig::default(),
         server: None,
         word_regex: None,
     }

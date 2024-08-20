@@ -1,6 +1,7 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_SEMANTIC_TOKENS};
 use crate::context::{Context, RequestParams};
 use crate::position::lsp_range_to_kakoune;
+use crate::semantic_tokens_config;
 use crate::types::{EditorMeta, ServerName};
 use crate::util::editor_quote;
 use indoc::formatdoc;
@@ -125,20 +126,18 @@ pub fn tokens_response(
                     .map(|bit| &legend.token_modifiers[bit as usize])
                     .collect();
 
-                let candidates = ctx
-                    .config
-                    .semantic_tokens
-                    .faces
-                    .iter()
-                    .filter(|token_config| {
-                        token_name == token_config.token &&
+                let candidates =
+                    semantic_tokens_config(&ctx.config, &meta)
+                        .iter()
+                        .filter(|token_config| {
+                            token_name == token_config.token &&
                         // All the config's modifiers must exist on the token for this
                         // config to match.
                         token_config
                         .modifiers
                         .iter()
                         .all(|modifier| token_modifiers.contains(&modifier))
-                    });
+                        });
 
                 // But not all the token's modifiers must exist on the config.
                 // Therefore, we use the config that matches the most modifiers.
@@ -157,7 +156,7 @@ pub fn tokens_response(
 
     let version = meta.version;
     let command = formatdoc!(
-        "set-option buffer lsp_semantic_tokens {version} {ranges}
+        "set-option buffer lsp_semantic_tokens_ranges {version} {ranges}
          set-option buffer lsp_semantic_tokens_timestamp {version}"
     );
     let command = format!(

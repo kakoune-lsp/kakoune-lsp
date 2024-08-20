@@ -33,7 +33,7 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
-            language_id: ctx.language_id.clone(),
+            language_id: meta.language_id.clone(),
             version: meta.version,
             text: params.draft,
         },
