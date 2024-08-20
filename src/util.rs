@@ -101,6 +101,7 @@ pub fn filetype_to_language_id_map(
 ) -> HashMap<String, (LanguageId, Vec<ServerName>)> {
     let mut filetypes: HashMap<String, (LanguageId, Vec<ServerName>)> = HashMap::default();
 
+    #[allow(deprecated)]
     for (server_name, lang_config) in &config.language_server {
         for filetype in &lang_config.filetypes {
             let entry = filetypes.entry(filetype.clone()).or_insert((

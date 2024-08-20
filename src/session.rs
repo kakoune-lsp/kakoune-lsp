@@ -43,8 +43,10 @@ pub fn start(
     }
     let editor = editor.unwrap();
 
-    let languages = config.language_server.clone();
-    let filetypes = filetype_to_language_id_map(config);
+    #[allow(deprecated)]
+    let legacy_languages = config.language_server.clone();
+    #[allow(deprecated)]
+    let legacy_filetypes = filetype_to_language_id_map(config);
 
     let mut controllers: Controllers = HashMap::default();
 
@@ -95,34 +97,84 @@ pub fn start(
                     continue 'event_loop;
                 }
 
-                let cfg = filetypes.get(&request.meta.filetype);
-                if cfg.is_none() {
-                    let msg = format!(
-                        "Language server is not configured for filetype `{}`",
-                        &request.meta.filetype
-                    );
-                    debug!("{}", msg);
-                    return_request_error(editor.to_editor.sender(), &request, &msg);
+                #[allow(deprecated)]
+                if !is_using_legacy_toml(config) && request.meta.language_server.values().any(
+                        |server|
+                        !server.roots.is_empty())
+                {
+                     let msg = "Error: new server configuration does not support roots parameter";
+                     debug!("{}", msg);
+                     return_request_error(editor.to_editor.sender(), &request, msg);
 
-                    continue 'event_loop;
+                     continue 'event_loop;
                 }
 
-                let (language_id, servers) = cfg.unwrap();
-                let routes: Vec<_> = servers
-                    .iter()
-                    .map(|server_name| {
-                        let language  = &languages[server_name];
-                        let root = find_project_root(language_id, &language.roots, &request.meta.buffile);
-                        let route = Route {
-                            session: request.meta.session.clone(),
-                            server_name: server_name.clone(),
-                            root,
-                        };
+                #[allow(deprecated)]
+                let legacy_cfg = legacy_filetypes.get(&request.meta.filetype);
+                let (language_id, servers) = if is_using_legacy_toml(config) {
+                    #[allow(deprecated)]
+                    let Some((language_id, servers)) = legacy_cfg else {
+                         let msg = format!(
+                            "Language server is not configured for filetype `{}`",
+                            &request.meta.filetype
+                         );
+                         debug!("{}", msg);
+                         return_request_error(editor.to_editor.sender(), &request, &msg);
 
-                        debug!("Routing editor request to {:?}", route);
-                        route
-                    })
-                    .collect();
+                         continue 'event_loop;
+                    };
+                    let servers = Box::new((servers.iter()).map(
+                        |server_name| (server_name, &legacy_languages[server_name])))
+                        as Box<dyn Iterator<Item=(&LanguageId, &LanguageServerConfig)>>;
+                    (language_id, servers)
+                } else {
+                    let language_id = &request.meta.language_id;
+                    let servers = server_configs(config, &request.meta);
+                    if servers.is_empty() {
+                         let msg = format!(
+                             "language server is not configured for filetype '{}'{}, please set the lsp_servers option",
+                             &request.meta.filetype,
+                             if request.meta.filetype != *language_id {
+                                 format!(" (language ID '{}')", language_id)
+                             } else {
+                                 "".to_string()
+                             }
+                         );
+                         debug!("{}", msg);
+                         return_request_error(editor.to_editor.sender(), &request, &msg);
+
+                         continue 'event_loop;
+                    };
+                    let servers = Box::new(servers.iter())
+                        as Box<dyn Iterator<Item=(&LanguageId, &LanguageServerConfig)>>;
+                    (language_id, servers)
+                };
+
+                let mut routes = vec![];
+                for (server_name, server_config) in servers {
+                    let root =
+                    if is_using_legacy_toml(config) {
+                        #[allow(deprecated)]
+                        find_project_root(language_id, &server_config.roots, &request.meta.buffile)
+                    } else {
+                        if request.meta.root.is_empty() {
+                            let msg =
+                                "missing project root path, please set the lsp_project_root option".to_string();
+                            error!("{}", msg);
+                            return_request_error(editor.to_editor.sender(), &request, &msg);
+                            continue 'event_loop;
+                        }
+                        request.meta.root.clone()
+                    };
+                    let route = Route {
+                        session: request.meta.session.clone(),
+                        server_name: server_name.clone(),
+                        root,
+                    };
+
+                    debug!("Routing editor request to {:?}", route);
+                    routes.push(route);
+                }
 
                 use std::collections::hash_map::Entry;
                 match controllers.entry(routes.clone()) {
@@ -148,7 +200,6 @@ pub fn start(
                             controller_entry.insert(spawn_controller(
                                 config.clone(),
                                 log_path,
-                                language_id.clone(),
                                 routes,
                                 request,
                                 editor.to_editor.sender().clone(),
@@ -301,7 +352,6 @@ fn stop_session(controllers: &mut Controllers) {
 fn spawn_controller(
     config: Config,
     log_path: &'static Option<PathBuf>,
-    language_id: LanguageId,
     routes: Vec<Route>,
     request: EditorRequest,
     to_editor: Sender<EditorResponse>,
@@ -310,15 +360,7 @@ fn spawn_controller(
     let channel_capacity = 1024;
 
     let worker = Worker::spawn("Controller", channel_capacity, move |receiver, _| {
-        controller::start(
-            to_editor,
-            receiver,
-            &language_id,
-            &routes,
-            request,
-            config,
-            log_path,
-        );
+        controller::start(to_editor, receiver, &routes, request, config, log_path);
     });
 
     ControllerHandle { worker }

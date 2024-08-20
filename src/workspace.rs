@@ -41,12 +41,12 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
             .language_server
             .get(server_name)
             .and_then(|lang| lang.settings.as_ref());
-        let settings = configured_section(ctx, server_name, settings).unwrap_or_else(|| {
+        let settings = configured_section(&meta, ctx, server_name, settings).unwrap_or_else(|| {
             if !raw_settings.is_empty() {
                 Value::Object(explode_string_table(raw_settings))
             } else {
-                let server = ctx.config.language_server.get(server_name).unwrap();
-                configured_section(ctx, server_name, server.settings.as_ref())
+                let server = server_configs(&ctx.config, &meta).get(server_name).unwrap();
+                configured_section(&meta, ctx, server_name, server.settings.as_ref())
                     .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
             }
         });
@@ -57,6 +57,7 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
 }
 
 pub fn configuration(
+    meta: EditorMeta,
     params: Params,
     server_name: &ServerName,
     ctx: &mut Context,
@@ -69,10 +70,13 @@ pub fn configuration(
         .get(server_name)
         .and_then(|cfg| cfg.settings.as_ref().cloned())
         .or_else(|| {
-            ctx.config
-                .language_server
-                .get(server_name)
-                .and_then(|conf| conf.settings.as_ref().cloned())
+            if is_using_legacy_toml(&ctx.config) {
+                server_configs(&ctx.config, &meta)
+                    .get(server_name)
+                    .and_then(|conf| conf.settings.as_ref().cloned())
+            } else {
+                ctx.language_servers[server_name].settings.as_ref().cloned()
+            }
         });
 
     let items = params
@@ -91,9 +95,7 @@ pub fn configuration(
                 .map(|section| match &settings {
                     None => Value::Null,
                     Some(settings) => {
-                        if ctx
-                            .config
-                            .language_server
+                        if server_configs(&ctx.config, &meta)
                             .get(server_name)
                             .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
                             && section.is_empty()

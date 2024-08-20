@@ -30,7 +30,7 @@ pub fn request_initialization_options_from_kakoune(
             .language_server
             .get(server_name)
             .and_then(|v| v.settings.as_ref());
-        let settings = configured_section(ctx, server_name, settings);
+        let settings = configured_section(meta, ctx, server_name, settings);
         if settings.is_some() {
             sections.push(settings);
             continue;
@@ -42,21 +42,21 @@ pub fn request_initialization_options_from_kakoune(
             continue;
         }
 
-        let lang = ctx.config.language_server.get(server_name).unwrap();
-        let settings = configured_section(ctx, server_name, lang.settings.as_ref());
+        let server_config = server_configs(&ctx.config, meta).get(server_name).unwrap();
+        let settings = configured_section(meta, ctx, server_name, server_config.settings.as_ref());
         sections.push(settings);
     }
     sections
 }
 
 pub fn configured_section(
+    meta: &EditorMeta,
     ctx: &Context,
     server_name: &ServerName,
     settings: Option<&Value>,
 ) -> Option<Value> {
     settings.and_then(|settings| {
-        ctx.config
-            .language_server
+        server_configs(&ctx.config, meta)
             .get(server_name)
             .and_then(|cfg| cfg.settings_section.as_ref())
             .and_then(|section| settings.get(section).cloned())
@@ -78,9 +78,12 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
             panic!("{}", msg)
         }
     };
+    for (server_name, server) in &meta.language_server {
+        ctx.language_servers.get_mut(server_name).unwrap().settings = server.settings.clone();
+    }
 }
 
-/// User may override initialization options provided in kak-lsp.toml on per-language server basis
+/// User may override initialization options on per-language server basis
 /// with `lsp_server_initialization_options` option in Kakoune
 /// (i.e. to customize it for specific project).
 /// This function asks Kakoune to give such override if any.

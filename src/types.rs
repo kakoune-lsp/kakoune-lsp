@@ -16,8 +16,9 @@ const fn default_true() -> bool {
     true
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Default, Deserialize, Debug)]
 pub struct Config {
+    #[deprecated(note = "use EditorMeta::language_server")]
     #[serde(default)]
     pub language_server: HashMap<ServerName, LanguageServerConfig>,
     #[deprecated(note = "use language_server")]
@@ -25,15 +26,17 @@ pub struct Config {
     pub language: HashMap<LanguageId, LanguageServerConfig>,
     #[serde(default)]
     pub server: ServerConfig,
+    #[deprecated(note = "use -v argument")]
     #[serde(default)]
     pub verbosity: u8,
     #[serde(default = "default_true")]
     pub snippet_support: bool,
     #[serde(default)]
     pub file_watch_support: bool,
+    #[deprecated(note = "use EditorMeta::semantic_tokens")]
     #[serde(default)]
     pub semantic_tokens: SemanticTokenConfig,
-    #[serde(default)]
+    #[deprecated(note = "use EditorMeta::language_id")]
     pub language_ids: HashMap<String, LanguageId>,
 }
 
@@ -54,7 +57,11 @@ pub struct ServerConfig {
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct LanguageServerConfig {
+    #[deprecated]
+    #[serde(default)]
     pub filetypes: Vec<String>,
+    #[deprecated]
+    #[serde(default)]
     pub roots: Vec<String>,
     pub command: Option<String>,
     #[serde(default)]
@@ -100,10 +107,48 @@ impl<'de> Deserialize<'de> for SemanticTokenConfig {
             where
                 A: MapAccess<'de>,
             {
+                fn parse_semantic_tokens<E>(v: &str) -> Result<Vec<SemanticTokenFace>, E>
+                where
+                    E: SerdeError,
+                {
+                    let mut faces = vec![];
+                    for line in v.lines() {
+                        if line.chars().find(|c| !c.is_whitespace()) == Some('#') {
+                            continue;
+                        }
+                        let mut words = line.split_whitespace();
+                        let Some(face) = words.next() else {
+                            return Err(E::missing_field("face"));
+                        };
+                        let Some(token) = words.next() else {
+                            return Err(E::missing_field("token"));
+                        };
+                        let mut modifiers = vec![];
+                        for modifier in words {
+                            modifiers.push(SemanticTokenModifier::from(modifier.to_string()));
+                        }
+                        faces.push(SemanticTokenFace {
+                            face: face.to_string(),
+                            token: token.to_string(),
+                            modifiers,
+                        });
+                    }
+                    Ok(faces)
+                }
+
                 let mut faces = None;
                 while let Some(k) = map.next_key::<String>()? {
                     match k.as_str() {
                         "faces" => faces = Some(map.next_value()?),
+                        "faces_dsl" => {
+                            let s = map.next_value::<String>()?;
+                            faces = Some(parse_semantic_tokens(&s).map_err(|err: A::Error| {
+                                SerdeError::custom(format!(
+                                    "failed to parse %opt{{lsp_semantic_tokens}}: {}",
+                                    err
+                                ))
+                            })?);
+                        }
                         _ => return Err(A::Error::unknown_field(&k, &["faces"])),
                     }
                 }
@@ -142,14 +187,48 @@ pub struct EditorMeta {
     pub session: String,
     pub client: Option<String>,
     pub buffile: String,
+    pub language_id: LanguageId,
     pub filetype: String,
     pub version: i32,
     pub fifo: Option<String>,
     pub command_fifo: Option<String>,
     #[serde(default)]
     pub hook: bool,
+    #[serde(default)]
+    pub language_server: HashMap<ServerName, LanguageServerConfig>,
+    pub semantic_tokens: SemanticTokenConfig,
+    pub root: RootPath,
     pub server: Option<ServerName>,
     pub word_regex: Option<String>,
+}
+
+pub fn is_using_legacy_toml(config: &Config) -> bool {
+    #[allow(deprecated)]
+    !config.language_server.is_empty()
+}
+
+pub fn server_configs<'a>(
+    config: &'a Config,
+    meta: &'a EditorMeta,
+) -> &'a HashMap<ServerName, LanguageServerConfig> {
+    #[allow(deprecated)]
+    if is_using_legacy_toml(config) {
+        &config.language_server
+    } else {
+        &meta.language_server
+    }
+}
+
+pub fn semantic_tokens_config<'a>(
+    config: &'a Config,
+    meta: &'a EditorMeta,
+) -> &'a [SemanticTokenFace] {
+    #[allow(deprecated)]
+    if is_using_legacy_toml(config) {
+        &config.semantic_tokens.faces
+    } else {
+        &meta.semantic_tokens.faces
+    }
 }
 
 pub type EditorParams = toml::Value;

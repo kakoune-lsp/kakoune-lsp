@@ -1,5 +1,14 @@
 ## Unreleased
 
+`kak-lsp.toml`, `lsp_config`, `KAK_LSP_PROJECT_ROOT_*` and `KAK_LSP_FORCE_PROJECT_ROOT` have been deprecated,
+ in favor of new Kakoune options `lsp_servers`, `lsp_project_root`, `lsp_semantic_tokens`, `lsp_timeout`, `lsp_snippet_support` and `lsp_file_watch_support`.
+For backwards compatibility, the new options are ignored if a `kak-lsp.toml` exists in the user's config directory or is provided via `--config`.
+By default, `lsp_servers` is populated via hooks in the `lsp-filetype-.*` groups, feel free to remove them.
+See the README or the beginning of `kak-lsp --kakoune` for details.
+
+Breaking changes:
+- If a file is configured to use multiple language servers, they must all use the same project root.
+
 Additions:
 - The `--session` option is no longer required when using `--kakoune`, simplifying the recommended configuration.
 - `kak-lsp --kakoune` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
