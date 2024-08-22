@@ -24,7 +24,7 @@ roots = [".git", ".hg"]
 args = ["start"]
 
 [language_server.clangd]
-filetypes = ["c", "cpp"]
+filetypes = ["c", "cpp", "objc"]
 roots = ["compile_commands.json", ".clangd", ".git", ".hg"]
 
 [language_server.clojure-lsp]
