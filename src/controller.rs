@@ -165,7 +165,7 @@ pub fn start(
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
-                if !msg.meta.buffile.starts_with('/') {
+                if !msg.meta.buffile.is_empty() && !msg.meta.buffile.starts_with('/') {
                     debug!(
                         "Unsupported scratch buffer, ignoring request from buffer '{}'",
                         msg.meta.buffile
