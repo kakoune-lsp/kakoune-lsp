@@ -106,7 +106,7 @@ pub fn start(
                 {
                      let msg = "Error: new server configuration does not support roots parameter";
                      debug!("{}", msg);
-                     return_request_error(editor.to_editor.sender(), &request, msg);
+                     report_error(editor.to_editor.sender(), &request, msg);
 
                      continue 'event_loop;
                 }
@@ -121,7 +121,7 @@ pub fn start(
                             &request.meta.filetype
                          );
                          debug!("{}", msg);
-                         return_request_error(editor.to_editor.sender(), &request, &msg);
+                         report_error_no_server_configured(editor.to_editor.sender(), &request, &msg);
 
                          continue 'event_loop;
                     };
@@ -149,7 +149,7 @@ pub fn start(
                              }
                          );
                          debug!("{}", msg);
-                         return_request_error(editor.to_editor.sender(), &request, &msg);
+                         report_error_no_server_configured(editor.to_editor.sender(), &request, &msg);
 
                          continue 'event_loop;
                     };
@@ -169,7 +169,7 @@ pub fn start(
                             let msg =
                                 format!("missing project root path for {server_name}, please set the root option");
                             error!("{}", msg);
-                            return_request_error(editor.to_editor.sender(), &request, &msg);
+                            report_error(editor.to_editor.sender(), &request, &msg);
                             continue 'event_loop;
                         }
                         server_config.root.clone()
@@ -191,7 +191,7 @@ pub fn start(
                     Entry::Occupied(controller_entry) => {
                         if let Err(err) = controller_entry.get().worker.sender().send(request.clone())  {
                             error!("Failed to send message to controller: {}", err);
-                            return_request_error(
+                            report_error(
                                 editor.to_editor.sender(),
                                 &request,
                                 "Language server is no longer running"
@@ -259,11 +259,11 @@ fn handle_broken_editor_request(
     }
 }
 
-/// Sends an error back to the editor.
-///
-/// This will cancel any blocking requests and also print an error if the
-/// request was not triggered by an editor hook.
-fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
+fn report_error_no_server_configured(
+    to_editor: &Sender<EditorResponse>,
+    request: &EditorRequest,
+    msg: &str,
+) {
     let word_regex = request.meta.word_regex.as_ref();
     let command = if let Some(multi_cmds) = match request.method.as_str() {
         _ if request.meta.hook => None,
@@ -293,7 +293,22 @@ fn return_request_error(to_editor: &Sender<EditorResponse>, request: &EditorRequ
     } else {
         format!("lsp-show-error {}", editor_quote(msg))
     };
+    report_error_impl(to_editor, request, command)
+}
 
+/// Sends an error back to the editor.
+///
+/// This will cancel any blocking requests and also print an error if the
+/// request was not triggered by an editor hook.
+fn report_error(to_editor: &Sender<EditorResponse>, request: &EditorRequest, msg: &str) {
+    report_error_impl(
+        to_editor,
+        request,
+        format!("lsp-show-error {}", editor_quote(msg)),
+    )
+}
+
+fn report_error_impl(to_editor: &Sender<EditorResponse>, request: &EditorRequest, command: String) {
     // If editor is expecting a fifo response, give it one, so it won't hang.
     if let Some(ref fifo) = request.meta.fifo {
         std::fs::write(fifo, &command).expect("Failed to write command to fifo");
