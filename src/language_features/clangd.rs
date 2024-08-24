@@ -16,9 +16,9 @@ pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .keys()
-        .map(|server_name| {
+        .map(|server_id| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![TextDocumentIdentifier {
                     uri: Url::from_file_path(&meta.buffile).unwrap(),
                 }],

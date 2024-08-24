@@ -11,9 +11,9 @@ pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .keys()
-        .map(|server_name| {
+        .map(|server_id| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![ExecuteCommandParams {
                     command: "java.edit.organizeImports".to_string(),
                     arguments: vec![serde_json::json!(file_uri)],

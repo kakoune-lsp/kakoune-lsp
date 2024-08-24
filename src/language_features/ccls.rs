@@ -40,9 +40,9 @@ pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![NavigateParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -93,9 +93,9 @@ pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![VarsParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -118,7 +118,7 @@ pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         move |ctx: &mut Context, meta, results| {
             let results = results
                 .into_iter()
-                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .map(|(server_id, loc)| (server_id, loc.map(GotoDefinitionResponse::Array)))
                 .collect();
 
             goto::goto(meta, results, ctx)
@@ -158,9 +158,9 @@ pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![InheritanceParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -185,7 +185,7 @@ pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         move |ctx, meta, results| {
             let results = results
                 .into_iter()
-                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .map(|(server_id, loc)| (server_id, loc.map(GotoDefinitionResponse::Array)))
                 .collect();
 
             goto::goto(meta, results, ctx)
@@ -223,9 +223,9 @@ pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![CallParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -249,7 +249,7 @@ pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         move |ctx, meta, results| {
             let results = results
                 .into_iter()
-                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .map(|(server_id, loc)| (server_id, loc.map(GotoDefinitionResponse::Array)))
                 .collect();
 
             goto::goto(meta, results, ctx)
@@ -287,9 +287,9 @@ pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![MemberParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -313,7 +313,7 @@ pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         move |ctx, meta, results| {
             let results = results
                 .into_iter()
-                .map(|(server_name, loc)| (server_name, loc.map(GotoDefinitionResponse::Array)))
+                .map(|(server_id, loc)| (server_id, loc.map(GotoDefinitionResponse::Array)))
                 .collect();
 
             goto::goto(meta, results, ctx)
@@ -470,7 +470,7 @@ pub struct PublishSemanticHighlightingParams {
     pub symbols: Vec<SemanticSymbol>,
 }
 
-pub fn publish_semantic_highlighting(server_name: &ServerName, params: Params, ctx: &mut Context) {
+pub fn publish_semantic_highlighting(server_id: &ServerId, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
     let path = params.uri.to_file_path().unwrap();
@@ -483,7 +483,7 @@ pub fn publish_semantic_highlighting(server_name: &ServerName, params: Params, c
         Some(meta) => meta,
         None => return,
     };
-    let server = &ctx.language_servers[server_name];
+    let server = &ctx.language_servers[server_id];
     let ranges = params
         .symbols
         .iter()

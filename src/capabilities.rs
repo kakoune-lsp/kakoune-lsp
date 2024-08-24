@@ -55,7 +55,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
             |(
                 idx,
                 (
-                    server_name,
+                    server_id,
                     ServerSettings {
                         root_path,
                         preferred_offset_encoding,
@@ -64,7 +64,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                 ),
             )| {
                 (
-                    server_name.clone(),
+                    server_id.clone(),
                     vec![InitializeParams {
                         capabilities: ClientCapabilities {
                             workspace: Some(WorkspaceClientCapabilities {
@@ -380,7 +380,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                                 .collect(),
                             ),
                             experimental: server_configs(&ctx.config, &meta)
-                                .get(server_name)
+                                .get(&server_id.name)
                                 .and_then(|cfg| cfg.experimental.clone())
                                 .or_else(|| {
                                     (meta.language_id == "rust").then_some(serde_json::json!({
@@ -420,9 +420,9 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
         let results: HashMap<_,_> = results.into_iter().collect();
         let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
 
-        for server_name in &servers {
-            let result = &results[server_name];
-            if let Some(server) = ctx.language_servers.get_mut(server_name) {
+        for server_id in &servers {
+            let result = &results[server_id];
+            if let Some(server) = ctx.language_servers.get_mut(server_id) {
                 server.offset_encoding = result
                     .capabilities
                     .position_encoding
@@ -443,11 +443,11 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context) {
                     (Some(OffsetEncoding::Utf8), OffsetEncoding::Utf16)) {
                         warn!(
                             "Requested offset encoding utf-8 is not supported by {} server, falling back to utf-16",
-                            server_name,
+                            server_id,
                         );
                 }
                 server.capabilities = Some(result.capabilities.clone());
-                ctx.notify::<Initialized>(server_name, InitializedParams {});
+                ctx.notify::<Initialized>(server_id, InitializedParams {});
             }
         }
         controller::dispatch_pending_editor_requests(ctx)
@@ -477,17 +477,20 @@ pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
 pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
 
 pub fn attempt_server_capability(
-    server: (&ServerName, &ServerSettings),
+    server: (&ServerId, &ServerSettings),
     meta: &EditorMeta,
     feature: &'static str,
 ) -> bool {
-    let (server_name, server_settings) = server;
+    let (server_id, server_settings) = server;
     if server_has_capability(server_settings, feature) {
         return true;
     }
 
     if !meta.hook {
-        warn!("{server_name} server does not support {feature}, refusing to send request");
+        warn!(
+            "{} server does not support {}, refusing to send request",
+            &server_id, feature
+        );
     }
 
     false
@@ -593,24 +596,24 @@ pub fn server_has_capability(server: &ServerSettings, feature: &'static str) -> 
 }
 
 pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
-    let mut features: BTreeMap<String, Vec<&ServerName>> = BTreeMap::new();
+    let mut features: BTreeMap<String, Vec<&ServerId>> = BTreeMap::new();
 
     fn probe_feature<'a>(
-        server: (&'a ServerName, &'a ServerSettings),
-        features: &mut BTreeMap<String, Vec<&'a ServerName>>,
+        server: (&'a ServerId, &'a ServerSettings),
+        features: &mut BTreeMap<String, Vec<&'a ServerId>>,
         feature: &'static str,
     ) {
-        let (server_name, server_settings) = server;
+        let (server_id, server_settings) = server;
         if server_has_capability(server_settings, feature) {
             features
                 .entry(feature.to_string())
                 .or_default()
-                .push(server_name);
+                .push(server_id);
         }
     }
 
     for entry in &ctx.language_servers {
-        let (server_name, server_settings) = entry;
+        let (server_id, server_settings) = entry;
 
         probe_feature(entry, &mut features, CAPABILITY_SELECTION_RANGE);
         probe_feature(entry, &mut features, CAPABILITY_HOVER);
@@ -625,7 +628,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
             features
                 .entry("lsp-document-symbol, lsp-object, lsp-goto-document-symbol".to_string())
                 .or_default()
-                .push(server_name);
+                .push(server_id);
         }
         probe_feature(entry, &mut features, CAPABILITY_WORKSPACE_SYMBOL);
         probe_feature(entry, &mut features, CAPABILITY_FORMATTING);
@@ -638,7 +641,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         features
             .entry("lsp-diagnostics".to_string())
             .or_default()
-            .push(server_name);
+            .push(server_id);
         probe_feature(entry, &mut features, CAPABILITY_INLAY_HINTS);
 
         // NOTE controller should park request for capabilities until they are available thus it should
@@ -652,7 +655,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                     provider.commands.iter().join(", ")
                 ))
                 .or_default()
-                .push(server_name);
+                .push(server_id);
         }
 
         if let Some(ref provider) = server_capabilities.semantic_tokens_provider {
@@ -673,7 +676,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                         .join(", ")
                 ))
                 .or_default()
-                .push(server_name);
+                .push(server_id);
             features
                 .entry(format!(
                     "lsp-semantic-tokens: modifiers: [{}]",
@@ -684,7 +687,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
                         .join(", ")
                 ))
                 .or_default()
-                .push(server_name);
+                .push(server_id);
         }
     }
 
@@ -692,7 +695,12 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         "info 'LSP commands supported by language servers ({}):
 
          {}'",
-        editor_escape(&ctx.language_servers.keys().join(", ")),
+        editor_escape(
+            &ctx.language_servers
+                .keys()
+                .map(|server_id| format!("{}", server_id))
+                .join(", ")
+        ),
         editor_escape(
             &features
                 .into_iter()

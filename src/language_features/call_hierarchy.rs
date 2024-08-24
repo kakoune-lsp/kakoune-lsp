@@ -14,12 +14,12 @@ pub fn call_hierarchy_prepare(meta: EditorMeta, params: EditorParams, ctx: &mut 
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             let position =
                 get_lsp_position(server_settings, &meta.buffile, &params.position, ctx).unwrap();
             let uri = Url::from_file_path(&meta.buffile).unwrap();
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![CallHierarchyPrepareParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier::new(uri),
@@ -44,16 +44,16 @@ fn request_call_hierarchy(
     meta: EditorMeta,
     ctx: &mut Context,
     incoming_or_outgoing: bool,
-    results: Vec<(ServerName, Option<Vec<CallHierarchyItem>>)>,
+    results: Vec<(ServerId, Option<Vec<CallHierarchyItem>>)>,
 ) {
     let result = results
         .into_iter()
         .find(|(_, response)| response.is_some())
-        .and_then(|(server_name, item)| item.map(|item| (server_name, item)));
+        .and_then(|(server_id, item)| item.map(|item| (server_id, item)));
 
     // TODO Can we get multiple items here?
-    let (server_name, item) =
-        match result.and_then(|(server_name, r)| r.into_iter().next().map(|v| (server_name, v))) {
+    let (server_id, item) =
+        match result.and_then(|(server_id, r)| r.into_iter().next().map(|v| (server_id, v))) {
             Some(item) => item,
             None => return,
         };
@@ -61,7 +61,7 @@ fn request_call_hierarchy(
     if incoming_or_outgoing {
         let mut params = HashMap::new();
         params.insert(
-            server_name,
+            server_id,
             vec![CallHierarchyIncomingCallsParams {
                 item: item.clone(),
                 work_done_progress_params: WorkDoneProgressParams::default(),
@@ -81,7 +81,7 @@ fn request_call_hierarchy(
     } else {
         let mut params = HashMap::new();
         params.insert(
-            server_name,
+            server_id,
             vec![CallHierarchyOutgoingCallsParams {
                 item: item.clone(),
                 work_done_progress_params: WorkDoneProgressParams::default(),
@@ -102,7 +102,7 @@ fn request_call_hierarchy(
 }
 
 fn format_location(
-    server_name: &ServerName,
+    server_id: &ServerId,
     meta: &EditorMeta,
     ctx: &mut Context,
     uri: &Url,
@@ -110,7 +110,7 @@ fn format_location(
     prefix: &str,
     suffix: &str,
 ) -> String {
-    let server = &ctx.language_servers[server_name];
+    let server = &ctx.language_servers[server_id];
     let filename = uri.to_file_path().unwrap();
     let filename = short_file_path(filename.to_str().unwrap(), &server.root_path);
     let position = get_kakoune_position_with_fallback(server, &meta.buffile, position, ctx);
@@ -155,9 +155,9 @@ fn format_call_hierarchy_calls<'a>(
     ctx: &mut Context,
     incoming_or_outgoing: bool,
     item: &'a CallHierarchyItem,
-    result: &'a (ServerName, Option<Vec<impl CallHierarchyCall<'a>>>),
+    result: &'a (ServerId, Option<Vec<impl CallHierarchyCall<'a>>>),
 ) {
-    let (server_name, result) = result;
+    let (server_id, result) = result;
     let result = match result {
         Some(result) => result,
         None => return,
@@ -174,7 +174,7 @@ fn format_call_hierarchy_calls<'a>(
     );
 
     let contents = format_location(
-        server_name,
+        server_id,
         &meta,
         ctx,
         &item.uri,
@@ -189,7 +189,7 @@ fn format_call_hierarchy_calls<'a>(
             let caller_or_calle = call.caller_or_callee();
 
             format_location(
-                server_name,
+                server_id,
                 &meta,
                 ctx,
                 &caller_or_calle.uri,
@@ -208,7 +208,7 @@ fn format_call_hierarchy_calls<'a>(
                         .or_else(|| line.strip_suffix('\n'))
                         .unwrap_or(&line);
                     format_location(
-                        server_name,
+                        server_id,
                         &meta,
                         ctx,
                         &caller.uri,
@@ -226,7 +226,7 @@ fn format_call_hierarchy_calls<'a>(
     } else {
         "lsp-show-outgoing-calls"
     };
-    let server = &ctx.language_servers[server_name];
+    let server = &ctx.language_servers[server_id];
     let command = format!(
         "{} {} {}",
         command,

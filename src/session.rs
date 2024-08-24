@@ -176,7 +176,9 @@ pub fn start(
                     };
                     let route = Route {
                         session: request.meta.session.clone(),
-                        server_name: server_name.clone(),
+                        server_id: ServerId{
+                            name: server_name.clone()
+                        },
                         root,
                     };
 
@@ -324,7 +326,7 @@ fn exit_editor_session(controllers: &mut Controllers, request: &EditorRequest) {
         assert_eq!(all_from_session, any_from_session);
         if all_from_session {
             for route in routes {
-                info!("Exit {} in project {}", route.server_name, route.root);
+                info!("Exit {} in project {}", &route.server_id, route.root);
             }
             // to notify kakoune-lsp about editor session end we use the same `exit` notification
             // as used in LSP spec to notify language server to exit, thus we can just clone
@@ -352,7 +354,7 @@ fn stop_session(controllers: &mut Controllers) {
             error!("Failed to send stop message to language server");
         }
         for route in &routes {
-            info!("Exit {} in project {}", route.server_name, route.root);
+            info!("Exit {} in project {}", &route.server_id, route.root);
         }
     }
 }

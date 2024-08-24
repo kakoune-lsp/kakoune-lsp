@@ -2,7 +2,7 @@ use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIG
 use crate::context::{Context, RequestParams};
 use crate::position::*;
 use crate::types::{
-    EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams, ServerName,
+    EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams, ServerId,
 };
 use crate::util::editor_quote;
 use itertools::Itertools;
@@ -23,15 +23,15 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
         return;
     }
 
-    let (first_server, _) = eligible_servers.first().unwrap();
-    let first_server = first_server.to_string();
+    let (first_server, _) = *eligible_servers.first().unwrap();
+    let first_server = first_server.to_owned();
 
     let params = PositionParams::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![DocumentHighlightParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -67,17 +67,17 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
 
 fn editor_document_highlight(
     meta: EditorMeta,
-    result: (ServerName, Option<Vec<DocumentHighlight>>),
+    result: (ServerId, Option<Vec<DocumentHighlight>>),
     main_cursor: KakounePosition,
     ctx: &mut Context,
 ) {
-    let (server_name, result) = result;
+    let (server_id, result) = result;
     let document = ctx.documents.get(&meta.buffile);
     if document.is_none() {
         return;
     }
     let document = document.unwrap();
-    let server = &ctx.language_servers[&server_name];
+    let server = &ctx.language_servers[&server_id];
     let mut ranges = vec![];
     let range_specs = match result {
         Some(highlights) => highlights

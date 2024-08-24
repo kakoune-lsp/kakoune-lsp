@@ -43,15 +43,15 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
 
 fn editor_code_lens(
     meta: EditorMeta,
-    results: Vec<(ServerName, Option<Vec<CodeLens>>)>,
+    results: Vec<(ServerId, Option<Vec<CodeLens>>)>,
     ctx: &mut Context,
 ) {
     let mut lenses: Vec<_> = results
         .into_iter()
-        .flat_map(|(server_name, v)| {
+        .flat_map(|(server_id, v)| {
             v.unwrap_or_default()
                 .into_iter()
-                .map(move |v| (server_name.clone(), v))
+                .map(move |v| (server_id.clone(), v))
         })
         .collect();
     lenses.sort_by_key(|(_, lens)| lens.range.start);
@@ -67,8 +67,8 @@ fn editor_code_lens(
     let version = document.version;
     let line_specs = lenses
         .iter()
-        .map(|(server_name, lens)| {
-            let server = &ctx.language_servers[server_name];
+        .map(|(server_id, lens)| {
+            let server = &ctx.language_servers[server_id];
             let label = lens.command.as_ref().map_or("", |v| &v.title);
             let position =
                 lsp_position_to_kakoune(&lens.range.start, &document.text, server.offset_encoding);
@@ -117,14 +117,14 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx
         None => return,
     };
 
-    if let Some((server_name, lens)) = ctx
+    if let Some((server_id, lens)) = ctx
         .code_lenses
         .get(&meta.buffile)
         .and_then(|lenses| {
-            lenses.iter().find(|(server_name, lens)| {
+            lenses.iter().find(|(server_id, lens)| {
                 let ServerSettings {
                     offset_encoding, ..
-                } = &ctx.language_servers[server_name];
+                } = &ctx.language_servers[server_id];
                 let range = kakoune_range_to_lsp(&range, &document.text, *offset_encoding);
                 ranges_touch_same_line(lens.range, range)
             })
@@ -133,7 +133,7 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx
         .cloned()
     {
         let mut req_params = HashMap::new();
-        req_params.insert(server_name, vec![lens]);
+        req_params.insert(server_id, vec![lens]);
 
         ctx.call::<CodeLensResolve, _>(
             meta,
@@ -149,10 +149,10 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx
     };
     let mut lenses = lenses
         .iter()
-        .filter(|(server_name, lens)| {
+        .filter(|(server_id, lens)| {
             let ServerSettings {
                 offset_encoding, ..
-            } = &ctx.language_servers[server_name];
+            } = &ctx.language_servers[server_id];
             let range = kakoune_range_to_lsp(&range, &document.text, *offset_encoding);
             ranges_touch_same_line(lens.range, range)
         })
@@ -172,7 +172,7 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx
     perform_code_lens(meta, &lenses, ctx);
 }
 
-fn perform_code_lens(meta: EditorMeta, lenses: &[(ServerName, CodeLens)], ctx: &Context) {
+fn perform_code_lens(meta: EditorMeta, lenses: &[(ServerId, CodeLens)], ctx: &Context) {
     let command = format!(
         "lsp-perform-code-lens {}",
         lenses

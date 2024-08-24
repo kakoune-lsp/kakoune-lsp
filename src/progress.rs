@@ -17,8 +17,8 @@ use std::time::{self, Duration};
 pub fn work_done_progress_cancel(_meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = WorkDoneProgressCancelParams::deserialize(params).expect("Failed to parse params");
     let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_name in &servers {
-        ctx.notify::<WorkDoneProgressCancel>(server_name, params.clone());
+    for server_id in &servers {
+        ctx.notify::<WorkDoneProgressCancel>(server_id, params.clone());
     }
 }
 

@@ -11,7 +11,7 @@ use crate::{
     context::{Context, RequestParams},
     markup::escape_kakoune_markup,
     position::lsp_position_to_kakoune,
-    types::{EditorMeta, EditorParams, ServerName},
+    types::{EditorMeta, EditorParams, ServerId},
     util::{editor_quote, escape_tuple_element},
 };
 
@@ -33,9 +33,9 @@ pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = InlayHintsOptions::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, _)| {
+        .map(|(server_id, _)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![InlayHintParams {
                     work_done_progress_params: Default::default(),
                     text_document: TextDocumentIdentifier {
@@ -52,11 +52,11 @@ pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         move |ctx, meta, results| {
             let results = results
                 .into_iter()
-                .flat_map(|(server_name, v)| {
+                .flat_map(|(server_id, v)| {
                     let v: Vec<_> = v
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|v| (server_name.clone(), v))
+                        .map(|v| (server_id.clone(), v))
                         .collect();
                     v
                 })
@@ -68,7 +68,7 @@ pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
 
 pub fn inlay_hints_response(
     meta: EditorMeta,
-    inlay_hints: Vec<(ServerName, InlayHint)>,
+    inlay_hints: Vec<(ServerId, InlayHint)>,
     ctx: &mut Context,
 ) {
     let document = match ctx.documents.get(&meta.buffile) {
@@ -79,7 +79,7 @@ pub fn inlay_hints_response(
         .into_iter()
         .map(
             |(
-                server_name,
+                server_id,
                 InlayHint {
                     position,
                     label,
@@ -88,7 +88,7 @@ pub fn inlay_hints_response(
                     ..
                 },
             )| {
-                let server = &ctx.language_servers[&server_name];
+                let server = &ctx.language_servers[&server_id];
                 let position =
                     lsp_position_to_kakoune(&position, &document.text, server.offset_encoding);
                 let label = match label {

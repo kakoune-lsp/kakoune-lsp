@@ -1,7 +1,7 @@
 use crate::context::{Context, RequestParams};
 use crate::position::get_lsp_position;
 use crate::types::{EditorMeta, EditorParams};
-use crate::PositionParams;
+use crate::{PositionParams, ServerId};
 use lsp_types::request::Request;
 use lsp_types::TextDocumentIdentifier;
 use lsp_types::TextDocumentPositionParams;
@@ -45,9 +45,9 @@ pub fn forward_search(meta: EditorMeta, params: EditorParams, ctx: &mut Context)
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![TextDocumentPositionParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -115,15 +115,19 @@ impl fmt::Display for BuildResult {
 }
 
 pub fn build(meta: EditorMeta, _params: EditorParams, ctx: &mut Context) {
-    let (server_name, _) = meta
+    let (server_id, _) = meta
         .server
         .as_ref()
-        .and_then(|name| ctx.language_servers.get_key_value(name))
+        .and_then(|server_name| {
+            ctx.language_servers.get_key_value(&ServerId {
+                name: server_name.clone(),
+            })
+        })
         .or_else(|| ctx.language_servers.first_key_value())
         .unwrap();
     let mut req_params = HashMap::new();
     req_params.insert(
-        server_name.clone(),
+        server_id.clone(),
         vec![BuildTextDocumentParams {
             text_document: TextDocumentIdentifier {
                 uri: Url::from_file_path(&meta.buffile).unwrap(),

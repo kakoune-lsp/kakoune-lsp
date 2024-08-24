@@ -21,15 +21,15 @@ pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx:
         return;
     }
 
-    let (first_server, _) = eligible_servers.first().unwrap();
-    let first_server = first_server.to_string();
+    let (first_server, _) = *eligible_servers.first().unwrap();
+    let first_server = first_server.to_owned();
 
     let params = PositionParams::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![SignatureHelpParams {
                     context: None,
                     text_document_position_params: TextDocumentPositionParams {
@@ -66,10 +66,10 @@ pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx:
 fn editor_signature_help(
     meta: EditorMeta,
     params: PositionParams,
-    result: (ServerName, Option<SignatureHelp>),
+    result: (ServerId, Option<SignatureHelp>),
     ctx: &mut Context,
 ) {
-    let (server_name, result) = result;
+    let (server_id, result) = result;
     let result = match result {
         Some(result) => result,
         None => return,
@@ -82,7 +82,7 @@ fn editor_signature_help(
         None => return,
     };
 
-    let server = &ctx.language_servers[&server_name];
+    let server = &ctx.language_servers[&server_id];
     let active_parameter = active_signature
         .active_parameter
         .or(result.active_parameter)

@@ -17,13 +17,13 @@ pub struct LanguageServerTransport {
 }
 
 pub fn start(
-    server_name: &str,
+    server_id: &ServerId,
     cmd: &str,
     args: &[String],
     envs: &HashMap<String, String>,
 ) -> Result<LanguageServerTransport, String> {
     info!(
-        "Starting Language server {server_name} as `{} {}`",
+        "Starting Language server {server_id} as `{} {}`",
         cmd,
         args.join(" ")
     );
@@ -78,12 +78,12 @@ pub fn start(
     // XXX
 
     let from_lang_server = {
-        let server_name = server_name.to_string();
+        let server_id = server_id.to_owned();
         Worker::spawn(
             "Messages from language server",
             channel_capacity,
             move |receiver, sender| {
-                if let Err(msg) = reader_loop(&server_name, reader, receiver, &sender) {
+                if let Err(msg) = reader_loop(&server_id, reader, receiver, &sender) {
                     error!("{}", msg);
                 }
             },
@@ -91,12 +91,12 @@ pub fn start(
     };
 
     let to_lang_server = {
-        let server_name = server_name.to_string();
+        let server_id = server_id.to_owned();
         Worker::spawn(
             "Messages to language server",
             channel_capacity,
             move |receiver, _| {
-                if writer_loop(&server_name, writer, &receiver).is_err() {
+                if writer_loop(&server_id, writer, &receiver).is_err() {
                     error!("Failed to write message to language server");
                 }
                 // NOTE prevent zombie
@@ -130,7 +130,7 @@ pub fn start(
 }
 
 fn reader_loop(
-    server_name: &str,
+    server_id: &ServerId,
     mut reader: impl BufRead,
     receiver: Receiver<Void>,
     sender: &Sender<ServerMessage>,
@@ -166,7 +166,7 @@ fn reader_loop(
         reader.read_exact(&mut content)?;
         let msg = String::from_utf8(content)
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to read content as UTF-8 string"))?;
-        debug!("From server {server_name}: {msg}");
+        debug!("From server {server_id}: {msg}");
         let output: serde_json::Result<Output> = serde_json::from_str(&msg);
         match output {
             Ok(output) => {
@@ -187,7 +187,7 @@ fn reader_loop(
 }
 
 fn writer_loop(
-    server_name: &str,
+    server_id: &ServerId,
     mut writer: impl Write,
     receiver: &Receiver<ServerMessage>,
 ) -> io::Result<()> {
@@ -196,7 +196,7 @@ fn writer_loop(
             ServerMessage::Request(request) => serde_json::to_string(&request),
             ServerMessage::Response(response) => serde_json::to_string(&response),
         }?;
-        debug!("To server {server_name}: {request}");
+        debug!("To server {server_id}: {request}");
         write!(
             writer,
             "Content-Length: {}\r\n\r\n{}",

@@ -34,7 +34,7 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
     let req_params = ctx
         .language_servers
         .iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             let cursor_positions = selections
                 .iter()
                 .map(|range| {
@@ -48,7 +48,7 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
                 .collect();
 
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![SelectionRangeParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -78,13 +78,13 @@ pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx
 }
 
 fn editor_selection_range(
-    result: (ServerName, Option<Vec<SelectionRange>>),
+    result: (ServerId, Option<Vec<SelectionRange>>),
     selections: Vec<KakouneRange>,
     is_cursor_left_of_anchor: bool,
     meta: EditorMeta,
     ctx: &mut Context,
 ) {
-    let (server_name, result) = result;
+    let (server_id, result) = result;
     let selection_ranges = match result {
         Some(selection_ranges) => selection_ranges,
         None => return,
@@ -102,7 +102,7 @@ fn editor_selection_range(
         }
     };
 
-    let server = &ctx.language_servers[&server_name];
+    let server = &ctx.language_servers[&server_id];
 
     // We get a list of ranges of parent nodes for each Kakoune selection.  The UI wants to
     // select parent nodes of all Kakoune selections at once.  This means we want to have a

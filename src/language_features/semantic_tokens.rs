@@ -2,7 +2,7 @@ use crate::capabilities::{attempt_server_capability, CAPABILITY_SEMANTIC_TOKENS}
 use crate::context::{Context, RequestParams};
 use crate::position::lsp_range_to_kakoune;
 use crate::semantic_tokens_config;
-use crate::types::{EditorMeta, ServerName};
+use crate::types::{EditorMeta, ServerId};
 use crate::util::editor_quote;
 use indoc::formatdoc;
 use lsp_types::request::SemanticTokensFullRequest;
@@ -23,14 +23,14 @@ pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
         return;
     }
 
-    let (first_server, _) = eligible_servers.first().unwrap();
-    let first_server = first_server.to_string();
+    let (first_server, _) = *eligible_servers.first().unwrap();
+    let first_server = first_server.to_owned();
 
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, _)| {
+        .map(|(server_id, _)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![SemanticTokensParams {
                     partial_result_params: Default::default(),
                     text_document: TextDocumentIdentifier {
@@ -45,13 +45,13 @@ pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
         meta,
         RequestParams::Each(req_params),
         move |ctx, meta, results| {
-            let (server_name, response) = match results.into_iter().find(|(_, v)| v.is_some()) {
+            let (server_id, response) = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
                 None => (first_server, None),
             };
 
             if let Some(response) = response {
-                tokens_response(meta, (server_name, response), ctx);
+                tokens_response(meta, (server_id, response), ctx);
             }
         },
     );
@@ -59,11 +59,11 @@ pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
 
 pub fn tokens_response(
     meta: EditorMeta,
-    response: (ServerName, SemanticTokensResult),
+    response: (ServerId, SemanticTokensResult),
     ctx: &mut Context,
 ) {
-    let (server_name, tokens) = response;
-    let server = &ctx.language_servers[&server_name];
+    let (server_id, tokens) = response;
+    let server = &ctx.language_servers[&server_id];
     let legend = match server
         .capabilities
         .as_ref()

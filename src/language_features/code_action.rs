@@ -46,9 +46,9 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
     };
     let ranges = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 kakoune_range_to_lsp(
                     &parse_kakoune_range(&params.selection_desc).0,
                     &document.text,
@@ -64,23 +64,22 @@ fn code_actions_for_ranges(
     meta: EditorMeta,
     params: CodeActionsParams,
     ctx: &mut Context,
-    ranges: HashMap<ServerName, Range>,
+    ranges: HashMap<ServerId, Range>,
 ) {
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
 
-    let mut diagnostics: HashMap<ServerName, Vec<Diagnostic>> = if let Some(buff_diags) = buff_diags
-    {
+    let mut diagnostics: HashMap<ServerId, Vec<Diagnostic>> = if let Some(buff_diags) = buff_diags {
         buff_diags
             .iter()
-            .filter(|(server_name, d)| {
+            .filter(|(server_id, d)| {
                 ranges
-                    .get(server_name)
+                    .get(server_id)
                     .is_some_and(|r| ranges_overlap(d.range, *r))
             })
             .cloned()
             .fold(HashMap::new(), |mut m, v| {
-                let (server_name, diagnostic) = v;
-                m.entry(server_name).or_default().push(diagnostic);
+                let (server_id, diagnostic) = v;
+                m.entry(server_id).or_default().push(diagnostic);
                 m
             })
     } else {
@@ -89,16 +88,16 @@ fn code_actions_for_ranges(
 
     let req_params = ranges
         .iter()
-        .map(|(server_name, range)| {
+        .map(|(server_id, range)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![CodeActionParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
                     },
                     range: *range,
                     context: CodeActionContext {
-                        diagnostics: diagnostics.remove(server_name).unwrap_or_default(),
+                        diagnostics: diagnostics.remove(server_id).unwrap_or_default(),
                         only: params.only.as_ref().map(|only| {
                             only.split(' ')
                                 .map(|s| CodeActionKind::from(s.to_string()))
@@ -125,15 +124,15 @@ fn code_actions_for_ranges(
 
 fn editor_code_actions(
     meta: EditorMeta,
-    results: Vec<(ServerName, Option<CodeActionResponse>)>,
+    results: Vec<(ServerId, Option<CodeActionResponse>)>,
     ctx: &mut Context,
     params: CodeActionsParams,
-    mut ranges: HashMap<ServerName, Range>,
+    mut ranges: HashMap<ServerId, Range>,
 ) {
     if !meta.hook
         && results
             .iter()
-            .all(|(server_name, result)| match ranges.get(server_name) {
+            .all(|(server_id, result)| match ranges.get(server_id) {
                 Some(range) => {
                     result == &Some(vec![])
                         && range.start.character != 0
@@ -157,11 +156,11 @@ fn editor_code_actions(
 
     let mut actions: Vec<_> = results
         .into_iter()
-        .flat_map(|(server_name, cmd)| {
+        .flat_map(|(server_id, cmd)| {
             let cmd: Vec<_> = cmd
                 .unwrap_or_default()
                 .into_iter()
-                .map(|cmd| (server_name.clone(), cmd))
+                .map(|cmd| (server_id.clone(), cmd))
                 .collect();
             cmd
         })
@@ -176,17 +175,17 @@ fn editor_code_actions(
 
     let may_resolve: HashSet<_> = ranges
         .iter()
-        .filter(|(server_name, _)| {
-            let server_name = *server_name;
-            let server_settings = &ctx.language_servers[server_name];
+        .filter(|(server_id, _)| {
+            let server_id = *server_id;
+            let server_settings = &ctx.language_servers[server_id];
 
             attempt_server_capability(
-                (server_name, server_settings),
+                (server_id, server_settings),
                 &meta,
                 CAPABILITY_CODE_ACTIONS_RESOLVE,
             )
         })
-        .map(|(server_name, _)| server_name)
+        .map(|(server_id, _)| server_id)
         .collect();
 
     let sync = meta.fifo.is_some();
@@ -227,8 +226,8 @@ fn editor_code_actions(
         let command = match actions.len() {
             0 => fail + " 'no matching action available'",
             1 => {
-                let (server_name, cmd) = &actions[0];
-                let may_resolve = may_resolve.contains(server_name);
+                let (server_id, cmd) = &actions[0];
+                let may_resolve = may_resolve.contains(server_id);
                 code_action_or_command_to_editor_command(cmd, sync, may_resolve)
             }
             _ => fail + " 'multiple matching actions'",
@@ -267,7 +266,7 @@ fn editor_code_actions(
     .to_string()
         + &actions
             .iter()
-            .map(|(server_name, c)| {
+            .map(|(server_id, c)| {
                 let mut title: &str = match c {
                     CodeActionOrCommand::Command(command) => &command.title,
                     CodeActionOrCommand::CodeAction(action) => &action.title,
@@ -275,7 +274,7 @@ fn editor_code_actions(
                 if let Some((head, _)) = title.split_once('\n') {
                     title = head
                 }
-                let may_resolve = may_resolve.contains(server_name);
+                let may_resolve = may_resolve.contains(server_id);
                 let select_cmd = code_action_or_command_to_editor_command(c, false, may_resolve);
                 format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
             })

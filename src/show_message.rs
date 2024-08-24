@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     context::Context,
-    types::{EditorMeta, ServerName},
+    types::{EditorMeta, ServerId},
     util::editor_quote,
 };
 
@@ -18,7 +18,7 @@ pub const SHOW_MESSAGE_REQUEST_RESPOND: &str = "window/showMessageRequest/respon
 /// Queues the message request from the LSP server.
 pub fn show_message_request(
     meta: EditorMeta,
-    server_name: &ServerName,
+    server_id: &ServerId,
     request: MethodCall,
     ctx: &mut Context,
 ) {
@@ -28,7 +28,7 @@ pub fn show_message_request(
         .parse()
         .expect("Failed to parse ShowMessageRequest params");
     ctx.pending_message_requests
-        .push_back((request_id, server_name.clone(), params));
+        .push_back((request_id, server_id.clone(), params));
     update_modeline(meta, ctx)
 }
 
@@ -44,19 +44,19 @@ pub fn show_message_request_respond(params: toml::Value, ctx: &mut Context) {
         MessageRequestResponse::deserialize(params).expect("Cannot parse message request response");
 
     let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_name in &servers {
+    for server_id in &servers {
         let item = resp
             .item
             .clone()
             .and_then(|v| MessageActionItem::deserialize(v).ok())
             .map(|v| jsonrpc_core::to_value(v).expect("Cannot serialize item"))
             .unwrap_or(jsonrpc_core::Value::Null);
-        ctx.reply(server_name, resp.message_request_id.clone(), Ok(item));
+        ctx.reply(server_id, resp.message_request_id.clone(), Ok(item));
     }
 }
 
 pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
-    let (id, server_name, params) = match ctx.pending_message_requests.pop_front() {
+    let (id, server_id, params) = match ctx.pending_message_requests.pop_front() {
         Some(v) => v,
         None => {
             return ctx.exec(meta, "lsp-show-error 'No pending message requests.'");
@@ -67,9 +67,9 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         Some(opts) if !opts.is_empty() => &opts[..],
         _ => {
             // a ShowMessageRequest with no actions is just a ShowMessage notification.
-            show_message(meta, &server_name, params.typ, &params.message, ctx);
+            show_message(meta, &server_id, params.typ, &params.message, ctx);
 
-            ctx.reply(&server_name, id.clone(), Ok(serde_json::Value::Null));
+            ctx.reply(&server_id, id.clone(), Ok(serde_json::Value::Null));
             return;
         }
     };
@@ -116,7 +116,7 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
 /// Implements ShowMessage notification.
 pub fn show_message(
     meta: EditorMeta,
-    server_name: &ServerName,
+    server_id: &ServerId,
     typ: MessageType,
     msg: &str,
     ctx: &Context,
@@ -127,7 +127,7 @@ pub fn show_message(
         format!(
             "{} {} {}",
             command,
-            editor_quote(server_name),
+            editor_quote(&format!("{}", &server_id)),
             editor_quote(msg)
         ),
     );

@@ -4,7 +4,7 @@ use crate::capabilities::{
 };
 use crate::context::{Context, RequestParams, ServerSettings};
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams, ServerName};
+use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams, ServerId};
 use crate::util::{editor_quote, short_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -18,28 +18,28 @@ use url::Url;
 
 pub fn goto(
     meta: EditorMeta,
-    results: Vec<(ServerName, Option<GotoDefinitionResponse>)>,
+    results: Vec<(ServerId, Option<GotoDefinitionResponse>)>,
     ctx: &mut Context,
 ) {
     // HACK: When using multiple language servers, we might get duplicates here. Filter them out.
     let mut seen: Vec<GotoDefinitionResponse> = vec![];
     let locations: Vec<_> = results
         .into_iter()
-        .filter_map(|(server_name, v)| match v {
+        .filter_map(|(server_id, v)| match v {
             None => None,
             Some(response) => {
                 if seen.iter().any(|r| *r == response) {
                     return None;
                 }
                 seen.push(response.clone());
-                Some((server_name, response))
+                Some((server_id, response))
             }
         })
-        .flat_map(|(server_name, response)| match response {
-            GotoDefinitionResponse::Scalar(location) => vec![(server_name, location)],
+        .flat_map(|(server_id, response)| match response {
+            GotoDefinitionResponse::Scalar(location) => vec![(server_id, location)],
             GotoDefinitionResponse::Array(locations) => locations
                 .into_iter()
-                .map(|v| (server_name.clone(), v))
+                .map(|v| (server_id.clone(), v))
                 .collect(),
             GotoDefinitionResponse::Link(locations) => locations
                 .into_iter()
@@ -48,7 +48,7 @@ pub fn goto(
                          target_uri: uri,
                          target_selection_range: range,
                          ..
-                     }| (server_name.clone(), Location { uri, range }),
+                     }| (server_id.clone(), Location { uri, range }),
                 )
                 .collect(),
         })
@@ -78,13 +78,13 @@ pub fn edit_at_range(buffile: &str, range: KakouneRange, in_normal_mode: bool) -
 
 fn goto_location(
     meta: EditorMeta,
-    (server_name, Location { uri, range }): &(ServerName, Location),
+    (server_id, Location { uri, range }): &(ServerId, Location),
     ctx: &mut Context,
 ) {
     let path = uri.to_file_path().unwrap();
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
-        let server = &ctx.language_servers[server_name];
+        let server = &ctx.language_servers[server_id];
         let range = lsp_range_to_kakoune(range, &contents, server.offset_encoding);
         let command = format!(
             "evaluate-commands -try-client %opt{{jumpclient}} -- {}",
@@ -94,7 +94,7 @@ fn goto_location(
     }
 }
 
-fn goto_locations(meta: EditorMeta, locations: &[(ServerName, Location)], ctx: &mut Context) {
+fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mut Context) {
     let server_entry = ctx.language_servers.first_entry().unwrap();
     let ServerSettings { root_path, .. } = server_entry.get();
     let main_root_path = root_path.clone();
@@ -109,8 +109,8 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerName, Location)], ctx: &
                 None => return "".into(),
             };
             locations
-                .map(|(server_name, Location { range, .. })| {
-                    let server = &ctx.language_servers[server_name];
+                .map(|(server_id, Location { range, .. })| {
+                    let server = &ctx.language_servers[server_id];
                     let pos = lsp_range_to_kakoune(range, &contents, server.offset_encoding).start;
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
@@ -158,9 +158,9 @@ pub fn text_document_definition(
     }
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -211,9 +211,9 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
     }
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -257,9 +257,9 @@ pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx
     }
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -303,9 +303,9 @@ pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mu
     }
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![ReferenceParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -334,7 +334,7 @@ pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mu
         move |ctx: &mut Context, meta, results| {
             let results = results
                 .into_iter()
-                .map(|(server_name, loc)| (server_name, loc.map(GotoTypeDefinitionResponse::Array)))
+                .map(|(server_id, loc)| (server_id, loc.map(GotoTypeDefinitionResponse::Array)))
                 .collect();
             goto(meta, results, ctx);
         },

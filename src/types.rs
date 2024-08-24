@@ -277,10 +277,21 @@ pub type LanguageId = String;
 pub type ServerName = String;
 pub type RootPath = String;
 
+#[derive(Clone, Eq, Debug, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ServerId {
+    pub name: ServerName,
+}
+
+impl std::fmt::Display for ServerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.name)
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct Route {
     pub session: SessionId,
-    pub server_name: ServerName,
+    pub server_id: ServerId,
     pub root: RootPath,
 }
 

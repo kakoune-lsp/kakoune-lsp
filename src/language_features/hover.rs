@@ -38,9 +38,9 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
     let (range, cursor) = parse_kakoune_range(&params.selection_desc);
     let req_params = eligible_servers
         .into_iter()
-        .map(|(server_name, server_settings)| {
+        .map(|(server_id, server_settings)| {
             (
-                server_name.clone(),
+                server_id.clone(),
                 vec![HoverParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -77,16 +77,16 @@ pub fn editor_hover(
     cursor: KakounePosition,
     range: KakouneRange,
     tabstop: usize,
-    results: Vec<(ServerName, Option<Hover>)>,
+    results: Vec<(ServerId, Option<Hover>)>,
     ctx: &mut Context,
 ) {
     let doc = &ctx.documents[&meta.buffile];
     let lsp_ranges: HashMap<_, _> = results
         .iter()
-        .map(|(server_name, _)| {
-            let offset_encoding = ctx.language_servers[server_name].offset_encoding;
+        .map(|(server_id, _)| {
+            let offset_encoding = ctx.language_servers[server_id].offset_encoding;
             (
-                server_name,
+                server_id,
                 kakoune_range_to_lsp(&range, &doc.text, offset_encoding),
             )
         })
@@ -96,18 +96,18 @@ pub fn editor_hover(
     let diagnostics = diagnostics
         .map(|x| {
             x.iter()
-                .filter(|(server_name, x)| {
+                .filter(|(server_id, x)| {
                     lsp_ranges
-                        .get(server_name)
+                        .get(server_id)
                         .filter(|lsp_range| ranges_touch_same_line(x.range, **lsp_range))
                         .is_some()
                 })
                 .filter(|(_, x)| !x.message.is_empty())
-                .map(|(server_name, x)| {
-                    let server = &ctx.language_servers[server_name];
+                .map(|(server_id, x)| {
+                    let server = &ctx.language_servers[server_id];
                     // Indent line breaks to the same level as the bullet point
                     let message = (x.message.trim().to_string()
-                        + &format_related_information(x, server_name, server, server, ctx)
+                        + &format_related_information(x, server_id, server, server, ctx)
                             .map(|s| "\n  ".to_string() + &s)
                             .unwrap_or_default())
                         .replace('\n', "\n  ");
@@ -116,7 +116,7 @@ pub fn editor_hover(
                         return format!(
                             "* {}{message}",
                             &if ctx.language_servers.len() > 1 {
-                                format!("[{server_name}] ")
+                                format!("[{}] ", server_id.name)
                             } else {
                                 "".to_string()
                             }
@@ -140,7 +140,7 @@ pub fn editor_hover(
                     format!(
                         "• {}{{{face}}}{}{{{FACE_INFO_DEFAULT}}}",
                         &if ctx.language_servers.len() > 1 {
-                            format!("[{server_name}] ")
+                            format!("[{}] ", server_id.name)
                         } else {
                             "".to_string()
                         },
@@ -157,29 +157,29 @@ pub fn editor_hover(
         .map(|lenses| {
             lenses
                 .iter()
-                .filter(|(server_name, lens)| {
+                .filter(|(server_id, lens)| {
                     lsp_ranges
-                        .get(server_name)
+                        .get(server_id)
                         .filter(|lsp_range| ranges_touch_same_line(lens.range, **lsp_range))
                         .is_some()
                 })
-                .map(|(server_name, lens)| {
+                .map(|(server_id, lens)| {
                     (
-                        server_name,
+                        server_id,
                         lens.command
                             .as_ref()
                             .map(|cmd| cmd.title.as_str())
                             .unwrap_or("(unresolved)"),
                     )
                 })
-                .map(|(server_name, title)| {
+                .map(|(server_id, title)| {
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
                         return format!("* {}", &title);
                     }
                     format!(
                         "• ({}) {{{}}}{}{{{}}}",
-                        server_name,
+                        server_id.name,
                         FACE_INFO_DIAGNOSTIC_HINT,
                         escape_kakoune_markup(title),
                         FACE_INFO_DEFAULT,

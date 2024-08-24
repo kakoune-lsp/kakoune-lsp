@@ -44,10 +44,14 @@ pub fn start(
     for route in routes {
         {
             // should be fine to unwrap because request was already routed which means language is configured
-            let server_config = &server_configs(&config, &initial_request.meta)[&route.server_name];
+            let server_config =
+                &server_configs(&config, &initial_request.meta)[&route.server_id.name];
             let server_transport = match language_server_transport::start(
-                &route.server_name,
-                server_config.command.as_ref().unwrap_or(&route.server_name),
+                &route.server_id,
+                server_config
+                    .command
+                    .as_ref()
+                    .unwrap_or(&route.server_id.name),
                 &server_config.args,
                 &server_config.envs,
             ) {
@@ -76,7 +80,7 @@ pub fn start(
             };
 
             language_servers.insert(
-                &route.server_name,
+                &route.server_id,
                 (server_transport, server_config.offset_encoding),
             );
         }
@@ -93,11 +97,11 @@ pub fn start(
         language_servers: routes
             .iter()
             .map(|route| {
-                let (transport, offset_encoding) = &language_servers[&route.server_name];
+                let (transport, offset_encoding) = &language_servers[&route.server_id];
                 let tx = transport.to_lang_server.sender().clone();
 
                 (
-                    route.server_name.clone(),
+                    route.server_id.clone(),
                     ServerSettings {
                         root_path: route.root.clone(),
                         offset_encoding: offset_encoding.unwrap_or_default(),
@@ -232,9 +236,9 @@ pub fn start(
                 if !fw.pending_file_events.is_empty() {
                     let file_events: Vec<_> = fw.pending_file_events.drain().collect();
                     let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-                    for server_name in &servers {
+                    for server_id in &servers {
                         workspace_did_change_watched_files(
-                            server_name,
+                            server_id,
                             file_events.clone(),
                             &mut ctx,
                         );
@@ -244,7 +248,7 @@ pub fn start(
             }
             i => {
                 let msg = op.recv(server_rxs[i]);
-                let server_name = ctx
+                let server_id = ctx
                     .language_servers
                     .iter()
                     .nth(i)
@@ -259,7 +263,7 @@ pub fn start(
                     ServerMessage::Request(call) => match call {
                         Call::MethodCall(request) => {
                             dispatch_server_request(
-                                &server_name,
+                                &server_id,
                                 initial_request_meta.clone(),
                                 request,
                                 &mut ctx,
@@ -267,7 +271,7 @@ pub fn start(
                         }
                         Call::Notification(notification) => {
                             dispatch_server_notification(
-                                &server_name,
+                                &server_id,
                                 initial_request_meta.clone(),
                                 &notification.method,
                                 notification.params,
@@ -288,7 +292,7 @@ pub fn start(
                                         continue;
                                     }
                                     remove_outstanding_request(
-                                        &server_name,
+                                        &server_id,
                                         &mut ctx,
                                         method,
                                         meta.buffile.clone(),
@@ -299,7 +303,7 @@ pub fn start(
                                         ctx.batches.remove(&batch_id)
                                     {
                                         if let Some(batch_seq) = ctx.batch_sizes.remove(&batch_id) {
-                                            vals.push((server_name.clone(), success.result));
+                                            vals.push((server_id.clone(), success.result));
                                             let batch_size = batch_seq.values().sum();
 
                                             if vals.len() >= batch_size {
@@ -321,7 +325,7 @@ pub fn start(
                                         continue;
                                     }
                                     remove_outstanding_request(
-                                        &server_name,
+                                        &server_id,
                                         &mut ctx,
                                         method,
                                         meta.buffile.clone(),
@@ -330,13 +334,13 @@ pub fn start(
                                     );
                                     error!(
                                         "Error response from server {}: {:?}",
-                                        server_name, failure
+                                        server_id, failure
                                     );
                                     if let Some((vals, callback)) = ctx.batches.remove(&batch_id) {
                                         if let Some(mut batch_seq) =
                                             ctx.batch_sizes.remove(&batch_id)
                                         {
-                                            batch_seq.remove(&server_name);
+                                            batch_seq.remove(&server_id);
 
                                             // We con only keep going if there are still other servers to respond.
                                             // Otherwise, skip the following block and handle failure.
@@ -345,7 +349,7 @@ pub fn start(
                                                 // working ones to still be handled.
                                                 let vals: Vec<_> = vals
                                                     .into_iter()
-                                                    .filter(|(name, _)| *name != server_name)
+                                                    .filter(|(s, _)| *s != server_id)
                                                     .collect();
 
                                                 // Scenario: this failing server is holding back the response handling
@@ -375,10 +379,10 @@ pub fn start(
                                         code => {
                                             let msg = match code {
                                                 ErrorCode::MethodNotFound => format!(
-                                                    "language server {server_name} doesn't support method {method}",
+                                                    "language server {server_id} doesn't support method {method}",
                                                 ),
                                                 _ => format!(
-                                                    "language server {server_name} error: {}",
+                                                    "language server {server_id} error: {}",
                                                     editor_quote(&failure.error.message)
                                                 ),
                                             };
@@ -391,7 +395,7 @@ pub fn start(
                                 } else {
                                     error!(
                                         "Error response from server {}: {:?}",
-                                        server_name, failure
+                                        server_id, failure
                                     );
                                     error!("Id {:?} is not in waitlist!", failure.id);
                                 }
@@ -564,8 +568,8 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         }
         notification::Exit::METHOD => {
             let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-            for server_name in &servers {
-                ctx.notify::<notification::Exit>(server_name, ());
+            for server_id in &servers {
+                ctx.notify::<notification::Exit>(server_id, ());
             }
         }
 
@@ -619,8 +623,8 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         }
         "apply-workspace-edit" => {
             let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-            if let Some(server_name) = servers.first() {
-                workspace::apply_edit_from_editor(server_name, meta, params, ctx);
+            if let Some(server_id) = servers.first() {
+                workspace::apply_edit_from_editor(server_id, meta, params, ctx);
             }
         }
         request::SemanticTokensFullRequest::METHOD => {
@@ -685,7 +689,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
 }
 
 fn dispatch_server_request(
-    server_name: &ServerName,
+    server_id: &ServerId,
     meta: EditorMeta,
     request: MethodCall,
     ctx: &mut Context,
@@ -693,7 +697,7 @@ fn dispatch_server_request(
     let method: &str = &request.method;
     let result = match method {
         request::ApplyWorkspaceEdit::METHOD => {
-            workspace::apply_edit_from_server(server_name, request.params, ctx)
+            workspace::apply_edit_from_server(server_id, request.params, ctx)
         }
         request::RegisterCapability::METHOD => {
             let params: RegistrationParams = request
@@ -704,7 +708,7 @@ fn dispatch_server_request(
                 match registration.method.as_str() {
                     notification::DidChangeWatchedFiles::METHOD => {
                         register_workspace_did_change_watched_files(
-                            server_name,
+                            server_id,
                             registration.register_options,
                             ctx,
                         )
@@ -735,7 +739,7 @@ fn dispatch_server_request(
                                 },
                             );
                         ctx.language_servers
-                            .get_mut(server_name)
+                            .get_mut(server_id)
                             .unwrap()
                             .capabilities
                             .as_mut()
@@ -748,7 +752,7 @@ fn dispatch_server_request(
             Ok(serde_json::Value::Null)
         }
         request::WorkspaceFoldersRequest::METHOD => {
-            let server = &ctx.language_servers[server_name];
+            let server = &ctx.language_servers[server_id];
             Ok(serde_json::to_value(vec![WorkspaceFolder {
                 uri: Url::from_file_path(&server.root_path).unwrap(),
                 name: server.root_path.to_string(),
@@ -760,10 +764,10 @@ fn dispatch_server_request(
             progress::work_done_progress_create(request.params, ctx)
         }
         request::WorkspaceConfiguration::METHOD => {
-            workspace::configuration(meta, request.params, server_name, ctx)
+            workspace::configuration(meta, request.params, server_id, ctx)
         }
         request::ShowMessageRequest::METHOD => {
-            return show_message::show_message_request(meta, server_name, request, ctx);
+            return show_message::show_message_request(meta, server_id, request, ctx);
         }
         _ => {
             warn!("Unsupported method: {}", method);
@@ -773,11 +777,11 @@ fn dispatch_server_request(
         }
     };
 
-    ctx.reply(server_name, request.id, result);
+    ctx.reply(server_id, request.id, result);
 }
 
 fn dispatch_server_notification(
-    server_name: &ServerName,
+    server_id: &ServerId,
     meta: EditorMeta,
     method: &str,
     params: Params,
@@ -788,22 +792,22 @@ fn dispatch_server_notification(
             progress::dollar_progress(meta, params, ctx);
         }
         notification::PublishDiagnostics::METHOD => {
-            diagnostics::publish_diagnostics(server_name, params, ctx);
+            diagnostics::publish_diagnostics(server_id, params, ctx);
         }
         "$cquery/publishSemanticHighlighting" => {
-            cquery::publish_semantic_highlighting(server_name, params, ctx);
+            cquery::publish_semantic_highlighting(server_id, params, ctx);
         }
         "$ccls/publishSemanticHighlight" => {
-            ccls::publish_semantic_highlighting(server_name, params, ctx);
+            ccls::publish_semantic_highlighting(server_id, params, ctx);
         }
         notification::Exit::METHOD => {
-            debug!("{server_name} language server exited");
+            debug!("{server_id} language server exited");
         }
         notification::ShowMessage::METHOD => {
             let params: ShowMessageParams = params
                 .parse()
                 .expect("Failed to parse ShowMessageParams params");
-            show_message::show_message(meta, server_name, params.typ, &params.message, ctx);
+            show_message::show_message(meta, server_id, params.typ, &params.message, ctx);
         }
         "window/logMessage" => {
             let params: LogMessageParams = params
@@ -813,7 +817,7 @@ fn dispatch_server_notification(
                 meta,
                 format!(
                     "lsp-show-message-log {} {}",
-                    editor_quote(server_name),
+                    editor_quote(&format!("{}", &server_id)),
                     editor_quote(&params.message)
                 ),
             );
