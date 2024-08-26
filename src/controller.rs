@@ -405,8 +405,7 @@ pub fn start(
         }
         // Did the language server request us to watch for file changes?
         if !ctx.pending_file_watchers.is_empty() {
-            let mut requested_watchers = HashMap::default();
-            mem::swap(&mut ctx.pending_file_watchers, &mut requested_watchers);
+            let requested_watchers = mem::take(&mut ctx.pending_file_watchers);
             // If there's an existing watcher, ask nicely to terminate.
             if let Some(ref fw) = file_watcher.as_mut() {
                 info!("stopping stale file watcher");
