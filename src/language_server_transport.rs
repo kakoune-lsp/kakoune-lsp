@@ -13,7 +13,7 @@ pub struct LanguageServerTransport {
     // That helps to ensure that reader loop is not stuck trying to read from the language server.
     pub to_lang_server: Worker<ServerMessage, Void>,
     pub from_lang_server: Worker<Void, ServerMessage>,
-    pub errors: Worker<Void, Void>,
+    _errors: Worker<Void, Void>,
 }
 
 pub fn start(
@@ -125,7 +125,7 @@ pub fn start(
     Ok(LanguageServerTransport {
         to_lang_server,
         from_lang_server,
-        errors,
+        _errors: errors,
     })
 }
 

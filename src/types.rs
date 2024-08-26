@@ -66,7 +66,8 @@ pub struct LanguageServerConfig {
     pub offset_encoding: Option<OffsetEncoding>,
     pub experimental: Option<Value>,
     // This does nothing, but is kept so we can still parse old configs.
-    pub workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
+    #[allow(dead_code)]
+    workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
     pub workaround_eslint: Option<bool>,
 }
 
@@ -224,12 +225,6 @@ pub struct PositionParams {
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct MainSelectionParams {
-    pub selection_desc: String,
-}
-
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct EditorHoverParams {
     pub selection_desc: String,
     pub tabstop: usize,
@@ -301,7 +296,6 @@ pub struct GotoSymbolParams {
 pub struct ObjectParams {
     pub count: u32,
     pub mode: String,
-    pub position: KakounePosition,
     pub selections_desc: String,
     pub symbol_kinds: Vec<String>,
 }

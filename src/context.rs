@@ -104,7 +104,7 @@ impl Context {
             batches: Default::default(),
             code_lenses: Default::default(),
             completion_items: vec![],
-            completion_items_timestamp: i32::max_value(),
+            completion_items_timestamp: i32::MAX,
             completion_last_client: None,
             config: params.config,
             diagnostics: Default::default(),

@@ -720,8 +720,6 @@ $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
 count           = $kak_count
 mode            = \"$kak_opt_lsp_object_mode\"
-position.line = ${kak_cursor_line}
-position.column = ${kak_cursor_column}
 selections_desc = \"${kak_selections_desc}\"
 symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }

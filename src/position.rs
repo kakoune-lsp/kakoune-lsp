@@ -2,6 +2,7 @@
 //! Easy part:
 //! * LSP ranges are 0-based, but Kakoune's are 1-based.
 //! * LSP ranges are exclusive, but Kakoune's are inclusive.
+//!
 //! This could be solved by applying a proper offset. A bit more tricky is that to include
 //! line ending character LSP range uses an end position denoting the start of the next
 //! line. This could be solved by keeping the current line, but setting character offset
