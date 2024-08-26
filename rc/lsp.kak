@@ -823,6 +823,7 @@ EOF
 define-command lsp-code-actions-sync -params 0.. -docstring %{
     lsp-code-actions-sync [<code-action-kinds>...]: Perform the matching code action for the main cursor position, blocking Kakoune session until done.
 } %{
+    lsp-require-enabled lsp-code-actions-sync
     lsp-code-actions-request true true only %arg{@}
 } -shell-script-candidates %{
 cat <<EOF
