@@ -7,7 +7,7 @@ user_home=$HOME
 . test/lib.sh
 
 cat > .config/kak-lsp/kak-lsp.toml << EOF
-[language.rust]
+[language_server.rust-analyzer]
 filetypes = ["rust"]
 roots = ["Cargo.toml"]
 command = "sh"

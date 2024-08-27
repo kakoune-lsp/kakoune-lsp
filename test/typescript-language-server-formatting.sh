@@ -5,7 +5,7 @@
 . test/lib.sh
 
 cat > .config/kak-lsp/kak-lsp.toml << EOF
-[language.typescript]
+[language_server.typescript-language-server]
 filetypes = ["typescript"]
 roots = ["main.ts"]
 args = ["--stdio"]
