@@ -2274,9 +2274,9 @@ map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
 
 define-command lsp-enable -docstring "Default LSP integration" %{
     lsp-enable-impl global
-    hook -group lsp %arg{1} BufClose .* lsp-did-close
-    hook -group lsp %arg{1} BufSetOption lsp_config=.* lsp-did-change-config
-    hook -group lsp %arg{1} BufSetOption lsp_server_configuration=.* lsp-did-change-config
+    hook -group lsp global BufClose .* lsp-did-close
+    hook -group lsp global BufSetOption lsp_config=.* lsp-did-change-config
+    hook -group lsp global BufSetOption lsp_server_configuration=.* lsp-did-change-config
     hook -group lsp global BufCreate .* %{
         lsp-did-open
         lsp-did-change-config
