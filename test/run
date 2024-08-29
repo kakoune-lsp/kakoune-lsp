@@ -1,6 +1,7 @@
 #!/bin/sh
 
 rc=0
+failed_tests=
 
 test="$(dirname "$0")"
 for file in $(
@@ -11,8 +12,18 @@ do
 	"$test"/littlecheck.py "$file"
 	case $? in
 		(0|125) ;;
-		(*) rc=$?
+		(*)
+			rc=$?
+			failed_tests="$failed_tests
+$file"
+			;;
 	esac
 done
+
+if [ $rc -ne 0 ]; then
+	echo "Failed tests:"
+	echo "$failed_tests"
+	exit 1
+fi
 
 exit $rc
