@@ -311,13 +311,13 @@ as the corresponding fragments from VSCode's `settings.json`. For example:
 ----
 [language_server.gopls]
 ...
-settings_section = "gopls" # Optional, defaults to server name.
+settings_section = "gopls"
 [language_server.gopls.settings.gopls]
 "formatting.gofumpt" = true
 ----
 
-During server initialization, kakoune-lsp sends either the section specified by `settings_section`,
-or the section with same name as the server; in this case `{"formatting.gofumpt":true}`.
+During server initialization, kakoune-lsp sends the sub-table of `settings` specified by
+`settings_section`; in this case `{"formatting.gofumpt":true}`.
 Whenever you change the Kakoune option `lsp_config`, the same section is sent via
 `workspace/didChangeConfiguration`.  Additionally, kakoune-lsp will send arbitrary sections that
 are requested by the server in `workspace/configuration`.
