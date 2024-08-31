@@ -113,7 +113,7 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
         }
         ProgressParamsValue::WorkDone(WorkDoneProgress::Report(report)) => {
             if ctx.work_done_progress_report_timestamp.elapsed() < Duration::from_millis(1000) {
-                warn!("Progress report arrived too fast, dropping");
+                debug!("Progress report arrived too fast, dropping");
                 return;
             }
             ctx.work_done_progress_report_timestamp = time::Instant::now();

@@ -169,8 +169,8 @@ fn editor_code_actions(
 
     for (_, cmd) in &actions {
         match cmd {
-            CodeActionOrCommand::Command(cmd) => info!("Command: {:?}", cmd),
-            CodeActionOrCommand::CodeAction(action) => info!("Action: {:?}", action),
+            CodeActionOrCommand::Command(cmd) => debug!("Command: {:?}", cmd),
+            CodeActionOrCommand::CodeAction(action) => debug!("Action: {:?}", action),
         }
     }
 

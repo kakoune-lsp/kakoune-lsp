@@ -218,7 +218,7 @@ pub fn start(
                     break 'event_loop;
                 }
                 let mut file_events = msg.unwrap();
-                info!("received {} events from file watcher", file_events.len());
+                debug!("received {} events from file watcher", file_events.len());
                 // Enqueue the events from the file watcher.
                 file_watcher
                     .as_mut()
@@ -488,7 +488,7 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
         if document.version < request.meta.version {
             return true;
         }
-        info!(
+        debug!(
             "dispatching pending request {} because we have received matching version in didChange",
             request.method
         );
