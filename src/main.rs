@@ -180,6 +180,11 @@ fn main() {
         LspSessionId(lsp_session.or(session).unwrap()),
     );
 
+    if lsp_session.is_empty() {
+        println!("Error: session name cannot be empty");
+        process::exit(1);
+    }
+
     let mut raw_request = Vec::new();
     if matches.get_flag("request") || matches.get_flag("initial-request") {
         stdin()

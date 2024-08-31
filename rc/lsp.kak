@@ -1281,7 +1281,9 @@ done
 ) | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command -hidden lsp-exit-editor-session -docstring "Shutdown language servers associated with current editor session but keep kakoune-lsp session running" %{
+define-command -hidden lsp-exit-editor-session -params 0..1 -docstring %{
+    lsp-exit-editor-session [<session>]: shutdown language servers associated with current (or given) editor session but keep kakoune-lsp session running
+} %{
     remove-hooks global lsp
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
@@ -1292,7 +1294,15 @@ version  = ${kak_timestamp:-0}
 method   = \"exit\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
-" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+" | eval "${kak_opt_lsp_cmd} $([ -n "$1" ] && echo --session=$1) --request") > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command -hidden -params 0..1 lsp-exit-ifn nop
+
+try %{
+    hook -group lsp-session-renamed global SessionRenamed ([^:]*):.* %{
+        lsp-exit-ifn %val{hook_param_capture_1}
+    }
 }
 
 define-command lsp-cancel-progress -params 1 -docstring "lsp-cancel-progress <token>: cancel a cancelable progress item." %{
@@ -1361,7 +1371,7 @@ edit     = $1
 " | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command lsp-stop -docstring "Stop kakoune-lsp session" %{
+define-command lsp-stop -params 0..1 -docstring "lsp-stop [<session>]: terminate the given kakoune-lsp session" %{
     remove-hooks global lsp
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
@@ -1372,7 +1382,7 @@ version  = ${kak_timestamp:-0}
 method   = \"stop\"
 $([ -z ${kak_hook_param+x} ] || echo hook = true)
 [params]
-" | eval "${kak_opt_lsp_cmd} --request") > /dev/null 2>&1 < /dev/null & }
+" | eval "${kak_opt_lsp_cmd} $([ -n "$1" ] && echo --session=$1) --request") > /dev/null 2>&1 < /dev/null & }
 }
 
 define-command lsp-formatting -params 0..1 -docstring "lsp-formatting [<server_name>]: format document" %{
@@ -2302,8 +2312,6 @@ define-command lsp-disable-window -docstring "Disable LSP in the window scope" %
     lsp-disable-impl window
 }
 
-define-command lsp-on-exit nop
-
 define-command -hidden lsp-enable-impl -params 1 %{
     try "
         add-highlighter %arg{1}/cquery_semhl ranges cquery_semhl
@@ -2340,7 +2348,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
     hook -group lsp-breadcrumbs %arg{1} BufReload .* lsp-breadcrumbs-request
     hook -group lsp-breadcrumbs %arg{1} NormalIdle .* lsp-breadcrumbs-request
     hook -group lsp-breadcrumbs %arg{1} InsertIdle .* lsp-breadcrumbs-request
-    define-command -override lsp-on-exit lsp-exit
+    define-command -override -hidden -params 0..1 lsp-exit-ifn %{ lsp-exit %arg{@} }
 }
 
 define-command -hidden lsp-disable-impl -params 1 %{
@@ -2357,7 +2365,7 @@ define-command -hidden lsp-disable-impl -params 1 %{
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
-    define-command -override lsp-on-exit nop
+    define-command -override -hidden -params 0..1 lsp-exit-ifn nop
     lsp-exit
 }
 
@@ -2367,7 +2375,7 @@ define-command -hidden lsp-require-enabled -params 1 %{
 }
 
 lsp-stop-on-exit-enable
-hook -always global KakEnd .* lsp-on-exit
+hook -always global KakEnd .* lsp-exit-ifn
 
 # SNIPPETS
 # This is a slightly modified version of occivink/kakoune-snippets

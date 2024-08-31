@@ -8,6 +8,10 @@ Additions:
 - `kak-lsp --kakoune` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
 - When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
 
+Fixes:
+- On `rename-session`, the kak-lsp session with the old name will be shut down.
+  This requires Kakoune version >= v2024.05.09.
+
 ## 17.1.2 - 2024-08-17
 
 Additions:
