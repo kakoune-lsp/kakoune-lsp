@@ -405,6 +405,11 @@ pub struct SelectionRangePositionParams {
     pub selections_desc: String,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+pub struct DidChangeOptionParams {
+    pub debug: bool,
+}
+
 // Language Server
 
 // XXX serde(untagged) ?

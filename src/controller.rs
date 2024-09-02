@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::mem;
 use std::ops::ControlFlow;
 use std::path::PathBuf;
+use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
 
 use crate::capabilities::{self, initialize};
@@ -13,6 +14,7 @@ use crate::diagnostics;
 use crate::editor_transport;
 use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
+use crate::log::DEBUG;
 use crate::progress;
 use crate::project_root::find_project_root;
 use crate::show_message;
@@ -31,6 +33,7 @@ use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
 use regex::Regex;
+use serde::Deserialize;
 
 /// Start the main event loop.
 ///
@@ -45,7 +48,10 @@ pub fn start(
     log_path: &'static Option<PathBuf>,
     initial_request: Option<String>,
 ) -> i32 {
-    info!(session, "Starting main event loop");
+    info!(
+        session,
+        "kak-lsp server starting. To increase log verbosity, run 'set g lsp_debug true'"
+    );
 
     let editor = editor_transport::start(&session, lsp_session, initial_request);
     if let Err(code) = editor {
@@ -379,7 +385,7 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
     } else {
         ctx.sessions.push(request.meta.session.clone());
     }
-    if !route_request(ctx, &mut request.meta, &request.method) {
+    if !route_request(ctx, &mut request.meta, &request.method, &request.params) {
         return ControlFlow::Continue(());
     }
     // initialize request must be first request from client to language server
@@ -497,13 +503,26 @@ pub fn can_serve(
         && (candidate.roots.contains(requested_root_path) || workspace_folder_support)
 }
 
-fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str) -> bool {
-    if request_method == notification::Exit::METHOD {
-        info!(
-            meta.session,
-            "Editor session `{}` closed, shutting down associated language servers", meta.session
-        );
-        return true;
+fn route_request(
+    ctx: &mut Context,
+    meta: &mut EditorMeta,
+    request_method: &str,
+    request_params: &EditorParams,
+) -> bool {
+    match request_method {
+        notification::Exit::METHOD => {
+            info!(
+                meta.session,
+                "Editor session `{}` closed, shutting down associated language servers",
+                meta.session
+            );
+            return true;
+        }
+        "kakoune/did-change-option" => {
+            let params = DidChangeOptionParams::deserialize(request_params.clone()).unwrap();
+            DEBUG.store(params.debug, Relaxed)
+        }
+        _ => (),
     }
     if !meta.buffile.starts_with('/') {
         debug!(

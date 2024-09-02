@@ -461,6 +461,14 @@ hook -group lsp-scratch-buffers global BufCreate [^/].* %{
         set-option buffer disabled_hooks "%opt{disabled_hooks}|lsp.*"
 }
 
+hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
+    try %{
+        lsp-require-enabled lsp-did-change-option
+        echo -debug LSP: applying option change %val{hook_param}
+        lsp-did-change-option
+    }
+}
+
 declare-option -hidden -docstring %{
     %sh{eval "$kak_opt_lsp_find_root" <globs>...}: detect root directory based on the given shell globs.
 
@@ -1524,6 +1532,27 @@ while [ $# -gt 0 ]; do
 
     shift
 done
+) | eval "${kak_opt_lsp_cmd} --request" # kak_opt_lsp_debug kak_opt_lsp_timeout kak_opt_lsp_snippet_support kak_opt_lsp_file_watch_support
+) > /dev/null 2>&1 < /dev/null & }
+}
+
+define-command -hidden lsp-did-change-option %{
+    nop %sh{ ((printf %s "
+session  = \"${kak_session}\"
+client   = \"${kak_client}\"
+buffile  = \"${kak_buffile}\"
+filetype = \"${kak_opt_filetype}\"
+language_id = \"${kak_opt_lsp_language_id}\"
+version  = ${kak_timestamp:-0}
+method   = \"kakoune/did-change-option\"
+$([ -z ${kak_hook_param+x} ] || echo hook = true)
+root = \"${kak_opt_lsp_project_root}\"
+$(printf %s "${kak_opt_lsp_servers}" | sed 's/^[[:space:]]*\[/[language_server./')
+[semantic_tokens]
+faces_str = \"\"\"${kak_opt_lsp_semantic_tokens}\"\"\"
+[params]
+${kak_hook_param#lsp_}
+"
 ) | eval "${kak_opt_lsp_cmd} --request" # kak_opt_lsp_debug kak_opt_lsp_timeout kak_opt_lsp_snippet_support kak_opt_lsp_file_watch_support
 ) > /dev/null 2>&1 < /dev/null & }
 }
