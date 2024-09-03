@@ -1,7 +1,7 @@
 ### Options and faces ###
 
 # Feel free to update path and arguments according to your setup when sourcing lsp.kak directly.
-declare-option -docstring "Command with which lsp is run" str lsp_cmd "kak-lsp -s %val{session}"
+declare-option -docstring "Command with which lsp is run" str lsp_cmd kak-lsp
 
 # Faces
 
@@ -397,7 +397,9 @@ set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 ### Requests ###
 
-define-command lsp-start -docstring "Start kakoune-lsp session" %{ nop %sh{ (eval "${kak_opt_lsp_cmd}") > /dev/null 2>&1 < /dev/null & } }
+define-command lsp-start -docstring "Start kakoune-lsp session" %{ nop %sh{
+    (eval "${kak_opt_lsp_cmd}") > /dev/null 2>&1 < /dev/null & # kak_session
+}}
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{ try %{
     evaluate-commands %sh{

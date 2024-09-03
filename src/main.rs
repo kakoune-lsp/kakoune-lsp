@@ -101,7 +101,6 @@ fn main() {
                 .short('s')
                 .long("session")
                 .value_name("SESSION")
-                .required_unless_present("kakoune")
                 .help("Session id to communicate via unix socket"),
         )
         .arg(
@@ -169,8 +168,17 @@ fn main() {
         config = fs::read_to_string(config_path).expect("Failed to read config");
     }
 
-    let lsp_session = LspSessionId(String::from(matches.get_one::<String>("session").unwrap()));
-    let session: SessionId = SessionId(lsp_session.0.clone());
+    let session = env_var("kak_session");
+    let lsp_session = matches.get_one::<String>("session").map(String::from);
+    if lsp_session.is_none() && session.is_none() {
+        println!("Error: no session name given, pass '--session'");
+        process::exit(1);
+    }
+
+    let (session, lsp_session) = (
+        SessionId(session.clone().or(lsp_session.clone()).unwrap()),
+        LspSessionId(lsp_session.or(session).unwrap()),
+    );
 
     let mut raw_request = Vec::new();
     if matches.get_flag("request") || matches.get_flag("initial-request") {
@@ -306,6 +314,19 @@ fn main() {
         let log_path = Box::leak(log_path);
         let code = session::start(session, &lsp_session, &config, log_path, initial_request);
         goodbye(&lsp_session, code);
+    }
+}
+
+fn env_var(name: &str) -> Option<String> {
+    match env::var(name) {
+        Ok(value) => Some(value),
+        Err(err) => match err {
+            env::VarError::NotPresent => None,
+            env::VarError::NotUnicode(_bytes) => {
+                println!("environment variable '{name}' is not valid UTF-8");
+                process::exit(1);
+            }
+        },
     }
 }
 

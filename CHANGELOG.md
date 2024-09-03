@@ -1,7 +1,10 @@
 ## Unreleased
 
 Additions:
-- The `--session` option is no longer required when using `--kakoune`, simplifying the recommended configuration.
+- The `--session` option is no longer required unless you start `kak-lsp` from outside an editor session:
+  - This simplifies the default configuration (`eval %sh{kak-lsp --kakoune}; lsp-enable`).
+  - Since `lsp_cmd` no longer needs to contain the `--session` argument,
+    `rename-session` does not break LSP by invalidating that argument.
 - `kak-lsp --kakoune` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
 - When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
 
