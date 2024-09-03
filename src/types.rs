@@ -7,6 +7,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
+use std::ops::Deref;
+use std::path::Path;
 
 pub enum Void {}
 
@@ -45,8 +47,10 @@ pub struct DynamicConfig {
 
 #[derive(Clone, Default, Deserialize, Debug)]
 pub struct ServerConfig {
+    #[deprecated]
+    #[allow(unused)]
     #[serde(default)]
-    pub session: String,
+    session: LspSessionId,
     #[serde(default)]
     pub timeout: u64,
 }
@@ -139,7 +143,7 @@ pub struct SemanticTokenFace {
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct EditorMeta {
-    pub session: String,
+    pub session: SessionId,
     pub client: Option<String>,
     pub buffile: String,
     pub filetype: String,
@@ -178,7 +182,46 @@ pub struct EditorResponse {
     pub command: Cow<'static, str>,
 }
 
-pub type SessionId = String;
+/// Kakoune session ID.
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct SessionId(pub String);
+
+impl Deref for SessionId {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Display for SessionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// kakoune-lsp session ID.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct LspSessionId(pub String);
+
+impl Deref for LspSessionId {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Display for LspSessionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl AsRef<Path> for LspSessionId {
+    fn as_ref(&self) -> &Path {
+        self.0.as_ref()
+    }
+}
+
 pub type LanguageId = String;
 pub type ServerName = String;
 pub type RootPath = String;

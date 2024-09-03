@@ -16,24 +16,27 @@ pub struct EditorTransport {
     pub to_editor: Worker<EditorResponse, Void>,
 }
 
-pub fn start(session: &str, initial_request: Option<String>) -> Result<EditorTransport, i32> {
+pub fn start(
+    lsp_session: &LspSessionId,
+    initial_request: Option<String>,
+) -> Result<EditorTransport, i32> {
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
 
     let (sender, receiver) = bounded(channel_capacity);
     let mut path = temp_dir();
-    path.push(session);
+    path.push(lsp_session);
     if path.exists() {
         if UnixStream::connect(&path).is_err() {
             if fs::remove_file(&path).is_err() {
                 error!(
-                    "Failed to clean up dead session at {}",
+                    "Failed to clean up dead LSP session at {}",
                     path.to_str().unwrap()
                 );
                 return Err(1);
             };
         } else {
-            error!("Server is already running for session {}", session);
+            error!("Server is already running for LSP session {}", lsp_session);
             return Err(1);
         }
     }

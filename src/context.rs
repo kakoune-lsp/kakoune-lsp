@@ -369,7 +369,7 @@ impl Context {
     }
 }
 
-pub fn meta_for_session(session: String, client: Option<String>) -> EditorMeta {
+pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMeta {
     EditorMeta {
         session,
         client,

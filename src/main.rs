@@ -169,7 +169,8 @@ fn main() {
         config = fs::read_to_string(config_path).expect("Failed to read config");
     }
 
-    let session = String::from(matches.get_one::<String>("session").unwrap());
+    let lsp_session = LspSessionId(String::from(matches.get_one::<String>("session").unwrap()));
+    let session: SessionId = SessionId(lsp_session.0.clone());
 
     let mut raw_request = Vec::new();
     if matches.get_flag("request") || matches.get_flag("initial-request") {
@@ -226,12 +227,10 @@ fn main() {
         }
     };
 
-    config.server.session = session;
-
     if let Some(timeout) = matches.get_one::<String>("timeout").map(|s| {
         s.parse().unwrap_or_else(|err| {
             report_config_error(
-                &config.server.session,
+                &session,
                 &raw_request,
                 format!("failed to parse --timeout parameter: {err}"),
             )
@@ -242,7 +241,7 @@ fn main() {
 
     if matches.get_flag("request") {
         let mut path = util::temp_dir();
-        path.push(&config.server.session);
+        path.push(&lsp_session);
         let connect = || match UnixStream::connect(&path) {
             Ok(mut stream) => {
                 stream
@@ -256,19 +255,19 @@ fn main() {
             return;
         }
         let mut lockfile_path = util::temp_dir();
-        lockfile_path.push(format!("{}.lock", config.server.session));
+        lockfile_path.push(format!("{}.lock", lsp_session));
         let lockfile = match fs::File::create(&lockfile_path) {
             Ok(lockfile) => lockfile,
             Err(err) => {
                 println!("Failed to create lock file: {:?}", err);
-                goodbye(&config.server.session, 1)
+                goodbye(&lsp_session, 1)
             }
         };
         if lockfile.try_lock_exclusive().is_ok() {
             spin_up_server(&raw_request);
             if let Err(err) = lockfile.unlock() {
                 println!("Failed to unlock lock file: {:?}", err);
-                goodbye(&config.server.session, 1);
+                goodbye(&lsp_session, 1);
             }
             fs::remove_file(&lockfile_path).expect("Failed to remove lock file");
             return;
@@ -280,7 +279,7 @@ fn main() {
             thread::sleep(Duration::from_millis(30));
         }
         println!("Could not launch server or connect to it, giving up after 10 attempts");
-        goodbye(&config.server.session, 1);
+        goodbye(&lsp_session, 1);
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
@@ -291,22 +290,22 @@ fn main() {
         };
         if matches.get_flag("daemonize") {
             let mut pid_path = util::temp_dir();
-            pid_path.push(format!("{}.pid", config.server.session));
+            pid_path.push(format!("{}.pid", lsp_session));
             if let Err(e) = Daemonize::new()
                 .pid_file(&pid_path)
                 .working_directory(std::env::current_dir().unwrap())
                 .start()
             {
                 println!("Failed to daemonize process: {:?}", e);
-                goodbye(&config.server.session, 1);
+                goodbye(&lsp_session, 1);
             }
         }
         // Setting up the logger after potential daemonization,
         // otherwise it refuses to work properly.
         let (_guard, log_path) = setup_logger(&config, &matches);
         let log_path = Box::leak(log_path);
-        let code = session::start(&config, log_path, initial_request);
-        goodbye(&config.server.session, code);
+        let code = session::start(session, &lsp_session, &config, log_path, initial_request);
+        goodbye(&lsp_session, code);
     }
 }
 
@@ -362,13 +361,13 @@ fn kakoune() -> i32 {
     0
 }
 
-fn report_config_error(session: &str, raw_request: &[u8], error_message: String) -> ! {
+fn report_config_error(session: &SessionId, raw_request: &[u8], error_message: String) -> ! {
     let editor_request: Option<EditorRequest> =
         toml::from_str(&String::from_utf8_lossy(raw_request)).ok();
     let command = format!("lsp-show-error {}", &editor_quote(&error_message));
     if let Err(err) = send_command_to_editor(EditorResponse {
         meta: meta_for_session(
-            session.to_string(),
+            session.clone(),
             editor_request.and_then(|req| req.meta.client),
         ),
         command: command.into(),
@@ -441,11 +440,11 @@ fn setup_logger(
 }
 
 // Cleanup and gracefully exit
-fn goodbye(session: &str, code: i32) -> ! {
+fn goodbye(lsp_session: &LspSessionId, code: i32) -> ! {
     if code == 0 {
         let path = temp_dir();
-        let sock_path = path.join(session);
-        let pid_path = path.join(format!("{}.pid", session));
+        let sock_path = path.join(lsp_session);
+        let pid_path = path.join(format!("{}.pid", lsp_session));
         if fs::remove_file(sock_path).is_err() {
             warn!("Failed to remove socket file");
         };
