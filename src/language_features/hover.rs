@@ -17,8 +17,7 @@ use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_HOVER))
         .collect();
     if meta.fifo.is_none() && eligible_servers.is_empty() {
@@ -40,7 +39,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![HoverParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -84,7 +83,7 @@ pub fn editor_hover(
     let lsp_ranges: HashMap<_, _> = results
         .iter()
         .map(|(server_id, _)| {
-            let offset_encoding = ctx.language_servers[server_id].offset_encoding;
+            let offset_encoding = ctx.server(*server_id).offset_encoding;
             (
                 server_id,
                 kakoune_range_to_lsp(&range, &doc.text, offset_encoding),
@@ -94,8 +93,8 @@ pub fn editor_hover(
     let for_hover_buffer = matches!(hover_type, HoverType::HoverBuffer { .. });
     let diagnostics = ctx.diagnostics.get(&meta.buffile);
     let diagnostics = diagnostics
-        .map(|x| {
-            x.iter()
+        .map(|xs| {
+            xs.iter()
                 .filter(|(server_id, x)| {
                     lsp_ranges
                         .get(server_id)
@@ -104,10 +103,10 @@ pub fn editor_hover(
                 })
                 .filter(|(_, x)| !x.message.is_empty())
                 .map(|(server_id, x)| {
-                    let server = &ctx.language_servers[server_id];
+                    let server = ctx.server(*server_id);
                     // Indent line breaks to the same level as the bullet point
                     let message = (x.message.trim().to_string()
-                        + &format_related_information(x, server_id, server, server, ctx)
+                        + &format_related_information(x, server, xs.len() > 1, &meta, ctx)
                             .map(|s| "\n  ".to_string() + &s)
                             .unwrap_or_default())
                         .replace('\n', "\n  ");
@@ -115,8 +114,8 @@ pub fn editor_hover(
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
                         return format!(
                             "* {}{message}",
-                            &if ctx.language_servers.len() > 1 {
-                                format!("[{}] ", server_id.name)
+                            &if meta.servers.len() > 1 {
+                                format!("[{}] ", server.name)
                             } else {
                                 "".to_string()
                             }
@@ -139,8 +138,8 @@ pub fn editor_hover(
 
                     format!(
                         "• {}{{{face}}}{}{{{FACE_INFO_DEFAULT}}}",
-                        &if ctx.language_servers.len() > 1 {
-                            format!("[{}] ", server_id.name)
+                        &if results.len() > 1 {
+                            format!("[{}] ", ctx.server(*server_id).name)
                         } else {
                             "".to_string()
                         },
@@ -179,7 +178,7 @@ pub fn editor_hover(
                     }
                     format!(
                         "• ({}) {{{}}}{}{{{}}}",
-                        server_id.name,
+                        ctx.server(*server_id).name,
                         FACE_INFO_DIAGNOSTIC_HINT,
                         escape_kakoune_markup(title),
                         FACE_INFO_DEFAULT,

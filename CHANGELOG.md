@@ -6,11 +6,23 @@ For backwards compatibility, the new options are ignored if a `kak-lsp.toml` exi
 By default, `lsp_servers` and `lsp_language_id` are populated via the hooks in the `lsp-filetype-.*` groups, feel free to remove them.
 See the README or the beginning of `kak-lsp --kakoune` for details.
 
+Breaking changes:
+- `lsp-stop-on-exit-disable` (and the default `lsp-stop-on-exit-enable`)
+  no longer have an effect.  Instead, the kakoune-lsp server will always
+  stop running as soon as all Kakoune sessions that ever connected have exited.
+- When using the `--session` option to use the same kakoune-lsp server from multiple Kakoune sessions,
+  those sessions will now share language server processes.
+  Since `--session` is no longer necessary for other use cases (see
+  below), this option is recommended only for advanced users and might be
+  changed/removed in future.
+
 Additions:
 - The `--session` option is no longer required unless you start `kak-lsp` from outside an editor session:
   - This simplifies the default configuration (`eval %sh{kak-lsp --kakoune}; lsp-enable`).
   - Since `lsp_cmd` no longer needs to contain the `--session` argument,
     `rename-session` does not break LSP by invalidating that argument.
+- Support for multiple project roots if the server supports LSP workspaceFolders:
+  a single language server instance will be reused for all projects in a kakoune-lsp session.
 - `kak-lsp --kakoune` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
 - When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
 

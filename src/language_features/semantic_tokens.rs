@@ -15,8 +15,7 @@ use url::Url;
 
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SEMANTIC_TOKENS))
         .collect();
     if meta.fifo.is_none() && eligible_servers.is_empty() {
@@ -30,7 +29,7 @@ pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
         .into_iter()
         .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![SemanticTokensParams {
                     partial_result_params: Default::default(),
                     text_document: TextDocumentIdentifier {
@@ -63,7 +62,7 @@ pub fn tokens_response(
     ctx: &mut Context,
 ) {
     let (server_id, tokens) = response;
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let legend = match server
         .capabilities
         .as_ref()

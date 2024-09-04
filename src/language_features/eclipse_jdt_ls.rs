@@ -9,11 +9,10 @@ pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
     let file_uri: String = file_uri.into();
 
     let req_params = ctx
-        .language_servers
-        .keys()
-        .map(|server_id| {
+        .servers(&meta)
+        .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![ExecuteCommandParams {
                     command: "java.edit.organizeImports".to_string(),
                     arguments: vec![serde_json::json!(file_uri)],

@@ -18,7 +18,7 @@ pub const SHOW_MESSAGE_REQUEST_RESPOND: &str = "window/showMessageRequest/respon
 /// Queues the message request from the LSP server.
 pub fn show_message_request(
     meta: EditorMeta,
-    server_id: &ServerId,
+    server_id: ServerId,
     request: MethodCall,
     ctx: &mut Context,
 ) {
@@ -28,7 +28,7 @@ pub fn show_message_request(
         .parse()
         .expect("Failed to parse ShowMessageRequest params");
     ctx.pending_message_requests
-        .push_back((request_id, server_id.clone(), params));
+        .push_back((request_id, server_id, params));
     update_modeline(meta, ctx)
 }
 
@@ -39,12 +39,10 @@ struct MessageRequestResponse {
 }
 
 /// Handles an user's response to a message request (or the user's request to display the next message request).
-pub fn show_message_request_respond(params: toml::Value, ctx: &mut Context) {
+pub fn show_message_request_respond(meta: EditorMeta, params: toml::Value, ctx: &mut Context) {
     let resp =
         MessageRequestResponse::deserialize(params).expect("Cannot parse message request response");
-
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
+    for server_id in meta.servers {
         let item = resp
             .item
             .clone()
@@ -67,9 +65,9 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         Some(opts) if !opts.is_empty() => &opts[..],
         _ => {
             // a ShowMessageRequest with no actions is just a ShowMessage notification.
-            show_message(meta, &server_id, params.typ, &params.message, ctx);
+            show_message(meta, server_id, params.typ, &params.message, ctx);
 
-            ctx.reply(&server_id, id.clone(), Ok(serde_json::Value::Null));
+            ctx.reply(server_id, id.clone(), Ok(serde_json::Value::Null));
             return;
         }
     };
@@ -116,7 +114,7 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
 /// Implements ShowMessage notification.
 pub fn show_message(
     meta: EditorMeta,
-    server_id: &ServerId,
+    server_id: ServerId,
     typ: MessageType,
     msg: &str,
     ctx: &Context,
@@ -127,7 +125,7 @@ pub fn show_message(
         format!(
             "{} {} {}",
             command,
-            editor_quote(&format!("{}", &server_id)),
+            editor_quote(&ctx.server(server_id).name),
             editor_quote(msg)
         ),
     );

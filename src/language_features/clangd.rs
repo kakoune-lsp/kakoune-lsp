@@ -13,12 +13,12 @@ impl Request for SwitchSourceHeaderRequest {
 }
 
 pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
-    let req_params = ctx
-        .language_servers
-        .keys()
-        .map(|server_id| {
+    let req_params = meta
+        .servers
+        .iter()
+        .map(|&server_id| {
             (
-                server_id.clone(),
+                server_id,
                 vec![TextDocumentIdentifier {
                     uri: Url::from_file_path(&meta.buffile).unwrap(),
                 }],

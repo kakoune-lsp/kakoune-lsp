@@ -19,8 +19,7 @@ use url::Url;
 
 pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_CODE_ACTIONS))
         .collect();
     if eligible_servers.is_empty() {
@@ -48,7 +47,7 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 kakoune_range_to_lsp(
                     &parse_kakoune_range(&params.selection_desc).0,
                     &document.text,
@@ -90,7 +89,7 @@ fn code_actions_for_ranges(
         .iter()
         .map(|(server_id, range)| {
             (
-                server_id.clone(),
+                *server_id,
                 vec![CodeActionParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -160,7 +159,7 @@ fn editor_code_actions(
             let cmd: Vec<_> = cmd
                 .unwrap_or_default()
                 .into_iter()
-                .map(|cmd| (server_id.clone(), cmd))
+                .map(|cmd| (server_id, cmd))
                 .collect();
             cmd
         })
@@ -173,11 +172,11 @@ fn editor_code_actions(
         }
     }
 
-    let may_resolve: HashSet<_> = ranges
+    let may_resolve: HashSet<ServerId> = ranges
         .iter()
         .filter(|(server_id, _)| {
-            let server_id = *server_id;
-            let server_settings = &ctx.language_servers[server_id];
+            let server_id = **server_id;
+            let server_settings = ctx.server(server_id);
 
             attempt_server_capability(
                 (server_id, server_settings),
@@ -185,7 +184,7 @@ fn editor_code_actions(
                 CAPABILITY_CODE_ACTIONS_RESOLVE,
             )
         })
-        .map(|(server_id, _)| server_id)
+        .map(|(server_id, _)| *server_id)
         .collect();
 
     let sync = meta.fifo.is_some();

@@ -1512,11 +1512,14 @@ done
 ) > /dev/null 2>&1 < /dev/null & }
 }
 
-define-command -hidden lsp-exit-editor-session -params 0..1 -docstring %{
-    lsp-exit-editor-session [<session>]: shutdown language servers associated with current (or given) editor session but keep kakoune-lsp session running
+define-command -hidden lsp-exit -params 0..1 -docstring %{
+    lsp-exit [<session>]: shutdown language servers associated with current (or given) editor session
 } %{
     remove-hooks global lsp
-    nop %sh{ (printf %s "
+    nop %sh{
+            # After rename, use the old session name (if given and lsp_cmd has -s, we'll fail anyway).
+            kak_session=${1:-"$kak_session"}
+            (printf %s "
 session  = \"${kak_session}\"
 client   = \"${kak_client}\"
 buffile  = \"${kak_buffile}\"
@@ -1619,25 +1622,6 @@ faces_str = \"\"\"${kak_opt_lsp_semantic_tokens}\"\"\"
 [params]
 edit     = $1
 " | eval "${kak_opt_lsp_cmd} --request" # kak_opt_lsp_debug kak_opt_lsp_timeout kak_opt_lsp_snippet_support kak_opt_lsp_file_watch_support
-) > /dev/null 2>&1 < /dev/null & }
-}
-
-define-command lsp-stop -params 0..1 -docstring "lsp-stop [<session>]: terminate the given kakoune-lsp session" %{
-    remove-hooks global lsp
-    nop %sh{ (printf %s "
-session  = \"${kak_session}\"
-client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
-filetype = \"${kak_opt_filetype}\"
-language_id = \"${kak_opt_lsp_language_id}\"
-version  = ${kak_timestamp:-0}
-method   = \"stop\"
-$([ -z ${kak_hook_param+x} ] || echo hook = true)
-${kak_opt_lsp_servers}
-[semantic_tokens]
-faces = \"\"\"${kak_opt_lsp_semantic_tokens}\"\"\"
-[params]
-" | eval "${kak_opt_lsp_cmd} $([ -n "$1" ] && echo --session=$1) --request" # kak_opt_lsp_debug kak_opt_lsp_timeout kak_opt_lsp_snippet_support kak_opt_lsp_file_watch_support
 ) > /dev/null 2>&1 < /dev/null & }
 }
 
@@ -2548,14 +2532,6 @@ define-command lsp-auto-signature-help-disable -docstring "Disable auto-requesti
     remove-hooks global lsp-auto-signature-help
 }
 
-define-command lsp-stop-on-exit-enable -docstring "End kakoune-lsp session on Kakoune session end" %{
-    alias global lsp-exit lsp-stop
-}
-
-define-command lsp-stop-on-exit-disable -docstring "Don't end kakoune-lsp session on Kakoune session end" %{
-    alias global lsp-exit lsp-exit-editor-session
-}
-
 define-command lsp-inlay-hints-enable -params 1 -docstring "lsp-inlay-hints-enable <scope>: enable inlay hints for <scope>" %{
     add-highlighter "%arg{1}/lsp_inlay_hints" replace-ranges lsp_inlay_hints
     hook -group lsp-inlay-hints %arg{1} BufReload .* lsp-inlay-hints
@@ -2730,7 +2706,6 @@ define-command -hidden lsp-require-enabled -params 1 %{
     %opt{lsp_fail_if_disabled} "%arg{1}: run lsp-enable or lsp-enable-window first"
 }
 
-lsp-stop-on-exit-enable
 hook -always global KakEnd .* lsp-exit-ifn
 
 # SNIPPETS
@@ -3192,3 +3167,7 @@ define-command -hidden lsp-goto-next-match -docstring 'DEPRECATED, use jump-next
 define-command -hidden lsp-goto-previous-match -docstring 'DEPRECATED, use jump-previous. Jump to the previous goto match' %{
     jump-previous '*goto*'
 }
+
+define-command -hidden lsp-stop-on-exit-enable -docstring "DEPRECATED. End kakoune-lsp session on Kakoune session end" %{}
+define-command -hidden lsp-stop-on-exit-disable -docstring "DEPRECATED. Don't end kakoune-lsp session on Kakoune session end" %{}
+define-command -hidden lsp-stop -docstring "DEPRECATED: lsp-stop: terminate the given kakoune-lsp session" lsp-exit

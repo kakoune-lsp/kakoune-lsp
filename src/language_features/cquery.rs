@@ -155,7 +155,7 @@ pub struct PublishSemanticHighlightingParams {
     pub symbols: Vec<SemanticSymbol>,
 }
 
-pub fn publish_semantic_highlighting(server_id: &ServerId, params: Params, ctx: &mut Context) {
+pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
     let client = None;
@@ -167,7 +167,7 @@ pub fn publish_semantic_highlighting(server_id: &ServerId, params: Params, ctx: 
     }
     let document = document.unwrap();
     let version = document.version;
-    let server = &ctx.language_servers[server_id];
+    let server = ctx.server(server_id);
     let ranges = params
         .symbols
         .iter()

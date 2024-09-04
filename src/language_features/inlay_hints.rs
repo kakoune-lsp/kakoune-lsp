@@ -22,8 +22,7 @@ struct InlayHintsOptions {
 
 pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_INLAY_HINTS))
         .collect();
     if meta.fifo.is_none() && eligible_servers.is_empty() {
@@ -35,7 +34,7 @@ pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         .into_iter()
         .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![InlayHintParams {
                     work_done_progress_params: Default::default(),
                     text_document: TextDocumentIdentifier {
@@ -56,7 +55,7 @@ pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
                     let v: Vec<_> = v
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|v| (server_id.clone(), v))
+                        .map(|v| (server_id, v))
                         .collect();
                     v
                 })
@@ -88,7 +87,7 @@ pub fn inlay_hints_response(
                     ..
                 },
             )| {
-                let server = &ctx.language_servers[&server_id];
+                let server = ctx.server(server_id);
                 let position =
                     lsp_position_to_kakoune(&position, &document.text, server.offset_encoding);
                 let label = match label {

@@ -34,20 +34,18 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
 
     record_dynamic_config(&meta, ctx, config);
 
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
+    for &server_id in &meta.servers {
+        let server_name = &ctx.server(server_id).name;
         let settings = ctx
             .dynamic_config
             .language_server
-            .get(&server_id.name)
+            .get(server_name)
             .and_then(|lang| lang.settings.as_ref());
         let settings = configured_section(&meta, ctx, server_id, settings).unwrap_or_else(|| {
             if !raw_settings.is_empty() {
                 Value::Object(explode_string_table(raw_settings))
             } else {
-                let server = server_configs(&ctx.config, &meta)
-                    .get(&server_id.name)
-                    .unwrap();
+                let server = server_configs(&ctx.config, &meta).get(server_name).unwrap();
                 configured_section(&meta, ctx, server_id, server.settings.as_ref())
                     .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
             }
@@ -61,23 +59,25 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
 pub fn configuration(
     meta: EditorMeta,
     params: Params,
-    server_id: &ServerId,
+    server_id: ServerId,
     ctx: &mut Context,
 ) -> Result<Value, jsonrpc_core::Error> {
     let params = params.parse::<ConfigurationParams>()?;
 
+    let server_name = &ctx.server(server_id).name;
+
     let settings = ctx
         .dynamic_config
         .language_server
-        .get(&server_id.name)
+        .get(server_name)
         .and_then(|cfg| cfg.settings.as_ref().cloned())
         .or_else(|| {
             if is_using_legacy_toml(&ctx.config) {
                 server_configs(&ctx.config, &meta)
-                    .get(&server_id.name)
+                    .get(server_name)
                     .and_then(|conf| conf.settings.as_ref().cloned())
             } else {
-                ctx.language_servers[&server_id].settings.as_ref().cloned()
+                ctx.server(server_id).settings.as_ref().cloned()
             }
         });
 
@@ -98,7 +98,7 @@ pub fn configuration(
                     None => Value::Null,
                     Some(settings) => {
                         if server_configs(&ctx.config, &meta)
-                            .get(&server_id.name)
+                            .get(server_name)
                             .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
                             && section.is_empty()
                         {
@@ -123,10 +123,7 @@ pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Contex
         move |ctx, meta, results| {
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
-                None => {
-                    let entry = ctx.language_servers.first_entry().unwrap();
-                    (entry.key().clone(), None)
-                }
+                None => (meta.servers[0], None),
             };
 
             editor_workspace_symbol(meta, result, ctx)
@@ -169,7 +166,7 @@ fn editor_workspace_symbol(
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let content = match result {
         Some(WorkspaceSymbolResponse::Flat(result)) => {
             if result.is_empty() {
@@ -189,7 +186,7 @@ fn editor_workspace_symbol(
     };
     let command = format!(
         "lsp-show-workspace-symbol {} {}",
-        editor_quote(&server.root_path),
+        editor_quote(ctx.main_root(&meta)),
         editor_quote(&content),
     );
     ctx.exec(meta, command);
@@ -290,8 +287,8 @@ pub fn apply_document_resource_op(
 
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
 pub fn apply_edit(
-    server_id: &ServerId,
-    meta: EditorMeta,
+    server_id: ServerId,
+    meta: &EditorMeta,
     edit: WorkspaceEdit,
     ctx: &mut Context,
 ) -> ApplyWorkspaceEditResponse {
@@ -301,7 +298,7 @@ pub fn apply_edit(
                 for edit in edits {
                     apply_annotated_text_edits(
                         server_id,
-                        &meta,
+                        meta,
                         edit.text_document.uri,
                         edit.edits,
                         ctx,
@@ -314,14 +311,14 @@ pub fn apply_edit(
                         DocumentChangeOperation::Edit(edit) => {
                             apply_annotated_text_edits(
                                 server_id,
-                                &meta,
+                                meta,
                                 edit.text_document.uri,
                                 edit.edits,
                                 ctx,
                             );
                         }
                         DocumentChangeOperation::Op(op) => {
-                            if let Err(e) = apply_document_resource_op(&meta, op, ctx) {
+                            if let Err(e) = apply_document_resource_op(meta, op, ctx) {
                                 error!("failed to apply document change operation: {}", e);
                                 return ApplyWorkspaceEditResponse {
                                     applied: false,
@@ -336,7 +333,7 @@ pub fn apply_edit(
         }
     } else if let Some(changes) = edit.changes {
         for (uri, change) in changes {
-            apply_text_edits(server_id, &meta, uri, change, ctx);
+            apply_text_edits(server_id, meta, uri, change, ctx);
         }
     }
     ApplyWorkspaceEditResponse {
@@ -352,8 +349,8 @@ struct EditorApplyEdit {
 }
 
 pub fn apply_edit_from_editor(
-    server_id: &ServerId,
-    meta: EditorMeta,
+    server_id: ServerId,
+    meta: &EditorMeta,
     params: EditorParams,
     ctx: &mut Context,
 ) {
@@ -365,12 +362,12 @@ pub fn apply_edit_from_editor(
 }
 
 pub fn apply_edit_from_server(
-    server_id: &ServerId,
+    meta: EditorMeta,
+    server_id: ServerId,
     params: Params,
     ctx: &mut Context,
 ) -> Result<Value, jsonrpc_core::Error> {
     let params: ApplyWorkspaceEditParams = params.parse()?;
-    let meta = meta_for_session(ctx.session.clone(), None);
-    let response = apply_edit(server_id, meta, params.edit, ctx);
+    let response = apply_edit(server_id, &meta, params.edit, ctx);
     Ok(serde_json::to_value(response).unwrap())
 }

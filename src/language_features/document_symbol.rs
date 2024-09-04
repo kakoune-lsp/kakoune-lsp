@@ -24,15 +24,14 @@ use url::Url;
 
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -50,10 +49,7 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
             // Find the first non-empty result.
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
-                None => {
-                    let entry = ctx.language_servers.first_entry().unwrap();
-                    (entry.key().clone(), None)
-                }
+                None => (meta.servers[0], None),
             };
 
             editor_document_symbol(meta, result, ctx)
@@ -63,15 +59,14 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
 
 pub fn next_or_prev_symbol(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -89,10 +84,7 @@ pub fn next_or_prev_symbol(meta: EditorMeta, editor_params: EditorParams, ctx: &
             // Find the first non-empty result.
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
-                None => {
-                    let entry = ctx.language_servers.first_entry().unwrap();
-                    (entry.key().clone(), None)
-                }
+                None => (meta.servers[0], None),
             };
 
             editor_next_or_prev_symbol(meta, editor_params, result, ctx)
@@ -180,7 +172,7 @@ fn editor_document_symbol(
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let content = match result {
         Some(DocumentSymbolResponse::Flat(result)) => {
             if result.is_empty() {
@@ -201,12 +193,12 @@ fn editor_document_symbol(
     let bufname = meta
         .buffile
         .as_str()
-        .strip_prefix(&server.root_path)
+        .strip_prefix(&server.roots[0])
         .and_then(|p| p.strip_prefix('/'))
         .unwrap_or(&meta.buffile);
     let command = format!(
         "lsp-show-document-symbol {} {} {}",
-        editor_quote(&server.root_path),
+        editor_quote(&server.roots[0]),
         editor_quote(&meta.buffile),
         editor_quote(&(bufname.to_owned() + "\n" + &content)),
     );
@@ -244,6 +236,7 @@ pub fn format_symbol<T: Symbol<T>>(
     server: &ServerSettings,
     ctx: &Context,
 ) -> String {
+    #[allow(clippy::too_many_arguments)]
     fn format_symbol_at_depth<T: Symbol<T>>(
         output: &mut Vec<(String, String)>,
         items: &[T],
@@ -288,7 +281,7 @@ pub fn format_symbol<T: Symbol<T>>(
                     if single_file {
                         "%"
                     } else {
-                        short_file_path(filename, &server.root_path)
+                        short_file_path(filename, &server.roots[0])
                     },
                     position.line,
                     position.column,
@@ -387,7 +380,7 @@ fn editor_next_or_prev_symbol(
         .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
         .collect::<Vec<_>>();
 
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let maybe_details = match result {
         None => return,
         Some(DocumentSymbolResponse::Flat(mut result)) => {
@@ -399,7 +392,7 @@ fn editor_next_or_prev_symbol(
                 &params,
                 &symbol_kinds_query,
                 &meta,
-                (&server_id, server),
+                (server_id, server),
                 ctx,
             )
         }
@@ -412,13 +405,13 @@ fn editor_next_or_prev_symbol(
                 &params,
                 &symbol_kinds_query,
                 &meta,
-                (&server_id, server),
+                (server_id, server),
                 ctx,
             )
         }
     };
 
-    editor_next_or_prev_for_details(&server_id, meta, ctx, maybe_details, hover);
+    editor_next_or_prev_for_details(server_id, meta, ctx, maybe_details, hover);
 }
 
 /// Send the response back to Kakoune. This could be either:
@@ -426,7 +419,7 @@ fn editor_next_or_prev_symbol(
 /// b) Instructions to show hover information of the next/previous symbol (without actually
 /// moving the cursor just yet).
 fn editor_next_or_prev_for_details(
-    server_id: &ServerId,
+    server_id: ServerId,
     meta: EditorMeta,
     ctx: &mut Context,
     maybe_details: Option<(String, KakounePosition, String, SymbolKind)>,
@@ -446,13 +439,13 @@ fn editor_next_or_prev_for_details(
         }
     };
 
-    let server = &ctx.language_servers[server_id];
+    let server = ctx.server(server_id);
     if !hover {
         let path = Path::new(&filename);
         let filename_abs = if path.is_absolute() {
             filename
         } else {
-            Path::new(&server.root_path)
+            Path::new(&server.roots[0])
                 .join(filename)
                 .to_str()
                 .unwrap()
@@ -470,7 +463,7 @@ fn editor_next_or_prev_for_details(
 
     let mut req_params = HashMap::new();
     req_params.insert(
-        server_id.clone(),
+        server_id,
         vec![HoverParams {
             text_document_position_params: TextDocumentPositionParams {
                 text_document: TextDocumentIdentifier {
@@ -534,7 +527,7 @@ fn next_or_prev_symbol_details<T: Symbol<T> + 'static>(
     params: &NextOrPrevSymbolParams,
     symbol_kinds_query: &[SymbolKind],
     meta: &EditorMeta,
-    server: (&ServerId, &ServerSettings),
+    server: (ServerId, &ServerSettings),
     ctx: &Context,
 ) -> Option<(String, KakounePosition, String, SymbolKind)> {
     // Some language servers return symbol locations that are not sorted in ascending order.
@@ -695,10 +688,7 @@ pub fn object(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) 
         move |ctx: &mut Context, meta, results| {
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
-                None => {
-                    let entry = ctx.language_servers.first_entry().unwrap();
-                    (entry.key().clone(), None)
-                }
+                None => (meta.servers[0], None),
             };
 
             editor_object(meta, editor_params, result, ctx)
@@ -738,7 +728,7 @@ fn editor_object(
             return;
         }
     };
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let mut ranges = match result {
         None => return,
         Some(DocumentSymbolResponse::Flat(symbols)) => {
@@ -902,15 +892,14 @@ fn flat_symbol_ranges<T: Symbol<T>>(
 
 pub fn document_symbol_menu(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -927,10 +916,7 @@ pub fn document_symbol_menu(meta: EditorMeta, editor_params: EditorParams, ctx: 
         move |ctx: &mut Context, meta, results| {
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
-                None => {
-                    let entry = ctx.language_servers.first_entry().unwrap();
-                    (entry.key().clone(), None)
-                }
+                None => (meta.servers[0], None),
             };
 
             let maybe_goto_symbol = GotoSymbolParams::deserialize(editor_params)
@@ -950,7 +936,7 @@ fn editor_document_symbol_menu(
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let choices = match result {
         Some(DocumentSymbolResponse::Flat(result)) => {
             if result.is_empty() {
@@ -977,7 +963,7 @@ fn editor_document_symbol_goto(
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let navigate_command = match result {
         Some(DocumentSymbolResponse::Flat(result)) => {
             if result.is_empty() {
@@ -1090,15 +1076,14 @@ fn symbol_search<T: Symbol<T>>(
 
 pub fn breadcrumbs(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -1142,7 +1127,7 @@ fn editor_breadcrumbs<T: Symbol<T>>(
     if symbols.is_empty() {
         return;
     }
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let mut filename_path = PathBuf::default();
     let filename = symbol_filename(&meta, &symbols[0], &mut filename_path).to_string();
     let mut breadcrumbs = Vec::default();

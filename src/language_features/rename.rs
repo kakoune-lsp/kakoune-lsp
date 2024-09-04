@@ -12,11 +12,10 @@ use super::super::workspace;
 pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = TextDocumentRenameParams::deserialize(params).unwrap();
     let req_params = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![RenameParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -42,10 +41,7 @@ pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Co
         move |ctx: &mut Context, meta, results| {
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,
-                None => {
-                    let entry = ctx.language_servers.first_entry().unwrap();
-                    (entry.key().clone(), None)
-                }
+                None => (meta.servers[0], None),
             };
 
             editor_rename(meta, result, ctx)
@@ -60,5 +56,5 @@ fn editor_rename(meta: EditorMeta, result: (ServerId, Option<WorkspaceEdit>), ct
         return;
     }
     let result = result.unwrap();
-    workspace::apply_edit(&server_id, meta, result, ctx);
+    workspace::apply_edit(server_id, &meta, result, ctx);
 }

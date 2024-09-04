@@ -1,5 +1,7 @@
+use crate::language_server_transport::LanguageServerTransport;
 use crate::text_sync::CompiledFileSystemWatcher;
-use crate::types::*;
+use crate::thread_worker::Worker;
+use crate::{filetype_to_language_id_map, types::*};
 use crossbeam_channel::Sender;
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
 use lsp_types::notification::{Cancel, Notification};
@@ -8,7 +10,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::path::PathBuf;
 use std::{fs, time};
@@ -43,12 +45,19 @@ pub struct OutstandingRequests {
 }
 
 pub struct ServerSettings {
-    pub root_path: String,
+    pub name: String,
+    pub roots: Vec<RootPath>,
     pub offset_encoding: OffsetEncoding,
     pub preferred_offset_encoding: Option<OffsetEncoding>,
+    pub transport: LanguageServerTransport,
     pub capabilities: Option<ServerCapabilities>,
     pub settings: Option<Value>,
-    pub tx: Sender<ServerMessage>,
+    pub users: Vec<SessionId>,
+}
+
+pub struct FileWatcher {
+    pub pending_file_events: HashSet<FileEvent>,
+    pub worker: Box<Worker<(), Vec<FileEvent>>>,
 }
 
 pub struct Context {
@@ -69,29 +78,27 @@ pub struct Context {
     pub dynamic_config: DynamicConfig,
     pub editor_tx: Sender<EditorResponse>,
     pub language_servers: BTreeMap<ServerId, ServerSettings>,
+    pub route_cache: HashMap<(ServerName, RootPath), ServerId>,
     pub outstanding_requests:
         HashMap<(ServerId, &'static str, String, Option<String>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
     pub pending_message_requests: VecDeque<(Id, ServerId, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
-    pub session: SessionId,
+    pub sessions: Vec<SessionId>,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
     pub pending_file_watchers:
         HashMap<(ServerId, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
-}
-
-pub struct ContextBuilder {
-    pub language_servers: BTreeMap<ServerId, ServerSettings>,
-    pub initial_request: EditorRequest,
-    pub editor_tx: Sender<EditorResponse>,
-    pub config: Config,
+    pub file_watcher: Option<FileWatcher>,
+    #[deprecated]
+    pub legacy_filetypes: HashMap<String, (LanguageId, Vec<ServerName>)>,
 }
 
 impl Context {
-    pub fn new(params: ContextBuilder) -> Self {
-        let session = params.initial_request.meta.session.clone();
+    pub fn new(session: SessionId, editor_tx: Sender<EditorResponse>, config: Config) -> Self {
+        let legacy_filetypes = filetype_to_language_id_map(&config);
+        #[allow(deprecated)]
         Context {
             batch_count: 0,
             batch_sizes: Default::default(),
@@ -100,22 +107,45 @@ impl Context {
             completion_items: vec![],
             completion_items_timestamp: i32::MAX,
             completion_last_client: None,
-            config: params.config,
+            config,
             diagnostics: Default::default(),
             documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
-            editor_tx: params.editor_tx,
-            language_servers: params.language_servers,
+            editor_tx,
+            language_servers: BTreeMap::new(),
+            route_cache: HashMap::new(),
             outstanding_requests: HashMap::default(),
-            pending_requests: vec![params.initial_request],
+            pending_requests: vec![],
             pending_message_requests: VecDeque::new(),
             request_counter: 0,
             response_waitlist: HashMap::default(),
-            session,
+            sessions: vec![session],
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
             pending_file_watchers: HashMap::default(),
+            file_watcher: None,
+            legacy_filetypes,
         }
+    }
+
+    pub fn last_session(&self) -> &SessionId {
+        self.sessions.last().unwrap()
+    }
+
+    pub fn main_root<'a>(&'a self, meta: &'a EditorMeta) -> &'a RootPath {
+        &self.servers(meta).next().unwrap().1.roots[0]
+    }
+
+    pub fn servers<'a>(
+        &'a self,
+        meta: &'a EditorMeta,
+    ) -> impl Iterator<Item = (ServerId, &'a ServerSettings)> {
+        meta.servers
+            .iter()
+            .map(move |&server_id| (server_id, self.server(server_id)))
+    }
+    pub fn server(&self, server_id: ServerId) -> &ServerSettings {
+        &self.language_servers[&server_id]
     }
 
     pub fn call<
@@ -132,11 +162,11 @@ impl Context {
     {
         let ops = match params {
             RequestParams::All(params) => {
-                let mut ops = Vec::with_capacity(params.len() * self.language_servers.len());
-                for server_id in self.language_servers.keys() {
+                let mut ops = Vec::with_capacity(params.len() * meta.servers.len());
+                for &server_id in &meta.servers {
                     let params: Vec<_> = params.to_vec();
                     for params in params {
-                        ops.push((server_id.clone(), params));
+                        ops.push((server_id, params));
                     }
                 }
                 ops
@@ -145,7 +175,7 @@ impl Context {
                 .into_iter()
                 .flat_map(|(key, ops)| {
                     let ops: Vec<(ServerId, <R as Request>::Params)> =
-                        ops.into_iter().map(|op| (key.clone(), op)).collect();
+                        ops.into_iter().map(|op| (key, op)).collect();
                     ops
                 })
                 .collect(),
@@ -178,7 +208,7 @@ impl Context {
         self.batch_sizes.insert(
             batch_id,
             ops.iter().fold(HashMap::new(), |mut m, (server_id, _)| {
-                let count = m.entry(server_id.clone()).or_default();
+                let count = m.entry(*server_id).or_default();
                 *count += 1;
                 m
             }),
@@ -213,7 +243,7 @@ impl Context {
                 .insert(id.clone(), (meta.clone(), R::METHOD, batch_id, false));
 
             add_outstanding_request(
-                &server_id,
+                server_id,
                 self,
                 R::METHOD,
                 meta.buffile.clone(),
@@ -227,9 +257,11 @@ impl Context {
                 method: R::METHOD.into(),
                 params: params.unwrap(),
             };
-            let server = &self.language_servers[&server_id];
+            let server = self.server(server_id);
             if server
-                .tx
+                .transport
+                .to_lang_server
+                .sender()
                 .send(ServerMessage::Request(Call::MethodCall(call)))
                 .is_err()
             {
@@ -238,19 +270,32 @@ impl Context {
         }
     }
 
-    pub fn cancel(&mut self, server_id: &ServerId, id: Id) {
+    pub fn cancel(&mut self, server_id: ServerId, id: Id) {
+        if let Some((_meta, method, _batch_id, _canceled)) = self.response_waitlist.get(&id) {
+            debug!(
+                "Canceling request to server {}: {:?} ({})",
+                &self.server(server_id).name,
+                id,
+                method
+            );
+        }
         match self.response_waitlist.get_mut(&id) {
-            Some((_meta, method, _batch_id, canceled)) => {
-                debug!("Canceling request to {server_id} server {id:?} ({method})");
+            Some((_meta, _method, _batch_id, canceled)) => {
                 *canceled = true;
             }
             None => {
-                error!("Failed to cancel request {id:?} to {server_id} server");
+                error!(
+                    "Failed to cancel request {id:?} to server {}",
+                    &self.server(server_id).name,
+                );
             }
         }
         let id = match id {
             Id::Num(id) => id,
-            _ => panic!("expected numeric ID for {} server", server_id),
+            _ => panic!(
+                "expected numeric ID for {} server",
+                &self.server(server_id).name
+            ),
         };
         self.notify::<Cancel>(
             server_id,
@@ -260,7 +305,7 @@ impl Context {
         );
     }
 
-    pub fn reply(&mut self, server_id: &ServerId, id: Id, result: Result<Value, Error>) {
+    pub fn reply(&mut self, server_id: ServerId, id: Id, result: Result<Value, Error>) {
         let output = match result {
             Ok(result) => Output::Success(Success {
                 jsonrpc: Some(Version::V2),
@@ -273,13 +318,19 @@ impl Context {
                 error,
             }),
         };
-        let server = &self.language_servers[server_id];
-        if server.tx.send(ServerMessage::Response(output)).is_err() {
-            error!("Failed to reply to language server {server_id}");
+        let server = &self.server(server_id);
+        if server
+            .transport
+            .to_lang_server
+            .sender()
+            .send(ServerMessage::Response(output))
+            .is_err()
+        {
+            error!("Failed to reply to language server {}", &server.name);
         };
     }
 
-    pub fn notify<N: Notification>(&mut self, server_id: &ServerId, params: N::Params)
+    pub fn notify<N: Notification>(&mut self, server_id: ServerId, params: N::Params)
     where
         N::Params: IntoParams,
     {
@@ -293,13 +344,18 @@ impl Context {
             method: N::METHOD.into(),
             params: params.unwrap(),
         };
-        let server = &self.language_servers[server_id];
+        let server = &self.server(server_id);
         if server
-            .tx
+            .transport
+            .to_lang_server
+            .sender()
             .send(ServerMessage::Request(Call::Notification(notification)))
             .is_err()
         {
-            error!("Failed to send notification to language server {server_id}");
+            error!(
+                "Failed to send notification to language server {}",
+                &server.name,
+            );
         }
     }
 
@@ -341,7 +397,7 @@ impl Context {
 
     pub fn meta_for_buffer(&self, client: Option<String>, buffile: &str) -> Option<EditorMeta> {
         let document = self.documents.get(buffile)?;
-        let mut meta = meta_for_session(self.session.clone(), client);
+        let mut meta = meta_for_session(self.last_session().clone(), client);
         meta.buffile = buffile.to_string();
         meta.version = document.version;
         Some(meta)
@@ -353,7 +409,7 @@ impl Context {
         buffile: &str,
         version: i32,
     ) -> EditorMeta {
-        let mut meta = meta_for_session(self.session.clone(), client);
+        let mut meta = meta_for_session(self.last_session().clone(), client);
         meta.buffile = buffile.to_string();
         meta.version = version;
         meta
@@ -376,55 +432,55 @@ pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMet
         semantic_tokens: SemanticTokenConfig::default(),
         server: None,
         word_regex: None,
+        servers: vec![],
     }
 }
 
 fn add_outstanding_request(
-    server_id: &ServerId,
+    server_id: ServerId,
     ctx: &mut Context,
     method: &'static str,
     buffile: String,
     client: Option<String>,
     id: Id,
 ) {
-    let to_cancel =
-        match ctx
-            .outstanding_requests
-            .entry((server_id.clone(), method, buffile, client))
-        {
-            Entry::Occupied(mut e) => {
-                let OutstandingRequests { oldest, youngest } = e.get_mut();
-                if oldest.is_none() {
-                    *oldest = Some(id);
-                    None
-                } else {
-                    let mut tmp = Some(id);
-                    std::mem::swap(youngest, &mut tmp);
-                    tmp
-                }
-            }
-            Entry::Vacant(e) => {
-                e.insert(OutstandingRequests {
-                    oldest: Some(id),
-                    youngest: None,
-                });
+    let to_cancel = match ctx
+        .outstanding_requests
+        .entry((server_id, method, buffile, client))
+    {
+        Entry::Occupied(mut e) => {
+            let OutstandingRequests { oldest, youngest } = e.get_mut();
+            if oldest.is_none() {
+                *oldest = Some(id);
                 None
+            } else {
+                let mut tmp = Some(id);
+                std::mem::swap(youngest, &mut tmp);
+                tmp
             }
-        };
+        }
+        Entry::Vacant(e) => {
+            e.insert(OutstandingRequests {
+                oldest: Some(id),
+                youngest: None,
+            });
+            None
+        }
+    };
     if let Some(id) = to_cancel {
         ctx.cancel(server_id, id);
     }
 }
 
 pub fn remove_outstanding_request(
-    server_id: &ServerId,
+    server_id: ServerId,
     ctx: &mut Context,
     method: &'static str,
     buffile: String,
     client: Option<String>,
     id: &Id,
 ) {
-    let key = (server_id.clone(), method, buffile, client);
+    let key = (server_id, method, buffile, client);
     if let Some(outstanding) = ctx.outstanding_requests.get_mut(&key) {
         if outstanding.youngest.as_ref() == Some(id) {
             outstanding.youngest = None;

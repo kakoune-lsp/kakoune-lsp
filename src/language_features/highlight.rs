@@ -15,8 +15,7 @@ use url::Url;
 
 pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT))
         .collect();
     if meta.fifo.is_none() && eligible_servers.is_empty() {
@@ -31,7 +30,7 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![DocumentHighlightParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -77,7 +76,7 @@ fn editor_document_highlight(
         return;
     }
     let document = document.unwrap();
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let mut ranges = vec![];
     let range_specs = match result {
         Some(highlights) => highlights

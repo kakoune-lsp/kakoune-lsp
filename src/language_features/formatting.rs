@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::capabilities::{attempt_server_capability, CAPABILITY_FORMATTING};
 use crate::context::*;
+use crate::controller::can_serve;
 use crate::types::*;
 use crate::util::editor_quote;
 use itertools::Itertools;
@@ -12,18 +13,20 @@ use url::Url;
 
 pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|server| attempt_server_capability(*server, &meta, CAPABILITY_FORMATTING))
         .filter(|(server_id, _)| {
-            if let Some(fmt_server) = &meta.server {
-                **server_id
-                    == ServerId {
-                        name: fmt_server.to_string(),
-                    }
-            } else {
-                true
-            }
+            meta.server
+                .as_ref()
+                .map(|fmt_server| {
+                    can_serve(
+                        ctx,
+                        *server_id,
+                        fmt_server,
+                        &server_configs(&ctx.config, &meta)[fmt_server].root,
+                    )
+                })
+                .unwrap_or(true)
         })
         .collect();
     if eligible_servers.is_empty() {
@@ -37,14 +40,14 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
     if eligible_servers.len() > 1 {
         let choices = eligible_servers
             .into_iter()
-            .map(|(server_id, _)| {
+            .map(|(_server_id, server)| {
                 let cmd = if meta.fifo.is_some() {
                     "lsp-formatting-sync"
                 } else {
                     "lsp-formatting"
                 };
-                let cmd = format!("{} {}", cmd, server_id.name);
-                format!("{} {}", editor_quote(&server_id.name), editor_quote(&cmd))
+                let cmd = format!("{} {}", cmd, server.name);
+                format!("{} {}", editor_quote(&server.name), editor_quote(&cmd))
             })
             .join(" ");
         ctx.exec(meta, format!("lsp-menu {}", choices));
@@ -57,7 +60,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
     let (server_id, _) = eligible_servers[0];
     let mut req_params = HashMap::new();
     req_params.insert(
-        server_id.clone(),
+        server_id,
         vec![DocumentFormattingParams {
             text_document: TextDocumentIdentifier {
                 uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -67,7 +70,6 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
         }],
     );
 
-    let server_id = server_id.clone();
     ctx.call::<Formatting, _>(
         meta,
         RequestParams::Each(req_params),

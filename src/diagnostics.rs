@@ -10,7 +10,7 @@ use lsp_types::*;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-pub fn publish_diagnostics(server_id: &ServerId, params: Params, ctx: &mut Context) {
+pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
@@ -19,12 +19,12 @@ pub fn publish_diagnostics(server_id: &ServerId, params: Params, ctx: &mut Conte
         .remove(buffile)
         .unwrap_or_default()
         .into_iter()
-        .filter(|(id, _)| id != server_id)
+        .filter(|(id, _)| id != &server_id)
         .collect();
     let params: Vec<_> = params
         .diagnostics
         .into_iter()
-        .map(|d| (server_id.clone(), d))
+        .map(|d| (server_id, d))
         .collect();
     diagnostics.extend(params);
     ctx.diagnostics.insert(buffile.to_string(), diagnostics);
@@ -40,7 +40,7 @@ pub fn publish_diagnostics(server_id: &ServerId, params: Params, ctx: &mut Conte
         .sorted_unstable_by_key(|(_, x)| x.severity)
         .rev()
         .map(|(server_id, x)| {
-            let server = &ctx.language_servers[server_id];
+            let server = ctx.server(*server_id);
             format!(
                 "{}|{}",
                 lsp_range_to_kakoune(&x.range, &document.text, server.offset_encoding),
@@ -74,7 +74,7 @@ pub fn publish_diagnostics(server_id: &ServerId, params: Params, ctx: &mut Conte
         let (_, line_diagnostics) = lines_with_diagnostics
             .entry(diagnostic.range.end.line)
             .or_insert((
-                server_id.clone(),
+                server_id,
                 LineDiagnostics {
                     range_end: diagnostic.range.end,
                     symbols: String::new(),
@@ -107,7 +107,7 @@ pub fn publish_diagnostics(server_id: &ServerId, params: Params, ctx: &mut Conte
     let inlay_diagnostics = lines_with_diagnostics
         .iter()
         .map(|(_, (server_id, line_diagnostics))| {
-            let server = &ctx.language_servers[server_id];
+            let server = ctx.server(**server_id);
             let pos = lsp_position_to_kakoune(
                 &line_diagnostics.range_end,
                 &document.text,
@@ -214,7 +214,6 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
 }
 
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
-    let (_, main_settings) = ctx.language_servers.first_key_value().unwrap();
     let content = ctx
         .diagnostics
         .iter()
@@ -222,7 +221,8 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
             diagnostics
                 .iter()
                 .map(|(server_id, x)| {
-                    let server = &ctx.language_servers[server_id];
+                    let server_id = *server_id;
+                    let server = ctx.server(server_id);
                     let p = match get_kakoune_position(server, filename, &x.range.start, ctx) {
                         Some(position) => position,
                         None => {
@@ -232,11 +232,11 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                     };
                     format!(
                         "{}:{}:{}: {}{}: {}{}",
-                        short_file_path(filename, &server.root_path),
+                        short_file_path(filename, ctx.main_root(&meta)),
                         p.line,
                         p.column,
-                        &if ctx.language_servers.len() > 1 {
-                            format!("[{server_id}] ")
+                        &if diagnostics.len() > 1 {
+                            format!("[{}] ", &server.name)
                         } else {
                             "".to_string()
                         },
@@ -251,7 +251,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             }
                         },
                         x.message,
-                        format_related_information(x, server_id, server, main_settings, ctx)
+                        format_related_information(x, server, diagnostics.len() > 1, &meta, ctx)
                             .unwrap_or_default()
                     )
                 })
@@ -260,7 +260,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
         .join("\n");
     let command = format!(
         "lsp-show-goto-buffer *diagnostics* lsp-diagnostics {} {}",
-        editor_quote(&main_settings.root_path),
+        editor_quote(ctx.main_root(&meta)),
         editor_quote(&content),
     );
     ctx.exec(meta, command);
@@ -268,9 +268,9 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
 
 pub fn format_related_information(
     d: &Diagnostic,
-    server_id: &ServerId,
     server: &ServerSettings,
-    main_settings: &ServerSettings,
+    label_with_server: bool,
+    meta: &EditorMeta,
     ctx: &Context,
 ) -> Option<String> {
     d.related_information
@@ -291,11 +291,11 @@ pub fn format_related_information(
                         );
                         format!(
                             "{}:{}:{}: {}{}",
-                            short_file_path(filename, &main_settings.root_path),
+                            short_file_path(filename, ctx.main_root(meta)),
                             p.line,
                             p.column,
-                            &if ctx.language_servers.len() > 1 {
-                                format!("[{}] ", &server_id.name)
+                            &if label_with_server {
+                                format!("[{}] ", &server.name)
                             } else {
                                 "".to_string()
                             },

@@ -38,8 +38,7 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
             text: params.draft,
         },
     };
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
+    for &server_id in &meta.servers {
         ctx.notify::<DidOpenTextDocument>(server_id, params.clone());
     }
     text_document_code_lens(meta, ctx);
@@ -78,8 +77,7 @@ pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mu
             text: params.draft,
         }],
     };
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
+    for &server_id in &meta.servers {
         ctx.notify::<DidChangeTextDocument>(server_id, req_params.clone());
     }
     text_document_code_lens(meta, ctx);
@@ -91,16 +89,14 @@ pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
+    for &server_id in &meta.servers {
         ctx.notify::<DidCloseTextDocument>(server_id, params.clone());
     }
 }
 
 pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
-        let server = &ctx.language_servers[server_id];
+    for &server_id in &meta.servers {
+        let server = ctx.server(server_id);
         let options = match &server.capabilities.as_ref().unwrap().text_document_sync {
             Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
                 save: Some(opts),
@@ -233,7 +229,7 @@ fn event_file_changes(
 }
 
 pub fn workspace_did_change_watched_files(
-    server_id: &ServerId,
+    server_id: ServerId,
     changes: Vec<FileEvent>,
     ctx: &mut Context,
 ) {
@@ -248,7 +244,7 @@ pub struct CompiledFileSystemWatcher {
 }
 
 pub fn register_workspace_did_change_watched_files(
-    server_id: &ServerId,
+    server_id: ServerId,
     options: Option<Value>,
     ctx: &mut Context,
 ) {
@@ -302,9 +298,12 @@ pub fn register_workspace_did_change_watched_files(
         };
         let default_watch_kind = WatchKind::Create | WatchKind::Change | WatchKind::Delete;
         let kind = watcher.kind.unwrap_or(default_watch_kind);
-        let server = &ctx.language_servers[server_id];
         ctx.pending_file_watchers
-            .entry((server_id.clone(), server.root_path.clone(), root_path))
+            .entry((
+                server_id,
+                ctx.server(server_id).roots[0].clone(),
+                root_path,
+            ))
             .or_default()
             .push(CompiledFileSystemWatcher { kind, pattern });
     }

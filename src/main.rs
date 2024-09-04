@@ -1,4 +1,5 @@
 #![allow(clippy::unused_unit)]
+#![allow(dead_code)]
 
 #[macro_use]
 extern crate enum_primitive;
@@ -19,7 +20,6 @@ mod markup;
 mod position;
 mod progress;
 mod project_root;
-mod session;
 mod settings;
 mod show_message;
 mod text_edit;
@@ -289,7 +289,7 @@ fn main() {
         // otherwise it refuses to work properly.
         let (_guard, log_path) = setup_logger(&matches, verbosity);
         let log_path = Box::leak(log_path);
-        let code = session::start(session, &lsp_session, &config, log_path, initial_request);
+        let code = controller::start(session, &lsp_session, config, log_path, initial_request);
         goodbye(&lsp_session, code);
     }
 }

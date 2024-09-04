@@ -18,17 +18,18 @@ pub fn request_dynamic_configuration_from_kakoune(
 }
 
 pub fn request_initialization_options_from_kakoune(
+    servers: &[ServerId],
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Vec<Option<Value>> {
     request_dynamic_configuration_from_kakoune(meta, ctx);
-    let mut sections = Vec::with_capacity(ctx.language_servers.len());
-    let servers: Vec<_> = ctx.language_servers.keys().cloned().collect();
-    for server_id in &servers {
+    let mut sections = Vec::with_capacity(servers.len());
+    for &server_id in servers {
+        let server_name = &ctx.server(server_id).name;
         let settings = ctx
             .dynamic_config
             .language_server
-            .get(&server_id.name)
+            .get(server_name)
             .and_then(|v| v.settings.as_ref());
         let settings = configured_section(meta, ctx, server_id, settings);
         if settings.is_some() {
@@ -42,9 +43,8 @@ pub fn request_initialization_options_from_kakoune(
             continue;
         }
 
-        let server_config = server_configs(&ctx.config, meta)
-            .get(&server_id.name)
-            .unwrap();
+        let server_name = &ctx.server(server_id).name;
+        let server_config = server_configs(&ctx.config, meta).get(server_name).unwrap();
         let settings = configured_section(meta, ctx, server_id, server_config.settings.as_ref());
         sections.push(settings);
     }
@@ -54,12 +54,13 @@ pub fn request_initialization_options_from_kakoune(
 pub fn configured_section(
     meta: &EditorMeta,
     ctx: &Context,
-    server_id: &ServerId,
+    server_id: ServerId,
     settings: Option<&Value>,
 ) -> Option<Value> {
+    let server_name = &ctx.server(server_id).name;
     settings.and_then(|settings| {
         server_configs(&ctx.config, meta)
-            .get(&server_id.name)
+            .get(server_name)
             .and_then(|cfg| cfg.settings_section.as_ref())
             .and_then(|section| settings.get(section).cloned())
     })
@@ -81,12 +82,11 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
         }
     };
     for (server_name, server) in &meta.language_server {
-        ctx.language_servers
-            .get_mut(&ServerId {
-                name: server_name.to_string(),
-            })
-            .unwrap()
-            .settings = server.settings.clone();
+        let server_id = ctx
+            .route_cache
+            .get(&(server_name.clone(), server.root.clone()))
+            .unwrap();
+        ctx.language_servers.get_mut(server_id).unwrap().settings = server.settings.clone();
     }
 }
 

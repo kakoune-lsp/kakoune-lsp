@@ -12,14 +12,13 @@ pub fn call_hierarchy_prepare(meta: EditorMeta, params: EditorParams, ctx: &mut 
     let params = CallHierarchyParams::deserialize(params)
         .expect("Params should follow CallHierarchyParams structure");
     let req_params = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .map(|(server_id, server_settings)| {
             let position =
                 get_lsp_position(server_settings, &meta.buffile, &params.position, ctx).unwrap();
             let uri = Url::from_file_path(&meta.buffile).unwrap();
             (
-                server_id.clone(),
+                server_id,
                 vec![CallHierarchyPrepareParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier::new(uri),
@@ -102,7 +101,7 @@ fn request_call_hierarchy(
 }
 
 fn format_location(
-    server_id: &ServerId,
+    server_id: ServerId,
     meta: &EditorMeta,
     ctx: &mut Context,
     uri: &Url,
@@ -110,9 +109,9 @@ fn format_location(
     prefix: &str,
     suffix: &str,
 ) -> String {
-    let server = &ctx.language_servers[server_id];
+    let server = ctx.server(server_id);
     let filename = uri.to_file_path().unwrap();
-    let filename = short_file_path(filename.to_str().unwrap(), &server.root_path);
+    let filename = short_file_path(filename.to_str().unwrap(), ctx.main_root(meta));
     let position = get_kakoune_position_with_fallback(server, &meta.buffile, position, ctx);
     format!(
         "{}{}:{}:{}: {}\n",
@@ -158,6 +157,7 @@ fn format_call_hierarchy_calls<'a>(
     result: &'a (ServerId, Option<Vec<impl CallHierarchyCall<'a>>>),
 ) {
     let (server_id, result) = result;
+    let server_id = *server_id;
     let result = match result {
         Some(result) => result,
         None => return,
@@ -226,11 +226,10 @@ fn format_call_hierarchy_calls<'a>(
     } else {
         "lsp-show-outgoing-calls"
     };
-    let server = &ctx.language_servers[server_id];
     let command = format!(
         "{} {} {}",
         command,
-        editor_quote(&server.root_path),
+        editor_quote(ctx.main_root(&meta)),
         editor_quote(&contents),
     );
     ctx.exec(meta, command);

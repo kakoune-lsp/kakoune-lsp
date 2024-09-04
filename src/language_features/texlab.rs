@@ -1,14 +1,13 @@
 use crate::context::{Context, RequestParams};
 use crate::position::get_lsp_position;
 use crate::types::{EditorMeta, EditorParams};
-use crate::{PositionParams, ServerId};
+use crate::PositionParams;
 use lsp_types::request::Request;
 use lsp_types::TextDocumentIdentifier;
 use lsp_types::TextDocumentPositionParams;
 use lsp_types::Url;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::collections::HashMap;
 use std::fmt;
 
 pub enum ForwardSearch {}
@@ -43,11 +42,10 @@ pub fn forward_search(meta: EditorMeta, params: EditorParams, ctx: &mut Context)
     let params = PositionParams::deserialize(params).unwrap();
 
     let req_params = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![TextDocumentPositionParams {
                     text_document: TextDocumentIdentifier {
                         uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -115,28 +113,14 @@ impl fmt::Display for BuildResult {
 }
 
 pub fn build(meta: EditorMeta, _params: EditorParams, ctx: &mut Context) {
-    let (server_id, _) = meta
-        .server
-        .as_ref()
-        .and_then(|server_name| {
-            ctx.language_servers.get_key_value(&ServerId {
-                name: server_name.clone(),
-            })
-        })
-        .or_else(|| ctx.language_servers.first_key_value())
-        .unwrap();
-    let mut req_params = HashMap::new();
-    req_params.insert(
-        server_id.clone(),
-        vec![BuildTextDocumentParams {
-            text_document: TextDocumentIdentifier {
-                uri: Url::from_file_path(&meta.buffile).unwrap(),
-            },
-        }],
-    );
+    let req_params = vec![BuildTextDocumentParams {
+        text_document: TextDocumentIdentifier {
+            uri: Url::from_file_path(&meta.buffile).unwrap(),
+        },
+    }];
     ctx.call::<Build, _>(
         meta,
-        RequestParams::Each(req_params),
+        RequestParams::All(req_params),
         move |ctx, meta, results| {
             if let Some((_, response)) = results.first() {
                 build_response(meta, response, ctx)

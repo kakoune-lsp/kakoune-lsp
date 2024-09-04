@@ -20,8 +20,7 @@ use url::Url;
 
 pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_COMPLETION))
         .collect();
 
@@ -30,7 +29,7 @@ pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mu
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![CompletionParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -77,7 +76,7 @@ fn editor_completion(
                 None => vec![],
             };
 
-            items.into_iter().map(move |v| (server_id.clone(), v))
+            items.into_iter().map(move |v| (server_id, v))
         })
         .collect();
 
@@ -112,7 +111,7 @@ fn editor_completion(
         .iter()
         .enumerate()
         .map(|(completion_item_index, (server_id, x))| {
-            let server = &ctx.language_servers[server_id];
+            let server = ctx.server(*server_id);
             let maybe_resolve = if server
                 .capabilities
                 .as_ref()
@@ -324,7 +323,7 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
             return;
         }
         (
-            server_id.clone(),
+            *server_id,
             item.clone(),
             item.detail.clone(),
             item.documentation.clone(),
@@ -341,7 +340,7 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
             Some(edits) if !edits.is_empty() => {
                 // Not sure if this case ever happens, the spec is unclear.
                 let uri = Url::from_file_path(&meta.buffile).unwrap();
-                apply_text_edits(&server_id, &meta, uri, edits, ctx);
+                apply_text_edits(server_id, &meta, uri, edits, ctx);
                 return;
             }
             _ => (),
@@ -359,7 +358,7 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
         move |ctx, meta, results| {
             if let Some((server_id, new_item)) = results.into_iter().next() {
                 editor_completion_item_resolve(
-                    &server_id,
+                    server_id,
                     ctx,
                     meta,
                     pager_active,
@@ -373,7 +372,7 @@ pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut
 }
 
 fn editor_completion_item_resolve(
-    server_id: &ServerId,
+    server_id: ServerId,
     ctx: &mut Context,
     meta: EditorMeta,
     pager_active: bool,

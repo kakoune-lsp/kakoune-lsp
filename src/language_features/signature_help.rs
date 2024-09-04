@@ -13,8 +13,7 @@ use url::Url;
 
 pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SIGNATURE_HELP))
         .collect();
     if meta.fifo.is_none() && eligible_servers.is_empty() {
@@ -29,7 +28,7 @@ pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx:
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![SignatureHelpParams {
                     context: None,
                     text_document_position_params: TextDocumentPositionParams {
@@ -82,7 +81,7 @@ fn editor_signature_help(
         None => return,
     };
 
-    let server = &ctx.language_servers[&server_id];
+    let server = ctx.server(server_id);
     let active_parameter = active_signature
         .active_parameter
         .or(result.active_parameter)

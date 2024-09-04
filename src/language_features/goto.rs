@@ -2,7 +2,7 @@ use crate::capabilities::{
     attempt_server_capability, CAPABILITY_DEFINITION, CAPABILITY_IMPLEMENTATION,
     CAPABILITY_REFERENCES, CAPABILITY_TYPE_DEFINITION,
 };
-use crate::context::{Context, RequestParams, ServerSettings};
+use crate::context::{Context, RequestParams};
 use crate::position::*;
 use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams, ServerId};
 use crate::util::{editor_quote, short_file_path};
@@ -37,10 +37,9 @@ pub fn goto(
         })
         .flat_map(|(server_id, response)| match response {
             GotoDefinitionResponse::Scalar(location) => vec![(server_id, location)],
-            GotoDefinitionResponse::Array(locations) => locations
-                .into_iter()
-                .map(|v| (server_id.clone(), v))
-                .collect(),
+            GotoDefinitionResponse::Array(locations) => {
+                locations.into_iter().map(|v| (server_id, v)).collect()
+            }
             GotoDefinitionResponse::Link(locations) => locations
                 .into_iter()
                 .map(
@@ -48,7 +47,7 @@ pub fn goto(
                          target_uri: uri,
                          target_selection_range: range,
                          ..
-                     }| (server_id.clone(), Location { uri, range }),
+                     }| (server_id, Location { uri, range }),
                 )
                 .collect(),
         })
@@ -84,7 +83,7 @@ fn goto_location(
     let path = uri.to_file_path().unwrap();
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
-        let server = &ctx.language_servers[server_id];
+        let server = ctx.server(*server_id);
         let range = lsp_range_to_kakoune(range, &contents, server.offset_encoding);
         let command = format!(
             "evaluate-commands -try-client %opt{{jumpclient}} -- {}",
@@ -95,9 +94,6 @@ fn goto_location(
 }
 
 fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mut Context) {
-    let server_entry = ctx.language_servers.first_entry().unwrap();
-    let ServerSettings { root_path, .. } = server_entry.get();
-    let main_root_path = root_path.clone();
     let select_location = locations
         .iter()
         .chunk_by(|(_, Location { uri, .. })| uri.to_file_path().unwrap())
@@ -110,7 +106,7 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mu
             };
             locations
                 .map(|(server_id, Location { range, .. })| {
-                    let server = &ctx.language_servers[server_id];
+                    let server = ctx.server(*server_id);
                     let pos = lsp_range_to_kakoune(range, &contents, server.offset_encoding).start;
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
@@ -119,7 +115,7 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mu
                     // file paths should look like in the goto buffer.
                     format!(
                         "{}:{}:{}:{}",
-                        short_file_path(path_str, &main_root_path),
+                        short_file_path(path_str, ctx.main_root(&meta)),
                         pos.line,
                         pos.column,
                         contents.line(range.start.line as usize),
@@ -130,7 +126,7 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mu
         .join("");
     let command = format!(
         "lsp-show-goto-choices {} {}",
-        editor_quote(&main_root_path),
+        editor_quote(ctx.main_root(&meta)),
         editor_quote(&select_location),
     );
     ctx.exec(meta, command);
@@ -144,11 +140,10 @@ pub fn text_document_definition(
 ) {
     let params = PositionParams::deserialize(params).unwrap();
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DEFINITION))
         .collect();
-    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+    if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
             "lsp-show-error %[no server supports {}]",
             request::GotoDefinition::METHOD
@@ -160,7 +155,7 @@ pub fn text_document_definition(
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -197,11 +192,10 @@ pub fn text_document_definition(
 pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_IMPLEMENTATION))
         .collect();
-    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+    if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
             "lsp-show-error %[no server supports {}]",
             request::GotoImplementation::METHOD
@@ -213,7 +207,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -243,11 +237,10 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
 pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_TYPE_DEFINITION))
         .collect();
-    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+    if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
             "lsp-show-error %[no server supports {}]",
             request::GotoTypeDefinition::METHOD
@@ -259,7 +252,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
@@ -289,11 +282,10 @@ pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx
 pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
     let params = PositionParams::deserialize(params).unwrap();
     let eligible_servers: Vec<_> = ctx
-        .language_servers
-        .iter()
+        .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_REFERENCES))
         .collect();
-    if eligible_servers.is_empty() && ctx.language_servers.len() > 1 {
+    if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
             "lsp-show-error %[no server supports {}]",
             request::References::METHOD
@@ -305,7 +297,7 @@ pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mu
         .into_iter()
         .map(|(server_id, server_settings)| {
             (
-                server_id.clone(),
+                server_id,
                 vec![ReferenceParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
