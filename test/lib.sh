@@ -32,7 +32,7 @@ mkdir .config
 mkdir .config/kak-lsp
 mkdir .config/kak
 cat > .config/kak/kakrc << 'EOF'
-evaluate-commands %sh{kak-lsp --kakoune -s $kak_session}
+evaluate-commands %sh{kak-lsp --kakoune}
 map global user l %{: enter-user-mode lsp<ret>}
 # Enable logging since this is only for testing.
 set-option global lsp_cmd "%opt{lsp_cmd} -vvvv --log ./log"
