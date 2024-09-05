@@ -5,9 +5,9 @@
 extern crate enum_primitive;
 #[macro_use]
 extern crate serde_derive;
-extern crate slog;
+
 #[macro_use]
-extern crate slog_scope;
+pub mod log;
 
 mod capabilities;
 mod context;
@@ -40,6 +40,7 @@ use editor_transport::send_command_to_editor;
 use fs4::FileExt;
 use itertools::Itertools;
 use libc::STDOUT_FILENO;
+use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
@@ -58,6 +59,7 @@ use std::path::PathBuf;
 use std::process;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::sync::atomic::Ordering::Relaxed;
 use std::thread;
 use std::time::Duration;
 
@@ -129,7 +131,7 @@ fn main() {
             Arg::new("log")
                 .long("log")
                 .value_name("PATH")
-                .help("File to write the log into instead of stderr"),
+                .help("File to write the log into, in addition to the *debug* buffer"),
         )
         .get_matches();
 
@@ -197,6 +199,9 @@ fn main() {
     } else {
         let mut config = Config::default();
         verbosity = 2;
+        if env_var("kak_opt_lsp_debug").is_some_and(|debug| debug != "false") {
+            verbosity = 4;
+        }
         config.server.timeout = 1800;
         if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support") {
             config.snippet_support = snippet_support != "false";
@@ -245,14 +250,14 @@ fn main() {
             Ok(lockfile) => lockfile,
             Err(err) => {
                 println!("Failed to create lock file: {:?}", err);
-                goodbye(&lsp_session, 1)
+                goodbye(&session, &lsp_session, 1)
             }
         };
         if lockfile.try_lock_exclusive().is_ok() {
             spin_up_server(&raw_request);
             if let Err(err) = lockfile.unlock() {
                 println!("Failed to unlock lock file: {:?}", err);
-                goodbye(&lsp_session, 1);
+                goodbye(&session, &lsp_session, 1);
             }
             fs::remove_file(&lockfile_path).expect("Failed to remove lock file");
             return;
@@ -264,7 +269,7 @@ fn main() {
             thread::sleep(Duration::from_millis(30));
         }
         println!("Could not launch server or connect to it, giving up after 10 attempts");
-        goodbye(&lsp_session, 1);
+        goodbye(&session, &lsp_session, 1);
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
@@ -282,15 +287,21 @@ fn main() {
                 .start()
             {
                 println!("Failed to daemonize process: {:?}", e);
-                goodbye(&lsp_session, 1);
+                goodbye(&session, &lsp_session, 1);
             }
         }
         // Setting up the logger after potential daemonization,
         // otherwise it refuses to work properly.
-        let (_guard, log_path) = setup_logger(&matches, verbosity);
+        let (_guard, log_path) = setup_logger(&session, &matches, verbosity);
         let log_path = Box::leak(log_path);
-        let code = controller::start(session, &lsp_session, config, log_path, initial_request);
-        goodbye(&lsp_session, code);
+        let code = controller::start(
+            session.clone(),
+            &lsp_session,
+            config,
+            log_path,
+            initial_request,
+        );
+        goodbye(&session, &lsp_session, code);
     }
 }
 
@@ -366,15 +377,16 @@ fn report_config_error(session: &SessionId, raw_request: &[u8], error_message: S
     let editor_request: Option<EditorRequest> =
         toml::from_str(&String::from_utf8_lossy(raw_request)).ok();
     let command = format!("lsp-show-error {}", &editor_quote(&error_message));
-    if let Err(err) = send_command_to_editor(EditorResponse {
-        meta: meta_for_session(
-            session.clone(),
-            editor_request.and_then(|req| req.meta.client),
-        ),
-        command: command.into(),
-    }) {
-        println!("Failed to send lsp-show-error command to editor: {}", err);
-    }
+    send_command_to_editor(
+        EditorResponse {
+            meta: meta_for_session(
+                session.clone(),
+                editor_request.and_then(|req| req.meta.client),
+            ),
+            command: command.into(),
+        },
+        false,
+    );
     println!("{}", error_message);
     process::exit(1);
 }
@@ -443,6 +455,7 @@ fn spin_up_server(raw_request: &[u8]) {
 }
 
 fn setup_logger(
+    session: &SessionId,
     matches: &ArgMatches,
     verbosity: u8,
 ) -> (slog_scope::GlobalLoggerGuard, Box<Option<PathBuf>>) {
@@ -453,6 +466,9 @@ fn setup_logger(
         3 => Severity::Debug,
         _ => Severity::Trace,
     };
+    if verbosity >= 3 {
+        DEBUG.store(true, Relaxed);
+    }
 
     let mut log_path = Box::default();
     let logger = if let Some(path) = matches.get_one::<String>("log") {
@@ -470,24 +486,25 @@ fn setup_logger(
         builder.build().unwrap()
     };
 
-    panic::set_hook(Box::new(|panic_info| {
-        error!("panic: {}", panic_info);
+    let session = session.clone();
+    panic::set_hook(Box::new(move |panic_info| {
+        error!(session, "panic: {}", panic_info);
     }));
 
     (slog_scope::set_global_logger(logger), log_path)
 }
 
 // Cleanup and gracefully exit
-fn goodbye(lsp_session: &LspSessionId, code: i32) -> ! {
+fn goodbye(session: &SessionId, lsp_session: &LspSessionId, code: i32) -> ! {
     if code == 0 {
         let path = temp_dir();
         let sock_path = path.join(lsp_session);
         let pid_path = path.join(format!("{}.pid", lsp_session));
         if fs::remove_file(sock_path).is_err() {
-            warn!("Failed to remove socket file");
+            warn!(session, "Failed to remove socket file");
         };
         if pid_path.exists() && fs::remove_file(pid_path).is_err() {
-            warn!("Failed to remove pid file");
+            warn!(session, "Failed to remove pid file");
         };
     }
     stderr().flush().unwrap();

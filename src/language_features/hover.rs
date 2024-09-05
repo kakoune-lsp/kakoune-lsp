@@ -130,7 +130,7 @@ pub fn editor_hover(
                             DiagnosticSeverity::INFORMATION => FACE_INFO_DIAGNOSTIC_INFO,
                             DiagnosticSeverity::HINT => FACE_INFO_DIAGNOSTIC_HINT,
                             _ => {
-                                warn!("Unexpected DiagnosticSeverity: {:?}", sev);
+                                warn!(meta.session, "Unexpected DiagnosticSeverity: {:?}", sev);
                                 FACE_INFO_DEFAULT
                             }
                         })
@@ -201,7 +201,7 @@ pub fn editor_hover(
                 ),
             }
         } else {
-            marked_string_to_kakoune_markup(ms)
+            marked_string_to_kakoune_markup(&meta.session, ms)
         }
     };
 
@@ -230,7 +230,7 @@ pub fn editor_hover(
                             if for_hover_buffer {
                                 contents.value
                             } else {
-                                markdown_to_kakoune_markup(contents.value)
+                                markdown_to_kakoune_markup(&meta.session, contents.value)
                             },
                         ),
                         MarkupKind::PlainText => (false, contents.value),
@@ -351,7 +351,7 @@ fn show_hover_in_hover_client(
 
     // Use a fifo buffer instead of a plain scratch buffer so Kakoune will keep the existing
     // buffer alive, keeping it visible in any clients.
-    let fifo = mkfifo();
+    let fifo = mkfifo(&meta.session);
 
     let command = format!(
         "%[

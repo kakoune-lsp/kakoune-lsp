@@ -1,10 +1,10 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::{Context, RequestParams};
-use crate::position::*;
 use crate::types::{
     EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams, ServerId,
 };
 use crate::util::editor_quote;
+use crate::{position::*, SessionId};
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
@@ -103,12 +103,13 @@ fn editor_document_highlight(
         meta.version, range_specs,
     );
     if !meta.hook {
-        command = select_ranges_and(command, ranges, main_cursor);
+        command = select_ranges_and(&meta.session, command, ranges, main_cursor);
     }
     ctx.exec(meta, command);
 }
 
 fn select_ranges_and(
+    session: &SessionId,
     command: String,
     ranges: Vec<KakouneRange>,
     main_cursor: KakounePosition,
@@ -119,7 +120,7 @@ fn select_ranges_and(
     {
         Some(range) => range,
         None => {
-            error!("main cursor lies outside ranges");
+            error!(session, "main cursor lies outside ranges");
             return command;
         }
     };

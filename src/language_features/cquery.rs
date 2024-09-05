@@ -174,16 +174,19 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
         .flat_map(|x| {
             let face = x.get_face();
             let offset_encoding = server.offset_encoding;
-            x.ranges.iter().filter_map(move |r| {
-                if face.is_empty() {
-                    warn!("No face found for {:?}", x);
-                    Option::None
-                } else {
-                    Option::Some(format!(
-                        "{}|{}",
-                        lsp_range_to_kakoune(r, &document.text, offset_encoding),
-                        face
-                    ))
+            x.ranges.iter().filter_map({
+                let session = ctx.last_session();
+                move |r| {
+                    if face.is_empty() {
+                        warn!(session, "No face found for {:?}", x);
+                        Option::None
+                    } else {
+                        Option::Some(format!(
+                            "{}|{}",
+                            lsp_range_to_kakoune(r, &document.text, offset_encoding),
+                            face
+                        ))
+                    }
                 }
             })
         })

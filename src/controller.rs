@@ -45,9 +45,9 @@ pub fn start(
     log_path: &'static Option<PathBuf>,
     initial_request: Option<String>,
 ) -> i32 {
-    info!("Starting main event loop");
+    info!(session, "Starting main event loop");
 
-    let editor = editor_transport::start(lsp_session, initial_request);
+    let editor = editor_transport::start(&session, lsp_session, initial_request);
     if let Err(code) = editor {
         return code;
     }
@@ -106,7 +106,10 @@ pub fn start(
         let op = sel.select();
         match op.index() {
             idx if idx == timeout_op => {
-                info!("Exiting session after {} seconds of inactivity", timeout);
+                info!(
+                    ctx.last_session(),
+                    "Exiting session after {} seconds of inactivity", timeout
+                );
                 break 'event_loop;
             }
             idx if idx == from_editor_op => {
@@ -126,7 +129,11 @@ pub fn start(
                     break 'event_loop;
                 }
                 let mut file_events = msg.unwrap();
-                debug!("received {} events from file watcher", file_events.len());
+                debug!(
+                    ctx.last_session(),
+                    "received {} events from file watcher",
+                    file_events.len()
+                );
                 // Enqueue the events from the file watcher.
                 ctx.file_watcher
                     .as_mut()
@@ -180,7 +187,10 @@ pub fn start(
                             );
                         }
                         Call::Invalid { id } => {
-                            error!("Invalid call from language server: {:?}", id);
+                            error!(
+                                ctx.last_session(),
+                                "Invalid call from language server: {:?}", id
+                            );
                         }
                     },
                     ServerMessage::Response(output) => {
@@ -196,6 +206,7 @@ pub fn start(
                                         server_id,
                                         ctx,
                                         method,
+                                        &meta.session,
                                         meta.buffile.clone(),
                                         meta.client.clone(),
                                         &success.id,
@@ -216,7 +227,10 @@ pub fn start(
                                         }
                                     }
                                 } else {
-                                    error!("Id {:?} is not in waitlist!", success.id);
+                                    error!(
+                                        ctx.last_session(),
+                                        "Id {:?} is not in waitlist!", success.id
+                                    );
                                 }
                             }
                             Output::Failure(failure) => {
@@ -229,11 +243,13 @@ pub fn start(
                                         server_id,
                                         ctx,
                                         method,
+                                        &meta.session,
                                         meta.buffile.clone(),
                                         meta.client.clone(),
                                         &failure.id,
                                     );
                                     error!(
+                                        meta.session,
                                         "Error response from server {}: {:?}",
                                         &ctx.server(server_id).name,
                                         failure
@@ -299,11 +315,15 @@ pub fn start(
                                     }
                                 } else {
                                     error!(
+                                        ctx.last_session(),
                                         "Error response from server {}: {:?}",
                                         &ctx.server(server_id).name,
                                         failure
                                     );
-                                    error!("Id {:?} is not in waitlist!", failure.id);
+                                    error!(
+                                        ctx.last_session(),
+                                        "Id {:?} is not in waitlist!", failure.id
+                                    );
                                 }
                             }
                         }
@@ -316,15 +336,20 @@ pub fn start(
         if !ctx.pending_file_watchers.is_empty() {
             let requested_watchers = mem::take(&mut ctx.pending_file_watchers);
             // If there's an existing watcher, ask nicely to terminate.
+            let session = ctx.last_session().clone();
             if let Some(ref fw) = ctx.file_watcher.as_mut() {
-                info!("stopping stale file watcher");
+                info!(session, "stopping stale file watcher");
                 if let Err(err) = fw.worker.sender().send(()) {
-                    error!("{}", err);
+                    error!(session, "{}", err);
                 }
             }
             ctx.file_watcher = Some(FileWatcher {
                 pending_file_events: HashSet::new(),
-                worker: Box::new(spawn_file_watcher(log_path, requested_watchers)),
+                worker: Box::new(spawn_file_watcher(
+                    ctx.last_session().clone(),
+                    log_path,
+                    requested_watchers,
+                )),
             });
         }
     }
@@ -336,7 +361,10 @@ pub fn process_raw_editor_request(ctx: &mut Context, request: String) -> Control
     let request: EditorRequest = match toml::from_str(&request) {
         Ok(req) => req,
         Err(err) => {
-            error!("Failed to parse editor request: {}", err);
+            error!(
+                ctx.last_session(),
+                "Failed to parse editor request: {}", err
+            );
             handle_broken_editor_request(&ctx.editor_tx, request, ctx.last_session(), err);
             return ControlFlow::Continue(());
         }
@@ -373,8 +401,8 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
             .map(|server_id| &ctx.server(*server_id).name)
             .join(", ");
         debug!(
-            "Language servers {} are still not initialized, parking request {:?}",
-            servers, request
+            ctx.last_session(),
+            "Language servers {} are still not initialized, parking request {:?}", servers, request
         );
         let err = format!(
             "lsp-show-error 'language servers {} are still not initialized, parking request'",
@@ -427,7 +455,7 @@ fn handle_broken_editor_request(
                 command: command.into(),
             };
             if let Err(err) = to_editor.send(response) {
-                error!("Failed to send error message to editor: {err}");
+                error!(session, "Failed to send error message to editor: {err}");
             };
         }
     }
@@ -435,7 +463,10 @@ fn handle_broken_editor_request(
 
 /// Shut down all language servers and exit.
 fn stop_session(ctx: &mut Context) {
-    info!("Shutting down language servers and exiting");
+    info!(
+        ctx.last_session(),
+        "Shutting down language servers and exiting"
+    );
     for session in ctx.sessions.clone().into_iter() {
         let request = EditorRequest {
             meta: meta_for_session(session.clone(), None),
@@ -444,7 +475,7 @@ fn stop_session(ctx: &mut Context) {
         };
         process_editor_request(ctx, request);
     }
-    info!("Exit all servers");
+    info!(ctx.last_session(), "Exit all servers");
 }
 
 pub fn can_serve(
@@ -469,15 +500,15 @@ pub fn can_serve(
 fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str) -> bool {
     if request_method == notification::Exit::METHOD {
         info!(
-            "Editor session `{}` closed, shutting down all language servers",
-            meta.session
+            meta.session,
+            "Editor session `{}` closed, shutting down associated language servers", meta.session
         );
         return true;
     }
     if !meta.buffile.starts_with('/') {
         debug!(
-            "Unsupported scratch buffer, ignoring request from buffer '{}'",
-            meta.buffile
+            meta.session,
+            "Unsupported scratch buffer, ignoring request from buffer '{}'", meta.buffile
         );
         let command = if meta.hook {
             "nop"
@@ -496,7 +527,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             .any(|server| !server.roots.is_empty())
     {
         let msg = "Error: new server configuration does not support roots parameter";
-        debug!("{}", msg);
+        debug!(meta.session, "{}", msg);
         report_error(&ctx.editor_tx, meta, msg);
         return false;
     }
@@ -512,15 +543,19 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                 "language server is not configured for filetype `{}`",
                 &meta.filetype
             );
-            debug!("{}", msg);
+            debug!(meta.session, "{}", msg);
             report_error_no_server_configured(&ctx.editor_tx, meta, request_method, &msg);
 
             return false;
         };
         #[allow(deprecated)]
         for server_config in ctx.config.language_server.values_mut() {
-            server_config.root =
-                find_project_root(language_id, &server_config.roots, &meta.buffile);
+            server_config.root = find_project_root(
+                &meta.session,
+                language_id,
+                &server_config.roots,
+                &meta.buffile,
+            );
         }
 
         #[allow(deprecated)]
@@ -554,7 +589,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                     "".to_string()
                 }
             );
-            debug!("{}", msg);
+            debug!(meta.session, "{}", msg);
             report_error_no_server_configured(&ctx.editor_tx, meta, request_method, &msg);
             return false;
         };
@@ -563,7 +598,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                 let msg = format!(
                     "missing project root path for {server_name}, please set the root option"
                 );
-                error!("{}", msg);
+                error!(meta.session, "{}", msg);
                 report_error(&ctx.editor_tx, meta, &msg);
                 return false;
             }
@@ -613,6 +648,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         // should be fine to unwrap because request was already routed which means language is configured
         let server_config = &server_configs(&ctx.config, meta)[&server_name];
         let server_transport = match language_server_transport::start(
+            meta.session.clone(),
             server_name.clone(),
             server_config.command.as_ref().unwrap_or(&server_name),
             &server_config.args,
@@ -620,7 +656,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         ) {
             Ok(ls) => ls,
             Err(err) => {
-                error!("failed to start language server: {}", err);
+                error!(meta.session, "failed to start language server: {}", err);
                 // If the server command isn't from a hook (e.g. auto-hover),
                 // then send a prominent error to the editor.
                 if !meta.hook {
@@ -636,7 +672,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                         })
                         .is_err()
                     {
-                        error!("Failed to send command to editor");
+                        error!(meta.session, "Failed to send command to editor");
                     }
                 }
                 return false;
@@ -726,7 +762,10 @@ fn report_error_impl(to_editor: &Sender<EditorResponse>, meta: &EditorMeta, comm
             command: command.into(),
         };
         if let Err(err) = to_editor.send(response) {
-            error!("Failed to send error message to editor: {err}");
+            error!(
+                meta.session,
+                "Failed to send error message to editor: {err}"
+            );
         };
     }
 }
@@ -750,8 +789,11 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
     };
     if document_version > request.meta.version {
         debug!(
+            request.meta.session,
             "incoming request {} is stale, version {} but I already have {}",
-            request.method, request.meta.version, document_version
+            request.method,
+            request.meta.version,
+            document_version
         );
         // Keep it nevertheless because at least "completionItem/resolve" is useful.
     }
@@ -800,13 +842,17 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
             return true;
         }
         debug!(
+            request.meta.session,
             "dispatching pending request {} because we have received matching version in didChange",
             request.method
         );
         if document.version > request.meta.version {
             debug!(
+                request.meta.session,
                 "pending request {} is stale, version {} but I already have {}",
-                request.method, request.meta.version, document.version
+                request.method,
+                request.meta.version,
+                document.version
             );
             // Keep it nevertheless because at least "completionItem/resolve" is useful.
         }
@@ -998,7 +1044,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
         }
 
         _ => {
-            warn!("Unsupported method: {}", method);
+            warn!(meta.session, "Unsupported method: {}", method);
         }
     }
 }
@@ -1035,7 +1081,7 @@ fn dispatch_server_request(
                     }
                     "textDocument/semanticTokens" => {
                         let Some(options) = registration.register_options else {
-                            warn!("semantic tokens registration without options");
+                            warn!(meta.session, "semantic tokens registration without options");
                             continue;
                         };
                         let semantic_tokens_options: SemanticTokensOptions =
@@ -1061,7 +1107,10 @@ fn dispatch_server_request(
                             .unwrap()
                             .semantic_tokens_provider = Some(semantic_tokens_server_capabilities);
                     }
-                    _ => warn!("Unsupported registration: {}", registration.method),
+                    _ => warn!(
+                        meta.session,
+                        "Unsupported registration: {}", registration.method
+                    ),
                 }
             }
             Ok(serde_json::Value::Null)
@@ -1079,7 +1128,7 @@ fn dispatch_server_request(
         .ok()
         .unwrap()),
         request::WorkDoneProgressCreate::METHOD => {
-            progress::work_done_progress_create(request.params, ctx)
+            progress::work_done_progress_create(meta, request.params, ctx)
         }
         request::WorkspaceConfiguration::METHOD => {
             workspace::configuration(meta, request.params, server_id, ctx)
@@ -1088,7 +1137,7 @@ fn dispatch_server_request(
             return show_message::show_message_request(meta, server_id, request, ctx);
         }
         _ => {
-            warn!("Unsupported method: {}", method);
+            warn!(meta.session, "Unsupported method: {}", method);
             Err(jsonrpc_core::Error::new(
                 jsonrpc_core::ErrorCode::MethodNotFound,
             ))
@@ -1119,7 +1168,11 @@ fn dispatch_server_notification(
             ccls::publish_semantic_highlighting(server_id, params, ctx);
         }
         notification::Exit::METHOD => {
-            debug!("language server {} exited", &ctx.server(server_id).name);
+            debug!(
+                meta.session,
+                "language server {} exited",
+                &ctx.server(server_id).name
+            );
         }
         notification::ShowMessage::METHOD => {
             let params: ShowMessageParams = params
@@ -1141,10 +1194,10 @@ fn dispatch_server_notification(
             );
         }
         "telemetry/event" => {
-            debug!("{:?}", params);
+            debug!(meta.session, "{:?}", params);
         }
         _ => {
-            warn!("Unsupported method: {}", method);
+            warn!(meta.session, "Unsupported method: {}", method);
         }
     }
 }
@@ -1177,8 +1230,8 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
             text_document_did_open(request.meta.clone(), toml::Value::Table(params), ctx);
         }
         Err(err) => error!(
-            "Failed to read file {} to simulate textDocument/didOpen: {}",
-            buffile, err
+            request.meta.session,
+            "Failed to read file {} to simulate textDocument/didOpen: {}", buffile, err
         ),
     };
 }

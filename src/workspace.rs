@@ -43,7 +43,7 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
             .and_then(|lang| lang.settings.as_ref());
         let settings = configured_section(&meta, ctx, server_id, settings).unwrap_or_else(|| {
             if !raw_settings.is_empty() {
-                Value::Object(explode_string_table(raw_settings))
+                Value::Object(explode_string_table(&meta.session, raw_settings))
             } else {
                 let server = server_configs(&ctx.config, &meta).get(server_name).unwrap();
                 configured_section(&meta, ctx, server_id, server.settings.as_ref())
@@ -319,7 +319,10 @@ pub fn apply_edit(
                         }
                         DocumentChangeOperation::Op(op) => {
                             if let Err(e) = apply_document_resource_op(meta, op, ctx) {
-                                error!("failed to apply document change operation: {}", e);
+                                error!(
+                                    ctx.last_session(),
+                                    "failed to apply document change operation: {}", e
+                                );
                                 return ApplyWorkspaceEditResponse {
                                     applied: false,
                                     failure_reason: None,

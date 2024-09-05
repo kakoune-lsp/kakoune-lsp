@@ -396,7 +396,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
         })
         .collect();
 
-    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params) , move |ctx, _meta, results| {
+    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params) , move |ctx, meta, results| {
         let results: HashMap<_,_> = results.into_iter().collect();
 
         for server_id in servers {
@@ -412,7 +412,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                         "utf-8" => OffsetEncoding::Utf8,
                         "utf-16" => OffsetEncoding::Utf16,
                         encoding => {
-                            error!("Language server sent unsupported offset encoding: {encoding}");
+                            error!(meta.session, "Language server sent unsupported offset encoding: {encoding}");
                             OffsetEncoding::Utf16
                         }
                     })
@@ -421,6 +421,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                     (server.preferred_offset_encoding, server.offset_encoding),
                     (Some(OffsetEncoding::Utf8), OffsetEncoding::Utf16)) {
                         warn!(
+                            meta.session,
                             "Requested offset encoding utf-8 is not supported by {} server, falling back to utf-16",
                             &server.name,
                         );
@@ -467,8 +468,10 @@ pub fn attempt_server_capability(
 
     if !meta.hook {
         warn!(
+            meta.session,
             "{} server does not support {}, refusing to send request",
-            &server_settings.name, feature
+            &server_settings.name,
+            feature
         );
     }
 

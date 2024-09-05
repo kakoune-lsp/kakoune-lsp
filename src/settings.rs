@@ -7,7 +7,7 @@ pub fn request_dynamic_configuration_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<()> {
-    let fifo = temp_fifo();
+    let fifo = temp_fifo(&meta.session);
     ctx.exec(
         meta.clone(),
         format!("lsp-get-config {}", editor_quote(&fifo.path)),
@@ -67,7 +67,7 @@ pub fn configured_section(
 }
 
 pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str) {
-    debug!("lsp_config:\n{}", config);
+    debug!(meta.session, "lsp_config:\n{}", config);
     match toml::from_str(config) {
         Ok(cfg) => {
             ctx.dynamic_config = cfg;
@@ -98,7 +98,7 @@ pub fn request_legacy_initialization_options_from_kakoune(
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Option<Value> {
-    let fifo = temp_fifo();
+    let fifo = temp_fifo(&meta.session);
     ctx.exec(
         meta.clone(),
         format!(
@@ -107,14 +107,20 @@ pub fn request_legacy_initialization_options_from_kakoune(
         ),
     );
     let options = std::fs::read_to_string(&fifo.path).unwrap();
-    debug!("lsp_server_initialization_options:\n{}", options);
+    debug!(
+        meta.session,
+        "lsp_server_initialization_options:\n{}", options
+    );
     if options.trim().is_empty() {
         None
     } else {
         match toml::from_str::<toml::value::Table>(&options) {
-            Ok(table) => Some(Value::Object(explode_string_table(&table))),
+            Ok(table) => Some(Value::Object(explode_string_table(&meta.session, &table))),
             Err(e) => {
-                error!("Failed to parse lsp_server_initialization_options: {:?}", e);
+                error!(
+                    meta.session,
+                    "Failed to parse lsp_server_initialization_options: {:?}", e
+                );
                 None
             }
         }
@@ -155,6 +161,7 @@ where
 }
 // Take flattened tables like "a.b = 1" and produce "{"a":{"b":1}}".
 pub fn explode_string_table(
+    session: &SessionId,
     raw_settings: &toml::value::Table,
 ) -> serde_json::value::Map<String, Value> {
     let mut settings = serde_json::Map::new();
@@ -164,7 +171,10 @@ pub fn explode_string_table(
         let local_key = match key_parts.next_back() {
             Some(name) => name,
             None => {
-                warn!("Got a setting with an empty local name: {:?}", raw_key);
+                warn!(
+                    session,
+                    "Got a setting with an empty local name: {:?}", raw_key
+                );
                 continue;
             }
         };
@@ -172,7 +182,10 @@ pub fn explode_string_table(
         let value: Value = match raw_value.clone().try_into() {
             Ok(value) => value,
             Err(e) => {
-                warn!("Could not convert setting {:?} to JSON: {}", raw_value, e,);
+                warn!(
+                    session,
+                    "Could not convert setting {:?} to JSON: {}", raw_value, e
+                );
                 continue;
             }
         };
@@ -180,7 +193,10 @@ pub fn explode_string_table(
         match insert_value(&mut settings, key_parts, local_key.into(), value) {
             Ok(_) => (),
             Err(e) => {
-                warn!("Could not set {:?} to {:?}: {}", raw_key, raw_value, e);
+                warn!(
+                    session,
+                    "Could not set {:?} to {:?}: {}", raw_key, raw_value, e
+                );
                 continue;
             }
         }

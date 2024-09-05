@@ -28,7 +28,7 @@ pub struct TempFifo {
     pub path: String,
 }
 
-pub fn mkfifo() -> String {
+pub fn mkfifo(session: &SessionId) -> String {
     let mut path = temp_dir();
     for attempt in 0..10 {
         path.push(format!("{:x}", rand::random::<u64>()));
@@ -40,13 +40,15 @@ pub fn mkfifo() -> String {
         if mkfifo_result == 0 {
             return path;
         }
-        error!("mkfifo attempt {attempt} failed, retrying");
+        error!(session, "mkfifo attempt {attempt} failed, retrying");
     }
     panic!("failed to create fifo");
 }
 
-pub fn temp_fifo() -> TempFifo {
-    TempFifo { path: mkfifo() }
+pub fn temp_fifo(session: &SessionId) -> TempFifo {
+    TempFifo {
+        path: mkfifo(session),
+    }
 }
 
 impl Drop for TempFifo {

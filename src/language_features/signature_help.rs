@@ -118,7 +118,7 @@ fn editor_signature_help(
     let mut contents = active_signature.label.clone();
     if let Some(range) = parameter_range {
         if range[0] >= contents.len() || range[1] >= contents.len() {
-            warn!("invalid range for active parameter");
+            warn!(meta.session, "invalid range for active parameter");
         } else {
             let (left, tail) = contents.split_at(range[0]);
             let (param, right) = tail.split_at(range[1] - range[0]);

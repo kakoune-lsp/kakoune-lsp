@@ -721,7 +721,7 @@ fn editor_object(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!("{}", err);
+            error!(meta.session, "{}", err);
             if !meta.hook {
                 ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
             }

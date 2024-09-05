@@ -26,6 +26,10 @@ Within each language server table, optional configuration options can be added:
 } str lsp_servers %{}
 
 declare-option -docstring %{
+    Turn on verbose log output in the *debug* buffer
+} bool lsp_debug false
+
+declare-option -docstring %{
     Exit session if no requests were received during given period in seconds
     set to 0 to disable
 } int lsp_timeout 1800
@@ -444,6 +448,18 @@ declare-option -hidden str lsp_modeline_progress ""
 declare-option -hidden str lsp_modeline_message_requests ""
 declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
+
+hook -always -once global NormalIdle .* %{
+    evaluate-commands -draft %{
+        try %{
+            buffer *debug*
+            set-option buffer disabled_hooks "%opt{disabled_hooks}|lsp.*"
+        }
+    }
+}
+hook -group lsp-scratch-buffers global BufCreate [^/].* %{
+        set-option buffer disabled_hooks "%opt{disabled_hooks}|lsp.*"
+}
 
 declare-option -hidden -docstring %{
     %sh{eval "$kak_opt_lsp_find_root" <globs>...}: detect root directory based on the given shell globs.

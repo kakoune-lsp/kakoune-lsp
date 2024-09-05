@@ -567,13 +567,13 @@ https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol extension]
 
 == Troubleshooting
 
-If kakoune-lsp fails try to put this line in your `kakrc` after `kak-lsp --kakoune` invocation:
+If kakoune-lsp fails, check the log in the `*debug*` buffer.
+To get more verbose logs, run:
+
 [source,kak]
 ----
-set global lsp_cmd "kak-lsp -vvv --log /tmp/kak-lsp.log"
+set global lsp_debug true
 ----
-
-to enable debug logging.
 
 If it does not give enough insight to fix the problem or if the problem is a bug in kakoune-lsp itself
 please don't hesitate to raise an issue.
@@ -586,7 +586,7 @@ Please also try to reproduce the issue with a minimal configuration. Sometimes t
 ----
 env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
     eval %sh{kak-lsp --kakoune}
-    set global lsp_cmd "kak-lsp -vvvv --log /tmp/kak-lsp.log"
+    set global lsp_debug true       # Check the *debug* buffer for debug logs.
     lsp-enable'
 ----
 

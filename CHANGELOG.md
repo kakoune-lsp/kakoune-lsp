@@ -17,6 +17,7 @@ Breaking changes:
   changed/removed in future.
 
 Additions:
+- The log is now written to the `*debug*` buffer.
 - The `--session` option is no longer required unless you start `kak-lsp` from outside an editor session:
   - This simplifies the default configuration (`eval %sh{kak-lsp --kakoune}; lsp-enable`).
   - Since `lsp_cmd` no longer needs to contain the `--session` argument,

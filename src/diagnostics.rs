@@ -50,7 +50,10 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
                     Some(DiagnosticSeverity::INFORMATION) => "DiagnosticInfo",
                     Some(DiagnosticSeverity::WARNING) | None => "DiagnosticWarning",
                     Some(_) => {
-                        warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                        warn!(
+                            ctx.last_session(),
+                            "Unexpected DiagnosticSeverity: {:?}", x.severity
+                        );
                         "DiagnosticWarning"
                     }
                 }
@@ -67,7 +70,10 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
             Some(DiagnosticSeverity::INFORMATION) => "InlayDiagnosticInfo",
             Some(DiagnosticSeverity::WARNING) | None => "InlayDiagnosticWarning",
             Some(_) => {
-                warn!("Unexpected DiagnosticSeverity: {:?}", diagnostic.severity);
+                warn!(
+                    ctx.last_session(),
+                    "Unexpected DiagnosticSeverity: {:?}", diagnostic.severity
+                );
                 "InlayDiagnosticWarning"
             }
         };
@@ -187,7 +193,10 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
                     "{LineFlagWarning}%opt[lsp_diagnostic_line_warning_sign]"
                 }
                 Some(_) => {
-                    warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                    warn!(
+                        ctx.last_session(),
+                        "Unexpected DiagnosticSeverity: {:?}", x.severity
+                    );
                     ""
                 }
             },
@@ -226,7 +235,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                     let p = match get_kakoune_position(server, filename, &x.range.start, ctx) {
                         Some(position) => position,
                         None => {
-                            warn!("Cannot get position from file {}", filename);
+                            warn!(meta.session, "Cannot get position from file {}", filename);
                             return "".to_string();
                         }
                     };
@@ -246,7 +255,10 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             Some(DiagnosticSeverity::INFORMATION) => "info",
                             Some(DiagnosticSeverity::WARNING) | None => "warning",
                             Some(_) => {
-                                warn!("Unexpected DiagnosticSeverity: {:?}", x.severity);
+                                warn!(
+                                    meta.session,
+                                    "Unexpected DiagnosticSeverity: {:?}", x.severity
+                                );
                                 "warning"
                             }
                         },

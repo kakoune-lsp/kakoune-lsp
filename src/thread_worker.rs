@@ -6,19 +6,23 @@ use std::thread;
 
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 
+use crate::SessionId;
+
 /// Like `std::thread::JoinHandle<()>`, but joins thread in drop automatically.
 pub struct ScopedThread {
     // Option for drop
     inner: Option<thread::JoinHandle<()>>,
+    session: SessionId,
 }
 
 impl Drop for ScopedThread {
     fn drop(&mut self) {
         let inner = self.inner.take().unwrap();
         let name = inner.thread().name().unwrap().to_string();
-        info!("Waiting for {} to finish...", name);
+        info!(self.session, "Waiting for {} to finish...", name);
         let res = inner.join();
         info!(
+            self.session,
             "... {} terminated with {}",
             name,
             if res.is_ok() { "ok" } else { "err" }
@@ -34,9 +38,16 @@ impl Drop for ScopedThread {
 }
 
 impl ScopedThread {
-    pub fn spawn(name: &'static str, f: impl FnOnce() + Send + 'static) -> ScopedThread {
+    pub fn spawn(
+        session: SessionId,
+        name: &'static str,
+        f: impl FnOnce() + Send + 'static,
+    ) -> ScopedThread {
         let inner = thread::Builder::new().name(name.into()).spawn(f).unwrap();
-        ScopedThread { inner: Some(inner) }
+        ScopedThread {
+            inner: Some(inner),
+            session,
+        }
     }
 }
 
@@ -59,7 +70,7 @@ pub struct Worker<I, O> {
 }
 
 impl<I, O> Worker<I, O> {
-    pub fn spawn<F>(name: &'static str, buf: usize, f: F) -> Worker<I, O>
+    pub fn spawn<F>(session: SessionId, name: &'static str, buf: usize, f: F) -> Worker<I, O>
     where
         F: FnOnce(Receiver<I>, Sender<O>) + Send + 'static,
         I: Send + 'static,
@@ -69,7 +80,7 @@ impl<I, O> Worker<I, O> {
         // and output buffers to a fixed size, a worker might get stuck.
         let (sender, input_receiver) = bounded::<I>(buf);
         let (output_sender, receiver) = unbounded::<O>();
-        let _thread = ScopedThread::spawn(name, move || f(input_receiver, output_sender));
+        let _thread = ScopedThread::spawn(session, name, move || f(input_receiver, output_sender));
         Worker {
             sender,
             _thread,

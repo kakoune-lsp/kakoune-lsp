@@ -73,7 +73,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
             match op {
                 SnippetDocumentChangeOperation::Op(resource_op) => {
                     if let Err(e) = workspace::apply_document_resource_op(&meta, resource_op, ctx) {
-                        error!("failed to apply document change: {}", e);
+                        error!(meta.session, "failed to apply document change: {}", e);
                     }
                 }
                 SnippetDocumentChangeOperation::Edit(SnippetTextDocumentEdit {
@@ -220,6 +220,7 @@ struct RunSingleArgs {
 pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut Context) {
     if params.arguments.len() != 1 {
         error!(
+            meta.session,
             "Unsupported number of runSingle arguments: {}",
             params.arguments.len()
         );
@@ -229,7 +230,10 @@ pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut 
     let argument: RunSingleArgument = serde_json::from_value(argument).unwrap();
 
     if argument.kind != "cargo" {
-        error!("Unsupported runSingle kind: {}", argument.kind);
+        error!(
+            meta.session,
+            "Unsupported runSingle kind: {}", argument.kind
+        );
         return;
     }
 

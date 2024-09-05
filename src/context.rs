@@ -235,7 +235,7 @@ impl Context {
         for (server_id, params) in ops {
             let params = params.into_params();
             if params.is_err() {
-                error!("Failed to convert params");
+                error!(meta.session, "Failed to convert params");
                 return;
             }
             let id = self.next_request_id();
@@ -265,14 +265,15 @@ impl Context {
                 .send(ServerMessage::Request(Call::MethodCall(call)))
                 .is_err()
             {
-                error!("Failed to call language server");
+                error!(meta.session, "Failed to call language server");
             };
         }
     }
 
     pub fn cancel(&mut self, server_id: ServerId, id: Id) {
-        if let Some((_meta, method, _batch_id, _canceled)) = self.response_waitlist.get(&id) {
+        if let Some((meta, method, _batch_id, _canceled)) = self.response_waitlist.get(&id) {
             debug!(
+                meta.session,
                 "Canceling request to server {}: {:?} ({})",
                 &self.server(server_id).name,
                 id,
@@ -285,6 +286,7 @@ impl Context {
             }
             None => {
                 error!(
+                    self.last_session(),
                     "Failed to cancel request {id:?} to server {}",
                     &self.server(server_id).name,
                 );
@@ -326,7 +328,10 @@ impl Context {
             .send(ServerMessage::Response(output))
             .is_err()
         {
-            error!("Failed to reply to language server {}", &server.name);
+            error!(
+                self.last_session(),
+                "Failed to reply to language server {}", &server.name
+            );
         };
     }
 
@@ -336,7 +341,7 @@ impl Context {
     {
         let params = params.into_params();
         if params.is_err() {
-            error!("Failed to convert params");
+            error!(self.last_session(), "Failed to convert params");
             return;
         }
         let notification = jsonrpc_core::Notification {
@@ -353,8 +358,8 @@ impl Context {
             .is_err()
         {
             error!(
-                "Failed to send notification to language server {}",
-                &server.name,
+                self.last_session(),
+                "Failed to send notification to language server {}", &server.name,
             );
         }
     }
@@ -364,13 +369,17 @@ impl Context {
         S: Into<Cow<'static, str>>,
     {
         let command = command.into();
+        let session = meta.session.clone();
         if let Some((fifo, which)) = meta
             .fifo
             .as_ref()
             .map(|f| (f, "fifo"))
             .or_else(|| meta.command_fifo.as_ref().map(|f| (f, "kak_command_fifo")))
         {
-            debug!("To editor `{}` via {}: {}", meta.session, which, command);
+            debug!(
+                session,
+                "To editor `{}` via {}: {}", meta.session, which, command
+            );
             fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
             return;
         }
@@ -379,7 +388,7 @@ impl Context {
             .send(EditorResponse { meta, command })
             .is_err()
         {
-            error!("Failed to send command to editor");
+            error!(session, "Failed to send command to editor");
         }
     }
 
@@ -476,6 +485,7 @@ pub fn remove_outstanding_request(
     server_id: ServerId,
     ctx: &mut Context,
     method: &'static str,
+    session: &SessionId,
     buffile: String,
     client: Option<String>,
     id: &Id,
@@ -492,6 +502,7 @@ pub fn remove_outstanding_request(
         }
     }
     error!(
+        session,
         "[{}] Not in outstanding requests: method {} buffile {} client {}",
         key.0,
         key.1,

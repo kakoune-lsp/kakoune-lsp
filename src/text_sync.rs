@@ -124,59 +124,64 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
 }
 
 pub fn spawn_file_watcher(
+    session: SessionId,
     log_path: &'static Option<PathBuf>,
     watch_requests: HashMap<(ServerId, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
 ) -> Worker<(), Vec<FileEvent>> {
-    info!("starting file watcher");
+    info!(session, "starting file watcher");
     Worker::spawn(
+        session.clone(),
         "File system change watcher",
         1024, // arbitrary
         move |receiver: Receiver<()>, sender: Sender<Vec<FileEvent>>| {
             let mut debouncers = Vec::new();
             for ((_, root_path, path), path_watch_requests) in watch_requests {
                 let sender = sender.clone();
-                let callback = move |res: DebounceEventResult| {
-                    match res {
-                        Ok(debounced_events) => {
-                            let mut file_changes = vec![];
-                            for debounced_event in debounced_events {
-                                event_file_changes(
-                                    &mut file_changes,
-                                    log_path,
-                                    &path_watch_requests,
-                                    debounced_event.event,
-                                );
-                            }
-                            if !file_changes.is_empty() {
-                                if let Err(err) = sender.send(file_changes) {
-                                    error!("{}", err);
+                let callback = {
+                    let session = session.clone();
+                    move |res: DebounceEventResult| {
+                        match res {
+                            Ok(debounced_events) => {
+                                let mut file_changes = vec![];
+                                for debounced_event in debounced_events {
+                                    event_file_changes(
+                                        &mut file_changes,
+                                        log_path,
+                                        &path_watch_requests,
+                                        debounced_event.event,
+                                    );
+                                }
+                                if !file_changes.is_empty() {
+                                    if let Err(err) = sender.send(file_changes) {
+                                        error!(session, "{}", err);
+                                    }
                                 }
                             }
-                        }
-                        Err(errors) => {
-                            for e in errors {
-                                error!("{}", e)
+                            Err(errors) => {
+                                for e in errors {
+                                    error!(session, "{}", e)
+                                }
                             }
-                        }
-                    };
+                        };
+                    }
                 };
 
                 let mut debouncer = match new_debouncer(Duration::from_secs(1), None, callback) {
                     Ok(debouncer) => debouncer,
                     Err(err) => {
-                        error!("{}", err);
+                        error!(session, "{}", err);
                         return;
                     }
                 };
 
                 let path = path.as_deref().unwrap_or_else(|| Path::new(&root_path));
                 if let Err(err) = debouncer.watcher().watch(path, RecursiveMode::Recursive) {
-                    error!("{:?}: {}", path, err);
+                    error!(session, "{:?}: {}", path, err);
                 }
                 debouncers.push(debouncer);
             }
             if let Err(err) = receiver.recv() {
-                error!("{}", err);
+                error!(session, "{}", err);
             }
         },
     )
@@ -250,6 +255,7 @@ pub fn register_workspace_did_change_watched_files(
 ) {
     if !ctx.config.file_watch_support {
         error!(
+            ctx.last_session(),
             "file watch support is disabled, ignoring spurious {} server request",
             notification::DidChangeWatchedFiles::METHOD
         );
@@ -265,7 +271,10 @@ pub fn register_workspace_did_change_watched_files(
                 GlobPattern::Relative(relative) => &relative.pattern,
             };
             if bare_pattern.contains('{') {
-                error!("unsupported braces in glob patttern: '{}'", &bare_pattern);
+                error!(
+                    ctx.last_session(),
+                    "unsupported braces in glob patttern: '{}'", &bare_pattern
+                );
                 continue;
             }
         }
@@ -279,7 +288,7 @@ pub fn register_workspace_did_change_watched_files(
                 let root = match url.to_file_path() {
                     Ok(root) => root,
                     Err(_) => {
-                        error!("URL is not a file path: {}", url);
+                        error!(ctx.last_session(), "URL is not a file path: {}", url);
                         continue;
                     }
                 };
@@ -290,8 +299,8 @@ pub fn register_workspace_did_change_watched_files(
             Ok(pattern) => pattern,
             Err(err) => {
                 error!(
-                    "failed to compile glob pattern '{}': {}",
-                    &glob_pattern, err
+                    ctx.last_session(),
+                    "failed to compile glob pattern '{}': {}", &glob_pattern, err
                 );
                 continue;
             }
@@ -299,11 +308,7 @@ pub fn register_workspace_did_change_watched_files(
         let default_watch_kind = WatchKind::Create | WatchKind::Change | WatchKind::Delete;
         let kind = watcher.kind.unwrap_or(default_watch_kind);
         ctx.pending_file_watchers
-            .entry((
-                server_id,
-                ctx.server(server_id).roots[0].clone(),
-                root_path,
-            ))
+            .entry((server_id, ctx.server(server_id).roots[0].clone(), root_path))
             .or_default()
             .push(CompiledFileSystemWatcher { kind, pattern });
     }

@@ -34,8 +34,7 @@ mkdir .config/kak
 cat > .config/kak/kakrc << 'EOF'
 evaluate-commands %sh{kak-lsp --kakoune}
 map global user l %{: enter-user-mode lsp<ret>}
-# Enable logging since this is only for testing.
-set-option global lsp_cmd "%opt{lsp_cmd} -vvvv --log ./log"
+set-option global lsp_debug true
 hook global -once WinDisplay .* lsp-enable
 
 EOF

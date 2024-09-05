@@ -96,6 +96,7 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
                 .unwrap_or(false);
         let server = ctx.server(server_id);
         match apply_text_edits_to_buffer(
+            ctx.last_session(),
             &meta.client,
             Some(uri),
             edits,
@@ -110,7 +111,10 @@ pub fn apply_annotated_text_edits<T: TextEditish<T>>(
         }
     } else if let Err(e) = apply_text_edits_to_file(server_id, &uri, edits, &meta.language_id, ctx)
     {
-        error!("Failed to apply edits to file {} ({})", &uri, e);
+        error!(
+            ctx.last_session(),
+            "Failed to apply edits to file {} ({})", &uri, e
+        );
     }
 }
 
@@ -248,6 +252,7 @@ fn cvt(t: i32) -> std::io::Result<i32> {
 }
 
 pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
+    session: &SessionId,
     client: &Option<String>,
     mut text_edits: Vec<T>,
     text: &Rope,
@@ -291,9 +296,12 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
                 &Rope::from_str(&text_edits[0].as_ref().new_text),
                 if missing_eol { Some(text_end) } else { None },
             );
-            debug!("Computed edit script to split up whole-buffer text edit");
+            debug!(
+                session,
+                "Computed edit script to split up whole-buffer text edit"
+            );
             for te in &text_edits {
-                debug!("{:?}", te.as_ref());
+                debug!(session, "{:?}", te.as_ref());
             }
         }
     }
@@ -419,6 +427,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
 }
 
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
+    session: &SessionId,
     client: &Option<String>,
     uri: Option<Url>,
     text_edits: Vec<T>,
@@ -429,7 +438,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     let mut apply_edits = formatdoc!(
         "{}
          lsp-did-change",
-        lsp_text_edits_to_kakoune(client, text_edits, text, offset_encoding)?
+        lsp_text_edits_to_kakoune(session, client, text_edits, text, offset_encoding)?
     );
 
     if write_to_disk {
@@ -631,7 +640,13 @@ mod tests {
             edit(0, 21, 0, 21, "{CStr, CString}"),
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
-        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(
+            &SessionId("test_session".to_string()),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
         let expected = indoc!(
             r#"select 1.5,1.12 1.15,1.21
                execute-keys -save-regs "" Z
@@ -645,7 +660,13 @@ mod tests {
     pub fn lsp_text_edits_to_kakoune_insert_adjacent_to_replace() {
         let text_edits = vec![edit(0, 1, 0, 1, "inserted"), edit(0, 2, 0, 3, "replaced")];
         let buffer = Rope::from_str("0123");
-        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(
+            &SessionId("test_session".to_string()),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
         let expected = indoc!(
             r#"select 1.2,1.2 1.3,1.3
                execute-keys -save-regs "" Z
@@ -676,7 +697,13 @@ mod tests {
         _ => {}
     }",
         );
-        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(
+            &SessionId("test_session".to_string()),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
         let expected = indoc!(
             r#"select 1.5,1.9 1.11,1.13 2.9,2.14
                execute-keys -save-regs "" Z
@@ -742,7 +769,13 @@ mod tests {
                }
                "#
         ));
-        let result = lsp_text_edits_to_kakoune(&None, text_edits, &buffer, OffsetEncoding::Utf8);
+        let result = lsp_text_edits_to_kakoune(
+            &SessionId("test_session".to_string()),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
 
         let expected = indoc!(
             r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000

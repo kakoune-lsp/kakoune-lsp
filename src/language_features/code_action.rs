@@ -36,7 +36,7 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!("{}", err);
+            error!(meta.session, "{}", err);
             if !meta.hook {
                 ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
             }
@@ -167,8 +167,8 @@ fn editor_code_actions(
 
     for (_, cmd) in &actions {
         match cmd {
-            CodeActionOrCommand::Command(cmd) => debug!("Command: {:?}", cmd),
-            CodeActionOrCommand::CodeAction(action) => debug!("Action: {:?}", action),
+            CodeActionOrCommand::Command(cmd) => debug!(meta.session, "Command: {:?}", cmd),
+            CodeActionOrCommand::CodeAction(action) => debug!(meta.session, "Action: {:?}", action),
         }
     }
 

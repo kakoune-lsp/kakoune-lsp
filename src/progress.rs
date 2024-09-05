@@ -22,6 +22,7 @@ pub fn work_done_progress_cancel(meta: EditorMeta, params: EditorParams, ctx: &m
 }
 
 pub fn work_done_progress_create(
+    meta: EditorMeta,
     params: Params,
     ctx: &mut Context,
 ) -> Result<jsonrpc_core::Value, jsonrpc_core::Error> {
@@ -30,7 +31,11 @@ pub fn work_done_progress_create(
         .map_err(|_| jsonrpc_core::Error::new(jsonrpc_core::ErrorCode::InvalidParams))?;
     match ctx.work_done_progress.entry(token) {
         hash_map::Entry::Occupied(e) => {
-            warn!("Received duplicate ProgressToken '{:?}'", e.key());
+            warn!(
+                meta.session,
+                "Received duplicate ProgressToken '{:?}'",
+                e.key()
+            );
         }
         hash_map::Entry::Vacant(e) => {
             e.insert(None);
@@ -46,7 +51,10 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
             // Workaround: clangd up to version 12 sends us invalid messages.  Avoid panicking so
             // other features keep working. This is fixed by LLVM commit f088af37e6b5 ([clangd]
             // Fix data type of WorkDoneProgressReport::percentage, 2021-05-10).
-            warn!("Failed to parse WorkDoneProgressParams params: {}", err);
+            warn!(
+                meta.session,
+                "Failed to parse WorkDoneProgressParams params: {}", err
+            );
             return;
         }
     };
@@ -86,8 +94,8 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
             match ctx.work_done_progress.get_mut(&params.token) {
                 Some(Some(_)) => {
                     warn!(
-                        "Received begin event for already started ProgressToken '{:?}'",
-                        token
+                        meta.session,
+                        "Received begin event for already started ProgressToken '{:?}'", token
                     )
                 }
                 Some(progress @ None) => {
@@ -104,15 +112,15 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
                 }
                 None => {
                     warn!(
-                        "Received begin event for non-existent ProgressToken '{:?}'",
-                        token
+                        meta.session,
+                        "Received begin event for non-existent ProgressToken '{:?}'", token
                     );
                 }
             }
         }
         ProgressParamsValue::WorkDone(WorkDoneProgress::Report(report)) => {
             if ctx.work_done_progress_report_timestamp.elapsed() < Duration::from_millis(1000) {
-                debug!("Progress report arrived too fast, dropping");
+                debug!(meta.session, "Progress report arrived too fast, dropping");
                 return;
             }
             ctx.work_done_progress_report_timestamp = time::Instant::now();
@@ -134,15 +142,15 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
                 Some(None) => {
                     let token = &params.token;
                     warn!(
-                        "Received report event for unstarted ProgressToken '{:?}'",
-                        token
+                        meta.session,
+                        "Received report event for unstarted ProgressToken '{:?}'", token
                     );
                 }
                 None => {
                     let token = &params.token;
                     warn!(
-                        "Received report event for non-existent ProgressToken '{:?}'",
-                        token
+                        meta.session,
+                        "Received report event for non-existent ProgressToken '{:?}'", token
                     );
                 }
             }
@@ -157,15 +165,15 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
                 Some(None) => {
                     let token = &params.token;
                     warn!(
-                        "Received end event for unstarted ProgressToken '{:?}'",
-                        token
+                        meta.session,
+                        "Received end event for unstarted ProgressToken '{:?}'", token
                     );
                 }
                 None => {
                     let token = &params.token;
                     warn!(
-                        "Received end event for non-existent ProgressToken '{:?}'",
-                        token
+                        meta.session,
+                        "Received end event for non-existent ProgressToken '{:?}'", token
                     );
                 }
             }

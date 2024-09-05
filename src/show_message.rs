@@ -9,6 +9,7 @@ use crate::{
     context::Context,
     types::{EditorMeta, ServerId},
     util::editor_quote,
+    SessionId,
 };
 
 // commands to be handled
@@ -119,7 +120,7 @@ pub fn show_message(
     msg: &str,
     ctx: &Context,
 ) {
-    let command = message_type(typ).unwrap_or("nop");
+    let command = message_type(&meta.session, typ).unwrap_or("nop");
     ctx.exec(
         meta,
         format!(
@@ -147,14 +148,14 @@ fn update_modeline(meta: EditorMeta, ctx: &Context) {
     );
 }
 
-fn message_type(typ: MessageType) -> Option<&'static str> {
+fn message_type(session: &SessionId, typ: MessageType) -> Option<&'static str> {
     Some(match typ {
         MessageType::ERROR => "lsp-show-message-error",
         MessageType::WARNING => "lsp-show-message-warning",
         MessageType::INFO => "lsp-show-message-info",
         MessageType::LOG => "lsp-show-message-log",
         _ => {
-            warn!("Unexpected ShowMessageParams type: {:?}", typ);
+            warn!(session, "Unexpected ShowMessageParams type: {:?}", typ);
             return None;
         }
     })

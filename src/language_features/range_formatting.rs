@@ -99,6 +99,7 @@ pub fn editor_range_formatting<T: TextEditish<T>>(
     let server = ctx.server(server_id);
     let cmd = ctx.documents.get(&meta.buffile).and_then(|document| {
         apply_text_edits_to_buffer(
+            &meta.session,
             &meta.client,
             None,
             text_edits,

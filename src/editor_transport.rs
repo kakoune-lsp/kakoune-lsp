@@ -17,6 +17,7 @@ pub struct EditorTransport {
 }
 
 pub fn start(
+    session: &SessionId,
     lsp_session: &LspSessionId,
     initial_request: Option<String>,
 ) -> Result<EditorTransport, i32> {
@@ -30,34 +31,40 @@ pub fn start(
         if UnixStream::connect(&path).is_err() {
             if fs::remove_file(&path).is_err() {
                 error!(
+                    session,
                     "Failed to clean up dead LSP session at {}",
                     path.to_str().unwrap()
                 );
                 return Err(1);
             };
         } else {
-            error!("Server is already running for LSP session {}", lsp_session);
+            error!(
+                session,
+                "Server is already running for LSP session {}", lsp_session
+            );
             return Err(1);
         }
     }
-    std::thread::spawn(move || {
-        if let Some(initial_request) = initial_request {
-            if sender.send(initial_request).is_err() {
-                return;
-            };
+    std::thread::spawn({
+        let session = session.clone();
+        move || {
+            if let Some(initial_request) = initial_request {
+                if sender.send(initial_request).is_err() {
+                    return;
+                };
+            }
+            start_unix(session, &path, sender);
         }
-        start_unix(&path, sender);
     });
     let from_editor = receiver;
 
     let to_editor = Worker::spawn(
+        session.clone(),
         "Messages to editor",
         channel_capacity,
         move |receiver: Receiver<EditorResponse>, _| {
             for response in receiver {
-                if let Err(err) = send_command_to_editor(response) {
-                    error!("Failed to send command to editor: {}", err);
-                }
+                send_command_to_editor(response, true);
             }
         },
     );
@@ -68,7 +75,7 @@ pub fn start(
     })
 }
 
-pub fn send_command_to_editor(response: EditorResponse) -> Result<(), String> {
+pub fn send_command_to_editor(response: EditorResponse, log: bool) {
     match Command::new("kak")
         .args(["-p", &response.meta.session])
         .stdin(Stdio::piped())
@@ -80,7 +87,10 @@ pub fn send_command_to_editor(response: EditorResponse) -> Result<(), String> {
             let stdin = match child.stdin.as_mut() {
                 Some(stdin) => stdin,
                 None => {
-                    return Err("failed to get editor stdin".to_string());
+                    if log {
+                        error!(response.meta.session, "failed to get editor stdin");
+                    }
+                    return;
                 }
             };
 
@@ -91,40 +101,51 @@ pub fn send_command_to_editor(response: EditorResponse) -> Result<(), String> {
                         "evaluate-commands -client {} -verbatim -- {}",
                         client, response.command
                     );
-                    debug!("To editor `{}`: {}", response.meta.session, command);
+                    if log {
+                        debug!(
+                            response.meta.session,
+                            "To editor `{}`: {}", response.meta.session, command
+                        );
+                    }
                     Cow::from(command)
                 }
                 None => {
-                    debug!(
-                        "To editor `{}`: {}",
-                        response.meta.session, response.command
-                    );
+                    if log {
+                        debug!(
+                            response.meta.session,
+                            "To editor `{}`: {}", response.meta.session, response.command
+                        );
+                    }
                     response.command
                 }
             };
 
             if stdin.write_all(command.as_bytes()).is_err() {
-                error!("Failed to write to editor stdin");
+                if log {
+                    error!(response.meta.session, "Failed to write to editor stdin");
+                }
+                return;
             }
             // code should fail earlier if Kakoune was not spawned
             // otherwise something went completely wrong, better to panic
             let exit_code = child.wait().unwrap();
-            if !exit_code.success() {
-                return Err("kak -p exited with non-zero status".to_string());
+            if !exit_code.success() && log {
+                error!(response.meta.session, "kak -p exited with non-zero status");
             }
         }
         Err(e) => {
-            error!("Failed to run Kakoune: {}", e);
+            if log {
+                error!(response.meta.session, "Failed to run Kakoune: {}", e);
+            }
         }
     }
-    Ok(())
 }
 
-pub fn start_unix(path: &path::Path, sender: Sender<String>) {
+pub fn start_unix(session: SessionId, path: &path::Path, sender: Sender<String>) {
     let listener = match UnixListener::bind(path) {
         Ok(listener) => listener,
         Err(e) => {
-            error!("Failed to bind: {}", e);
+            error!(session, "Failed to bind: {}", e);
             return;
         }
     };
@@ -138,18 +159,18 @@ pub fn start_unix(path: &path::Path, sender: Sender<String>) {
                         if request.is_empty() {
                             continue;
                         }
-                        debug!("From editor: {}", request);
+                        debug!(session, "From editor: {}", request);
                         if sender.send(request).is_err() {
                             return;
                         };
                     }
                     Err(e) => {
-                        error!("Failed to read from stream: {}", e);
+                        error!(session, "Failed to read from stream: {}", e);
                     }
                 }
             }
             Err(e) => {
-                error!("Failed to accept connection: {}", e);
+                error!(session, "Failed to accept connection: {}", e);
             }
         }
     }
