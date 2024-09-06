@@ -116,6 +116,7 @@ pub fn start(
                     ctx.last_session(),
                     "Exiting session after {} seconds of inactivity", timeout
                 );
+                op.recv(&timeout_channel).unwrap();
                 break 'event_loop;
             }
             idx if idx == from_editor_op => {
