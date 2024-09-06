@@ -203,6 +203,15 @@ fn main() {
             verbosity = 4;
         }
         config.server.timeout = 1800;
+        if let Some(timeout) = env_var("kak_opt_lsp_timeout") {
+            config.server.timeout = timeout.parse().unwrap_or_else(|err| {
+                report_config_error(
+                    &session,
+                    &raw_request,
+                    format!("failed to parse lsp_timeout: {err}"),
+                )
+            });
+        }
         if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support") {
             config.snippet_support = snippet_support != "false";
         }
