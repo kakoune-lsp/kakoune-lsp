@@ -35,10 +35,12 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
     let document = document.unwrap();
     let version = document.version;
     let diagnostics = &ctx.diagnostics[buffile];
-    let inline_diagnostics = diagnostics
+    let diagnostics_orderd_by_severity = diagnostics
         .iter()
         .sorted_unstable_by_key(|(_, x)| x.severity)
-        .rev()
+        .rev();
+    let inline_diagnostics = diagnostics_orderd_by_severity
+        .clone()
         .map(|(server_id, x)| {
             let server = ctx.server(*server_id);
             format!(
@@ -60,6 +62,27 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
             )
         })
         .join(" ");
+    let tagged_diagnostics = |tag, tag_face| {
+        diagnostics_orderd_by_severity
+            .clone()
+            .filter_map(|(server_id, x)| {
+                let server = ctx.server(*server_id);
+                if x.tags.as_ref().is_some_and(|tags| tags.contains(&tag)) {
+                    Some(format!(
+                        "{}|{}",
+                        lsp_range_to_kakoune(&x.range, &document.text, server.offset_encoding),
+                        tag_face
+                    ))
+                } else {
+                    None
+                }
+            })
+            .join(" ")
+    };
+    let inline_diagnostics_deprecated =
+        tagged_diagnostics(DiagnosticTag::DEPRECATED, "DiagnosticTagDeprecated");
+    let inline_diagnostics_unnecessary =
+        tagged_diagnostics(DiagnosticTag::UNNECESSARY, "DiagnosticTagUnnecessary");
 
     // Assemble a list of diagnostics by line number
     let mut lines_with_diagnostics = HashMap::new();
@@ -144,6 +167,8 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
          set-option buffer lsp_diagnostic_info_count {info_count}; \
          set-option buffer lsp_diagnostic_warning_count {warning_count}; \
          set-option buffer lsp_inline_diagnostics {version} {inline_diagnostics}; \
+         set-option buffer lsp_inline_diagnostics_deprecated {version} {inline_diagnostics_deprecated}; \
+         set-option buffer lsp_inline_diagnostics_unnecessary {version} {inline_diagnostics_unnecessary}; \
          evaluate-commands \"set-option buffer lsp_diagnostic_lines {version} {line_flags} '0|%opt[lsp_diagnostic_line_error_sign]'\"; \
          set-option buffer lsp_inlay_diagnostics {version} {inlay_diagnostics}"
     );

@@ -74,6 +74,8 @@ set-face global DiagnosticError red
 set-face global DiagnosticHint default
 set-face global DiagnosticInfo default
 set-face global DiagnosticWarning yellow
+set-face global DiagnosticTagDeprecated +s
+set-face global DiagnosticTagUnnecessary dim
 # Faces used by inlay diagnostics.
 set-face global InlayDiagnosticError DiagnosticError
 set-face global InlayDiagnosticHint DiagnosticHint
@@ -430,6 +432,8 @@ declare-option -hidden completions lsp_completions
 declare-option -hidden int lsp_completions_timestamp -1
 declare-option -hidden int lsp_completions_selected_item
 declare-option -hidden range-specs lsp_inline_diagnostics
+declare-option -hidden range-specs lsp_inline_diagnostics_deprecated
+declare-option -hidden range-specs lsp_inline_diagnostics_unnecessary
 declare-option -hidden line-specs lsp_diagnostic_lines 0 '0| '
 declare-option -hidden line-specs lsp_inlay_diagnostics
 declare-option -hidden range-specs cquery_semhl
@@ -2493,10 +2497,14 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
 
 define-command lsp-inline-diagnostics-enable -params 1 -docstring "lsp-inline-diagnostics-enable <scope>: Enable inline diagnostics highlighting for <scope>" %{
     add-highlighter "%arg{1}/lsp_inline_diagnostics" ranges lsp_inline_diagnostics
+    add-highlighter "%arg{1}/lsp_inline_diagnostics_deprecated" ranges lsp_inline_diagnostics_deprecated
+    add-highlighter "%arg{1}/lsp_inline_diagnostics_unnecessary" ranges lsp_inline_diagnostics_unnecessary
 } -shell-script-candidates %{ printf '%s\n' global buffer window }
 
 define-command lsp-inline-diagnostics-disable -params 1 -docstring "lsp-inline-diagnostics-disable <scope>: Disable inline diagnostics highlighting for <scope>"  %{
     remove-highlighter "%arg{1}/lsp_inline_diagnostics"
+    remove-highlighter "%arg{1}/lsp_inline_diagnostics_unnecessary"
+    remove-highlighter "%arg{1}/lsp_inline_diagnostics_deprecated"
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-diagnostic-lines-enable -params 1 -docstring "lsp-diagnostic-lines-enable <scope>: Show flags on lines with diagnostics in <scope>" %{

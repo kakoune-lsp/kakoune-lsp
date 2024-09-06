@@ -272,7 +272,12 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                             }),
                             publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
                                 related_information: Some(true),
-                                tag_support: None,
+                                tag_support: Some(TagSupport {
+                                    value_set: vec![
+                                        DiagnosticTag::UNNECESSARY,
+                                        DiagnosticTag::DEPRECATED,
+                                    ],
+                                }),
                                 version_support: None,
                                 code_description_support: None,
                                 data_support: None,
