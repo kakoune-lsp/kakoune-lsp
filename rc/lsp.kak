@@ -2819,7 +2819,7 @@ define-command lsp-snippets-insert -hidden -params 1 %[
             # select things that look like placeholders
             # this regex is not as bad as it looks
             evaluate-commands -save-regs x -draft %[
-                execute-keys s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])*)?)\}))<ret>
+                execute-keys s((?<lt>!\\)(\\\\)*|\A)\K(\$(\d+|\{(\d+(:(\\\}|[^}])*)?)\}))<ret>)
                 # tests
                 # $1                - ok
                 # ${2}              - ok
@@ -2855,6 +2855,19 @@ use Text::ParseWords();
 
 my @sel_content = Text::ParseWords::shellwords($ENV{"kak_quoted_selections"});
 my @existing_placeholder_ids = split(/ /, $ENV{"kak_opt_lsp_snippets_placeholder_groups"});
+my @existing_placeholders = split(/ /, $ENV{"kak_opt_lsp_snippets_placeholders"});
+my @selections_desc = split(/ /, $ENV{"kak_selections_desc"});
+
+if (scalar @existing_placeholders > 1) {
+    $existing_placeholders[1] =~ m{^(\d+)\.(\d+)} or die "failed to parse: $existing_placeholders[1]";
+    my $existing_line = $1 and my $existing_column = $2 ;
+    $selections_desc[0] =~ m{^(\d+)\.(\d+)} or die "failed to parse: $selections_desc[0]";
+    my $new_line = $1 and my $new_column = $2;
+    if ($new_line > $existing_line || ($new_line == $existing_line && $new_column > $existing_column)) {
+        print "set-option window lsp_snippets_placeholders\n";
+        @existing_placeholder_ids = ();
+    }
+}
 
 my @placeholder_defaults;
 my %placeholder_id_to_default;
@@ -2880,7 +2893,7 @@ for my $i (0 .. $#sel_content) {
             if (scalar @existing_placeholder_ids) {
                 # If we are a recusive snippet there probably already is an end anchor, so
                 # ignore this one.
-                print "set-register x execute-keys %[" . ($i+1) . ")<a-,>]\n";
+                print "set-register x execute-keys %[" . $i . ")<a-,>]\n";
                 $id = -1;
             } else {
                 $id = scalar @placeholder_ids - 1;
