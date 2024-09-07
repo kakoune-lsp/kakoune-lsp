@@ -2347,7 +2347,7 @@ define-command -hidden lsp-get-config -params 1 -docstring %{
 
 ### Other commands ###
 
-define-command lsp-diagnostic-object -docstring 'lsp-diagnostic-object [--include-warnings]: go to adjacent diagnostic from object mdoe' -params 0..1 %<
+define-command lsp-diagnostic-object -docstring 'lsp-diagnostic-object [--include-warnings]: go to adjacent diagnostic from object mode' -params 0..1 %<
     evaluate-commands %sh<
         case "$kak_opt_lsp_object_mode" in
             ( [ | { | '<a-[>' | '<a-{>' ) previous=--previous ;;
