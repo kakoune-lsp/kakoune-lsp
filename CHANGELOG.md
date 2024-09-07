@@ -1,6 +1,6 @@
 ## Unreleased
 
-The `kak-lsp.toml` config file has been deprecated, as have been `lsp_config`, `KAK_LSP_PROJECT_ROOT_*` and `KAK_LSP_FORCE_PROJECT_ROOT` as well as commandline flags `--config` and `--timeout`.
+The `kak-lsp.toml` config file has been deprecated, as have been `lsp_config`, `KAK_LSP_PROJECT_ROOT_*` and `KAK_LSP_FORCE_PROJECT_ROOT` as well as commandline flags `--config`, `--log` and `--timeout`.
 This is in favor of new Kakoune options `lsp_servers`, `lsp_language_id`, `lsp_semantic_tokens`, `lsp_timeout`, `lsp_snippet_support` and `lsp_file_watch_support`.
 For backwards compatibility, the new options are ignored if a `kak-lsp.toml` exists in the user's config directory (or is provided via `--config`).
 By default, `lsp_servers` and `lsp_language_id` are populated via the hooks in the `lsp-filetype-.*` groups, feel free to remove them.

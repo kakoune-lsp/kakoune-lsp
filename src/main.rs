@@ -129,6 +129,7 @@ fn main() {
         )
         .arg(
             Arg::new("log")
+                .hide(true)
                 .long("log")
                 .value_name("PATH")
                 .help("File to write the log into, in addition to the *debug* buffer"),
