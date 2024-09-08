@@ -139,7 +139,7 @@ hook -group lsp-filetype-go global User LSPDefaultConfig=go %{
             hints.functionTypeParameters = true
             hints.parameterNames = true
             hints.rangeVariableTypes = true
-            ""ui.completion.usePlaceholders"" = true
+            usePlaceholders = true
         "
     }
 }
