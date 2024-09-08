@@ -58,6 +58,7 @@ declare-option -docstring %{
         {face="documentation", token="comment", modifiers=["documentation"]},
         {face="comment", token="comment"},
         {face="function", token="function"},
+        {face="function", token="method"},
         {face="keyword", token="keyword"},
         {face="module", token="namespace"},
         {face="operator", token="operator"},
