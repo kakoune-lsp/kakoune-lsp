@@ -464,6 +464,9 @@ hook -always -once global NormalIdle .* %{
 hook -group lsp-scratch-buffers global BufCreate [^/].* %{
         set-option buffer disabled_hooks "%opt{disabled_hooks}|lsp.*"
 }
+hook -group lsp-scratch-buffers global WinDisplay \*debug\* %{
+        set-option window disabled_hooks "%opt{disabled_hooks}|lsp.*"
+}
 
 hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
     try %{
