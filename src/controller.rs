@@ -685,6 +685,7 @@ fn route_request(
                         "evaluate-commands -buffer {} %[ set-option buffer disabled_hooks \"%opt[disabled_hooks]|lsp.*\" ]",
                         editor_quote(&meta.buffile),
                     );
+                    error!(meta.session, "disabling hooks for buffer: {}", &command);
                     if ctx
                         .editor_tx
                         .send(EditorResponse {
