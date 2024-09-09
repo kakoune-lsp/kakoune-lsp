@@ -2,14 +2,14 @@
 #
 # For help, see the docstring of the 'lsp_servers' option.
 
-hook -group lsp-filetype-c-family global User LSPDefaultConfig=(?:c|cpp|objc) %{
+hook -group lsp-filetype-c-family global BufSetOption filetype=(?:c|cpp|objc) %{
     set-option buffer lsp_servers "
         [clangd]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" compile_commands.json .clangd .git .hg $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-clojure global User LSPDefaultConfig=clojure %{
+hook -group lsp-filetype-clojure global BufSetOption filetype=clojure %{
     set-option buffer lsp_servers "
         [clojure-lsp]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" project.clj .git .hg $(: kak_buffile)}""
@@ -20,21 +20,21 @@ hook -group lsp-filetype-clojure global User LSPDefaultConfig=clojure %{
     "
 }
 
-hook -group lsp-filetype-cmake global User LSPDefaultConfig=make %{
+hook -group lsp-filetype-cmake global BufSetOption filetype=make %{
     set-option buffer lsp_servers "
         [cmake-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" CMakeLists.txt .git .hg $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-crystal global User LSPDefaultConfig=crystal %{
+hook -group lsp-filetype-crystal global BufSetOption filetype=crystal %{
     set-option buffer lsp_servers "
         [crystalline]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" shard.yml $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-css global User LSPDefaultConfig=(?:css|less|scss) %{
+hook -group lsp-filetype-css global BufSetOption filetype=(?:css|less|scss) %{
     set-option buffer lsp_servers "
         [vscode-css-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" package.json .git .hg $(: kak_buffile)}""
@@ -42,14 +42,14 @@ hook -group lsp-filetype-css global User LSPDefaultConfig=(?:css|less|scss) %{
     "
 }
 
-hook -group lsp-filetype-d global User LSPDefaultConfig=(?:d|di) %{
+hook -group lsp-filetype-d global BufSetOption filetype=(?:d|di) %{
     set-option buffer lsp_servers "
         [dls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git dub.sdl dub.json $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-dart global User LSPDefaultConfig=dart %{
+hook -group lsp-filetype-dart global BufSetOption filetype=dart %{
     set-option buffer lsp_servers "
         [dart-lsp]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" pubspec.yaml .git .hg $(: kak_buffile)}""
@@ -59,7 +59,7 @@ hook -group lsp-filetype-dart global User LSPDefaultConfig=dart %{
     "
 }
 
-hook -group lsp-filetype-elixir global User LSPDefaultConfig=elixir %{
+hook -group lsp-filetype-elixir global BufSetOption filetype=elixir %{
     set-option buffer lsp_servers "
         [elixir-ls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" mix.exs $(: kak_buffile)}""
@@ -70,7 +70,7 @@ hook -group lsp-filetype-elixir global User LSPDefaultConfig=elixir %{
     "
 }
 
-hook -group lsp-filetype-elm global User LSPDefaultConfig=elm %{
+hook -group lsp-filetype-elm global BufSetOption filetype=elm %{
     set-option buffer lsp_servers "
         [elm-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" elm.json $(: kak_buffile)}""
@@ -85,7 +85,7 @@ hook -group lsp-filetype-elm global User LSPDefaultConfig=elm %{
     "
 }
 
-hook -group lsp-filetype-elvish global User LSPDefaultConfig=elvish %{
+hook -group lsp-filetype-elvish global BufSetOption filetype=elvish %{
     set-option buffer lsp_servers "
         [elvish]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
@@ -93,7 +93,7 @@ hook -group lsp-filetype-elvish global User LSPDefaultConfig=elvish %{
     "
 }
 
-hook -group lsp-filetype-erlang global User LSPDefaultConfig=erlang %{
+hook -group lsp-filetype-erlang global BufSetOption filetype=erlang %{
     set-option buffer lsp_servers "
         [erlang_ls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" rebar.config erlang.mk .git .hg $(: kak_buffile)}""
@@ -102,7 +102,7 @@ hook -group lsp-filetype-erlang global User LSPDefaultConfig=erlang %{
     "
 }
 
-hook -group lsp-filetype-go global User LSPDefaultConfig=go %{
+hook -group lsp-filetype-go global BufSetOption filetype=go %{
     set-option buffer lsp_servers "
         [gopls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" Gopkg.toml go.mod .git .hg $(: kak_buffile)}""
@@ -120,7 +120,7 @@ hook -group lsp-filetype-go global User LSPDefaultConfig=go %{
     "
 }
 
-hook -group lsp-filetype-haskell global User LSPDefaultConfig=haskell %{
+hook -group lsp-filetype-haskell global BufSetOption filetype=haskell %{
     set-option buffer lsp_servers "
         [haskell-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" hie.yaml cabal.project Setup.hs stack.yaml '*.cabal' $(: kak_buffile)}""
@@ -133,7 +133,7 @@ hook -group lsp-filetype-haskell global User LSPDefaultConfig=haskell %{
     "
 }
 
-hook -group lsp-filetype-html global User LSPDefaultConfig=html %{
+hook -group lsp-filetype-html global BufSetOption filetype=html %{
     set-option buffer lsp_servers "
         [vscode-html-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" package.json $(: kak_buffile)}""
@@ -145,7 +145,7 @@ hook -group lsp-filetype-html global User LSPDefaultConfig=html %{
     "
 }
 
-hook -group lsp-filetype-javascript global User LSPDefaultConfig=(?:javascript|typescript) %{
+hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|typescript) %{
     set-option -add buffer lsp_servers "
         [typescript-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" package.json tsconfig.json jsconfig.json .git .hg $(: kak_buffile)}""
@@ -188,7 +188,7 @@ hook -group lsp-filetype-javascript global User LSPDefaultConfig=(?:javascript|t
     # "
 }
 
-hook -group lsp-filetype-java global User LSPDefaultConfig=java %{
+hook -group lsp-filetype-java global BufSetOption filetype=java %{
     set-option buffer lsp_servers "
         [jdtls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" mvnw gradlew .git .hg $(: kak_buffile)}""
@@ -198,7 +198,7 @@ hook -group lsp-filetype-java global User LSPDefaultConfig=java %{
     "
 }
 
-hook -group lsp-filetype-json global User LSPDefaultConfig=json %{
+hook -group lsp-filetype-json global BufSetOption filetype=json %{
     set-option buffer lsp_servers "
         [vscode-json-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" package.json $(: kak_buffile)}""
@@ -206,7 +206,7 @@ hook -group lsp-filetype-json global User LSPDefaultConfig=json %{
     "
 }
 
-hook -group lsp-filetype-julia global User LSPDefaultConfig=julia %{
+hook -group lsp-filetype-julia global BufSetOption filetype=julia %{
     set-option buffer lsp_servers "
         # Requires Julia package ""LanguageServer""
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" Project.toml .git .hg $(: kak_buffile)}""
@@ -240,7 +240,7 @@ hook -group lsp-filetype-julia global User LSPDefaultConfig=julia %{
     "
 }
 
-hook -group lsp-filetype-latex global User LSPDefaultConfig=latex %{
+hook -group lsp-filetype-latex global BufSetOption filetype=latex %{
     set-option buffer lsp_servers "
         [texlab]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
@@ -272,7 +272,7 @@ hook -group lsp-filetype-latex global User LSPDefaultConfig=latex %{
     "
 }
 
-hook -group lsp-filetype-lua global User LSPDefaultConfig=lua %{
+hook -group lsp-filetype-lua global BufSetOption filetype=lua %{
     set-option buffer lsp_servers "
         [lua-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
@@ -283,7 +283,7 @@ hook -group lsp-filetype-lua global User LSPDefaultConfig=lua %{
     "
 }
 
-hook -group lsp-filetype-markdown global User LSPDefaultConfig=markdown %{
+hook -group lsp-filetype-markdown global BufSetOption filetype=markdown %{
     set-option -add buffer lsp_servers "
         [marksman]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .marksman.toml $(: kak_buffile)}""
@@ -296,21 +296,21 @@ hook -group lsp-filetype-markdown global User LSPDefaultConfig=markdown %{
     # "
 }
 
-hook -group lsp-filetype-nim global User LSPDefaultConfig=nim %{
+hook -group lsp-filetype-nim global BufSetOption filetype=nim %{
     set-option buffer lsp_servers "
         [nimlsp]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" '*.nimble' .git .hg $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-nix global User LSPDefaultConfig=nix %{
+hook -group lsp-filetype-nix global BufSetOption filetype=nix %{
     set-option buffer lsp_servers "
         [nil]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" flake.nix shell.nix .git .hg $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-ocaml global User LSPDefaultConfig=ocaml %{
+hook -group lsp-filetype-ocaml global BufSetOption filetype=ocaml %{
     set-option buffer lsp_servers "
         [ocamllsp]
         # Often useful to simply do a `touch dune-workspace` in your project root folder if you have problems with root detection
@@ -321,7 +321,7 @@ hook -group lsp-filetype-ocaml global User LSPDefaultConfig=ocaml %{
     "
 }
 
-hook -group lsp-filetype-php global User LSPDefaultConfig=php %{
+hook -group lsp-filetype-php global BufSetOption filetype=php %{
     set-option buffer lsp_servers "
         [intelephense]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .htaccess composer.json $(: kak_buffile)}""
@@ -332,14 +332,14 @@ hook -group lsp-filetype-php global User LSPDefaultConfig=php %{
     "
 }
 
-hook -group lsp-filetype-protobuf global User LSPDefaultConfig=protobuf %{
+hook -group lsp-filetype-protobuf global BufSetOption filetype=protobuf %{
     set-option buffer lsp_servers "
         [pls] # https://github.com/lasorda/protobuf-language-server
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-purescript global User LSPDefaultConfig=purescript %{
+hook -group lsp-filetype-purescript global BufSetOption filetype=purescript %{
     set-option buffer lsp_servers "
         [purescript-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" spago.dhall spago.yaml package.json .git .hg $(: kak_buffile)}""
@@ -347,7 +347,7 @@ hook -group lsp-filetype-purescript global User LSPDefaultConfig=purescript %{
     "
 }
 
-hook -group lsp-filetype-python global User LSPDefaultConfig=python %{
+hook -group lsp-filetype-python global BufSetOption filetype=python %{
     set-option -add buffer lsp_servers "
         [pylsp]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" requirements.txt setup.py pyproject.toml .git .hg $(: kak_buffile)}""
@@ -372,7 +372,7 @@ hook -group lsp-filetype-python global User LSPDefaultConfig=python %{
     # "
 }
 
-hook -group lsp-filetype-r global User LSPDefaultConfig=r %{
+hook -group lsp-filetype-r global BufSetOption filetype=r %{
     set-option buffer lsp_servers "
         [r-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" DESCRIPTION .git .hg $(: kak_buffile)}""
@@ -381,7 +381,7 @@ hook -group lsp-filetype-r global User LSPDefaultConfig=r %{
     "
 }
 
-hook -group lsp-filetype-racket global User LSPDefaultConfig=racket %{
+hook -group lsp-filetype-racket global BufSetOption filetype=racket %{
     set-option buffer lsp_servers "
         [racket-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" info.rkt $(: kak_buffile)}""
@@ -390,14 +390,14 @@ hook -group lsp-filetype-racket global User LSPDefaultConfig=racket %{
     "
 }
 
-hook -group lsp-filetype-reason global User LSPDefaultConfig=reason %{
+hook -group lsp-filetype-reason global BufSetOption filetype=reason %{
     set-option buffer lsp_servers "
         [ocamllsp]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" package.json Makefile .git .hg $(: kak_buffile)}""
     "
 }
 
-hook -group lsp-filetype-rust global User LSPDefaultConfig=rust %{
+hook -group lsp-filetype-rust global BufSetOption filetype=rust %{
     set-option buffer lsp_servers "
         [rust-analyzer]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" Cargo.toml $(: kak_buffile)}""
@@ -422,7 +422,7 @@ hook -group lsp-filetype-rust global User LSPDefaultConfig=rust %{
     "
 }
 
-hook -group lsp-filetype-ruby global User LSPDefaultConfig=ruby %{
+hook -group lsp-filetype-ruby global BufSetOption filetype=ruby %{
     set-option buffer lsp_servers "
         [solargraph]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" Gemfile $(: kak_buffile)}""
@@ -435,7 +435,7 @@ hook -group lsp-filetype-ruby global User LSPDefaultConfig=ruby %{
 }
 
 # See https://scalameta.org/metals/docs/integrations/new-editor
-hook -group lsp-filetype-scala global User LSPDefaultConfig=scala %{
+hook -group lsp-filetype-scala global BufSetOption filetype=scala %{
     set-option buffer lsp_servers "
         [metals]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" build.sbt .scala-build $(: kak_buffile)}""
@@ -454,7 +454,7 @@ hook -group lsp-filetype-scala global User LSPDefaultConfig=scala %{
     "
 }
 
-hook -group lsp-filetype-sh global User LSPDefaultConfig=sh %{
+hook -group lsp-filetype-sh global BufSetOption filetype=sh %{
     set-option buffer lsp_servers "
         [bash-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
@@ -462,7 +462,7 @@ hook -group lsp-filetype-sh global User LSPDefaultConfig=sh %{
     "
 }
 
-hook -group lsp-filetype-svelte global User LSPDefaultConfig=svelte %{
+hook -group lsp-filetype-svelte global BufSetOption filetype=svelte %{
     set-option buffer lsp_servers "
         [svelteserver]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" package.json tsconfig.json jsconfig.json .git .hg $(: kak_buffile)}""
@@ -470,7 +470,7 @@ hook -group lsp-filetype-svelte global User LSPDefaultConfig=svelte %{
     "
 }
 
-hook -group lsp-filetype-terraform global User LSPDefaultConfig=terraform %{
+hook -group lsp-filetype-terraform global BufSetOption filetype=terraform %{
     set-option buffer lsp_servers "
         [terraform-ls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" '*.tf' $(: kak_buffile)}""
@@ -481,7 +481,7 @@ hook -group lsp-filetype-terraform global User LSPDefaultConfig=terraform %{
     "
 }
 
-hook -group lsp-filetype-toml global User LSPDefaultConfig=toml %{
+hook -group lsp-filetype-toml global BufSetOption filetype=toml %{
     set-option buffer lsp_servers "
         [taplo]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
@@ -489,7 +489,7 @@ hook -group lsp-filetype-toml global User LSPDefaultConfig=toml %{
     "
 }
 
-hook -group lsp-filetype-yaml global User LSPDefaultConfig=yaml %{
+hook -group lsp-filetype-yaml global BufSetOption filetype=yaml %{
     set-option buffer lsp_servers "
         [yaml-language-server]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
@@ -502,7 +502,7 @@ hook -group lsp-filetype-yaml global User LSPDefaultConfig=yaml %{
     "
 }
 
-hook -group lsp-filetype-zig global User LSPDefaultConfig=zig %{
+hook -group lsp-filetype-zig global BufSetOption filetype=zig %{
     set-option buffer lsp_servers "
         [zls]
         root = ""%sh{eval ""$kak_opt_lsp_find_root"" build.zig $(: kak_buffile)}""
@@ -516,22 +516,22 @@ declare-option -docstring %{LSP languageId, usually same as filetype option
 See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem
 } str lsp_language_id
 
-hook -group lsp global User LSPDefaultConfig=(.*) %{
+hook -group lsp global BufSetOption filetype=(.*) %{
     set-option buffer lsp_language_id %val{hook_param_capture_1}
 }
 
-hook -group lsp global User LSPDefaultConfig=(?:c|cpp) %{
+hook -group lsp global BufSetOption filetype=(?:c|cpp) %{
     set-option buffer lsp_language_id c_cpp
 }
-hook -group lsp global User LSPDefaultConfig=javascript %{
+hook -group lsp global BufSetOption filetype=javascript %{
     set-option buffer lsp_language_id javascriptreact
 }
-hook -group lsp global User LSPDefaultConfig=protobuf %{
+hook -group lsp global BufSetOption filetype=protobuf %{
     set-option buffer lsp_language_id proto
 }
-hook -group lsp global User LSPDefaultConfig=sh %{
+hook -group lsp global BufSetOption filetype=sh %{
     set-option buffer lsp_language_id shellscript
 }
-hook -group lsp global User LSPDefaultConfig=typescript %{
+hook -group lsp global BufSetOption filetype=typescript %{
     set-option buffer lsp_language_id typescriptreact
 }

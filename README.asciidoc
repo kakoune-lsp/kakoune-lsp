@@ -584,7 +584,7 @@ Please also try to reproduce the issue with a minimal configuration. Sometimes t
 
 [source,sh]
 ----
-env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
+env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -E '
     eval %sh{kak-lsp --kakoune}
     set global lsp_debug true       # Check the *debug* buffer for debug logs.
     lsp-enable'
