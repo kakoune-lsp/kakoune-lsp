@@ -680,6 +680,22 @@ fn route_request(
             Ok(ls) => ls,
             Err(err) => {
                 error!(meta.session, "failed to start language server: {}", err);
+                if meta.hook && !meta.buffile.is_empty() {
+                    let command = format!(
+                        "evaluate-commands -buffer {} %[ set-option buffer disabled_hooks \"%opt[disabled_hooks]|lsp.*\" ]",
+                        editor_quote(&meta.buffile),
+                    );
+                    if ctx
+                        .editor_tx
+                        .send(EditorResponse {
+                            meta: meta.clone(),
+                            command: Cow::from(command),
+                        })
+                        .is_err()
+                    {
+                        error!(meta.session, "Failed to send command to editor");
+                    }
+                }
                 // If the server command isn't from a hook (e.g. auto-hover),
                 // then send a prominent error to the editor.
                 if !meta.hook {
