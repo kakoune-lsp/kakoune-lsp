@@ -200,9 +200,6 @@ fn main() {
     } else {
         let mut config = Config::default();
         verbosity = 2;
-        if env_var("kak_opt_lsp_debug").is_some_and(|debug| debug != "false") {
-            verbosity = 4;
-        }
         config.server.timeout = 1800;
         if let Some(timeout) = env_var("kak_opt_lsp_timeout") {
             config.server.timeout = timeout.parse().unwrap_or_else(|err| {
@@ -222,6 +219,9 @@ fn main() {
         config
     };
 
+    if env_var("kak_opt_lsp_debug").is_some_and(|debug| debug != "false") {
+        verbosity = 4;
+    }
     let vs = matches.get_count("v");
     if vs != 0 {
         verbosity = vs;
