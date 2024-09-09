@@ -569,7 +569,8 @@ fn route_request(
             return false;
         };
         #[allow(deprecated)]
-        for server_config in ctx.config.language_server.values_mut() {
+        for server_name in servers {
+            let server_config = &mut ctx.config.language_server.get_mut(server_name).unwrap();
             server_config.root = find_project_root(
                 &meta.session,
                 language_id,
