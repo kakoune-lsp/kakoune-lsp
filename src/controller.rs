@@ -409,7 +409,9 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
             .join(", ");
         debug!(
             ctx.last_session(),
-            "Language servers {} are still not initialized, parking request {:?}", servers, request
+            "Language server(s) {} are still not initialized, parking request {:?}",
+            servers,
+            request
         );
         let err = format!(
             "lsp-show-error 'language servers {} are still not initialized, parking request'",
