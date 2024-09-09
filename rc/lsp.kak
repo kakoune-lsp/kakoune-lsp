@@ -504,16 +504,6 @@ declare-option -hidden -docstring %{
     }
     find_root}
 
-define-command -hidden lsp-if-no-servers -docstring %{
-    Run the given commands if the 'lsp_servers' option is empty
-} -params 1 %{
-    evaluate-commands %sh{
-        if [ -z "$kak_opt_lsp_servers" ]; then
-            echo evaluate-commands %arg{1}
-        fi
-    }
-}
-
 ### Requests ###
 
 define-command lsp-start -docstring "Start kakoune-lsp session" %{ nop %sh{
