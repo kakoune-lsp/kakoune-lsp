@@ -93,6 +93,7 @@ pub struct Context {
     pub file_watcher: Option<FileWatcher>,
     #[deprecated]
     pub legacy_filetypes: HashMap<String, (LanguageId, Vec<ServerName>)>,
+    pub is_exiting: bool,
 }
 
 impl Context {
@@ -125,6 +126,7 @@ impl Context {
             pending_file_watchers: HashMap::default(),
             file_watcher: None,
             legacy_filetypes,
+            is_exiting: false,
         }
     }
 

@@ -401,7 +401,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
         })
         .collect();
 
-    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params) , move |ctx, meta, results| {
+    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params), move |ctx, meta, results| {
         let results: HashMap<_,_> = results.into_iter().collect();
 
         for server_id in servers {

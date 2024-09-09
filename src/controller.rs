@@ -227,6 +227,9 @@ pub fn start(
 
                                             if vals.len() >= batch_size {
                                                 callback(ctx, meta, vals);
+                                                if ctx.is_exiting {
+                                                    break 'event_loop;
+                                                }
                                             } else {
                                                 ctx.batch_sizes.insert(batch_id, batch_seq);
                                                 ctx.batches.insert(batch_id, (vals, callback));
@@ -281,6 +284,9 @@ pub fn start(
                                                 // for all other servers, which already responded successfully.
                                                 if vals.len() >= batch_seq.values().sum() {
                                                     callback(ctx, meta, vals);
+                                                    if ctx.is_exiting {
+                                                        break 'event_loop;
+                                                    }
                                                 } else {
                                                     // Re-insert the batch, as we have no business with it at the moment,
                                                     // since not all servers have completely responded.
@@ -401,7 +407,7 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
         .filter(|server_id| ctx.language_servers[server_id].capabilities.is_none())
         .collect();
     if parked.is_empty() {
-        dispatch_incoming_editor_request(request, ctx);
+        dispatch_incoming_editor_request(request, ctx)?;
     } else {
         let servers = parked
             .into_iter()
@@ -482,7 +488,9 @@ fn stop_session(ctx: &mut Context) {
             method: notification::Exit::METHOD.to_string(),
             params: toml::Value::Table(toml::value::Table::default()),
         };
-        process_editor_request(ctx, request);
+        if process_editor_request(ctx, request).is_break() {
+            break;
+        }
     }
     info!(ctx.last_session(), "Exit all servers");
 }
@@ -818,7 +826,7 @@ pub fn dispatch_pending_editor_requests(ctx: &mut Context) {
     }
 }
 
-fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
+fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -> ControlFlow<()> {
     let method: &str = &request.method;
     let document_version = {
         let buffile = &request.meta.buffile;
@@ -857,7 +865,7 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
         {
             // Wait for buffer update.
             ctx.pending_requests.push(request);
-            return;
+            return ControlFlow::Continue(());
         }
     };
     let version_bump = [
@@ -866,13 +874,17 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
     ]
     .contains(&method);
 
-    dispatch_editor_request(request, ctx);
+    dispatch_editor_request(request, ctx)?;
 
     if !version_bump {
-        return;
+        return ControlFlow::Continue(());
     }
     let mut requests = mem::take(&mut ctx.pending_requests);
+    let mut all_exited = false;
     requests.retain_mut(|request| {
+        if all_exited {
+            return false;
+        }
         let buffile = &request.meta.buffile;
         let document = match ctx.documents.get(buffile) {
             Some(document) => document,
@@ -896,14 +908,17 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) {
             );
             // Keep it nevertheless because at least "completionItem/resolve" is useful.
         }
-        dispatch_editor_request(mem::take(request), ctx);
+        if dispatch_editor_request(mem::take(request), ctx).is_break() {
+            all_exited = true;
+        }
         false
     });
     assert!(ctx.pending_requests.is_empty());
     ctx.pending_requests = mem::take(&mut requests);
+    ControlFlow::Continue(())
 }
 
-fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
+fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> ControlFlow<()> {
     ensure_did_open(&request, ctx);
     let method: &str = &request.method;
     let meta = request.meta;
@@ -964,6 +979,12 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             let mut redundant_servers = vec![];
             for (server_id, server) in ctx.language_servers.iter_mut() {
                 if let Some(pos) = server.users.iter().position(|s| s == &meta.session) {
+                    debug!(
+                        meta.session,
+                        "Sending exit notification to server {} with users: {}",
+                        &server.name,
+                        server.users.iter().join(", ")
+                    );
                     server.users.swap_remove(pos);
                     if server.users.is_empty() {
                         redundant_servers.push(*server_id);
@@ -972,6 +993,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             }
             for server_id in redundant_servers {
                 ctx.notify::<notification::Exit>(server_id, ());
+            }
+            if ctx.language_servers.values().all(|v| v.users.is_empty()) {
+                return ControlFlow::Break(());
             }
         }
 
@@ -1087,6 +1111,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) {
             warn!(meta.session, "Unsupported method: {}", method);
         }
     }
+    ControlFlow::Continue(())
 }
 
 fn dispatch_server_request(
