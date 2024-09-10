@@ -2668,11 +2668,16 @@ map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
 
 define-command lsp-enable -docstring "Default LSP integration" %{
     hook -group lsp global BufSetOption filetype=(.*) %{
-        trigger-user-hook "LSPDefaultConfig=%val{hook_param_capture_1}"
+        lsp-if-no-servers %{
+            trigger-user-hook "LSPDefaultConfig=%val{hook_param_capture_1}"
+        }
     }
     lsp-enable-impl global
     evaluate-commands -buffer * %{
-        trigger-user-hook "LSPDefaultConfig=%opt{filetype}" # For kak somefile -e '%eval{kak-lsp --kakoune}'
+        # For kak somefile -e '%eval{kak-lsp --kakoune}'
+        lsp-if-no-servers %{
+            trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
+        }
         hook -group lsp buffer BufSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
     }
     hook -group lsp global BufClose .* lsp-did-close
@@ -2693,7 +2698,9 @@ define-command lsp-disable -docstring "Disable LSP" %{
 }
 
 define-command lsp-enable-window -docstring "Default LSP integration in the window scope" %{
-    trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
+    lsp-if-no-servers %{
+        trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
+    }
     lsp-enable-impl window
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window WinSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
