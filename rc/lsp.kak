@@ -25,6 +25,11 @@ Within each language server table, optional configuration options can be added:
 
 } str lsp_servers %{}
 
+declare-option -docstring %{LSP languageId, usually same as filetype option
+
+See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem
+} str lsp_language_id
+
 declare-option -docstring %{
     Turn on verbose log output in the *debug* buffer
 } bool lsp_debug false

@@ -591,27 +591,22 @@ hook -group lsp-filetype-zig global User LSPDefaultConfig=zig %{
 
 ### Language ID ###
 
-declare-option -docstring %{LSP languageId, usually same as filetype option
-
-See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem
-} str lsp_language_id
-
-hook -group lsp global User LSPDefaultConfig=(.*) %{
+hook -group lsp-language-id global User LSPDefaultConfig=(.*) %{
     set-option buffer lsp_language_id %val{hook_param_capture_1}
 }
 
-hook -group lsp global User LSPDefaultConfig=(?:c|cpp) %{
+hook -group lsp-language-id global User LSPDefaultConfig=(?:c|cpp) %{
     set-option buffer lsp_language_id c_cpp
 }
-hook -group lsp global User LSPDefaultConfig=javascript %{
+hook -group lsp-language-id global User LSPDefaultConfig=javascript %{
     set-option buffer lsp_language_id javascriptreact
 }
-hook -group lsp global User LSPDefaultConfig=protobuf %{
+hook -group lsp-language-id global User LSPDefaultConfig=protobuf %{
     set-option buffer lsp_language_id proto
 }
-hook -group lsp global User LSPDefaultConfig=sh %{
+hook -group lsp-language-id global User LSPDefaultConfig=sh %{
     set-option buffer lsp_language_id shellscript
 }
-hook -group lsp global User LSPDefaultConfig=typescript %{
+hook -group lsp-language-id global User LSPDefaultConfig=typescript %{
     set-option buffer lsp_language_id typescriptreact
 }
