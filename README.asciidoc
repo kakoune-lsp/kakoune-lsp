@@ -160,8 +160,8 @@ If you have followed above steps you get
 
 [source,kak]
 ----
-hook global WinSetOption filetype=rust %{
-    hook window BufWritePre .* lsp-formatting-sync
+hook global BufSetOption filetype=rust %{
+    hook buffer BufWritePre .* lsp-formatting-sync
 }
 ----
 
