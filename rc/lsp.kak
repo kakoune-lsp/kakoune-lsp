@@ -2766,7 +2766,6 @@ define-command -hidden lsp-disable-impl -params 1 %{
     remove-hooks global lsp-auto-hover
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
-    define-command -override -hidden -params 0..1 lsp-exit-ifn nop
     lsp-exit
 }
 
