@@ -483,7 +483,7 @@ hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
 }
 
 declare-option -hidden -docstring %{
-    %sh{eval "$kak_opt_lsp_find_root" <globs>...}: detect root directory based on the given shell globs.
+    echo %sh{eval "$kak_opt_lsp_find_root" <globs>... $(: kak_buffile)}: detect root directory based on the given shell globs.
 
     Prints the first among <globs> that matches in a parent directory of the current buffer's file.
 } str lsp_find_root %{
