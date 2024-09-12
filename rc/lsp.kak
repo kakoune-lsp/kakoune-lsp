@@ -2753,7 +2753,11 @@ define-command -hidden lsp-enable-impl -params 1 %{
 }
 
 define-command -hidden lsp-disable-impl -params 1 %{
-    remove-highlighter "%arg{1}/cquery_semhl"
+    try "
+        remove-highlighter %arg{1}/cquery_semhl
+    " catch "
+        fail 'LSP already disabled at %arg{1} scope'
+    "
     remove-highlighter "%arg{1}/lsp_references"
     remove-highlighter "%arg{1}/lsp_semantic_tokens_ranges"
     remove-highlighter "%arg{1}/lsp_snippets_placeholders"
