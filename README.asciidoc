@@ -76,7 +76,7 @@ commands to your `kakrc`:
 
 [source,kak]
 ----
-eval %sh{kak-lsp --kakoune}
+eval %sh{kak-lsp}
 lsp-enable
 ----
 
@@ -85,7 +85,7 @@ via `lsp-enable-window`, e.g.:
 
 [source,kak]
 ----
-eval %sh{kak-lsp --kakoune}
+eval %sh{kak-lsp}
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
     lsp-enable-window
 }
@@ -246,7 +246,7 @@ hook -group lsp-filetype-clangd global BufSetOption filetype=(?:c|cpp) %{
 }
 ----
 
-See `kak-lsp --kakoune` for the default set of servers and some commented-out alternatives.
+See the output of `kak-lsp` for the default set of servers and some commented-out alternatives.
 
 To use different servers, add the corresponding hooks to your `kakrc`.
 To remove the defaults, you can use `remove-hooks global lsp-filetype-.*` in your `kakrc`.
@@ -281,7 +281,7 @@ by the server in `workspace/configuration`.
 
 The current buffer's `lsp_language_id` option value is sent to the language server as `languageId`.
 By default it's usually the same as Kakoune's filetype option but depending on the language server it may need to be different.
-See `kak-lsp --kakoune` for the default set of exceptions.
+See the output of `kak-lsp` for the default set of exceptions.
 
 === Multiple language servers
 
@@ -566,7 +566,7 @@ Please also try to reproduce the issue with a minimal configuration. Sometimes t
 [source,sh]
 ----
 env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
-    eval %sh{kak-lsp --kakoune}
+    eval %sh{kak-lsp}
     set global lsp_debug true       # Check the *debug* buffer for debug logs.
     lsp-enable'
 ----

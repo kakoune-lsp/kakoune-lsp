@@ -2675,7 +2675,7 @@ define-command lsp-enable -docstring "Default LSP integration" %{
     }
     lsp-enable-impl global
     evaluate-commands -buffer * %{
-        # For kak somefile -e '%eval{kak-lsp --kakoune}'
+        # For kak somefile -e 'eval %sh{kak-lsp}'
         lsp-if-no-servers %{
             trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
         }

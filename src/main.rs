@@ -72,8 +72,12 @@ fn main() {
         .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
+        .after_help(concat!(
+            "Unless --session is given, print commands to plug into a Kakoune",
+        ))
         .arg(
             Arg::new("kakoune")
+                .hide(true)
                 .long("kakoune")
                 .action(ArgAction::SetTrue)
                 .help("Generate commands for Kakoune to plug in kak-lsp"),
@@ -94,6 +98,7 @@ fn main() {
         )
         .arg(
             Arg::new("daemonize")
+                .hide(true)
                 .short('d')
                 .long("daemonize")
                 .action(ArgAction::SetTrue)
@@ -104,7 +109,7 @@ fn main() {
                 .short('s')
                 .long("session")
                 .value_name("SESSION")
-                .help("Session id to communicate via unix socket"),
+                .help("Run as server with the given name"),
         )
         .arg(
             Arg::new("timeout")
@@ -136,7 +141,10 @@ fn main() {
         )
         .get_matches();
 
-    if matches.get_flag("kakoune") {
+    let session_arg = matches.get_one::<String>("session");
+    let request_flag = matches.get_flag("request");
+    let initial_request = matches.get_flag("initial-request");
+    if matches.get_flag("kakoune") || (session_arg.is_none() && !request_flag && !initial_request) {
         process::exit(kakoune());
     }
 
@@ -168,7 +176,7 @@ fn main() {
         ;
 
     let session = env_var("kak_session");
-    let lsp_session = matches.get_one::<String>("session").map(String::from);
+    let lsp_session = session_arg.map(String::from);
     if lsp_session.is_none() && session.is_none() {
         println!("Error: no session name given, pass '--session'");
         process::exit(1);
@@ -185,7 +193,7 @@ fn main() {
     }
 
     let mut raw_request = Vec::new();
-    if matches.get_flag("request") || matches.get_flag("initial-request") {
+    if request_flag || initial_request {
         stdin()
             .read_to_end(&mut raw_request)
             .expect("Failed to read stdin");
@@ -239,7 +247,7 @@ fn main() {
         config.server.timeout = timeout;
     }
 
-    if matches.get_flag("request") {
+    if request_flag {
         let mut path = util::temp_dir();
         path.push(&lsp_session);
         let connect = || match UnixStream::connect(&path) {
@@ -283,7 +291,7 @@ fn main() {
     } else {
         // It's important to read input before daemonizing even if we don't use it.
         // Otherwise it will be empty.
-        let initial_request = if matches.get_flag("initial-request") {
+        let initial_request = if initial_request {
             Some(String::from_utf8_lossy(&raw_request).to_string())
         } else {
             None

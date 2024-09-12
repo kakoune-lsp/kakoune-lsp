@@ -32,7 +32,7 @@ mkdir .config
 mkdir .config/kak-lsp
 mkdir .config/kak
 cat > .config/kak/kakrc << 'EOF'
-evaluate-commands %sh{kak-lsp --kakoune}
+evaluate-commands %sh{kak-lsp}
 map global user l %{: enter-user-mode lsp<ret>}
 set-option global lsp_debug true
 hook global -once WinDisplay .* lsp-enable

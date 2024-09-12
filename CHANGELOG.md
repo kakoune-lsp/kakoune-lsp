@@ -4,7 +4,7 @@ The `kak-lsp.toml` config file has been deprecated, as have been `lsp_config`, `
 This is in favor of new Kakoune options `lsp_servers`, `lsp_language_id`, `lsp_semantic_tokens`, `lsp_timeout`, `lsp_snippet_support` and `lsp_file_watch_support`.
 For backwards compatibility, the new options are ignored if a `kak-lsp.toml` exists in the user's config directory (or is provided via `--config`).
 By default, `lsp_servers` and `lsp_language_id` are populated via the hooks in the `lsp-filetype-.*` groups, feel free to remove them.
-See the README or the beginning of `kak-lsp --kakoune` for details.
+See the README or the output of `kak-lsp` for details.
 
 Breaking changes:
 - `lsp-stop-on-exit-disable` (and the default `lsp-stop-on-exit-enable`)
@@ -18,8 +18,9 @@ Breaking changes:
 
 Additions:
 - The log is now written to the `*debug*` buffer.
+- The `--kakoune` option is no longer needed and deprecated.
 - The `--session` option is no longer required unless you start `kak-lsp` from outside an editor session:
-  - This simplifies the default configuration (`eval %sh{kak-lsp --kakoune}; lsp-enable`).
+  - This simplifies the default configuration (`eval %sh{kak-lsp}; lsp-enable`).
   - Since `lsp_cmd` no longer needs to contain the `--session` argument,
     `rename-session` does not break LSP by invalidating that argument.
 - Support for multiple project roots if the server supports LSP workspaceFolders:
