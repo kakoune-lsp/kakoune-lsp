@@ -459,7 +459,7 @@ declare-option -hidden str lsp_modeline_message_requests ""
 declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
-hook -always -once global NormalIdle .* %{
+hook -once -always global NormalIdle .* %{
     evaluate-commands -draft %{
         try %{
             buffer *debug*
@@ -3068,7 +3068,7 @@ define-command -hidden lsp-select-previous %{
 
 hook global WinSetOption filetype=(lsp-(?:diagnostics|document-symbol|goto)) %{
     map window normal <ret> ":jump # %val{hook_param_capture_1}<ret>"
-    hook -always -once window WinSetOption filetype=.* "
+    hook -once -always window WinSetOption filetype=.* "
         unmap window normal <ret> ':jump # %val{hook_param_capture_1}<ret>'
     "
     alias buffer jump "%val{hook_param_capture_1}-jump"
