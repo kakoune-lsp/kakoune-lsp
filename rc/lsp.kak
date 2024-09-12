@@ -2117,7 +2117,7 @@ define-command -hidden lsp-select-previous %{
         execute-keys ge %opt{jump_current_line}g<a-h> <a-/><ret>
 }
 
-hook global WinSetOption filetype=(lsp-(?:diagnostics|document-symbol|goto)) %{
+hook -group lsp-goto global WinSetOption filetype=(lsp-(?:diagnostics|document-symbol|goto)) %{
     map window normal <ret> ":jump # %val{hook_param_capture_1}<ret>"
     hook -once -always window WinSetOption filetype=.* "
         unmap window normal <ret> ':jump # %val{hook_param_capture_1}<ret>'
