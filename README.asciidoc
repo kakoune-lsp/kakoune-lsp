@@ -58,28 +58,9 @@ Generally, you need the latest stable version of Rust to build kakoune-lsp.
 ----
 git clone https://github.com/kakoune-lsp/kakoune-lsp
 cd kakoune-lsp
-
 # this installs the kak-lsp binary to ~/.cargo/bin, which must be in your `$PATH`
 cargo install --locked --force --path .
 ----
-
-==== With plug.kak
-
-If you don't mind using a plugin manager, you can install kakoune-lsp
-via https://github.com/andreyorst/plug.kak[plug.kak]. Add this code to your `kakrc`:
-
-[source,kak]
-----
-plug "kakoune-lsp/kakoune-lsp" do %{
-    cargo install --locked --force --path .
-}
-----
-
-`cargo install` will install the `kak-lsp` binary to `~/.cargo/bin`, which must be in your `$PATH`.
-Alternatively, you can replace `cargo install` with `cargo build --release && ln -sf $PWD/target/release/kak-lsp ~/.local/bin/`
-where `~/.local/bin/` can be replaced with something in your `$PATH`.
-
-Examples of configuration with plug.kak can be found at https://github.com/kakoune-lsp/kakoune-lsp/wiki/Usage-with-plug.kak[Wiki].
 
 === Install language servers for your desired languages
 
@@ -95,7 +76,7 @@ commands to your `kakrc`:
 
 [source,kak]
 ----
-eval %sh{kak-lsp --kakoune}  # Not needed if you load it with plug.kak.
+eval %sh{kak-lsp --kakoune}
 lsp-enable
 ----
 
@@ -104,7 +85,7 @@ via `lsp-enable-window`, e.g.:
 
 [source,kak]
 ----
-eval %sh{kak-lsp --kakoune}  # Not needed if you load it with plug.kak.
+eval %sh{kak-lsp --kakoune}
 hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %{
     lsp-enable-window
 }
