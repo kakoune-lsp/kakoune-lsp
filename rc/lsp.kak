@@ -1413,7 +1413,6 @@ define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
     evaluate-commands %sh{
         if [ -z "${4}" ];
         then echo "fail"
-        else echo "nop"
         fi
     }
     nop %sh{ (printf %s "
