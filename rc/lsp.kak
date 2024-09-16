@@ -605,23 +605,22 @@ ${lsp_draft}\"\"\"
     }
 }}
 
-define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
-try %{
-    # Fail if preceding character is a whitespace (by default; the trigger could be customized).
-    evaluate-commands -draft %opt{lsp_completion_trigger}
+define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
+        # Fail if preceding character is a whitespace (by default; the trigger could be customized).
+        evaluate-commands -draft %opt{lsp_completion_trigger}
 
-    # Kakoune requires completions to point fragment start rather than cursor position.
-    # We try to detect it and put into lsp_completion_offset and then pass via completion.offset
-    # parameter to the kakoune-lsp server so it can use it when sending completions back.
-    declare-option -hidden str lsp_completion_offset
+        # Kakoune requires completions to point fragment start rather than cursor position.
+        # We try to detect it and put into lsp_completion_offset and then pass via completion.offset
+        # parameter to the kakoune-lsp server so it can use it when sending completions back.
+        declare-option -hidden str lsp_completion_offset
 
-    set-option window lsp_completion_offset %val{cursor_column}
-    evaluate-commands -draft %{
-        try %{
-            evaluate-commands %opt{lsp_completion_fragment_start}
-            set-option window lsp_completion_offset %val{cursor_column}
+        set-option window lsp_completion_offset %val{cursor_column}
+        evaluate-commands -draft %{
+            try %{
+                evaluate-commands %opt{lsp_completion_fragment_start}
+                set-option window lsp_completion_offset %val{cursor_column}
+            }
         }
-    }
 
     nop %sh{ (printf %s "
 session  = \"${kak_session}\"
