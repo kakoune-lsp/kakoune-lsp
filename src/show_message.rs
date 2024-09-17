@@ -33,24 +33,25 @@ pub fn show_message_request(
     update_modeline(meta, ctx)
 }
 
-#[derive(Deserialize)]
-struct MessageRequestResponse {
+pub struct MessageRequestResponse {
     pub message_request_id: Id,
     pub item: Option<toml::Value>,
 }
 
 /// Handles an user's response to a message request (or the user's request to display the next message request).
-pub fn show_message_request_respond(meta: EditorMeta, params: toml::Value, ctx: &mut Context) {
-    let resp =
-        MessageRequestResponse::deserialize(params).expect("Cannot parse message request response");
+pub fn show_message_request_respond(
+    meta: EditorMeta,
+    params: MessageRequestResponse,
+    ctx: &mut Context,
+) {
     for server_id in meta.servers {
-        let item = resp
+        let item = params
             .item
             .clone()
             .and_then(|v| MessageActionItem::deserialize(v).ok())
             .map(|v| jsonrpc_core::to_value(v).expect("Cannot serialize item"))
             .unwrap_or(jsonrpc_core::Value::Null);
-        ctx.reply(server_id, resp.message_request_id.clone(), Ok(item));
+        ctx.reply(server_id, params.message_request_id.clone(), Ok(item));
     }
 }
 

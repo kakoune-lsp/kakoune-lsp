@@ -1,5 +1,4 @@
 #![allow(clippy::unused_unit)]
-#![allow(dead_code)]
 
 #[macro_use]
 extern crate enum_primitive;
@@ -37,31 +36,36 @@ use clap::{self, crate_version, Arg, ArgAction};
 use context::meta_for_session;
 use daemonize::Daemonize;
 use editor_transport::send_command_to_editor;
-use fs4::FileExt;
 use itertools::Itertools;
+use libc::SIGHUP;
+use libc::SIGINT;
+use libc::SIGQUIT;
+use libc::SIGTERM;
 use libc::STDOUT_FILENO;
 use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
+use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
 use std::fs;
 use std::io;
-use std::io::stderr;
-use std::io::stdout;
-use std::io::{stdin, Read, Write};
-use std::os::unix::net::UnixStream;
+use std::io::ErrorKind;
+use std::io::Write;
+use std::mem;
 use std::panic;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::atomic::Ordering::Relaxed;
-use std::thread;
-use std::time::Duration;
+use std::sync::Mutex;
+
+static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
+static LOG_PATH: Mutex<OnceCell<Option<PathBuf>>> = Mutex::new(OnceCell::new());
 
 fn main() {
     {
@@ -81,12 +85,6 @@ fn main() {
                 .long("kakoune")
                 .action(ArgAction::SetTrue)
                 .help("Generate commands for Kakoune to plug in kak-lsp"),
-        )
-        .arg(
-            Arg::new("request")
-                .long("request")
-                .action(ArgAction::SetTrue)
-                .help("Forward stdin to kak-lsp server"),
         )
         .arg(
             Arg::new("config")
@@ -109,7 +107,7 @@ fn main() {
                 .short('s')
                 .long("session")
                 .value_name("SESSION")
-                .help("Run as server with the given name"),
+                .help("Name of the Kakoune session to talk to (defaults to $kak_session)"),
         )
         .arg(
             Arg::new("timeout")
@@ -118,13 +116,6 @@ fn main() {
                 .long("timeout")
                 .value_name("TIMEOUT")
                 .help("Session timeout in seconds (default is 1800 seconds)"),
-        )
-        .arg(
-            Arg::new("initial-request")
-                .hide(true)
-                .long("initial-request")
-                .action(ArgAction::SetTrue)
-                .help("Read initial request from stdin"),
         )
         .arg(
             Arg::new("v")
@@ -141,10 +132,8 @@ fn main() {
         )
         .get_matches();
 
-    let session_arg = matches.get_one::<String>("session");
-    let request_flag = matches.get_flag("request");
-    let initial_request = matches.get_flag("initial-request");
-    if matches.get_flag("kakoune") || (session_arg.is_none() && !request_flag && !initial_request) {
+    let session = env_var("kak_session").or_else(|| matches.get_one::<String>("session").cloned());
+    if matches.get_flag("kakoune") || session.is_none() {
         process::exit(kakoune());
     }
 
@@ -175,34 +164,91 @@ fn main() {
         .or_else(|| try_config_dir(dirs::preference_dir())) // Historical config dir on macOS.
         ;
 
-    let session = env_var("kak_session");
-    let lsp_session = session_arg.map(String::from);
-    if lsp_session.is_none() && session.is_none() {
-        println!("Error: no session name given, pass '--session'");
-        process::exit(1);
+    let Some(session) = session else {
+        eprintln!("Error: no session name given, please export '$kak_session'");
+        goodbye(1);
+    };
+    let session = SessionId(session);
+
+    let session_directory = env_var("XDG_RUNTIME_DIR")
+        .filter(|dir| unsafe {
+            let mut stat = mem::zeroed();
+            let dir = CString::new(dir.clone()).unwrap();
+            libc::stat(dir.as_ptr(), &mut stat) == 0 && stat.st_uid == libc::geteuid()
+        })
+        .map(|dir| PathBuf::from(format!("{}/kakoune-lsp", dir)))
+        .unwrap_or_else(|| {
+            let mut path = env::temp_dir();
+            path.push(format!("kakoune-lsp-{}", whoami::username()));
+            path
+        });
+    if fs::create_dir_all(session_directory.clone()).is_err() {
+        report_config_error(
+            &session,
+            format!(
+                "failed to create session directory '{}': {}",
+                session_directory.display(),
+                std::io::Error::last_os_error()
+            ),
+        )
+    };
+    let mut fifo = session_directory.clone();
+    fifo.push(session.as_str());
+    let fifo_cstring = CString::new(fifo.clone().into_os_string().into_encoded_bytes()).unwrap();
+    let mut exists = false;
+    if unsafe { libc::mkfifo(fifo_cstring.as_ptr(), 0o600) } != 0 {
+        let err = std::io::Error::last_os_error();
+        if err.kind() == ErrorKind::AlreadyExists {
+            exists = true;
+        } else {
+            report_config_error(
+                &session,
+                format!(
+                    "failed to create fifo '{}': {}",
+                    fifo.display(),
+                    std::io::Error::last_os_error()
+                ),
+            )
+        }
     }
 
-    let (session, lsp_session) = (
-        SessionId(session.clone().or(lsp_session.clone()).unwrap()),
-        LspSessionId(lsp_session.or(session).unwrap()),
-    );
-
-    if lsp_session.is_empty() {
-        println!("Error: session name cannot be empty");
-        process::exit(1);
+    if exists {
+        eprintln!("Server seems to be already running at:");
+    }
+    println!("{}", fifo.display());
+    unsafe {
+        libc::close(STDOUT_FILENO);
+    }
+    if exists {
+        process::exit(0);
     }
 
-    let mut raw_request = Vec::new();
-    if request_flag || initial_request {
-        stdin()
-            .read_to_end(&mut raw_request)
-            .expect("Failed to read stdin");
+    let mut pid_file = session_directory;
+    pid_file.push(format!("{}.pid", session.as_str()));
+
+    let cleanup = {
+        let parent = Path::new(&fifo).parent().unwrap();
+        let parent_cstring = CString::new(parent.to_str().unwrap().to_string()).unwrap();
+        let pid_file_cstring =
+            CString::new(pid_file.clone().into_os_string().into_encoded_bytes()).unwrap();
+        move || unsafe {
+            let _ = libc::unlink(fifo_cstring.as_ptr()) == 0;
+            let _ = libc::unlink(pid_file_cstring.as_ptr()) == 0;
+            let _ = libc::rmdir(parent_cstring.as_ptr()) == 0;
+        }
+    };
+    CLEANUP.lock().unwrap().get_or_init(|| Box::new(cleanup));
+
+    for signal in [SIGTERM, SIGHUP, SIGINT, SIGQUIT] {
+        unsafe {
+            libc::signal(signal, handle_interrupt as libc::sighandler_t);
+        }
     }
 
     let mut verbosity;
     #[allow(deprecated)]
     let mut config = if let Some(config_path) = config_path {
-        let config = parse_legacy_config(&config_path, &raw_request, &session);
+        let config = parse_legacy_config(&config_path, &session);
         verbosity = config.verbosity;
         config
     } else {
@@ -211,11 +257,7 @@ fn main() {
         config.server.timeout = 1800;
         if let Some(timeout) = env_var("kak_opt_lsp_timeout") {
             config.server.timeout = timeout.parse().unwrap_or_else(|err| {
-                report_config_error(
-                    &session,
-                    &raw_request,
-                    format!("failed to parse lsp_timeout: {err}"),
-                )
+                report_config_error(&session, format!("failed to parse lsp_timeout: {err}"))
             });
         }
         if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support") {
@@ -239,7 +281,6 @@ fn main() {
         s.parse().unwrap_or_else(|err| {
             report_config_error(
                 &session,
-                &raw_request,
                 format!("failed to parse --timeout parameter: {err}"),
             )
         })
@@ -247,77 +288,29 @@ fn main() {
         config.server.timeout = timeout;
     }
 
-    if request_flag {
-        let mut path = util::temp_dir();
-        path.push(&lsp_session);
-        let connect = || match UnixStream::connect(&path) {
-            Ok(mut stream) => {
-                stream
-                    .write_all(&raw_request)
-                    .expect("Failed to send stdin to server");
-                true
-            }
-            _ => false,
-        };
-        if connect() {
-            return;
+    if matches.get_flag("daemonize") {
+        if let Err(e) = Daemonize::new()
+            .working_directory(std::env::current_dir().unwrap())
+            .start()
+        {
+            eprintln!("Failed to daemonize process: {:?}", e);
+            goodbye(1);
         }
-        let mut lockfile_path = util::temp_dir();
-        lockfile_path.push(format!("{}.lock", lsp_session));
-        let lockfile = match fs::File::create(&lockfile_path) {
-            Ok(lockfile) => lockfile,
-            Err(err) => {
-                println!("Failed to create lock file: {:?}", err);
-                goodbye(&session, &lsp_session, 1)
-            }
-        };
-        if lockfile.try_lock_exclusive().is_ok() {
-            spin_up_server(&raw_request);
-            if let Err(err) = lockfile.unlock() {
-                println!("Failed to unlock lock file: {:?}", err);
-                goodbye(&session, &lsp_session, 1);
-            }
-            fs::remove_file(&lockfile_path).expect("Failed to remove lock file");
-            return;
-        }
-        for _attempt in 0..10 {
-            if connect() {
-                return;
-            }
-            thread::sleep(Duration::from_millis(30));
-        }
-        println!("Could not launch server or connect to it, giving up after 10 attempts");
-        goodbye(&session, &lsp_session, 1);
-    } else {
-        // It's important to read input before daemonizing even if we don't use it.
-        // Otherwise it will be empty.
-        let initial_request = if initial_request {
-            Some(String::from_utf8_lossy(&raw_request).to_string())
-        } else {
-            None
-        };
-        if matches.get_flag("daemonize") {
-            if let Err(e) = Daemonize::new()
-                .working_directory(std::env::current_dir().unwrap())
-                .start()
-            {
-                println!("Failed to daemonize process: {:?}", e);
-                goodbye(&session, &lsp_session, 1);
-            }
-        }
-        // Setting up the logger after potential daemonization,
-        // otherwise it refuses to work properly.
-        let (_guard, log_path) = setup_logger(&session, &matches, verbosity);
-        let log_path = Box::leak(log_path);
-        let code = controller::start(
-            session.clone(),
-            &lsp_session,
-            config,
-            log_path,
-            initial_request,
-        );
-        goodbye(&session, &lsp_session, code);
     }
+
+    if let Err(err) = fs::write(pid_file.clone(), process::id().to_string().as_bytes()) {
+        report_config_error(
+            &session,
+            format!("failed to write pid file '{}': {}", pid_file.display(), err),
+        )
+    }
+
+    // Setting up the logger after potential daemonization,
+    // otherwise it refuses to work properly.
+    let log_path_parent = initialize_logger(&session, &matches, verbosity);
+    let code = controller::start(session.clone(), config, log_path_parent, fifo);
+    info!(session, "kak-lsp server exiting");
+    goodbye(code);
 }
 
 fn env_var(name: &str) -> Option<String> {
@@ -326,8 +319,8 @@ fn env_var(name: &str) -> Option<String> {
         Err(err) => match err {
             env::VarError::NotPresent => None,
             env::VarError::NotUnicode(_bytes) => {
-                println!("environment variable '{name}' is not valid UTF-8");
-                process::exit(1);
+                eprintln!("environment variable '{name}' is not valid UTF-8");
+                goodbye(1);
             }
         },
     }
@@ -361,7 +354,7 @@ fn kakoune() -> i32 {
     let mut child = match process::Command::new(&pager).stdin(Stdio::piped()).spawn() {
         Ok(child) => child,
         Err(err) => {
-            println!("failed to run pager {}: {}", pager.to_string_lossy(), err);
+            eprintln!("failed to run pager {}: {}", pager.to_string_lossy(), err);
             return 1;
         }
     };
@@ -369,7 +362,7 @@ fn kakoune() -> i32 {
         Ok(()) => (),
         Err(err) if err.kind() == io::ErrorKind::BrokenPipe => (),
         Err(err) => {
-            println!(
+            eprintln!(
                 "failed to run write to pager {}: {}",
                 pager.to_string_lossy(),
                 err
@@ -378,7 +371,7 @@ fn kakoune() -> i32 {
         }
     };
     if let Err(err) = child.wait() {
-        println!(
+        eprintln!(
             "failed to wait for pager {}: {}",
             pager.to_string_lossy(),
             err
@@ -388,25 +381,20 @@ fn kakoune() -> i32 {
     0
 }
 
-fn report_config_error(session: &SessionId, raw_request: &[u8], error_message: String) -> ! {
-    let editor_request: Option<EditorRequest> =
-        toml::from_str(&String::from_utf8_lossy(raw_request)).ok();
+fn report_config_error(session: &SessionId, error_message: String) -> ! {
     let command = format!("lsp-show-error {}", &editor_quote(&error_message));
     send_command_to_editor(
         EditorResponse {
-            meta: meta_for_session(
-                session.clone(),
-                editor_request.and_then(|req| req.meta.client),
-            ),
+            meta: meta_for_session(session.clone(), env_var("kak_client")),
             command: command.into(),
         },
         false,
     );
-    println!("{}", error_message);
-    process::exit(1);
+    eprintln!("{}", error_message);
+    goodbye(1);
 }
 
-fn parse_legacy_config(config_path: &PathBuf, raw_request: &[u8], session: &SessionId) -> Config {
+fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
     let raw_config = fs::read_to_string(config_path).expect("Failed to read config");
     #[allow(deprecated)]
     #[allow(clippy::blocks_in_conditions)]
@@ -439,7 +427,6 @@ fn parse_legacy_config(config_path: &PathBuf, raw_request: &[u8], session: &Sess
         Ok(cfg) => cfg,
         Err(err) => report_config_error(
             session,
-            raw_request,
             format!(
                 "failed to parse config file {}: {}",
                 config_path.display(),
@@ -449,31 +436,11 @@ fn parse_legacy_config(config_path: &PathBuf, raw_request: &[u8], session: &Sess
     }
 }
 
-fn spin_up_server(raw_request: &[u8]) {
-    let args = env::args()
-        .filter(|arg| arg != "--request")
-        .collect::<Vec<_>>();
-    let mut cmd = Command::new(&args[0]);
-    let mut child = cmd
-        .args(&args[1..])
-        .args(["--daemonize", "--initial-request"])
-        .stdin(Stdio::piped())
-        .spawn()
-        .expect("Failed to run server");
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(raw_request)
-        .expect("Failed to write initial request");
-    child.wait().expect("Failed to daemonize server");
-}
-
-fn setup_logger(
+fn initialize_logger(
     session: &SessionId,
     matches: &ArgMatches,
     verbosity: u8,
-) -> (slog_scope::GlobalLoggerGuard, Box<Option<PathBuf>>) {
+) -> &'static Option<PathBuf> {
     let level = match verbosity {
         0 => Severity::Error,
         1 => Severity::Warning,
@@ -485,13 +452,34 @@ fn setup_logger(
         DEBUG.store(true, Relaxed);
     }
 
-    let mut log_path = Box::default();
-    let logger = if let Some(path) = matches.get_one::<String>("log") {
-        log_path = Box::new({
-            let path = PathBuf::from_str(path).unwrap();
-            path.parent().and_then(|path| path.canonicalize().ok())
-        });
-        let mut builder = FileLoggerBuilder::new(path);
+    let path = matches
+        .get_one::<String>("log")
+        .map(|path| PathBuf::from_str(path).unwrap());
+    let log_path_parent =
+        Box::leak(Box::new(path.as_ref().and_then(|path| {
+            path.parent().and_then(|parent| parent.canonicalize().ok())
+        })));
+    LOG_PATH.lock().unwrap().get_or_init(|| path);
+
+    set_logger(level);
+
+    let session = session.clone();
+    panic::set_hook(Box::new(move |panic_info| {
+        error!(
+            session,
+            "panic: {}\n{}",
+            panic_info,
+            std::backtrace::Backtrace::capture()
+        );
+        goodbye(1);
+    }));
+
+    log_path_parent
+}
+
+fn set_logger(level: Severity) {
+    let logger = if let Some(path) = LOG_PATH.lock().unwrap().get().unwrap().as_ref() {
+        let mut builder = FileLoggerBuilder::new(path.clone());
         builder.level(level);
         builder.build().unwrap()
     } else {
@@ -500,31 +488,17 @@ fn setup_logger(
         builder.destination(Destination::Stderr);
         builder.build().unwrap()
     };
-
-    let session = session.clone();
-    panic::set_hook(Box::new(move |panic_info| {
-        error!(session, "panic: {}", panic_info);
-    }));
-
-    (slog_scope::set_global_logger(logger), log_path)
+    slog_scope::set_global_logger(logger).cancel_reset();
 }
 
 // Cleanup and gracefully exit
-fn goodbye(session: &SessionId, lsp_session: &LspSessionId, code: i32) -> ! {
-    if code == 0 {
-        let path = temp_dir();
-        let sock_path = path.join(lsp_session);
-        let pid_path = path.join(format!("{}.pid", lsp_session));
-        if fs::remove_file(sock_path).is_err() {
-            warn!(session, "Failed to remove socket file");
-        };
-        if pid_path.exists() && fs::remove_file(pid_path).is_err() {
-            warn!(session, "Failed to remove pid file");
-        };
+fn goodbye(code: i32) -> ! {
+    if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
+        (cleanup)();
     }
-    stderr().flush().unwrap();
-    stdout().flush().unwrap();
-    // give stdio a chance to actually flush
-    thread::sleep(Duration::from_secs(1));
     process::exit(code);
+}
+
+extern "C" fn handle_interrupt(_sig: libc::c_int) -> ! {
+    goodbye(1)
 }

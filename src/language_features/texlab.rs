@@ -1,6 +1,6 @@
 use crate::context::{Context, RequestParams};
 use crate::position::get_lsp_position;
-use crate::types::{EditorMeta, EditorParams};
+use crate::types::EditorMeta;
 use crate::PositionParams;
 use lsp_types::request::Request;
 use lsp_types::TextDocumentIdentifier;
@@ -38,9 +38,7 @@ impl fmt::Display for ForwardSearchResult {
     }
 }
 
-pub fn forward_search(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
-
+pub fn forward_search(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -112,7 +110,7 @@ impl fmt::Display for BuildResult {
     }
 }
 
-pub fn build(meta: EditorMeta, _params: EditorParams, ctx: &mut Context) {
+pub fn build(meta: EditorMeta, ctx: &mut Context) {
     let req_params = vec![BuildTextDocumentParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),

@@ -15,7 +15,6 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 
 pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
@@ -101,15 +100,12 @@ fn editor_code_lens(
     ctx.exec(meta, command);
 }
 
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct CodeLensOptions {
     pub selection_desc: String,
 }
 
-pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = CodeLensOptions::deserialize(params)
-        .expect("Params should follow CodeLensParams structure");
+pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: CodeLensOptions, ctx: &mut Context) {
     let (range, _cursor) = parse_kakoune_range(&params.selection_desc);
     let document = match ctx.documents.get(&meta.buffile) {
         Some(document) => document,

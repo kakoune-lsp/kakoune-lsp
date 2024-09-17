@@ -13,26 +13,21 @@ use serde_json::{self, Value};
 use std::fs;
 use std::io;
 
-pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx: &mut Context) {
-    let mut default_settings = toml::value::Table::new();
+#[derive(Clone, Deserialize, Debug)]
+pub struct EditorDidChangeConfigurationParams {
+    #[deprecated]
+    pub config: String,
+    #[deprecated]
+    pub server_configuration: Vec<String>,
+}
 
-    let raw_settings = params
-        .as_table_mut()
-        .and_then(|t| t.get_mut("settings"))
-        .and_then(|t| t.as_table_mut())
-        .unwrap_or(&mut default_settings);
-
-    let config_param = raw_settings.remove("lsp_config");
-    let config = config_param
-        .as_ref()
-        .map(|config| {
-            config
-                .as_str()
-                .expect("Parameter \"lsp_config\" must be a string")
-        })
-        .unwrap_or("");
-
-    record_dynamic_config(&meta, ctx, config);
+pub fn did_change_configuration(
+    meta: EditorMeta,
+    params: EditorDidChangeConfigurationParams,
+    ctx: &mut Context,
+) {
+    #[allow(deprecated)]
+    record_dynamic_config(&meta, ctx, &params.config);
 
     for &server_id in &meta.servers {
         let server_name = &ctx.server(server_id).name;
@@ -42,8 +37,12 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
             .get(server_name)
             .and_then(|lang| lang.settings.as_ref());
         let settings = configured_section(&meta, ctx, server_id, settings).unwrap_or_else(|| {
-            if !raw_settings.is_empty() {
-                Value::Object(explode_string_table(&meta.session, raw_settings))
+            #[allow(deprecated)]
+            if !params.server_configuration.is_empty() {
+                Value::Object(explode_str_to_str_map(
+                    &meta.session,
+                    &params.server_configuration,
+                ))
             } else {
                 let server = server_configs(&ctx.config, &meta).get(server_name).unwrap();
                 configured_section(&meta, ctx, server_id, server.settings.as_ref())
@@ -51,8 +50,8 @@ pub fn did_change_configuration(meta: EditorMeta, mut params: EditorParams, ctx:
             }
         });
 
-        let params = DidChangeConfigurationParams { settings };
-        ctx.notify::<DidChangeConfiguration>(server_id, params);
+        let req_params = DidChangeConfigurationParams { settings };
+        ctx.notify::<DidChangeConfiguration>(server_id, req_params);
     }
 }
 
@@ -114,9 +113,7 @@ pub fn configuration(
     Ok(Value::Array(items))
 }
 
-pub fn workspace_symbol(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = WorkspaceSymbolParams::deserialize(params)
-        .expect("Params should follow WorkspaceSymbolParams structure");
+pub fn workspace_symbol(meta: EditorMeta, params: WorkspaceSymbolParams, ctx: &mut Context) {
     ctx.call::<WorkspaceSymbolRequest, _>(
         meta,
         RequestParams::All(vec![params]),
@@ -193,14 +190,12 @@ fn editor_workspace_symbol(
 }
 
 #[derive(Deserialize)]
-struct EditorExecuteCommand {
-    command: String,
-    arguments: String,
+pub struct EditorExecuteCommand {
+    pub command: String,
+    pub arguments: String,
 }
 
-pub fn execute_command(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = EditorExecuteCommand::deserialize(params)
-        .expect("Params should follow ExecuteCommand structure");
+pub fn execute_command(meta: EditorMeta, params: EditorExecuteCommand, ctx: &mut Context) {
     let req_params = ExecuteCommandParams {
         command: params.command,
         // arguments is quoted to avoid parsing issues
@@ -347,17 +342,16 @@ pub fn apply_edit(
 }
 
 #[derive(Deserialize)]
-struct EditorApplyEdit {
-    edit: String,
+pub struct EditorApplyEdit {
+    pub edit: String,
 }
 
 pub fn apply_edit_from_editor(
     server_id: ServerId,
     meta: &EditorMeta,
-    params: EditorParams,
+    params: EditorApplyEdit,
     ctx: &mut Context,
 ) {
-    let params = EditorApplyEdit::deserialize(params).expect("Failed to parse params");
     let edit = WorkspaceEdit::deserialize(serde_json::from_str::<Value>(&params.edit).unwrap())
         .expect("Failed to parse edit");
 

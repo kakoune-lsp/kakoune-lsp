@@ -6,15 +6,16 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_selection_range(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = SelectionRangePositionParams::deserialize(params).unwrap();
-
+pub fn text_document_selection_range(
+    meta: EditorMeta,
+    params: SelectionRangePositionParams,
+    ctx: &mut Context,
+) {
     let selections: Vec<KakouneRange> = params
         .selections_desc
-        .split_ascii_whitespace()
+        .iter()
         .map(|desc| parse_kakoune_range(desc).0)
         .collect();
 

@@ -4,13 +4,11 @@ use crate::types::*;
 
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
 use super::super::workspace;
 
-pub fn text_document_rename(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = TextDocumentRenameParams::deserialize(params).unwrap();
+pub fn text_document_rename(meta: EditorMeta, params: TextDocumentRenameParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {

@@ -1,5 +1,5 @@
 use crate::context::Context;
-use crate::types::{EditorMeta, EditorParams};
+use crate::types::EditorMeta;
 use crate::util::editor_quote;
 use crate::wcwidth;
 use indoc::formatdoc;
@@ -10,12 +10,14 @@ use lsp_types::{
     WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCancelParams,
     WorkDoneProgressCreateParams, WorkDoneProgressEnd,
 };
-use serde::Deserialize;
 use std::collections::hash_map;
 use std::time::{self, Duration};
 
-pub fn work_done_progress_cancel(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = WorkDoneProgressCancelParams::deserialize(params).expect("Failed to parse params");
+pub fn work_done_progress_cancel(
+    meta: EditorMeta,
+    params: WorkDoneProgressCancelParams,
+    ctx: &mut Context,
+) {
     for server_id in meta.servers {
         ctx.notify::<WorkDoneProgressCancel>(server_id, params.clone());
     }

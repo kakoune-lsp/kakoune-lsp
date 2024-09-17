@@ -21,9 +21,11 @@ use ropey::Rope;
 use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = TextDocumentDidOpenParams::deserialize(params)
-        .expect("Params should follow TextDocumentDidOpenParams structure");
+pub fn text_document_did_open(
+    meta: EditorMeta,
+    params: TextDocumentDidOpenParams,
+    ctx: &mut Context,
+) {
     let document = Document {
         version: meta.version,
         text: Rope::from_str(&params.draft),
@@ -44,9 +46,11 @@ pub fn text_document_did_open(meta: EditorMeta, params: EditorParams, ctx: &mut 
     text_document_code_lens(meta, ctx);
 }
 
-pub fn text_document_did_change(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = TextDocumentDidChangeParams::deserialize(params)
-        .expect("Params should follow TextDocumentDidChangeParams structure");
+pub fn text_document_did_change(
+    meta: EditorMeta,
+    params: TextDocumentDidChangeParams,
+    ctx: &mut Context,
+) {
     let uri = Url::from_file_path(&meta.buffile).unwrap();
     let version = meta.version;
     let old_version = ctx

@@ -4,7 +4,7 @@ use crate::capabilities::{
 };
 use crate::context::{Context, RequestParams};
 use crate::position::*;
-use crate::types::{EditorMeta, EditorParams, KakouneRange, PositionParams, ServerId};
+use crate::types::{EditorMeta, KakouneRange, PositionParams, ServerId};
 use crate::util::{editor_quote, short_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -13,7 +13,6 @@ use lsp_types::request::{
     GotoTypeDefinitionResponse, References, Request,
 };
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
 pub fn goto(
@@ -135,10 +134,9 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mu
 pub fn text_document_definition(
     declaration: bool,
     meta: EditorMeta,
-    params: EditorParams,
+    params: PositionParams,
     ctx: &mut Context,
 ) {
-    let params = PositionParams::deserialize(params).unwrap();
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DEFINITION))
@@ -189,8 +187,7 @@ pub fn text_document_definition(
     }
 }
 
-pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
+pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_IMPLEMENTATION))
@@ -234,8 +231,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: EditorParams, ctx:
     );
 }
 
-pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
+pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_TYPE_DEFINITION))
@@ -279,8 +275,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: EditorParams, ctx
     );
 }
 
-pub fn text_document_references(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
+pub fn text_document_references(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_REFERENCES))

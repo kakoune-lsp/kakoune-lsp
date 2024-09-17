@@ -8,10 +8,9 @@ use crate::util::*;
 use lsp_types::request::*;
 use lsp_types::*;
 use ropey::Rope;
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SIGNATURE_HELP))
@@ -23,7 +22,6 @@ pub fn text_document_signature_help(meta: EditorMeta, params: EditorParams, ctx:
     let (first_server, _) = *eligible_servers.first().unwrap();
     let first_server = first_server.to_owned();
 
-    let params = PositionParams::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {

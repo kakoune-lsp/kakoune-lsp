@@ -1,26 +1,24 @@
-use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::{
     request::InlayHintRequest, InlayHint, InlayHintLabel, InlayHintParams, Position, Range,
     TextDocumentIdentifier, Url,
 };
-use serde::Deserialize;
 
 use crate::{
     capabilities::{attempt_server_capability, CAPABILITY_INLAY_HINTS},
     context::{Context, RequestParams},
     markup::escape_kakoune_markup,
     position::lsp_position_to_kakoune,
-    types::{EditorMeta, EditorParams, ServerId},
+    types::{EditorMeta, ServerId},
     util::{editor_quote, escape_tuple_element},
 };
 
-#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
-struct InlayHintsOptions {
-    buf_line_count: u32,
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct InlayHintsOptions {
+    pub buf_line_count: u32,
 }
 
-pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn inlay_hints(meta: EditorMeta, params: InlayHintsOptions, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_INLAY_HINTS))
@@ -29,7 +27,6 @@ pub fn inlay_hints(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
         return;
     }
 
-    let params = InlayHintsOptions::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _)| {
@@ -114,10 +111,7 @@ pub fn inlay_hints_response(
         )
         .join(" ");
     let version = meta.version;
-    let command = formatdoc!(
-        "set-option buffer lsp_inlay_hints {version} {ranges}
-         set-option buffer lsp_inlay_hints_timestamp {version}"
-    );
+    let command = format!("set-option buffer lsp_inlay_hints {version} {ranges}");
     let command = format!(
         "evaluate-commands -buffer {} -- {}",
         editor_quote(&meta.buffile),

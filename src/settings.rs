@@ -1,4 +1,8 @@
+use std::fs;
+use std::iter;
+
 use crate::context::*;
+use crate::controller::ParserState;
 use crate::types::*;
 use crate::util::*;
 use serde_json::Value;
@@ -105,24 +109,18 @@ pub fn request_legacy_initialization_options_from_kakoune(
             editor_quote(&fifo.path)
         ),
     );
-    let options = std::fs::read_to_string(&fifo.path).unwrap();
-    debug!(
-        meta.session,
-        "lsp_server_initialization_options:\n{}", options
-    );
-    if options.trim().is_empty() {
+    let mut state = ParserState::new(meta.session.clone());
+    state.buf = fs::read(fifo.path.clone()).unwrap();
+    let server_configuration: Vec<String> = iter::from_fn(|| state.next())
+        .take_while(|s| s != "map-end")
+        .collect();
+    if server_configuration.is_empty() {
         None
     } else {
-        match toml::from_str::<toml::value::Table>(&options) {
-            Ok(table) => Some(Value::Object(explode_string_table(&meta.session, &table))),
-            Err(e) => {
-                error!(
-                    meta.session,
-                    "Failed to parse lsp_server_initialization_options: {:?}", e
-                );
-                None
-            }
-        }
+        Some(Value::Object(explode_str_to_str_map(
+            &meta.session,
+            &server_configuration,
+        )))
     }
 }
 
@@ -158,14 +156,15 @@ where
         },
     }
 }
-// Take flattened tables like "a.b = 1" and produce "{"a":{"b":1}}".
-pub fn explode_string_table(
+// Take flattened tables like "a.b=1" and produce "{"a":{"b":1}}".
+pub fn explode_str_to_str_map(
     session: &SessionId,
-    raw_settings: &toml::value::Table,
+    map: &[String],
 ) -> serde_json::value::Map<String, Value> {
     let mut settings = serde_json::Map::new();
 
-    for (raw_key, raw_value) in raw_settings.iter() {
+    for map_entry in map.iter() {
+        let (raw_key, raw_value) = map_entry.split_once('=').unwrap();
         let mut key_parts = raw_key.split('.');
         let local_key = match key_parts.next_back() {
             Some(name) => name,
@@ -177,8 +176,18 @@ pub fn explode_string_table(
                 continue;
             }
         };
+        let toml_value: toml::Value = match toml::from_str(raw_value) {
+            Ok(toml_value) => toml_value,
+            Err(e) => {
+                warn!(
+                    session,
+                    "Could not parse TOML setting {:?}: {}", raw_value, e
+                );
+                continue;
+            }
+        };
 
-        let value: Value = match raw_value.clone().try_into() {
+        let value: Value = match toml_value.try_into() {
             Ok(value) => value,
             Err(e) => {
                 warn!(

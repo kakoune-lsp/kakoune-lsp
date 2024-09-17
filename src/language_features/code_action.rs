@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::mem;
 
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_CODE_ACTIONS;
@@ -14,10 +15,9 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_code_action(meta: EditorMeta, params: CodeActionsParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_CODE_ACTIONS))
@@ -28,9 +28,6 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
         }
         return;
     }
-
-    let params = CodeActionsParams::deserialize(params)
-        .expect("Params should follow CodeActionsParams structure");
 
     let document = match ctx.documents.get(&meta.buffile) {
         Some(document) => document,
@@ -61,7 +58,7 @@ pub fn text_document_code_action(meta: EditorMeta, params: EditorParams, ctx: &m
 
 fn code_actions_for_ranges(
     meta: EditorMeta,
-    params: CodeActionsParams,
+    mut params: CodeActionsParams,
     ctx: &mut Context,
     ranges: HashMap<ServerId, Range>,
 ) {
@@ -97,11 +94,10 @@ fn code_actions_for_ranges(
                     range: *range,
                     context: CodeActionContext {
                         diagnostics: diagnostics.remove(server_id).unwrap_or_default(),
-                        only: params.only.as_ref().map(|only| {
-                            only.split(' ')
-                                .map(|s| CodeActionKind::from(s.to_string()))
-                                .collect()
-                        }),
+                        only: match &mut params.filters {
+                            Some(CodeActionFilter::ByKind(pattern)) => Some(mem::take(pattern)),
+                            None | Some(CodeActionFilter::ByRegex(_)) => None,
+                        },
                         trigger_kind: Some(if meta.hook {
                             CodeActionTriggerKind::AUTOMATIC
                         } else {
@@ -188,8 +184,8 @@ fn editor_code_actions(
         .collect();
 
     let sync = meta.fifo.is_some();
-    if sync || params.code_action_pattern.is_some() {
-        let actions = if let Some(pattern) = params.code_action_pattern.as_ref() {
+    if sync || matches!(params.filters, Some(CodeActionFilter::ByRegex(_))) {
+        let actions = if let Some(CodeActionFilter::ByRegex(pattern)) = &params.filters {
             let regex = match regex::Regex::new(pattern) {
                 Ok(regex) => regex,
                 Err(error) => {
@@ -339,9 +335,6 @@ fn code_action_to_editor_command(action: &CodeAction, sync: bool, may_resolve: b
 }
 
 pub fn apply_workspace_edit_editor_command(edit: &WorkspaceEdit, sync: bool) -> String {
-    // Double JSON serialization is performed to prevent parsing args as a TOML
-    // structure when they are passed back via lsp-apply-workspace-edit.
-    let edit = &serde_json::to_string(edit).unwrap();
     let edit = editor_quote(&serde_json::to_string(&edit).unwrap());
     format!(
         "{} {}",
@@ -356,10 +349,7 @@ pub fn apply_workspace_edit_editor_command(edit: &WorkspaceEdit, sync: bool) -> 
 
 pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
     let cmd = editor_quote(&command.command);
-    // Double JSON serialization is performed to prevent parsing args as a TOML
-    // structure when they are passed back via lsp-execute-command.
-    let args = &serde_json::to_string(&command.arguments).unwrap();
-    let args = editor_quote(&serde_json::to_string(&args).unwrap());
+    let args = editor_quote(&serde_json::to_string(&command.arguments).unwrap());
     format!(
         "{} {} {}",
         if sync {
@@ -374,11 +364,9 @@ pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
 
 pub fn text_document_code_action_resolve(
     meta: EditorMeta,
-    params: EditorParams,
+    params: CodeActionResolveParams,
     ctx: &mut Context,
 ) {
-    let params = CodeActionResolveParams::deserialize(params)
-        .expect("Params should follow CodeActionResolveParams structure");
     let req_params = serde_json::from_str(&params.code_action).unwrap();
 
     ctx.call::<CodeActionResolveRequest, _>(

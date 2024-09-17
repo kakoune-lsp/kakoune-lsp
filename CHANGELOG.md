@@ -8,15 +8,12 @@ See the README or the output of `kak-lsp` for details.
 Thanks to Tobias Pisani for providing most of the design.
 
 Breaking changes:
+- The `--session` argument used to allow using a single kakoune-lsp server from multiple Kakoune sessions.
+  This feature has been removed until we find a need for it. The `--session` argument is now usually ignored,
+  except when starting kak-lsp outside the editor.
 - `lsp-stop-on-exit-disable` (and the default `lsp-stop-on-exit-enable`)
   no longer have an effect.  Instead, the kakoune-lsp server will always
-  stop running as soon as all Kakoune sessions that ever connected have exited.
-- When using the `--session` option to use the same kakoune-lsp server from multiple Kakoune sessions,
-  those sessions will now share language server processes.
-  Since `--session` is no longer necessary for other use cases (see
-  below), this option is recommended only for advanced users and might be
-  changed/removed in future.
-- The pid file (`/tmp/kakoune-lsp/$USER/*.pid`) has been removed.
+  stop running as soon as its associated Kakoune session exits.
 
 Additions:
 - The log is now written to the `*debug*` buffer.
@@ -33,6 +30,7 @@ Additions:
 Fixes:
 - On `rename-session`, the kak-lsp session with the old name will be shut down.
   This feature requires Kakoune version >= v2024.05.09.
+- `lsp-*` commands that require `lsp-enable`/`lsp-enable-window` will fail more explicitly.
 
 ## 17.1.2 - 2024-08-17
 

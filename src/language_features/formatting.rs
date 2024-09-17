@@ -8,10 +8,9 @@ use crate::util::editor_quote;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|server| attempt_server_capability(*server, &meta, CAPABILITY_FORMATTING))
@@ -53,9 +52,6 @@ pub fn text_document_formatting(meta: EditorMeta, params: EditorParams, ctx: &mu
         ctx.exec(meta, format!("lsp-menu {}", choices));
         return;
     }
-
-    let params = FormattingOptions::deserialize(params)
-        .expect("Params should follow FormattingOptions structure");
 
     let (server_id, _) = eligible_servers[0];
     let mut req_params = HashMap::new();

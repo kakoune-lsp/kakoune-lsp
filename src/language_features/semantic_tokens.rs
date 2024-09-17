@@ -4,7 +4,6 @@ use crate::position::lsp_range_to_kakoune;
 use crate::semantic_tokens_config;
 use crate::types::{EditorMeta, ServerId};
 use crate::util::editor_quote;
-use indoc::formatdoc;
 use lsp_types::request::SemanticTokensFullRequest;
 use lsp_types::{
     Position, Range, SemanticToken, SemanticTokenModifier, SemanticTokensOptions,
@@ -154,10 +153,7 @@ pub fn tokens_response(
         .join(" ");
 
     let version = meta.version;
-    let command = formatdoc!(
-        "set-option buffer lsp_semantic_tokens_ranges {version} {ranges}
-         set-option buffer lsp_semantic_tokens_timestamp {version}"
-    );
+    let command = format!("set-option buffer lsp_semantic_tokens_ranges {version} {ranges}");
     let command = format!(
         "evaluate-commands -buffer {} -- {}",
         editor_quote(&meta.buffile),

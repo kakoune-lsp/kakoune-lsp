@@ -12,10 +12,9 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_HOVER))
@@ -24,16 +23,12 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         return;
     }
 
-    let HoverDetails {
-        hover_client: maybe_hover_client,
-    } = HoverDetails::deserialize(params.clone()).unwrap();
-
-    let hover_type = match maybe_hover_client {
+    let hover_type = match params.hover_client {
         Some(client) => HoverType::HoverBuffer { client },
         None => HoverType::InfoBox,
     };
+    let tabstop = params.tabstop;
 
-    let params = EditorHoverParams::deserialize(params).unwrap();
     let (range, cursor) = parse_kakoune_range(&params.selection_desc);
     let req_params = eligible_servers
         .into_iter()
@@ -57,15 +52,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorParams, ctx: &mut Con
         meta,
         RequestParams::Each(req_params),
         move |ctx: &mut Context, meta, results| {
-            editor_hover(
-                meta,
-                hover_type,
-                cursor,
-                range,
-                params.tabstop,
-                results,
-                ctx,
-            )
+            editor_hover(meta, hover_type, cursor, range, tabstop, results, ctx)
         },
     );
 }

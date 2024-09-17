@@ -1,62 +1,17 @@
 use crate::thread_worker::Worker;
 use crate::types::*;
-use crate::util::*;
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam_channel::Receiver;
 use std::borrow::Cow;
-use std::fs;
-use std::io::{Read, Write};
-use std::os::unix::net::{UnixListener, UnixStream};
-use std::path;
+use std::io::Write;
 use std::process::{Command, Stdio};
 
 pub struct EditorTransport {
-    // Not using Worker here as listener blocks forever and joining its thread
-    // would block kak-lsp from exiting.
-    pub from_editor: Receiver<String>,
     pub to_editor: Worker<EditorResponse, Void>,
 }
 
-pub fn start(
-    session: &SessionId,
-    lsp_session: &LspSessionId,
-    initial_request: Option<String>,
-) -> Result<EditorTransport, i32> {
+pub fn start(session: &SessionId) -> Result<EditorTransport, i32> {
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
-
-    let (sender, receiver) = bounded(channel_capacity);
-    let mut path = temp_dir();
-    path.push(lsp_session);
-    if path.exists() {
-        if UnixStream::connect(&path).is_err() {
-            if fs::remove_file(&path).is_err() {
-                error!(
-                    session,
-                    "Failed to clean up dead LSP session at {}",
-                    path.to_str().unwrap()
-                );
-                return Err(1);
-            };
-        } else {
-            error!(
-                session,
-                "Server is already running for LSP session {}", lsp_session
-            );
-            return Err(1);
-        }
-    }
-    std::thread::spawn({
-        let session = session.clone();
-        move || {
-            if let Some(initial_request) = initial_request {
-                if sender.send(initial_request).is_err() {
-                    return;
-                };
-            }
-            start_unix(session, &path, sender);
-        }
-    });
-    let from_editor = receiver;
 
     let to_editor = Worker::spawn(
         session.clone(),
@@ -69,10 +24,7 @@ pub fn start(
         },
     );
 
-    Ok(EditorTransport {
-        from_editor,
-        to_editor,
-    })
+    Ok(EditorTransport { to_editor })
 }
 
 pub fn send_command_to_editor(response: EditorResponse, log: bool) {
@@ -136,41 +88,6 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
         Err(e) => {
             if log {
                 error!(response.meta.session, "Failed to run Kakoune: {}", e);
-            }
-        }
-    }
-}
-
-pub fn start_unix(session: SessionId, path: &path::Path, sender: Sender<String>) {
-    let listener = match UnixListener::bind(path) {
-        Ok(listener) => listener,
-        Err(e) => {
-            error!(session, "Failed to bind: {}", e);
-            return;
-        }
-    };
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                let mut request = String::new();
-                match stream.read_to_string(&mut request) {
-                    Ok(_) => {
-                        if request.is_empty() {
-                            continue;
-                        }
-                        debug!(session, "From editor: {}", request);
-                        if sender.send(request).is_err() {
-                            return;
-                        };
-                    }
-                    Err(e) => {
-                        error!(session, "Failed to read from stream: {}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                error!(session, "Failed to accept connection: {}", e);
             }
         }
     }

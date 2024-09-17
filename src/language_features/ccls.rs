@@ -20,7 +20,7 @@ pub struct NavigateParams {
     pub direction: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct KakouneNavigateParams {
     pub position: KakounePosition,
     pub direction: String,
@@ -34,9 +34,7 @@ impl Request for NavigateRequest {
     const METHOD: &'static str = "$ccls/navigate";
 }
 
-pub fn navigate(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = KakouneNavigateParams::deserialize(params).unwrap();
-
+pub fn navigate(meta: EditorMeta, params: KakouneNavigateParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -86,9 +84,7 @@ impl Request for VarsRequest {
     const METHOD: &'static str = "$ccls/vars";
 }
 
-pub fn vars(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = PositionParams::deserialize(params).unwrap();
-
+pub fn vars(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -135,7 +131,7 @@ pub struct InheritanceParams {
     pub derived: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct KakouneInheritanceParams {
     pub position: KakounePosition,
     pub levels: usize,
@@ -150,9 +146,7 @@ impl Request for InheritanceRequest {
     const METHOD: &'static str = "$ccls/inheritance";
 }
 
-pub fn inheritance(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = KakouneInheritanceParams::deserialize(params).unwrap();
-
+pub fn inheritance(meta: EditorMeta, params: KakouneInheritanceParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -200,7 +194,7 @@ pub struct CallParams {
     pub callee: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct KakouneCallParams {
     pub position: KakounePosition,
     pub callee: bool,
@@ -214,9 +208,7 @@ impl Request for CallRequest {
     const METHOD: &'static str = "$ccls/call";
 }
 
-pub fn call(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = KakouneCallParams::deserialize(params).unwrap();
-
+pub fn call(meta: EditorMeta, params: KakouneCallParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -263,7 +255,7 @@ pub struct MemberParams {
     pub kind: u8, // 1: variable, 2: type, 3: function
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct KakouneMemberParams {
     pub position: KakounePosition,
     pub kind: u8, // 1: variable, 2: type, 3: function
@@ -277,9 +269,7 @@ impl Request for MemberRequest {
     const METHOD: &'static str = "$ccls/member";
 }
 
-pub fn member(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = KakouneMemberParams::deserialize(params).unwrap();
-
+pub fn member(meta: EditorMeta, params: KakouneMemberParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {

@@ -3,16 +3,20 @@ use std::collections::HashMap;
 use crate::capabilities::{attempt_server_capability, CAPABILITY_RANGE_FORMATTING};
 use crate::context::*;
 use crate::controller::can_serve;
+use crate::position::{kakoune_range_to_lsp, parse_kakoune_range};
 use crate::text_edit::{apply_text_edits_to_buffer, TextEditish};
 use crate::types::*;
 use crate::util::editor_quote;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_range_formatting(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_range_formatting(
+    meta: EditorMeta,
+    params: RangeFormattingParams,
+    ctx: &mut Context,
+) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|server| attempt_server_capability(*server, &meta, CAPABILITY_RANGE_FORMATTING))
@@ -55,21 +59,30 @@ pub fn text_document_range_formatting(meta: EditorMeta, params: EditorParams, ct
         return;
     }
 
-    let params = RangeFormattingParams::deserialize(params)
-        .expect("Params should follow RangeFormattingParams structure");
+    let Some(document) = ctx.documents.get(&meta.buffile) else {
+        warn!(
+            meta.session,
+            "No document in context for file: {}", &meta.buffile
+        );
+        return;
+    };
 
-    let (server_id, _) = eligible_servers[0];
+    let (server_id, server) = eligible_servers[0];
     let mut req_params = HashMap::new();
     req_params.insert(
         server_id,
         params
             .ranges
             .iter()
+            .map(|s| {
+                let (range, _cursor) = parse_kakoune_range(s);
+                kakoune_range_to_lsp(&range, &document.text, server.offset_encoding)
+            })
             .map(|range| DocumentRangeFormattingParams {
                 text_document: TextDocumentIdentifier {
                     uri: Url::from_file_path(&meta.buffile).unwrap(),
                 },
-                range: *range,
+                range,
                 options: params.formatting_options.clone(),
                 work_done_progress_params: Default::default(),
             })

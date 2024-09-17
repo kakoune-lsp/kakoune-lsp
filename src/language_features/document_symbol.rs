@@ -13,7 +13,6 @@ use indoc::{formatdoc, indoc};
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use serde::Deserialize;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -57,7 +56,7 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
     );
 }
 
-pub fn next_or_prev_symbol(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+pub fn next_or_prev_symbol(meta: EditorMeta, params: NextOrPrevSymbolParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
@@ -87,7 +86,7 @@ pub fn next_or_prev_symbol(meta: EditorMeta, editor_params: EditorParams, ctx: &
                 None => (meta.servers[0], None),
             };
 
-            editor_next_or_prev_symbol(meta, editor_params, result, ctx)
+            editor_next_or_prev_symbol(meta, params, result, ctx)
         },
     );
 }
@@ -366,12 +365,11 @@ fn symbol_kind_from_string(value: &str) -> Option<SymbolKind> {
 
 fn editor_next_or_prev_symbol(
     meta: EditorMeta,
-    editor_params: EditorParams,
+    params: NextOrPrevSymbolParams,
     result: (ServerId, Option<DocumentSymbolResponse>),
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
-    let params = NextOrPrevSymbolParams::deserialize(editor_params).unwrap();
     let hover = params.hover;
 
     let symbol_kinds_query: Vec<SymbolKind> = params
@@ -674,7 +672,7 @@ fn find_identifier_in_file(
     })
 }
 
-pub fn object(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+pub fn object(meta: EditorMeta, params: ObjectParams, ctx: &mut Context) {
     let req_params = DocumentSymbolParams {
         text_document: TextDocumentIdentifier {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
@@ -691,24 +689,23 @@ pub fn object(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) 
                 None => (meta.servers[0], None),
             };
 
-            editor_object(meta, editor_params, result, ctx)
+            editor_object(meta, params, result, ctx)
         },
     );
 }
 
 fn editor_object(
     meta: EditorMeta,
-    editor_params: EditorParams,
+    params: ObjectParams,
     result: (ServerId, Option<DocumentSymbolResponse>),
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
-    let params = ObjectParams::deserialize(editor_params).unwrap();
 
     let selections: Vec<(KakouneRange, KakounePosition)> = params
         .selections_desc
-        .split_ascii_whitespace()
-        .map(parse_kakoune_range)
+        .iter()
+        .map(|s| parse_kakoune_range(s))
         .collect();
 
     let symbol_kinds_query: Vec<SymbolKind> = params
@@ -890,7 +887,7 @@ fn flat_symbol_ranges<T: Symbol<T>>(
     result
 }
 
-pub fn document_symbol_menu(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+pub fn document_symbol_menu(meta: EditorMeta, params: GotoSymbolParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
@@ -919,9 +916,7 @@ pub fn document_symbol_menu(meta: EditorMeta, editor_params: EditorParams, ctx: 
                 None => (meta.servers[0], None),
             };
 
-            let maybe_goto_symbol = GotoSymbolParams::deserialize(editor_params)
-                .unwrap()
-                .goto_symbol;
+            let maybe_goto_symbol = params.goto_symbol;
             match maybe_goto_symbol {
                 Some(goto_symbol) => editor_document_symbol_goto(meta, goto_symbol, result, ctx),
                 None => editor_document_symbol_menu(meta, result, ctx),
@@ -1074,7 +1069,7 @@ fn symbol_search<T: Symbol<T>>(
     navigate_cmd
 }
 
-pub fn breadcrumbs(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Context) {
+pub fn breadcrumbs(meta: EditorMeta, params: BreadcrumbsParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
@@ -1094,7 +1089,6 @@ pub fn breadcrumbs(meta: EditorMeta, editor_params: EditorParams, ctx: &mut Cont
             )
         })
         .collect();
-    let params = BreadcrumbsParams::deserialize(editor_params).unwrap();
     ctx.call::<DocumentSymbolRequest, _>(
         meta,
         RequestParams::Each(req_params),

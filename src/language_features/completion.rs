@@ -12,19 +12,21 @@ use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use unicode_width::UnicodeWidthStr;
 use url::Url;
 
-pub fn text_document_completion(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_completion(
+    meta: EditorMeta,
+    params: TextDocumentCompletionParams,
+    ctx: &mut Context,
+) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_COMPLETION))
         .collect();
 
-    let params = TextDocumentCompletionParams::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -299,12 +301,16 @@ fn completion_menu_text(session: &SessionId, x: &CompletionItem) -> String {
     markup
 }
 
-pub fn completion_item_resolve(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn completion_item_resolve(
+    meta: EditorMeta,
+    params: CompletionItemResolveParams,
+    ctx: &mut Context,
+) {
     let CompletionItemResolveParams {
         completion_item_timestamp,
         completion_item_index,
         pager_active,
-    } = CompletionItemResolveParams::deserialize(params).unwrap();
+    } = params;
 
     if ctx.completion_last_client.is_none() || meta.client != ctx.completion_last_client {
         return;

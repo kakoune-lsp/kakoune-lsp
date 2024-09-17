@@ -1,8 +1,11 @@
 use jsonrpc_core::{Call, Output, Params};
-use lsp_types::{DiagnosticSeverity, FormattingOptions, Position, Range, SemanticTokenModifier};
+use lsp_types::{
+    CodeActionKind, DiagnosticSeverity, FormattingOptions, Position, SemanticTokenModifier,
+};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+use std::any::Any;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -209,11 +212,20 @@ pub fn semantic_tokens_config<'a>(
     }
 }
 
-pub type EditorParams = toml::Value;
+#[derive(Debug)]
+pub struct EditorParams(pub Box<dyn Any + Send>);
 
-#[derive(Clone, Debug, Deserialize)]
+impl EditorParams {
+    pub fn unbox<T: 'static>(self) -> T {
+        *self.0.downcast().unwrap()
+    }
+    pub fn downcast_ref<T: 'static>(&self) -> &T {
+        self.0.downcast_ref().unwrap()
+    }
+}
+
+#[derive(Debug)]
 pub struct EditorRequest {
-    #[serde(flatten)]
     pub meta: EditorMeta,
     pub method: String,
     pub params: EditorParams,
@@ -224,7 +236,7 @@ impl Default for EditorRequest {
         Self {
             meta: Default::default(),
             method: Default::default(),
-            params: toml::Value::Boolean(false),
+            params: EditorParams(Box::new(())),
         }
     }
 }
@@ -280,134 +292,120 @@ pub type ServerName = String;
 pub type RootPath = String;
 pub type ServerId = usize;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct EditorCompletion {
     pub offset: u32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct TextDocumentDidOpenParams {
     pub draft: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct TextDocumentDidChangeParams {
     pub draft: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct TextDocumentCompletionParams {
     pub position: KakounePosition,
     pub completion: EditorCompletion,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct CompletionItemResolveParams {
     pub completion_item_timestamp: i32,
     pub completion_item_index: isize,
     pub pager_active: bool,
 }
 
-#[derive(Clone, Copy, Deserialize, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PositionParams {
     pub position: KakounePosition,
 }
 
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct EditorHoverParams {
     pub selection_desc: String,
     pub tabstop: usize,
-}
-
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct HoverDetails {
     pub hover_client: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct CallHierarchyParams {
     pub position: KakounePosition,
     pub incoming_or_outgoing: bool,
 }
 
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
+pub enum CodeActionFilter {
+    ByKind(Vec<CodeActionKind>),
+    ByRegex(String),
+}
+
+#[derive(Clone, Debug)]
 pub struct CodeActionsParams {
     pub selection_desc: String,
     pub perform_code_action: bool,
     pub auto_single: bool,
-    pub only: Option<String>,
-    pub code_action_pattern: Option<String>,
+    pub filters: Option<CodeActionFilter>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct CodeActionResolveParams {
     pub code_action: String,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct RangeFormattingParams {
-    #[serde(flatten)]
     pub formatting_options: FormattingOptions,
-    pub ranges: Vec<Range>,
+    pub ranges: Vec<String>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct NextOrPrevSymbolParams {
     pub position: KakounePosition,
-    /// Match any of these kinds of symbols, or any symbol if empty.
-    pub symbol_kinds: Vec<String>,
     /// If true then searches forward ("next")
     /// otherwise searches backward ("previous")
     pub search_next: bool,
     /// If true, don't navigate to the next/previous symbol but show its hover
     /// otherwise goto the next/previous symbol
-    #[serde(default)]
     pub hover: bool,
+    /// Match any of these kinds of symbols, or any symbol if empty.
+    pub symbol_kinds: Vec<String>,
 }
 
-#[derive(Clone, Default, Deserialize, Debug)]
-#[serde(default)]
+#[derive(Clone, Default, Debug)]
 pub struct BreadcrumbsParams {
     pub position_line: u32,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct GotoSymbolParams {
     pub goto_symbol: Option<String>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct ObjectParams {
     pub count: u32,
     pub mode: String,
-    pub selections_desc: String,
+    pub selections_desc: Vec<String>,
     pub symbol_kinds: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct TextDocumentRenameParams {
     pub position: KakounePosition,
     pub new_name: String,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct SelectionRangePositionParams {
     // The cursor position.
     pub position: KakounePosition,
     // The ranges of all Kakoune selections.
-    pub selections_desc: String,
-}
-
-#[derive(Clone, Deserialize, Debug)]
-pub struct DidChangeOptionParams {
-    pub debug: bool,
+    pub selections_desc: Vec<String>,
 }
 
 // Language Server

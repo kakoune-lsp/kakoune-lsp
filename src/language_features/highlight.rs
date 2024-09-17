@@ -1,8 +1,6 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::{Context, RequestParams};
-use crate::types::{
-    EditorMeta, EditorParams, KakounePosition, KakouneRange, PositionParams, ServerId,
-};
+use crate::types::{EditorMeta, KakounePosition, KakouneRange, PositionParams, ServerId};
 use crate::util::editor_quote;
 use crate::{position::*, SessionId};
 use itertools::Itertools;
@@ -10,10 +8,9 @@ use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
     DocumentHighlightParams, TextDocumentIdentifier, TextDocumentPositionParams,
 };
-use serde::Deserialize;
 use url::Url;
 
-pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
+pub fn text_document_highlight(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT))
@@ -25,7 +22,6 @@ pub fn text_document_highlight(meta: EditorMeta, params: EditorParams, ctx: &mut
     let (first_server, _) = *eligible_servers.first().unwrap();
     let first_server = first_server.to_owned();
 
-    let params = PositionParams::deserialize(params).unwrap();
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {

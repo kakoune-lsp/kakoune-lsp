@@ -6,11 +6,8 @@ use crate::types::*;
 use crate::util::*;
 use itertools::Itertools;
 use lsp_types::{request::*, *};
-use serde::Deserialize;
 
-pub fn call_hierarchy_prepare(meta: EditorMeta, params: EditorParams, ctx: &mut Context) {
-    let params = CallHierarchyParams::deserialize(params)
-        .expect("Params should follow CallHierarchyParams structure");
+pub fn call_hierarchy_prepare(meta: EditorMeta, params: CallHierarchyParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
