@@ -81,12 +81,14 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
             panic!("{}", msg)
         }
     };
-    for (server_name, server) in &meta.language_server {
-        let server_id = ctx
-            .route_cache
-            .get(&(server_name.clone(), server.root.clone()))
-            .unwrap();
-        ctx.language_servers.get_mut(server_id).unwrap().settings = server.settings.clone();
+    if !is_using_legacy_toml(&ctx.config) {
+        for (server_name, server) in &meta.language_server {
+            let server_id = ctx
+                .route_cache
+                .get(&(server_name.clone(), server.root.clone()))
+                .unwrap();
+            ctx.language_servers.get_mut(server_id).unwrap().settings = server.settings.clone();
+        }
     }
 }
 
