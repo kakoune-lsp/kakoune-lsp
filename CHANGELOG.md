@@ -15,6 +15,7 @@ Breaking changes:
   Since `--session` is no longer necessary for other use cases (see
   below), this option is recommended only for advanced users and might be
   changed/removed in future.
+- The pid file (`/tmp/kakoune-lsp/$USER/*.pid`) has been removed.
 
 Additions:
 - The log is now written to the `*debug*` buffer.

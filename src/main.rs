@@ -297,10 +297,7 @@ fn main() {
             None
         };
         if matches.get_flag("daemonize") {
-            let mut pid_path = util::temp_dir();
-            pid_path.push(format!("{}.pid", lsp_session));
             if let Err(e) = Daemonize::new()
-                .pid_file(&pid_path)
                 .working_directory(std::env::current_dir().unwrap())
                 .start()
             {
