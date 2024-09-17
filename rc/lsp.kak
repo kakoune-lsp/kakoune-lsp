@@ -1662,25 +1662,6 @@ edit     = $2
     fi
 }}
 
-define-command lsp-apply-text-edits -params 1 -hidden %{
-    nop %sh{ (printf %s "
-session  = \"${kak_session}\"
-client   = \"${kak_client}\"
-buffile  = \"${kak_buffile}\"
-filetype = \"${kak_opt_filetype}\"
-language_id = \"${kak_opt_lsp_language_id}\"
-version  = ${kak_timestamp:-0}
-method   = \"apply-text-edits\"
-$([ -z ${kak_hook_param+x} ] || echo hook = true)
-$(printf %s "${kak_opt_lsp_servers}" | sed 's/^[[:space:]]*\[/[language_server./')
-[semantic_tokens]
-faces_str = \"\"\"${kak_opt_lsp_semantic_tokens}\"\"\"
-[params]
-edit     = $1
-" | eval "${kak_opt_lsp_cmd} --request" # kak_opt_lsp_debug kak_opt_lsp_timeout kak_opt_lsp_snippet_support kak_opt_lsp_file_watch_support
-) > /dev/null 2>&1 < /dev/null & }
-}
-
 define-command lsp-formatting -params 0..1 -docstring "lsp-formatting [<server_name>]: format document" %{
     lsp-formatting-request false %arg{1}
 }
