@@ -4,7 +4,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
 use jsonrpc_core::{self, Call, Output};
 use std::collections::HashMap;
-use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 
 pub struct LanguageServerTransport {
@@ -56,7 +56,7 @@ pub fn start(
     let channel_capacity = 1024;
 
     // XXX temporary way of tracing language server errors
-    let mut stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
+    let stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
     let errors = {
         let session = session.clone();
         Worker::spawn(
@@ -67,23 +67,25 @@ pub fn start(
                 if let Err(TryRecvError::Disconnected) = receiver.try_recv() {
                     return;
                 }
-                let mut line = String::new();
+                let mut stderr = stderr.bytes();
                 loop {
-                    line.clear();
-                    match stderr.read_line(&mut line) {
-                        Ok(0) => return,
-                        Ok(_n) => {
-                            error!(
-                                session,
-                                "Language server stderr: {}",
-                                line.trim_end_matches('\n')
-                            );
+                    let mut line = vec![];
+                    loop {
+                        let b = match stderr.next() {
+                            Some(Ok(b)) => b,
+                            None => return,
+                            Some(Err(_)) => break,
+                        };
+                        if b == b'\n' {
+                            break;
                         }
-                        Err(e) => {
-                            error!(session, "Failed to read from language server stderr: {}", e);
-                            return;
-                        }
+                        line.push(b);
                     }
+                    error!(
+                        session,
+                        "Language server stderr: {}",
+                        String::from_utf8_lossy(&line)
+                    );
                 }
             },
         )
