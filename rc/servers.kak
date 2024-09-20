@@ -308,6 +308,13 @@ hook -group lsp-filetype-markdown global BufSetOption filetype=markdown %{
     # "
 }
 
+hook -group lsp-filetype-mojo global BufSetOption filetype=mojo %{
+    set-option buffer lsp_servers "
+        [mojo-lsp-server]
+        root = ""%sh{eval ""$kak_opt_lsp_find_root"" .git .hg $(: kak_buffile)}""
+    "
+}
+
 hook -group lsp-filetype-nim global BufSetOption filetype=nim %{
     set-option buffer lsp_servers "
         [nimlsp]
