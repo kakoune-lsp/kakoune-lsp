@@ -3,10 +3,7 @@ use crate::types::*;
 use crate::util::*;
 use serde_json::Value;
 
-pub fn request_dynamic_configuration_from_kakoune(
-    meta: &EditorMeta,
-    ctx: &mut Context,
-) -> Option<()> {
+fn request_dynamic_configuration_from_kakoune(meta: &EditorMeta, ctx: &mut Context) -> Option<()> {
     let fifo = temp_fifo(&meta.session);
     ctx.exec(
         meta.clone(),
