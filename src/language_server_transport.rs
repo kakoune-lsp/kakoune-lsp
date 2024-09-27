@@ -81,7 +81,7 @@ pub fn start(
                         }
                         line.push(b);
                     }
-                    error!(
+                    warn!(
                         session,
                         "Language server stderr: {}",
                         String::from_utf8_lossy(&line)
