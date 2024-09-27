@@ -1211,10 +1211,10 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                 error!(meta.session, "failed to start language server: {}", err);
                 if meta.hook && !meta.buffile.is_empty() {
                     let command = format!(
-                        "evaluate-commands -buffer {} %[ set-option buffer disabled_hooks \"%opt[disabled_hooks]|lsp.*\" ]",
-                        editor_quote(&meta.buffile),
+                        "alias 'buffer={}' lsp-send nop",
+                        editor_escape(&meta.buffile),
                     );
-                    error!(meta.session, "disabling hooks for buffer: {}", &command);
+                    error!(meta.session, "disabling LSP for buffer: {}", &command);
                     if ctx
                         .editor_tx
                         .send(EditorResponse {

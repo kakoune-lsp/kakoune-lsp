@@ -458,21 +458,6 @@ declare-option -hidden str lsp_modeline_message_requests ""
 declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
-hook -once -always global NormalIdle .* %{
-    evaluate-commands -draft %{
-        try %{
-            buffer *debug*
-            set-option buffer disabled_hooks "%opt{disabled_hooks}|lsp.*"
-        }
-    }
-}
-hook -group lsp-scratch-buffers global BufCreate [^/].* %{
-        set-option buffer disabled_hooks "%opt{disabled_hooks}|lsp.*"
-}
-hook -group lsp-scratch-buffers global WinDisplay \*debug\* %{
-        set-option window disabled_hooks "%opt{disabled_hooks}|lsp.*"
-}
-
 hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
     try %{
         %opt{lsp_fail_if_disabled}
@@ -629,6 +614,14 @@ define-command -hidden lsp-do-send-sync %{
         fi
         cat ${kak_response_fifo}
     }
+}
+
+try %{ alias buffer=*debug* lsp-send nop }
+hook -group lsp-scratch-buffers global BufCreate [^/].* %{
+    alias buffer lsp-send nop
+}
+hook -group lsp-scratch-buffers global WinDisplay \*debug\* %{
+    alias buffer lsp-send nop
 }
 
 declare-option -hidden int lsp_timestamp -1
