@@ -886,7 +886,7 @@ symbol_kinds    = [$([ $# -gt 0 ] && printf '"%s",' "$@")]
 
 define-command -hidden lsp-get-word-regex %{
     try %{
-        execute-keys "<a-i>c\A|[^\w%opt{lsp_extra_word_chars}],\z|[^\w%opt{lsp_extra_word_chars}]<ret>"
+        execute-keys "<space><esc>,<esc><a-i>c\A|[^\w%opt{lsp_extra_word_chars}],\z|[^\w%opt{lsp_extra_word_chars}]<ret>"
         execute-keys %{"a*}
     } catch %{
         set-register a %{}
