@@ -5,8 +5,6 @@
 . test/lib.sh
 
 cat >> .config/kak/kakrc << 'EOF'
-set-option global lsp_auto_show_code_actions true
-
 hook global BufSetOption filetype=typescript %{
 	set-option buffer lsp_servers "
 		[typescript-language-server]
