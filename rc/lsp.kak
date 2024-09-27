@@ -649,7 +649,8 @@ define-command -hidden lsp-did-change -docstring "Notify language server about b
     }
 }
 
-define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{ try %{
+define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
+    try %{
         # Fail if preceding character is a whitespace (by default; the trigger could be customized).
         evaluate-commands -draft %opt{lsp_completion_trigger}
 
@@ -666,9 +667,10 @@ define-command -hidden lsp-completion -docstring "Request completions for the ma
             }
         }
 
-    lsp-send textDocument/completion %val{cursor_line} %val{cursor_column} \
-        %opt{lsp_completion_offset}
-}}
+        lsp-send textDocument/completion %val{cursor_line} %val{cursor_column} \
+            %opt{lsp_completion_offset}
+    }
+}
 
 declare-option -hidden str-list lsp_completion_inserted_ranges
 
