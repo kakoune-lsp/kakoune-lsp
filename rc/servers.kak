@@ -341,6 +341,9 @@ hook -group lsp-filetype-php global BufSetOption filetype=php %{
         settings_section = ""intelephense""
         [intelephense.settings.intelephense]
         storagePath = ""/tmp/intelephense""
+        # [phpactor]
+        # root = ""%sh{eval ""$kak_opt_lsp_find_root"" composer.json .phpactor.json .phpactor.yml .git .hg $(: kak_buffile)}""
+        # args = [""language-server""]
     "
 }
 
