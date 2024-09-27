@@ -2615,7 +2615,7 @@ map global lsp l '<esc>: lsp-code-lens<ret>'               -docstring 'apply a c
 map global lsp o '<esc>: lsp-workspace-symbol-incr<ret>'   -docstring 'search project symbols'
 map global lsp n '<esc>: lsp-find-error<ret>'              -docstring 'find next error'
 map global lsp p '<esc>: lsp-find-error --previous<ret>'   -docstring 'find previous error'
-map global lsp q '<esc>: lsp-exit<ret>'                    -docstring 'exit session'
+map global lsp q '<esc>: lsp-disable<ret>'                 -docstring 'disable LSP integration'
 map global lsp r '<esc>: lsp-references<ret>'              -docstring 'list symbol references'
 map global lsp R '<esc>: lsp-rename-prompt<ret>'           -docstring 'rename symbol'
 map global lsp s '<esc>: lsp-goto-document-symbol<ret>'    -docstring 'jump to document symbol'
