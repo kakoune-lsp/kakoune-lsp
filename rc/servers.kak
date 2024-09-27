@@ -378,7 +378,7 @@ hook -group lsp-filetype-python global BufSetOption filetype=python %{
     #     [ruff-lsp]
     #     root = ""%sh{eval ""$kak_opt_lsp_find_root"" requirements.txt setup.py pyproject.toml .git .hg $(: kak_buffile)}""
     #     settings_section = ""_""
-    #     [ruff.settings._.globalSettings]
+    #     [ruff-lsp.settings._.globalSettings]
     #     organizeImports = true
     #     fixAll = true
     # "
