@@ -1067,6 +1067,7 @@ define-command -hidden lsp-did-open %{
         lsp-send textDocument/didOpen %val{selection}
     }
     set-option buffer lsp_timestamp %val{timestamp}
+    lsp-code-lens-request
 }
 
 define-command -hidden lsp-did-close %{
