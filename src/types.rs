@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
 use std::ops::Deref;
-use std::path::Path;
 
 pub enum Void {}
 
@@ -56,7 +55,7 @@ pub struct ServerConfig {
     #[deprecated]
     #[allow(unused)]
     #[serde(default)]
-    session: LspSessionId,
+    session: String,
     #[serde(default)]
     pub timeout: u64,
 }
@@ -261,29 +260,6 @@ impl Deref for SessionId {
 impl Display for SessionId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-/// kakoune-lsp session ID.
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct LspSessionId(pub String);
-
-impl Deref for LspSessionId {
-    type Target = String;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Display for LspSessionId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl AsRef<Path> for LspSessionId {
-    fn as_ref(&self) -> &Path {
-        self.0.as_ref()
     }
 }
 
