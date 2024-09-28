@@ -25,16 +25,24 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
         return;
     }
 
-    let req_params = CodeLensParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
-        },
-        work_done_progress_params: WorkDoneProgressParams::default(),
-        partial_result_params: PartialResultParams::default(),
-    };
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_id, _server)| {
+            (
+                server_id,
+                vec![CodeLensParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    work_done_progress_params: WorkDoneProgressParams::default(),
+                    partial_result_params: PartialResultParams::default(),
+                }],
+            )
+        })
+        .collect();
     ctx.call::<CodeLensRequest, _>(
         meta,
-        RequestParams::All(vec![req_params]),
+        RequestParams::Each(req_params),
         |ctx: &mut Context, meta, results| editor_code_lens(meta, results, ctx),
     );
 }
