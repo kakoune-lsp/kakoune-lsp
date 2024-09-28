@@ -80,15 +80,7 @@ pub fn tokens_response(
         None => return,
     };
     let tokens = match tokens {
-        SemanticTokensResult::Tokens(tokens) => {
-            if tokens.data.is_empty() {
-                // Early on, rust-analyzer tends to send empty results. Work around this
-                // by not setting the cached timestamp in this case.  Upstream issue
-                // https://github.com/rust-lang/rust-analyzer/issues/14048
-                return;
-            }
-            tokens.data
-        }
+        SemanticTokensResult::Tokens(tokens) => tokens.data,
         SemanticTokensResult::Partial(partial) => partial.data,
     };
     let mut line = 0;

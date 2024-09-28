@@ -5,7 +5,6 @@ use std::{
 };
 
 use crate::context::*;
-use crate::language_features::code_lens::text_document_code_lens;
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crossbeam_channel::{Receiver, Sender};
@@ -43,7 +42,6 @@ pub fn text_document_did_open(
     for &server_id in &meta.servers {
         ctx.notify::<DidOpenTextDocument>(server_id, params.clone());
     }
-    text_document_code_lens(meta, ctx);
 }
 
 pub fn text_document_did_change(
@@ -84,7 +82,6 @@ pub fn text_document_did_change(
     for &server_id in &meta.servers {
         ctx.notify::<DidChangeTextDocument>(server_id, req_params.clone());
     }
-    text_document_code_lens(meta, ctx);
 }
 
 pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {

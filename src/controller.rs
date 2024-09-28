@@ -31,7 +31,7 @@ use crate::{context::*, set_logger};
 use ccls::{
     KakouneCallParams, KakouneInheritanceParams, KakouneMemberParams, KakouneNavigateParams,
 };
-use code_lens::CodeLensOptions;
+use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
 use indoc::formatdoc;
 use inlay_hints::InlayHintsOptions;
@@ -395,6 +395,7 @@ fn dispatch_fifo_request(
             sync_trailer(&mut meta, state, is_sync);
             params
         }
+        "textDocument/codeLens" => Box::new(()),
         "textDocument/completion" => Box::new(TextDocumentCompletionParams {
             position: state.next(),
             completion: EditorCompletion {
@@ -1463,6 +1464,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         request::CallHierarchyPrepare::METHOD => {
             call_hierarchy::call_hierarchy_prepare(meta, params.unbox(), ctx);
         }
+        request::CodeLensRequest::METHOD => {
+            text_document_code_lens(meta, ctx);
+        }
         request::Completion::METHOD => {
             completion::text_document_completion(meta, params.unbox(), ctx);
         }
@@ -1721,6 +1725,27 @@ fn dispatch_server_request(
         }
         request::ShowMessageRequest::METHOD => {
             return show_message::show_message_request(meta, server_id, request, ctx);
+        }
+        request::CodeLensRefresh::METHOD => {
+            ctx.exec(
+                meta,
+                "evaluate-commands -buffer * unset-option buffer lsp_code_lens_timestamp",
+            );
+            Ok(serde_json::Value::Null)
+        }
+        request::InlayHintRefreshRequest::METHOD => {
+            ctx.exec(
+                meta,
+                "evaluate-commands -buffer * unset-option buffer lsp_inlay_hints_timestamp",
+            );
+            Ok(serde_json::Value::Null)
+        }
+        request::SemanticTokensRefresh::METHOD => {
+            ctx.exec(
+                meta,
+                "evaluate-commands -buffer * unset-option buffer lsp_semantic_tokens_timestamp",
+            );
+            Ok(serde_json::Value::Null)
         }
         _ => {
             warn!(meta.session, "Unsupported method: {}", method);

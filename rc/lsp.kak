@@ -922,6 +922,13 @@ define-command lsp-code-lens -docstring "apply a code lens from the current sele
     lsp-send kakoune/textDocument/codeLens %val{selection_desc}
 }
 
+define-command -hidden lsp-code-lens-request %{
+    declare-option -hidden int lsp_code_lens_timestamp -1
+    lsp-if-changed-since lsp_code_lens_timestamp %opt{lsp_code_lens_timestamp} %{
+        lsp-send textDocument/codeLens
+    }
+}
+
 define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command" %{
     lsp-execute-command-request is-async %arg{@}
 }
@@ -1786,6 +1793,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
     hook -group lsp %arg{1} InsertCompletionHide .+ lsp-completion-accepted
     hook -group lsp %arg{1} NormalIdle .* %{
         lsp-did-change
+        lsp-code-lens-request
         evaluate-commands %sh{
             if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
             if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-background-request"; fi

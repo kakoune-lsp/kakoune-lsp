@@ -98,14 +98,18 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                             }),
                             workspace_folders: Some(true),
                             configuration: Some(true),
-                            semantic_tokens: None,
+                            semantic_tokens: enum_primitive::Option::Some(
+                                SemanticTokensWorkspaceClientCapabilities {
+                                    refresh_support: Some(true),
+                                },
+                            ),
                             code_lens: Some(CodeLensWorkspaceClientCapabilities {
-                                refresh_support: None,
+                                refresh_support: Some(true),
                             }),
                             file_operations: None,
                             inline_value: None,
                             inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
-                                refresh_support: Some(false),
+                                refresh_support: Some(true),
                             }),
                             diagnostic: None,
                         }),
