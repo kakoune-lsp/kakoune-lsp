@@ -77,7 +77,7 @@ fn main() {
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
         .after_help(concat!(
-            "Unless --session is given, print commands to plug into a Kakoune",
+            "Unless --session is given, print commands to plug into a Kakoune session",
         ))
         .arg(
             Arg::new("kakoune")
