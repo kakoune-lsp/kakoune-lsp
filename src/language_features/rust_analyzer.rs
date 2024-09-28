@@ -209,6 +209,7 @@ struct RunSingleArgument {
 #[serde(rename_all = "camelCase")]
 struct RunSingleArgs {
     cargo_args: Vec<String>,
+    #[serde(default)]
     cargo_extra_args: Vec<String>,
     executable_args: Vec<String>,
     override_cargo: Option<bool>,
