@@ -21,7 +21,7 @@ pub struct NavigateParams {
 }
 
 #[derive(Debug)]
-pub struct KakouneNavigateParams {
+pub struct EditorNavigateParams {
     pub position: KakounePosition,
     pub direction: String,
 }
@@ -34,7 +34,7 @@ impl Request for NavigateRequest {
     const METHOD: &'static str = "$ccls/navigate";
 }
 
-pub fn navigate(meta: EditorMeta, params: KakouneNavigateParams, ctx: &mut Context) {
+pub fn navigate(meta: EditorMeta, params: EditorNavigateParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -132,7 +132,7 @@ pub struct InheritanceParams {
 }
 
 #[derive(Debug)]
-pub struct KakouneInheritanceParams {
+pub struct EditorInheritanceParams {
     pub position: KakounePosition,
     pub levels: usize,
     pub derived: bool,
@@ -146,7 +146,7 @@ impl Request for InheritanceRequest {
     const METHOD: &'static str = "$ccls/inheritance";
 }
 
-pub fn inheritance(meta: EditorMeta, params: KakouneInheritanceParams, ctx: &mut Context) {
+pub fn inheritance(meta: EditorMeta, params: EditorInheritanceParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -195,7 +195,7 @@ pub struct CallParams {
 }
 
 #[derive(Debug)]
-pub struct KakouneCallParams {
+pub struct EditorCallParams {
     pub position: KakounePosition,
     pub callee: bool,
 }
@@ -208,7 +208,7 @@ impl Request for CallRequest {
     const METHOD: &'static str = "$ccls/call";
 }
 
-pub fn call(meta: EditorMeta, params: KakouneCallParams, ctx: &mut Context) {
+pub fn call(meta: EditorMeta, params: EditorCallParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -256,7 +256,7 @@ pub struct MemberParams {
 }
 
 #[derive(Serialize, Debug)]
-pub struct KakouneMemberParams {
+pub struct EditorMemberParams {
     pub position: KakounePosition,
     pub kind: u8, // 1: variable, 2: type, 3: function
 }
@@ -269,7 +269,7 @@ impl Request for MemberRequest {
     const METHOD: &'static str = "$ccls/member";
 }
 
-pub fn member(meta: EditorMeta, params: KakouneMemberParams, ctx: &mut Context) {
+pub fn member(meta: EditorMeta, params: EditorMemberParams, ctx: &mut Context) {
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {

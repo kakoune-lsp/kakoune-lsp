@@ -28,9 +28,7 @@ use crate::workspace::{
     self, EditorApplyEdit, EditorDidChangeConfigurationParams, EditorExecuteCommand,
 };
 use crate::{context::*, set_logger};
-use ccls::{
-    KakouneCallParams, KakouneInheritanceParams, KakouneMemberParams, KakouneNavigateParams,
-};
+use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
 use indoc::formatdoc;
@@ -275,20 +273,20 @@ fn dispatch_fifo_request(
 
     let method: String = state.next();
     let params = EditorParams(match method.as_str() {
-        "$ccls/call" => Box::new(KakouneCallParams {
+        "$ccls/call" => Box::new(EditorCallParams {
             position: state.next(),
             callee: state.next(),
         }),
-        "$ccls/inheritance" => Box::new(KakouneInheritanceParams {
+        "$ccls/inheritance" => Box::new(EditorInheritanceParams {
             position: state.next(),
             levels: state.next(),
             derived: state.next(),
         }),
-        "$ccls/member" => Box::new(KakouneMemberParams {
+        "$ccls/member" => Box::new(EditorMemberParams {
             position: state.next(),
             kind: state.next(),
         }),
-        "$ccls/navigate" => Box::new(KakouneNavigateParams {
+        "$ccls/navigate" => Box::new(EditorNavigateParams {
             position: state.next(),
             direction: state.next(),
         }),
