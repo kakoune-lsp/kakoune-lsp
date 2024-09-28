@@ -673,7 +673,7 @@ pub fn start(
                     "Exiting session after {} seconds of inactivity", timeout
                 );
                 op.recv(&timeout_channel).unwrap();
-                if let Err(err) = fs::write(fifo.clone(), "'$exit' ") {
+                if let Err(err) = fs::write(fifo.clone(), "'$exit'") {
                     error!(ctx.last_session(), "Error writing to fifo: {}", err);
                 }
                 break 'event_loop;
