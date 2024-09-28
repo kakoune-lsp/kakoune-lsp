@@ -9,29 +9,33 @@ use crate::{
 
 macro_rules! error {
     ($session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
-            log_impl!($session, "ERRO", $fmt $(, $arg ) *)
+            log_impl!($session, slog::Level::Error, $fmt $(, $arg ) *)
     };
 }
 macro_rules! warn {
     ($session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
-            log_impl!($session, "WARN", $fmt $(, $arg ) *)
+            log_impl!($session, slog::Level::Warning, $fmt $(, $arg ) *)
     };
 }
 macro_rules! info {
     ($session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
-            log_impl!($session, "INFO", $fmt $(, $arg ) *)
+            log_impl!($session, slog::Level::Info, $fmt $(, $arg ) *)
     };
 }
 macro_rules! debug {
     ($session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
-            log_impl!($session, "DEBG", $fmt $(, $arg ) *)
+            log_impl!($session, slog::Level::Debug, $fmt $(, $arg ) *)
     };
 }
 
 macro_rules! log_impl {
-    ($session:expr, $level:literal, $fmt:literal $(, $arg:expr )* $(,)?) => {
+    ($session:expr, $level:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
         {
             let message = format!($fmt $(, $arg ) *);
+            slog_scope::with_logger(
+                |logger|
+                 slog::slog_log!(logger, $level, "", "{}", message)
+            );
             crate::log::do_log(&$session, $level, message)
         }
     };
@@ -39,15 +43,8 @@ macro_rules! log_impl {
 
 pub static DEBUG: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn do_log(session: &SessionId, level: &'static str, message: String) {
-    match level {
-        "ERRO" => slog_scope::error!("{}", message),
-        "WARN" => slog_scope::warn!("{}", message),
-        "INFO" => slog_scope::info!("{}", message),
-        "DEBG" => slog_scope::debug!("{}", message),
-        _ => panic!(),
-    }
-    if level == "DEBG" && !DEBUG.load(Relaxed) {
+pub(crate) fn do_log(session: &SessionId, level: slog::Level, message: String) {
+    if level == slog::Level::Debug && !DEBUG.load(Relaxed) {
         return;
     }
     let command = format!("echo -debug -- LSP: {} {}", level, editor_quote(&message));
