@@ -1145,21 +1145,35 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             report_error_no_server_configured(&ctx.editor_tx, meta, request_method, &msg);
             return false;
         };
-        for (server_name, server) in servers {
-            if server.root.is_empty() {
-                let msg = format!(
-                    "missing project root path for {server_name}, please set the root option"
-                );
+        for (server_name, server) in &mut meta.language_server {
+            if !server.root.is_empty() && !server.root_globs.is_empty() {
+                let msg = format!("cannot specify both root and root_globs");
                 error!(meta.session, "{}", msg);
                 report_error(&ctx.editor_tx, meta, &msg);
                 return false;
             }
+            if server.root.is_empty() {
+                if !server.root_globs.is_empty() {
+                    server.root = find_project_root(
+                        &meta.session,
+                        language_id,
+                        &server.root_globs,
+                        &meta.buffile,
+                    );
+                } else {
+                    let msg = format!(
+                        "missing project root path for {server_name}, please set the root option"
+                    );
+                    error!(meta.session, "{}", msg);
+                    report_error(&ctx.editor_tx, meta, &msg);
+                    return false;
+                }
+            }
         }
-        server_addresses = servers
+        server_addresses = meta
+            .language_server
             .iter()
-            .map(|(server_name, server_settings)| {
-                (server_name.clone(), server_settings.root.clone())
-            })
+            .map(|(server_name, server)| (server_name.clone(), server.root.clone()))
             .collect();
     };
 

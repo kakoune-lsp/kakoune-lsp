@@ -71,6 +71,8 @@ pub struct LanguageServerConfig {
     #[deprecated]
     #[serde(default)]
     pub roots: Vec<String>,
+    #[serde(default)]
+    pub root_globs: Vec<String>,
     pub command: Option<String>,
     #[serde(default)]
     pub args: Vec<String>,

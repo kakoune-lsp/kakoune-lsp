@@ -8,12 +8,12 @@ user_home=$HOME
 
 cat >> .config/kak/kakrc << EOF
 hook global BufSetOption filetype=rust %{
-	set-option buffer lsp_servers "
+	set-option buffer lsp_servers %{
 		[rust-analyzer]
-		root = ""%sh{eval ""\$kak_opt_lsp_find_root"" Cargo.toml \$(: ""\$kak_buffile"")}""
-		command = ""sh""
-		args = [""-c"", ""RUSTUP_HOME=$user_home/.rustup rust-analyzer""]
-	"
+		root_globs = ["Cargo.toml"]
+		command = "sh"
+		args = ["-c", "RUSTUP_HOME=$user_home/.rustup rust-analyzer"]
+	}
 }
 EOF
 

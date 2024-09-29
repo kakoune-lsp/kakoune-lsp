@@ -6,12 +6,12 @@
 
 cat >> .config/kak/kakrc << 'EOF'
 hook global BufSetOption filetype=typescript %{
-	set-option buffer lsp_servers "
+	set-option buffer lsp_servers %{
 		[typescript-language-server]
-		root = ""%sh{eval ""$kak_opt_lsp_find_root"" '*.ts' $(: kak_buffile)}""
-		command = ""typescript-language-server""
-		args = [""--stdio""]
-	"
+		root_globs = ['*.ts']
+		command = "typescript-language-server"
+		args = ["--stdio"]
+	}
 }
 EOF
 

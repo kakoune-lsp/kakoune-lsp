@@ -239,9 +239,9 @@ of servers to use for the current buffer.  By default, this option is populated 
 [source,kak]
 ----
 hook -group lsp-filetype-clangd global BufSetOption filetype=(?:c|cpp) %{
-    set-option buffer lsp_servers %exp{
+    set-option buffer lsp_servers %{
         [clangd]
-        root = "%sh{eval "$kak_opt_lsp_find_root" compile_commands.json .clangd .git .hg $(: kak_buffile)}"
+        root_globs = ["compile_commands.json", ".clangd", ".git", ".hg"]
     }
 }
 ----
@@ -262,9 +262,9 @@ the corresponding fragments from VSCode's `settings.json`. For example:
 [source,kak]
 ----
 hook global BufSetOption filetype=go %{
-    set-option buffer lsp_servers %exp{
+    set-option buffer lsp_servers %{
         [gopls]
-        root = "%sh{eval "$kak_opt_lsp_find_root" Gopkg.toml go.mod .git .hg $(: kak_buffile)}"
+        root_globs = ["Gopkg.toml", "go.mod", ".git", ".hg"]
         settings_section = "gopls"
         [gopls.settings.gopls]
         "formatting.gofumpt" = true
@@ -291,12 +291,12 @@ set up TSServer and TailwindCSS to use in React projects:
 [source,kak]
 ----
 hook global BufSetOption filetype=(?:javascript|typescript) %{
-    set-option buffer lsp_servers %exp{
+    set-option buffer lsp_servers %{
         [typescript-language-server]
-        root = "%sh{eval "$kak_opt_lsp_find_root" tailwind.config.ts tailwind.config.js $(: kak_buffile)}"
+        root_globs = ["tailwind.config.ts", "tailwind.config.js"]
         args = ["--stdio"]
         [tailwindcss-language-server]
-        root = "%sh{eval "$kak_opt_lsp_find_root" package.json tsconfig.json jsconfig.json .git .hg $(: kak_buffile)}"
+        root_globs = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
         args = ["--stdio"]
         [tailwindcss-language-server.settings.tailwindcss]
         editor = {}

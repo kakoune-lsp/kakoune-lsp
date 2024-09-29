@@ -8,13 +8,18 @@ To add a language server, add a sub-table with the language server's name.
 For example
 
     hook global BufSetOption filetype=(?:c|cpp) %{
-        set-option buffer lsp_servers %exp{
+        set-option buffer lsp_servers %{
             [clangd]
-            root = "%sh{eval "$kak_opt_lsp_find_root" compile_commands.json .clangd .git .hg $(: kak_buffile)}"
+            root_globs = ["compile_commands.json", ".clangd", ".git" ".hg"]
         }
     }
 
-Within each language server table, optional configuration options can be added:
+Each language server table needs to define exactly one of
+- root       = root directory to use for the given language server and buffer
+- root_globs = detect 'root' based on the first glob that matches in a parent
+               directory of the buffer's file.
+
+Additionally, optional configuration options can be added:
 - args             = arguments to pass to the language server process at startup
 - settings         = table of arbitrary server-specific settings
 - settings_section = name of a sub-table of above settings; that sub-table will be actively
