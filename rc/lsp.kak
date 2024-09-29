@@ -86,7 +86,7 @@ set-face global DiagnosticHint default
 set-face global DiagnosticInfo default
 set-face global DiagnosticWarning yellow
 set-face global DiagnosticTagDeprecated +s
-set-face global DiagnosticTagUnnecessary dim
+set-face global DiagnosticTagUnnecessary +d
 # Faces used by inlay diagnostics.
 set-face global InlayDiagnosticError DiagnosticError
 set-face global InlayDiagnosticHint DiagnosticHint
