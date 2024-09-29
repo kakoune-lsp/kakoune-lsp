@@ -972,6 +972,7 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
             notification::DidChangeConfiguration::METHOD => (),
             notification::DidCloseTextDocument::METHOD => (),
             notification::DidSaveTextDocument::METHOD => (),
+            request::CodeLensRequest::METHOD => (),
             _ => {
                 if !request.meta.hook {
                     ctx.exec(request.meta.clone(), err);
