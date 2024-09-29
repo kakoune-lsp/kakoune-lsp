@@ -14,6 +14,7 @@ Breaking changes:
 - `lsp-stop-on-exit-disable` (and the default `lsp-stop-on-exit-enable`)
   no longer have an effect.  Instead, the kakoune-lsp server will always
   stop running as soon as its associated Kakoune session exits.
+- The server timeout has been increased from 1800 seconds (30 minutes) to 18000 seconds (5 hours).
 
 Additions:
 - The log is now written to the `*debug*` buffer.

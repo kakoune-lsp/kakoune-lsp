@@ -186,7 +186,7 @@ hook global BufSetOption filetype=rust %{
 * `lsp-execute-command` command to execute server-specific commands (listed by `lsp-capabilities`).
 * Commands starting with either of `ccls-`, `clangd-`, `ejdtls-`, `rust-analyzer-` or `texlab-`, that provide server specific features.
 
-NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
+NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 5 hours,
 even if the Kakoune session is still up and running. Change the `lsp_timeout` option before
 starting `kak-lsp` (or use `lsp-restart`) to change this duration, or set it to 0 to disable this behavior. In any
 scenario, a new request would spin up a fresh server if it is down.

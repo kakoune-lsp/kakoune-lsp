@@ -37,7 +37,7 @@ declare-option -docstring %{
 declare-option -docstring %{
     Exit session if no requests were received during given period in seconds
     set to 0 to disable
-} int lsp_timeout 1800
+} int lsp_timeout 18000
 
 # Feel free to update path and arguments according to your setup when sourcing lsp.kak directly.
 declare-option -docstring "Command with which lsp is run" str lsp_cmd kak-lsp

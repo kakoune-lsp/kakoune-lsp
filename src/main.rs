@@ -115,7 +115,7 @@ fn main() {
                 .short('t')
                 .long("timeout")
                 .value_name("TIMEOUT")
-                .help("Session timeout in seconds (default is 1800 seconds)"),
+                .help("Session timeout in seconds (default is 18000 seconds)"),
         )
         .arg(
             Arg::new("v")
@@ -254,7 +254,7 @@ fn main() {
     } else {
         let mut config = Config::default();
         verbosity = 2;
-        config.server.timeout = 1800;
+        config.server.timeout = 18000;
         if let Some(timeout) = env_var("kak_opt_lsp_timeout") {
             config.server.timeout = timeout.parse().unwrap_or_else(|err| {
                 report_config_error(&session, format!("failed to parse lsp_timeout: {err}"))
