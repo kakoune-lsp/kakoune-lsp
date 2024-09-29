@@ -369,7 +369,7 @@ fn dispatch_fifo_request(
             } else {
                 Severity::Info
             });
-            error!(state.session, "Applied option change {}", hook_param);
+            info!(state.session, "Applied option change {}", hook_param);
             return ControlFlow::Continue(());
         }
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
