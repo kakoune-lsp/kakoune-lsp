@@ -140,7 +140,7 @@ impl Context {
 
     pub fn main_root<'a>(&'a self, meta: &'a EditorMeta) -> &'a RootPath {
         let first_server = &self.servers(meta).next().unwrap().1;
-        &meta.language_server[&first_server.name].root
+        &self.server_config(meta, &first_server.name).unwrap().root
     }
 
     pub fn servers<'a>(
@@ -153,6 +153,14 @@ impl Context {
     }
     pub fn server(&self, server_id: ServerId) -> &ServerSettings {
         &self.language_servers[&server_id]
+    }
+    pub fn server_config<'a>(
+        &'a self,
+        meta: &'a EditorMeta,
+        server_name: &ServerName,
+    ) -> Option<&'a LanguageServerConfig> {
+        server_configs(&self.config, meta)
+            .get(server_name_for_lookup(&self.config, &meta.language_id, server_name).as_ref())
     }
 
     pub fn call<

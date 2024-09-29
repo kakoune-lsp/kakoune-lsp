@@ -22,7 +22,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx
                         ctx,
                         *server_id,
                         fmt_server,
-                        &server_configs(&ctx.config, &meta)[fmt_server].root,
+                        &ctx.server_config(&meta, fmt_server).unwrap().root,
                     )
                 })
                 .unwrap_or(true)

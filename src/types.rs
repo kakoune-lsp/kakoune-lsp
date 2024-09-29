@@ -204,6 +204,18 @@ pub fn server_configs<'a>(
     }
 }
 
+pub fn server_name_for_lookup<'a>(
+    config: &Config,
+    language_id: &LanguageId,
+    server_name: &'a ServerName,
+) -> Cow<'a, str> {
+    #[allow(deprecated)]
+    if config.language.is_empty() {
+        return Cow::Borrowed(server_name);
+    }
+    Cow::Owned(format!("{}:{}", language_id, server_name))
+}
+
 pub fn semantic_tokens_config<'a>(
     config: &'a Config,
     meta: &'a EditorMeta,

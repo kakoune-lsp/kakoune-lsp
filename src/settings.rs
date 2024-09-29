@@ -45,7 +45,7 @@ pub fn request_initialization_options_from_kakoune(
         }
 
         let server_name = &ctx.server(server_id).name;
-        let server_config = server_configs(&ctx.config, meta).get(server_name).unwrap();
+        let server_config = ctx.server_config(meta, server_name).unwrap();
         let settings = configured_section(meta, ctx, server_id, server_config.settings.as_ref());
         sections.push(settings);
     }
@@ -60,8 +60,7 @@ pub fn configured_section(
 ) -> Option<Value> {
     let server_name = &ctx.server(server_id).name;
     settings.and_then(|settings| {
-        server_configs(&ctx.config, meta)
-            .get(server_name)
+        ctx.server_config(meta, server_name)
             .and_then(|cfg| cfg.settings_section.as_ref())
             .and_then(|section| settings.get(section).cloned())
     })

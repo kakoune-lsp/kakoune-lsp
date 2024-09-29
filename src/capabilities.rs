@@ -369,8 +369,8 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                             .map(|s| s.to_string())
                             .collect(),
                         ),
-                        experimental: server_configs(&ctx.config, &meta)
-                            .get(server_name)
+                        experimental: ctx
+                            .server_config(&meta, server_name)
                             .and_then(|cfg| cfg.experimental.clone())
                             .or_else(|| {
                                 (meta.language_id == "rust").then_some(serde_json::json!({

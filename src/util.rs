@@ -115,7 +115,12 @@ pub fn filetype_to_language_id_map(
                 Vec::new(),
             ));
             let (_, servers) = entry;
-            servers.push(server_name.clone());
+            let server_name = if !config.language.is_empty() {
+                server_name.split_once(':').unwrap().1
+            } else {
+                server_name
+            };
+            servers.push(server_name.to_string());
         }
     }
 

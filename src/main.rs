@@ -397,14 +397,14 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
                 );
             }
             if cfg.language_server.is_empty() {
-                for (language_id, language) in cfg.language.drain() {
+                for (language_id, language) in &cfg.language {
                     cfg.language_server.insert(
                         format!(
                             "{}:{}",
                             language_id,
                             language.command.as_ref().unwrap_or(&"".to_string())
                         ),
-                        language,
+                        language.clone(),
                     );
                 }
             }

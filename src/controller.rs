@@ -1160,7 +1160,11 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         };
         #[allow(deprecated)]
         for server_name in servers {
-            let server_config = &mut ctx.config.language_server.get_mut(server_name).unwrap();
+            let server_config = &mut ctx
+                .config
+                .language_server
+                .get_mut(server_name_for_lookup(&ctx.config, language_id, server_name).as_ref())
+                .unwrap();
             server_config.root = find_project_root(
                 &meta.session,
                 language_id,
@@ -1176,7 +1180,14 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                 .map(|server_name| {
                     (
                         server_name.clone(),
-                        ctx.config.language_server[server_name].root.clone(),
+                        ctx.config.language_server[server_name_for_lookup(
+                            &ctx.config,
+                            language_id,
+                            server_name,
+                        )
+                        .as_ref()]
+                        .root
+                        .clone(),
                     )
                 })
                 .collect();
@@ -1287,7 +1298,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         }
 
         // should be fine to unwrap because request was already routed which means language is configured
-        let server_config = &server_configs(&ctx.config, meta)[&server_name];
+        let server_config = &ctx.server_config(meta, &server_name).unwrap();
         let server_command = server_config.command.as_ref().unwrap_or(&server_name);
         if ctx.server_tombstones.contains(server_command) {
             debug!(

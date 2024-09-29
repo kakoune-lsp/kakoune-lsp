@@ -44,7 +44,7 @@ pub fn did_change_configuration(
                     &params.server_configuration,
                 ))
             } else {
-                let server = server_configs(&ctx.config, &meta).get(server_name).unwrap();
+                let server = ctx.server_config(&meta, server_name).unwrap();
                 configured_section(&meta, ctx, server_id, server.settings.as_ref())
                     .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
             }
@@ -72,8 +72,7 @@ pub fn configuration(
         .and_then(|cfg| cfg.settings.as_ref().cloned())
         .or_else(|| {
             if is_using_legacy_toml(&ctx.config) {
-                server_configs(&ctx.config, &meta)
-                    .get(server_name)
+                ctx.server_config(&meta, server_name)
                     .and_then(|conf| conf.settings.as_ref().cloned())
             } else {
                 ctx.server(server_id).settings.as_ref().cloned()
@@ -96,8 +95,8 @@ pub fn configuration(
                 .map(|section| match &settings {
                     None => Value::Null,
                     Some(settings) => {
-                        if server_configs(&ctx.config, &meta)
-                            .get(server_name)
+                        if ctx
+                            .server_config(&meta, server_name)
                             .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
                             && section.is_empty()
                         {

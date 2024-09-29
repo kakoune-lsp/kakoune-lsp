@@ -1,10 +1,14 @@
 ## Unreleased
 
+This release fixes more regressions identified in version 18.0.0.
+
 Additions:
 - Worked around a case where an unnecessary `KakEnd` hook in user configuration would cause delay when exiting the editor.
 
 Fixes:
 - Fix crash in `lsp-selection-range`.
+- Fix default configuration for Julia.
+- Fix crash when the `language` table is used in the `kak-lsp.toml` file (both of which are deprecated).
 
 ## 18.0.2 - 2024-10-18
 
