@@ -187,10 +187,9 @@ hook global BufSetOption filetype=rust %{
 * Commands starting with either of `ccls-`, `clangd-`, `ejdtls-`, `rust-analyzer-` or `texlab-`, that provide server specific features.
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
-even if the Kakoune session is still up and running. Change the `lsp_timeout` option and restart
-kak-lsp to tweak this duration, or set it to 0 to disable this behavior. In any scenario,
-a new request would spin up a fresh server if it is down. Hence, one way to restart kak-lsp is
-to kill the process and then use any LSP feature. Another way is to run `lsp-disable; nop %sh{sleep .3}; lsp-enable`.
+even if the Kakoune session is still up and running. Change the `lsp_timeout` option before
+starting `kak-lsp` (or use `lsp-restart`) to change this duration, or set it to 0 to disable this behavior. In any
+scenario, a new request would spin up a fresh server if it is down.
 
 * `lsp` https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#user-modes[user mode] with the following default mappings:
 
@@ -526,12 +525,12 @@ hook global InsertCompletionHide .* %{
 }
 ----
 
-Snippet support can be disabled via `set-option global lsp_snippet_support false` and restarting kak-lsp.
+Snippet support can be disabled via `set-option global lsp_snippet_support false` before starting `kak-lsp`.
 
 == Limitations
 
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles[`workspace/didChangeWatchedFiles`]
-is disabled by default; use `set-option global lsp_file_watch_support true` and restart kak-lsp to enable it.
+is disabled by default; use `set-option global lsp_file_watch_support true` before starting `kak-lsp` to enable it.
 
 === Encoding
 

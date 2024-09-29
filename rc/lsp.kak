@@ -1087,6 +1087,22 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-send exit
 }
 
+define-command lsp-restart -docstring "Restart kak-lsp and language servers" %{
+    lsp-exit
+    evaluate-commands %sh{
+        for attempt in $(seq 30); do
+            if ! [ -e ${kak_opt_lsp_pid_file} ] && ! [ -e ${kak_opt_lsp_fifo} ]; then
+                exit
+            fi
+            sleep .1
+        done
+        echo "fail lsp-restart: timed out waiting for kak-lsp to exit"
+    }
+    lsp-did-change-config
+    lsp-did-open
+    echo -markup {Information}Restarted LSP servers
+}
+
 define-command lsp-cancel-progress -params 1 -docstring "lsp-cancel-progress <token>: cancel a cancelable progress item." %{
     lsp-send window/workDoneProgress/cancel %arg{1} # token
 }

@@ -26,6 +26,7 @@ Additions:
   a single language server instance will be reused for all projects in a kakoune-lsp session.
 - `kak-lsp` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
 - When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
+- New command `lsp-restart`.
 
 Fixes:
 - On `rename-session`, the kak-lsp session with the old name will be shut down.
