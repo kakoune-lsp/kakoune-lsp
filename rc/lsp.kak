@@ -1843,7 +1843,8 @@ define-command -hidden lsp-disable-impl -params 1 %{
 declare-option -hidden str lsp_fail_if_disabled fail
 
 hook -always global KakEnd .* %{
-    remove-hooks global lsp # BufClose/WinClose
+    remove-hooks global lsp # BufClose
+    set-option global lsp_fail_if_disabled nop # hack for lsp-enable-window
     try lsp-exit
 }
 try %{
