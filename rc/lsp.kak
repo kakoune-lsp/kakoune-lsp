@@ -589,8 +589,7 @@ define-command -hidden lsp-do-send-async %{
             cat ${kak_opt_lsp_msg_file} >&3
         '
         if [ $? -eq 124 ]; then
-            rm -f ${kak_opt_lsp_pid_file} ${kak_opt_lsp_fifo}
-            echo fail "Timed out trying to reach kak-lsp. Disconnecting it from this session."
+            echo fail "Timed out trying to reach kak-lsp"
         fi
     }
 }
@@ -608,9 +607,8 @@ define-command -hidden lsp-do-send-sync %{
             cat ${kak_opt_lsp_msg_file} >&3
         '
         if [ $? -eq 124 ]; then
-            rm -f ${kak_opt_lsp_pid_file} ${kak_opt_lsp_fifo}
-            echo >${kak_command_fifo} "fail Timed out trying to reach kak-lsp. Disconnecting it from this session."
-            echo "fail Timed out trying to reach kak-lsp. Disconnecting it from this session."
+            echo >${kak_command_fifo} "fail Timed out trying to reach kak-lsp"
+            echo "fail Timed out trying to reach kak-lsp"
         fi
         cat ${kak_response_fifo}
     }
@@ -1087,9 +1085,6 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-exit: shutdown language servers associated with current editor session
 } %{
     lsp-send exit
-    nop %sh{
-        rm -f ${kak_opt_lsp_pid_file} ${kak_opt_lsp_fifo}
-    }
 }
 
 define-command lsp-cancel-progress -params 1 -docstring "lsp-cancel-progress <token>: cancel a cancelable progress item." %{
@@ -1838,6 +1833,7 @@ hook -always global KakEnd .* %{
 try %{
     hook -group lsp-session-renamed global SessionRenamed .* %{
         try lsp-exit
+        set-option global lsp_pid_file %{}
         set-option global lsp_fifo %{}
     }
 }
