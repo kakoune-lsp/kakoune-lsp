@@ -483,7 +483,7 @@ declare-option -hidden -docstring %{
         for glob; do
             until [ "$(pwd -P)" = / ]; do
                 set -- $glob
-                if [ $# -eq 1 ] && [ -e "$1" ]; then
+                if [ -e "$1" ]; then
                     break 2
                 fi
                 cd ..
