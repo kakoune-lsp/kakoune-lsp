@@ -102,7 +102,9 @@ Here are additional recommended mappings. See below for the meaning of each comm
 [source,kak]
 ----
 map global user l %{:enter-user-mode lsp<ret>} -docstring "LSP mode"
+
 map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
+
 map global object a '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
 map global object <a-a> '<a-semicolon>lsp-object<ret>' -docstring 'LSP any symbol'
 map global object f '<a-semicolon>lsp-object Function Method<ret>' -docstring 'LSP function or method'
@@ -134,9 +136,9 @@ If you have followed above steps you get
 * `lsp-references` command to find references to the symbol under the main cursor, mapped to `gr` by default
 ** for the previous five commands, the `\*goto*` buffer has filetype `lsp-goto`, so you can press `<ret>` on a line or use the `jump` command
 * `lsp-find-error` command to jump to the next or previous error in the current file
-- `lsp-selection-range` command to quickly select interesting ranges around selections.
-  - `lsp-selection-range-select` to navigate ranges fetched by `lsp-selection-range`.
-- A polyfill of Kakoune's `jump-*` commands to jump to the next or previous location listed in a buffer with the `lsp-goto` filetype. These also work for buffers `\*grep*`, `\*lint*` and `\*make*`
+* `lsp-selection-range` command to quickly select interesting ranges around selections.
+** `lsp-selection-range-select` to navigate ranges fetched by `lsp-selection-range`.
+- A polyfill of Kakoune's `jump-\*` commands to jump to the next or previous location listed in a buffer with the `lsp-goto` filetype. These also work for buffers `*grep*`, `\*lint*` and `\*make*`
 * `lsp-highlight-references` command to select (unless run in a hook context) all references to the symbol under the main cursor in the current buffer and highlight them with the `Reference` face (which is equal to the `MatchingChar` face by default)
 * `lsp-document-symbol` command to list the current buffer's symbols in a buffer of type `lsp-document-symbol`
 * `lsp-goto-document-symbol` command to jump to one of the current buffer's symbols
@@ -149,14 +151,14 @@ If you have followed above steps you get
 ** `\*callers*` and `\*callees*` buffers have filetype `lsp-goto` so you can press `<ret>` on a line or use the `jump` command
 * `lsp-signature-help` command to show signature information of the function under the main cursor
 ** To automatically show signature information in insert mode, use `lsp-auto-signature-help-enable`.
-* inline diagnostics highlighting using the `DiagnosticError`, `DiagnosticHint`, `DiagnosticInfo` and `DiagnosticWarning` faces; can be disabled with `lsp-inline-diagnostics-disable` command
+* inline diagnostics highlighting using the `DiagnosticError`, `DiagnosticHint`, `DiagnosticInfo`, `DiagnosticWarning`, `DiagnosticTagDeprecated` and `DiagnosticTagUnnecessary` faces; can be disabled with `lsp-inline-diagnostics-disable` command
 * flags in the left margin on lines with errors or other diagnostics; can be disabled with `lsp-diagnostic-lines-disable` command
-  * for lines with code lenses, a `>` flag which can be customized via the `lsp_code_lens_sign` option
-  * `lsp-code-lens` command to execute a code lens from the current selection
-  * commands `lsp-inlay-code-lenses-enable` and `lsp-inlay-code-lenses-disable` to toggle rendering of code lenses.
-    * You can change the code lenses' face with `set-face global InlayCodeLens <face>`.
+* for lines with code lenses, a `>` flag which can be customized via the `lsp_code_lens_sign` option
+** `lsp-code-lens` command to execute a code lens from the current selection
+** commands `lsp-inlay-code-lenses-enable` and `lsp-inlay-code-lenses-disable` to toggle rendering of code lenses.
+** You can change the code lenses' face with `set-face global InlayCodeLens <face>`.
 * `lsp-formatting` command to format current buffer, according to the `tabstop` and `lsp_insert_spaces` options
-* `lsp-formatting-sync` command to format current buffer synchronously, suitable for use with `BufWritePre` hook:
+* `lsp-formatting-sync` command to format current buffer synchronously, suitable for use in a `BufWritePre` hook:
 
 [source,kak]
 ----
@@ -181,9 +183,8 @@ hook global BufSetOption filetype=rust %{
 * `lsp-code-action` to run the code action matching the given pattern.
 * `lsp-code-action-sync` to synchronously run that code action, suitable for use in a `BufWritePre` hook.
 * `lsp_diagnostic_error_count`, `lsp_diagnostic_hint_count`, `lsp_diagnostic_info_count` and `lsp_diagnostic_warning_count` options which contain the number of diagnostics of the respective level for the current buffer. For example, you can put it into your modeline to see at a glance if there are errors in the current file
-* starting new kak-lsp session when Kakoune session begins and stopping it when Kakoune session ends
 * `lsp-execute-command` command to execute server-specific commands (listed by `lsp-capabilities`).
-* Commands starting with either of `ccls-`, `clangd-`, `ejdtls-`, `texlab-` or `rust-analyzer-`, that provide server specific features.
+* Commands starting with either of `ccls-`, `clangd-`, `ejdtls-`, `rust-analyzer-` or `texlab-`, that provide server specific features.
 
 NOTE: By default, kak-lsp exits when it doesn't receive any request from Kakoune for 30 minutes,
 even if the Kakoune session is still up and running. Change the `lsp_timeout` option and restart
@@ -226,8 +227,8 @@ to kill the process and then use any LSP feature. Another way is to run `lsp-dis
 | } | lsp-next-symbol
 |===
 
-To know which subset of LSP commands is backed by the current buffer's filetype's language server use
-`lsp-capabilities` command.
+To know which subset of LSP commands is backed by the current buffer's language server use
+the `lsp-capabilities` command.
 
 == Configuration
 
@@ -246,7 +247,7 @@ hook -group lsp-filetype-clangd global BufSetOption filetype=(?:c|cpp) %{
 }
 ----
 
-See the output of `kak-lsp` for the default set of servers and some commented-out alternatives.
+See link:rc/servers.kak[] for the default set of servers and some commented-out alternatives.
 
 To use different servers, add the corresponding hooks to your `kakrc`.
 To remove the defaults, you can use `remove-hooks global lsp-filetype-.*` in your `kakrc`.
@@ -259,7 +260,7 @@ Many servers accept configuration options that are not part of the LSP spec.  Th
 `[<server_name>.settings]` holds those configuration options.  It has the same structure as
 the corresponding fragments from VSCode's `settings.json`. For example:
 
-[source,toml]
+[source,kak]
 ----
 hook global BufSetOption filetype=go %{
     set-option buffer lsp_servers %exp{
@@ -281,7 +282,7 @@ by the server in `workspace/configuration`.
 
 The current buffer's `lsp_language_id` option value is sent to the language server as `languageId`.
 By default it's usually the same as Kakoune's filetype option but depending on the language server it may need to be different.
-See the output of `kak-lsp` for the default set of exceptions.
+See link:rc/servers.kak[] for the default set of exceptions.
 
 === Multiple language servers
 
@@ -510,7 +511,7 @@ to insert text (for example function call arguments).  The placeholders are high
 the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`.
 
 The `lsp-snippets-select-next-placeholders` command allows to jump to the next tabstop (like
-function call arguments). The suggested mapping uses `<tab>` (see <<Configure mappings>>). Here's
+function call arguments). The suggested mapping uses `<tab>` (see <<Configure key mappings>>). Here's
 a way to bind it to `<c-n>` instead (might need to hide the completion menu with Kakoune's
 `<c-o>` command):
 
@@ -556,7 +557,7 @@ To get more verbose logs, run:
 set global lsp_debug true
 ----
 
-If it does not give enough insight to fix the problem or if the problem is a bug in kakoune-lsp itself
+If this does not give enough insight to fix the problem or if the problem is a bug in kakoune-lsp itself
 please don't hesitate to raise an issue.
 
 === Default configuration
@@ -576,13 +577,11 @@ env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
 For troubleshooting crashes, you might like to run kakoune-lsp outside of
 Kakoune.
 
-To do this:
-
-. *Before launching Kakoune*, run kakoune-lsp with an arbitrary session ID (here `foobar`):
+To do this, run kakoune-lsp with an arbitrary session ID (here `foobar`):
 
   kak-lsp -s foobar
 
-. In a second terminal, run Kakoune with the same session ID:
+In a second terminal, run Kakoune with the same session ID:
 
   kak -s foobar
 
