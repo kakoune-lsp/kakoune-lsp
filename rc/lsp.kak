@@ -1909,7 +1909,7 @@ hook -always global KakEnd .* %{
     remove-hooks global lsp # BufClose
     set-option global lsp_fail_if_disabled nop # hack for lsp-enable-window
     try lsp-exit
-    alias global lsp-did-close nop
+    set-option global lsp_unless_blocked lsp-blocked
     nop %sh{ rm -f ${kak_opt_lsp_msg_file} }
 }
 try %{

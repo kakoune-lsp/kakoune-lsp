@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- Worked around a case where an unnecessary `KakEnd` hook in user configuration would cause delay when exiting the editor.
+
 ## 18.0.2 - 2024-10-18
 
 Breaking changes:
@@ -15,7 +18,7 @@ Fixes:
 - The info box shown by `lsp-show-message-{error,warning,info}` is no longer created in the toolsclient but in the most recently used client.
 - Fix missing error messages when LSP commands are run from either a scratch buffer or a buffer where the server is not installed.
 
-Additions
+Additions:
 - Further reduce the number of shell calls caused by hooks, in addition to the work done on this in version 18.0.0.
 - When crashing via a Rust panic, the process is now aborted and creates a coredump.
   Also, crashes are now shown in an info box.
