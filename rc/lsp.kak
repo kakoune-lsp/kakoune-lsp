@@ -1851,6 +1851,7 @@ hook -always global KakEnd .* %{
     remove-hooks global lsp # BufClose
     set-option global lsp_fail_if_disabled nop # hack for lsp-enable-window
     try lsp-exit
+    alias global lsp-did-close nop
 }
 try %{
     hook -group lsp-session-renamed global SessionRenamed .* %{
