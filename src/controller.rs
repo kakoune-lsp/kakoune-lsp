@@ -204,6 +204,17 @@ impl ParserState {
             .take(n)
             .collect()
     }
+
+    pub fn buffer_contents(&mut self) -> String {
+        let path: String = self.next();
+        let mut buf = vec![];
+        fs::File::open(path.clone())
+            .unwrap()
+            .read_to_end(&mut buf)
+            .unwrap();
+        let _ = fs::remove_file(path);
+        String::from_utf8_lossy(&buf).to_string()
+    }
 }
 
 fn dispatch_fifo_request(
@@ -413,11 +424,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.next(),
+            draft: state.buffer_contents(),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.next(),
+            draft: state.buffer_contents(),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => Box::new(PositionParams {

@@ -645,9 +645,12 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
     lsp-if-changed-since lsp_timestamp %opt{lsp_timestamp} %{
-        evaluate-commands -draft %{
-            execute-keys '%'
-            lsp-send textDocument/didChange %val{selection}
+        evaluate-commands %sh{
+            file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
+            echo "
+                write -force $file
+                lsp-send textDocument/didChange $file
+            "
         }
     }
 }
@@ -1065,9 +1068,12 @@ define-command lsp-capabilities -docstring "List available commands for current 
 }
 
 define-command -hidden lsp-did-open %{
-    evaluate-commands -draft %{
-        execute-keys '%'
-        lsp-send textDocument/didOpen %val{selection}
+    evaluate-commands %sh{
+        file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
+        echo "
+            write -force $file
+            lsp-send textDocument/didOpen $file
+        "
     }
     set-option buffer lsp_timestamp %val{timestamp}
     lsp-code-lens-request
