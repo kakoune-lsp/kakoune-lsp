@@ -648,7 +648,7 @@ define-command -hidden lsp-did-change -docstring "Notify language server about b
         evaluate-commands %sh{
             file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
             echo "
-                write -force $file
+                evaluate-commands -no-hooks %{ write -force $file }
                 lsp-send textDocument/didChange $file
             "
         }
@@ -1071,7 +1071,7 @@ define-command -hidden lsp-did-open %{
     evaluate-commands %sh{
         file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
         echo "
-            write -force $file
+            evaluate-commands -no-hooks %{ write -force $file }
             lsp-send textDocument/didOpen $file
         "
     }
