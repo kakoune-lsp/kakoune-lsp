@@ -164,7 +164,10 @@ fn reader_loop(
         loop {
             let mut header = String::new();
             if reader.read_line(&mut header)? == 0 {
-                debug!(session, "Language server closed pipe, stopping reading");
+                debug!(
+                    session,
+                    "Language server {server_name} closed pipe, stopping reading"
+                );
                 return Ok(());
             }
             let header = header.trim();
