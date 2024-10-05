@@ -135,7 +135,8 @@ impl Context {
     }
 
     pub fn main_root<'a>(&'a self, meta: &'a EditorMeta) -> &'a RootPath {
-        &self.servers(meta).next().unwrap().1.roots[0]
+        let first_server = &self.servers(meta).next().unwrap().1;
+        &meta.language_server[&first_server.name].root
     }
 
     pub fn servers<'a>(
