@@ -619,12 +619,18 @@ define-command -hidden lsp-do-send-sync %{
     }
 }
 
-try %{ alias buffer=*debug* lsp-send nop }
-hook -group lsp-scratch-buffers global BufCreate [^/].* %{
+define-command -hidden lsp-block-in-buffer %{
     alias buffer lsp-send nop
+    alias buffer lsp-did-change nop
+    alias buffer lsp-did-open nop
+}
+
+try %{ evaluate-commands -buffer *debug* lsp-block-in-buffer }
+hook -group lsp-scratch-buffers global BufCreate [^/].* %{
+    lsp-block-in-buffer
 }
 hook -group lsp-scratch-buffers global WinDisplay \*debug\* %{
-    alias buffer lsp-send nop
+    lsp-block-in-buffer
 }
 
 declare-option -hidden int lsp_timestamp -1
