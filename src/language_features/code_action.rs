@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::mem;
 
 use crate::capabilities::attempt_server_capability;
@@ -53,13 +54,14 @@ pub fn text_document_code_action(meta: EditorMeta, params: CodeActionsParams, ct
             )
         })
         .collect();
-    code_actions_for_ranges(meta, params, ctx, ranges)
+    code_actions_for_ranges(meta, params, ctx, document.version, ranges)
 }
 
 fn code_actions_for_ranges(
     meta: EditorMeta,
     mut params: CodeActionsParams,
     ctx: &mut Context,
+    version: i32,
     ranges: HashMap<ServerId, Range>,
 ) {
     let buff_diags = ctx.diagnostics.get(&meta.buffile);
@@ -113,7 +115,7 @@ fn code_actions_for_ranges(
     ctx.call::<CodeActionRequest, _>(
         meta,
         RequestParams::Each(req_params),
-        move |ctx, meta, results| editor_code_actions(meta, results, ctx, params, ranges),
+        move |ctx, meta, results| editor_code_actions(meta, results, ctx, params, version, ranges),
     );
 }
 
@@ -122,8 +124,10 @@ fn editor_code_actions(
     results: Vec<(ServerId, Option<CodeActionResponse>)>,
     ctx: &mut Context,
     params: CodeActionsParams,
+    version: i32,
     mut ranges: HashMap<ServerId, Range>,
 ) {
+    let sync = meta.fifo.is_some();
     if !meta.hook
         && results
             .iter()
@@ -140,12 +144,42 @@ fn editor_code_actions(
             })
     {
         // Some servers send code actions only if the requested range includes the affected
-        // AST nodes.  Let's make them more convenient to access by requesting on whole lines.
-        for range in ranges.values_mut() {
-            range.start.character = 0;
-            range.end.character = EOL_OFFSET;
+        // AST nodes.  Since we don't have per-line lightbulbs, let's make the common case more
+        // convenient by requesting on whole lines.
+        let Some(document) = ctx.documents.get(&meta.buffile) else {
+            error!(meta.session, "Missing document for {}", &meta.buffile);
+            if sync {
+                ctx.exec(meta, "nop");
+            }
+            return;
+        };
+        if document.version != version {
+            error!(
+                meta.session,
+                "Stale document for {}: my ranges are for {}, document has {}",
+                &meta.buffile,
+                version,
+                document.version
+            );
+            if sync {
+                ctx.exec(meta, "nop");
+            }
+            return;
         }
-        code_actions_for_ranges(meta, params, ctx, ranges);
+        for (server_id, range) in &mut ranges {
+            range.start.character = 0;
+            let line = document.text.line(usize::try_from(range.end.line).unwrap());
+            range.end.character = kakoune_position_to_lsp(
+                &KakounePosition {
+                    line: range.end.line + 1,
+                    column: u32::try_from(line.len_bytes()).unwrap(),
+                },
+                &document.text,
+                ctx.server(*server_id).offset_encoding,
+            )
+            .character;
+        }
+        code_actions_for_ranges(meta, params, ctx, version, ranges);
         return;
     }
 
@@ -183,7 +217,6 @@ fn editor_code_actions(
         .map(|(server_id, _)| *server_id)
         .collect();
 
-    let sync = meta.fifo.is_some();
     if sync || matches!(params.filters, Some(CodeActionFilter::ByRegex(_))) {
         let actions = if let Some(CodeActionFilter::ByRegex(pattern)) = &params.filters {
             let regex = match regex::Regex::new(pattern) {
