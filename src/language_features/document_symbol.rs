@@ -937,13 +937,13 @@ fn editor_document_symbol_menu(
             if result.is_empty() {
                 return;
             }
-            symbol_menu(result, &meta, server, ctx)
+            symbol_menu(&result, &meta, server, ctx)
         }
         Some(DocumentSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            symbol_menu(result, &meta, server, ctx)
+            symbol_menu(&result, &meta, server, ctx)
         }
         None => return,
     };
@@ -980,12 +980,12 @@ fn editor_document_symbol_goto(
     ctx.exec(meta, navigate_command);
 }
 
-fn symbols_walk<T, F>(visit: &mut F, s: &T) -> bool
+fn symbols_walk<'a, T, V>(visit: &mut V, s: &'a T) -> bool
 where
     T: Symbol<T>,
-    F: FnMut(&T) -> bool,
+    V: FnMut(bool, &'a T) -> bool,
 {
-    if !visit(s) {
+    if !visit(true, s) {
         return false;
     }
     for child in s.children() {
@@ -994,28 +994,37 @@ where
         }
     }
 
+    let ok = visit(false, s);
+    assert!(ok);
+
     true
 }
 
-fn symbol_menu<T: Symbol<T>>(
-    symbols: Vec<T>,
+fn symbol_menu<'a, T: Symbol<T>>(
+    symbols: &'a Vec<T>,
     meta: &EditorMeta,
     server: &ServerSettings,
     ctx: &Context,
 ) -> String {
     let mut choices = vec![];
-    let mut add_symbol = |symbol: &T| {
+    let mut qualified_name = vec![];
+    let mut add_symbol = |pre: bool, symbol: &'a T| {
+        if !pre {
+            qualified_name.pop();
+            return true;
+        }
         let mut filename_path = PathBuf::default();
         let filename = symbol_filename(meta, symbol, &mut filename_path);
         let range =
             get_kakoune_range_with_fallback(server, filename, &symbol.selection_range(), ctx);
-        let name = symbol.name();
+        qualified_name.push(symbol.name());
+        let name = qualified_name.join(" > ");
         let kind = symbol.kind();
-        choices.push((name.to_owned(), kind, edit_at_range(filename, range, false)));
+        choices.push((name, kind, edit_at_range(filename, range, false)));
         true
     };
     for symbol in symbols {
-        symbols_walk(&mut add_symbol, &symbol);
+        symbols_walk(&mut add_symbol, symbol);
     }
     let mut occurrences: HashMap<String, i32> = HashMap::new();
     for (name, _, _) in &choices {
@@ -1044,7 +1053,10 @@ fn symbol_search<T: Symbol<T>>(
     ctx: &Context,
 ) -> String {
     let mut navigate_cmd = String::new();
-    let mut symbol_matches = |symbol: &T| {
+    let mut symbol_matches = |pre: bool, symbol: &T| {
+        if !pre {
+            return true;
+        }
         if symbol.name() == goto_symbol {
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, symbol, &mut filename_path);
