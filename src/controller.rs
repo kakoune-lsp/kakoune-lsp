@@ -675,6 +675,12 @@ pub fn start(
         };
         let timeout_op = sel.recv(&timeout_channel);
 
+        let force_exit = |ctx: &mut Context| {
+            if let Err(err) = fs::write(fifo.clone(), "'$exit'") {
+                error!(ctx.last_session(), "Error writing to fifo: {}", err);
+            }
+        };
+
         let op = sel.select();
         match op.index() {
             idx if idx == timeout_op => {
@@ -683,16 +689,12 @@ pub fn start(
                     "Exiting session after {} seconds of inactivity", timeout
                 );
                 op.recv(&timeout_channel).unwrap();
-                if let Err(err) = fs::write(fifo.clone(), "'$exit'") {
-                    error!(ctx.last_session(), "Error writing to fifo: {}", err);
-                }
+                force_exit(ctx);
                 break 'event_loop;
             }
             idx if idx == from_editor_op => {
                 debug!(ctx.last_session(), "Received editor request via fifo");
-                let Ok(editor_request) = op.recv(from_editor) else {
-                    break 'event_loop;
-                };
+                let editor_request = op.recv(from_editor).unwrap();
                 if process_editor_request(ctx, editor_request).is_break() {
                     break 'event_loop;
                 }
@@ -700,8 +702,13 @@ pub fn start(
             i if i == from_file_watcher_op => {
                 let msg = op.recv(from_file_watcher);
 
-                if msg.is_err() {
-                    continue 'event_loop;
+                if let Err(err) = msg {
+                    debug!(
+                        ctx.last_session(),
+                        "received error from file watcher: {err}"
+                    );
+                    force_exit(ctx);
+                    break 'event_loop;
                 }
                 let mut file_events = msg.unwrap();
                 debug!(
@@ -717,7 +724,7 @@ pub fn start(
                     .extend(file_events.drain(..));
             }
             i if i == from_pending_file_watcher_op => {
-                let _msg = op.recv(from_pending_file_watcher);
+                let _msg = op.recv(from_pending_file_watcher).unwrap();
 
                 let fw = ctx.file_watcher.as_mut().unwrap();
                 if !fw.pending_file_events.is_empty() {
@@ -738,8 +745,10 @@ pub fn start(
                 let msg = op.recv(server_rxs[i]);
                 let server_id = ctx.language_servers.iter().nth(i).map(|(s, _)| *s).unwrap();
 
-                if msg.is_err() {
-                    continue 'event_loop;
+                if let Err(err) = msg {
+                    debug!(ctx.last_session(), "received error from server: {err}");
+                    force_exit(ctx);
+                    break 'event_loop;
                 }
                 let msg = msg.unwrap();
                 match msg {
