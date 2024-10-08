@@ -1631,6 +1631,7 @@ define-command -hidden lsp-check-auto-hover -params 1 %{
 }
 
 define-command lsp-auto-hover-enable -docstring "enable auto-requesting hover info box for current position" %{
+    remove-hooks global lsp-auto-hover
     hook -group lsp-auto-hover global NormalIdle .* %{ lsp-check-auto-hover lsp-hover }
 }
 
@@ -1643,6 +1644,7 @@ define-command lsp-auto-hover-buffer-enable \
 
 This will continuously update the '*hover*' buffer, keeping it visible.
 Additionally, the buffer will be activated in the client referred to by the 'docsclient' option." %{
+    remove-hooks global lsp-auto-hover-buffer
     hook -group lsp-auto-hover-buffer global NormalIdle .* %{ lsp-check-auto-hover %{lsp-hover-buffer %opt{docsclient}} }
 }
 
@@ -1654,6 +1656,7 @@ define-command lsp-auto-hover-insert-mode-enable -params 0..1 -client-completion
     -docstring "lsp-auto-hover-insert-mode-enable [<client>]: enable auto-requesting hover info for current function in insert mode
 
 If a client is given, show hover in a scratch buffer in that client instead of the info box" %{
+    remove-hooks global lsp-auto-hover-insert-mode
     evaluate-commands %sh{
         hover=lsp-hover
         [ $# -eq 1 ] && hover="lsp-hover-buffer $1"
