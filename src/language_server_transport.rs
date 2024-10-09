@@ -125,17 +125,29 @@ pub fn start(
                 drop(child.stderr.take());
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 match child.try_wait() {
+                    Ok(Some(status)) => {
+                        debug!(session, "Language server process exited with {status}");
+                    }
                     Ok(None) => {
                         std::thread::sleep(std::time::Duration::from_secs(1));
-                        if let Ok(None) = child.try_wait() {
-                            // Okay, we asked politely enough and waited long enough.
-                            child.kill().unwrap();
+                        match child.try_wait() {
+                            Ok(Some(status)) => {
+                                debug!(session, "Language server process exited with {status}");
+                            }
+                            Ok(None) => {
+                                // Okay, we asked politely enough and waited long enough.
+                                debug!(
+                                    session,
+                                    "Language server process has still not exited, sending SIGTERM"
+                                );
+                                child.kill().unwrap();
+                            }
+                            Err(_) => (),
                         }
                     }
                     Err(_) => {
                         error!(session, "Language server wasn't running was it?!");
                     }
-                    _ => {}
                 }
             },
         )
