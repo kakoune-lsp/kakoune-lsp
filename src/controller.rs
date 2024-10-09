@@ -694,8 +694,15 @@ pub fn start(
             }
             idx if idx == from_editor_op => {
                 debug!(ctx.last_session(), "Received editor request via fifo");
-                let editor_request = op.recv(from_editor).unwrap();
+                let editor_request = match op.recv(from_editor) {
+                    Ok(r) => r,
+                    Err(err) => {
+                        warn!(ctx.last_session(), "Error receiving editor request: {err}");
+                        break 'event_loop;
+                    }
+                };
                 if process_editor_request(ctx, editor_request).is_break() {
+                    info!(ctx.last_session(), "Processed exit request");
                     break 'event_loop;
                 }
             }
@@ -703,7 +710,7 @@ pub fn start(
                 let msg = op.recv(from_file_watcher);
 
                 if let Err(err) = msg {
-                    debug!(
+                    warn!(
                         ctx.last_session(),
                         "received error from file watcher: {err}"
                     );
@@ -746,7 +753,7 @@ pub fn start(
                 let server_id = ctx.language_servers.iter().nth(i).map(|(s, _)| *s).unwrap();
 
                 if let Err(err) = msg {
-                    debug!(ctx.last_session(), "received error from server: {err}");
+                    warn!(ctx.last_session(), "received error from server: {err}");
                     force_exit(ctx);
                     break 'event_loop;
                 }
