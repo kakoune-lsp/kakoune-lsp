@@ -1167,9 +1167,9 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         };
         for (server_name, server) in &mut meta.language_server {
             if !server.root.is_empty() && !server.root_globs.is_empty() {
-                let msg = format!("cannot specify both root and root_globs");
+                let msg = "cannot specify both root and root_globs";
                 error!(meta.session, "{}", msg);
-                report_error(&ctx.editor_tx, meta, &msg);
+                report_error(&ctx.editor_tx, meta, msg);
                 return false;
             }
             if server.root.is_empty() {
