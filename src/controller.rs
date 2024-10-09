@@ -36,7 +36,6 @@ use inlay_hints::InlayHintsOptions;
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lsp_types::error_codes::CONTENT_MODIFIED;
-use lsp_types::notification::DidChangeWorkspaceFolders;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
@@ -1222,16 +1221,6 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             ctx.route_cache
                 .insert((server_name.clone(), root.clone()), server_id);
             meta.servers.push(server_id);
-            let params = DidChangeWorkspaceFoldersParams {
-                event: WorkspaceFoldersChangeEvent {
-                    added: vec![WorkspaceFolder {
-                        uri: Url::from_file_path(&root).unwrap(),
-                        name: root,
-                    }],
-                    removed: vec![],
-                },
-            };
-            ctx.notify::<DidChangeWorkspaceFolders>(server_id, params);
             continue 'server;
         }
 
@@ -1745,18 +1734,6 @@ fn dispatch_server_request(
             }
             Ok(serde_json::Value::Null)
         }
-        request::WorkspaceFoldersRequest::METHOD => Ok(serde_json::to_value(
-            ctx.server(server_id)
-                .roots
-                .iter()
-                .map(|root| WorkspaceFolder {
-                    uri: Url::from_file_path(root).unwrap(),
-                    name: root.clone(),
-                })
-                .collect::<Vec<_>>(),
-        )
-        .ok()
-        .unwrap()),
         request::WorkDoneProgressCreate::METHOD => {
             progress::work_done_progress_create(meta, request.params, ctx)
         }

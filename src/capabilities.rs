@@ -96,7 +96,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                             execute_command: Some(DynamicRegistrationClientCapabilities {
                                 dynamic_registration: Some(false),
                             }),
-                            workspace_folders: Some(true),
+                            workspace_folders: Some(false),
                             configuration: Some(true),
                             semantic_tokens: enum_primitive::Option::Some(
                                 SemanticTokensWorkspaceClientCapabilities {
