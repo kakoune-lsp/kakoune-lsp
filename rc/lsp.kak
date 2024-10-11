@@ -548,7 +548,7 @@ define-command -hidden lsp-send -params 1.. %{
     } catch %{
         lsp-start
     }
-    evaluate-commands -save-regs bfht %{
+    evaluate-commands -save-regs bht %{
         try %{
             nop %val{hook_param}
             set-register h true
