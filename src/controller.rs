@@ -1103,7 +1103,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             .values()
             .any(|server| !server.roots.is_empty())
     {
-        let msg = "Error: new server configuration does not support roots parameter";
+        let msg = "Error: the lsp_servers configuration does not support the roots parameter, please use root_globs or root";
         debug!(meta.session, "{}", msg);
         report_error(&ctx.editor_tx, meta, msg);
         return false;
