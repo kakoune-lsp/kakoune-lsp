@@ -539,7 +539,6 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
 declare-option -hidden -docstring 'Temporary storage for messages to server' str lsp_msg_file %sh{
     mktemp -q -t 'kak-lsp-msg.XXXXXX' 2>/dev/null || mktemp -q
 }
-hook -always global KakEnd .* %{ nop %sh{ rm -f ${kak_opt_lsp_msg_file} } }
 
 define-command -hidden lsp-send -params 1.. %{
     %opt{lsp_fail_if_disabled} "lsp-send: run lsp-enable or lsp-enable-window first"
@@ -1874,6 +1873,7 @@ hook -always global KakEnd .* %{
     set-option global lsp_fail_if_disabled nop # hack for lsp-enable-window
     try lsp-exit
     alias global lsp-did-close nop
+    nop %sh{ rm -f ${kak_opt_lsp_msg_file} }
 }
 try %{
     hook -group lsp-session-renamed global SessionRenamed .* %{
