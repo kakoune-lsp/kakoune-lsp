@@ -548,12 +548,18 @@ define-command -hidden lsp-send -params 1.. %{
     } catch %{
         lsp-start
     }
-    evaluate-commands -save-regs bht %{
+    evaluate-commands -save-regs bhst %{
         try %{
             nop %val{hook_param}
             set-register h true
         } catch %{
             set-register h false
+        }
+        try %{
+            nop %val{source}
+            set-register s true
+        } catch %{
+            set-register s false
         }
         # KakEnd has no buffer in context
         try %{
@@ -570,6 +576,7 @@ define-command -hidden lsp-send -params 1.. %{
             %val{session} \
             %val{client} \
             %reg{h} \
+            %reg{s} \
             %reg{b} \
             %reg{t} \
             %opt{filetype} \

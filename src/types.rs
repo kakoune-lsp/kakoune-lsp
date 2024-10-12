@@ -176,6 +176,8 @@ pub struct EditorMeta {
     #[serde(default)]
     pub hook: bool,
     #[serde(default)]
+    pub sourcing: bool,
+    #[serde(default)]
     pub language_server: HashMap<ServerName, LanguageServerConfig>,
     pub semantic_tokens: SemanticTokenConfig,
     pub server: Option<ServerName>,

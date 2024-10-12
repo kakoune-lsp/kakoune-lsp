@@ -440,6 +440,7 @@ pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMet
         fifo: None,
         command_fifo: None,
         hook: false,
+        sourcing: false,
         language_server: HashMap::new(),
         semantic_tokens: SemanticTokenConfig::default(),
         server: None,

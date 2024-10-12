@@ -227,6 +227,7 @@ fn dispatch_fifo_request(
     }
     let client: String = state.next();
     let hook = state.next();
+    let sourcing = state.next();
     let buffile = state.next();
     let version = state.next();
     let filetype = state.next();
@@ -267,6 +268,7 @@ fn dispatch_fifo_request(
         fifo: None,
         command_fifo: None,
         hook,
+        sourcing,
         language_server,
         semantic_tokens,
         server: None,
@@ -1087,7 +1089,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             meta.session,
             "Unsupported scratch buffer, ignoring request from buffer '{}'", meta.buffile
         );
-        let command = if meta.hook {
+        let command = if meta.hook || meta.sourcing {
             "nop"
         } else {
             "lsp-show-error 'scratch buffers are not supported, refusing to forward request'"
