@@ -2,6 +2,9 @@
 
 The `kak-lsp.toml` config file has been deprecated, as have been `lsp_config`, `KAK_LSP_PROJECT_ROOT_*` and `KAK_LSP_FORCE_PROJECT_ROOT` as well as commandline flags `--config`, `--log` and `--timeout`.
 This is in favor of new Kakoune options `lsp_servers`, `lsp_language_id`, `lsp_semantic_tokens`, `lsp_timeout`, `lsp_snippet_support` and `lsp_file_watch_support`.
+In particular, the `lsp_servers` option makes it easier to
+1. override servers only for specific filetypes, and
+2. set server config dynamically (based on project etc.) via Kakoune commands and hooks.
 For backwards compatibility, the new options are ignored if a `kak-lsp.toml` exists in the user's config directory (or is provided via `--config`).
 By default, `lsp_servers` and `lsp_language_id` are populated via the hooks in the `lsp-filetype-.*` groups, feel free to remove them.
 See the documentation of the respective options for details.
@@ -9,32 +12,35 @@ Thanks to Tobias Pisani for designing this config rework.
 
 Breaking changes:
 - The `--session` argument used to allow using a single kakoune-lsp server from multiple Kakoune sessions.
-  This feature has been removed until we find a need for it.
-  The `--session` argument is now ignored, except when starting kak-lsp outside the editor.
-   This means that `rename-session` no longer breaks LSP by invalidating that argument.
-- `lsp-stop-on-exit-disable` (and the default `lsp-stop-on-exit-enable`) no longer have an effect.
+  This feature has been removed to allow supporting `rename-session` better;
+  it may be added back if we find a need for it.
+  The `--session` argument is now ignored, except when `kak-lsp` is started outside the editor.
+  This means that you probably don't need to override the `lsp_cmd` option anymore.
+  Additionally, `rename-session` no longer breaks kakoune-lsp by invalidating the `--session` argument.
+- `lsp-stop-on-exit-disable` and `lsp-stop-on-exit-enable` no longer have an effect.
   Instead, the kakoune-lsp server will always stop running as soon as its associated Kakoune session exits.
 - The default server timeout has been increased from 1800 seconds (30 minutes) to 18000 seconds (5 hours),
-  to avoid potential delay from frequent restarts.
+  to avoid potential delays from frequent restarts.
 
 Additions:
 - Log messages are now written to the `*debug*` buffer.
+- New option `lsp_debug` to control log verbosity without restarting `kak-lsp`.
 - New command `lsp-restart`.
-- Just like the `--session` argument, `--kakoune` is no longer needed and has been deprecated.
-  This simplifies the default configuration (`eval %sh{kak-lsp}; lsp-enable`).
+- The `--kakoune` argument is no longer needed and has been deprecated.
+  This simplifies the minimal configuration to `eval %sh{kak-lsp}; lsp-enable`.
 - If the server supports LSP workspaceFolders, a single language server
-  instance will be reused for all projects in a kakoune-lsp session.
-  The file where the language server was started determines the main workspace.
-- When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
+  instance will be reused for all projects in a Kakoune session.
+  The file where the language server was originally started from determines the (only) workspaceFolder we send to the language server.
+- In language server definitions, the `command` field is now optional and defaults to the name of the language server.
 - New faces `DiagnosticTagDeprecated` and `DiagnosticTagUnnecessary` for the LSP's diagnostic tags.
 
 Fixes:
-- On `rename-session`, the kak-lsp session with the old name will be shut down.
-  This feature requires Kakoune version >= v2024.05.09.
+- On `rename-session`, the kakoune-lsp server for the old session will be shut down.
+  This only works with Kakoune version >= v2024.05.09.
 - `lsp-*` commands that require `lsp-enable`/`lsp-enable-window` now fail more explicitly.
-- Fix an easily reproducible crash when requesting code actions from `rust-analyzer`.
-- Fix crash when running Rust unit tests via `lsp-code-lens`.
-- lsp-goto-document-symbol now uses qualified names, to prevent clashes.
+- Fix a crash when requesting code actions from `rust-analyzer`.
+- Fix a crash when running Rust unit tests via `rust-analyzer's` `lsp-code-lens`.
+- `lsp-goto-document-symbol` now uses qualified names, to make sure that it shows all symbols in the current buffer.
 
 ## 17.1.2 - 2024-08-17
 
