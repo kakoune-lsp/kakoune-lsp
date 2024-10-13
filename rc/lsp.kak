@@ -10,7 +10,7 @@ For example
     hook global BufSetOption filetype=(?:c|cpp) %{
         set-option buffer lsp_servers %{
             [clangd]
-            root_globs = ["compile_commands.json", ".clangd", ".git" ".hg"]
+            root_globs = ["compile_commands.json", ".clangd", ".git", ".hg"]
         }
     }
 

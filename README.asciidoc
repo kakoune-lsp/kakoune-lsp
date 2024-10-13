@@ -71,7 +71,7 @@ quick installation of language servers supported by kakoune-lsp out of the box.
 
 === Configure Kakoune to enable LSP integration
 
-To enable LSP support for configured languages (see <<Configuration>>) just add the following
+To enable LSP support for configured languages (see <<Configuration>>) add the following
 commands to your `kakrc`:
 
 [source,kak]
@@ -80,7 +80,7 @@ eval %sh{kak-lsp}
 lsp-enable
 ----
 
-A bit more involved but recommended way is to enable LSP only for specific filetypes you need
+Alternatively, enable LSP only for specific filetypes you need
 via `lsp-enable-window`, e.g.:
 
 [source,kak]
@@ -123,18 +123,17 @@ version you use or the README.asciidoc from the release archive.
 If you have followed above steps you get
 
 * completions
-* `lsp-definition` command to go to definition, mapped to `gd` by default
+* `lsp-definition` command to jump to the definition of the symbol under the main cursor (mapped to `gd` by default)
+* `lsp-references` command to find references to the symbol under the main cursor, mapped to `gr` by default
+* `lsp-declaration` command to jump to the declaration of the symbol under the main cursor
+* `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor, mapped to `gy` by default
+* `lsp-implementation` command to find implementations for the symbol under the main cursor
+** for the previous five commands, the `\*goto*` buffer has filetype `lsp-goto`, so you can press `<ret>` on a line or use the `jump` command
 * `lsp-hover` command to show hover info (including relevant diagnostics when available) in the info box.
 ** `lsp-hover-buffer` command to show the same in a scratch buffer.
 ** to automatically show hover when you move around, use `lsp-auto-hover-enable` or `lsp-auto-hover-buffer-enable`.
 ** to show hover anchored to hovered position, use `set global lsp_hover_anchor true`
 ** to exclude diagnostics, use `set-option global lsp_show_hover_format 'printf %s "${lsp_info}"'`
-* `lsp-declaration` command to jump to the declaration of the symbol under the main cursor
-* `lsp-definition` command to jump to the definition of the symbol under the main cursor
-* `lsp-type-definition` command to jump to the definition of the type of the symbol under the main cursor, mapped to `gy` by default
-* `lsp-implementation` command to find implementations for the symbol under the main cursor
-* `lsp-references` command to find references to the symbol under the main cursor, mapped to `gr` by default
-** for the previous five commands, the `\*goto*` buffer has filetype `lsp-goto`, so you can press `<ret>` on a line or use the `jump` command
 * `lsp-find-error` command to jump to the next or previous error in the current file
 * `lsp-selection-range` command to quickly select interesting ranges around selections.
 ** `lsp-selection-range-select` to navigate ranges fetched by `lsp-selection-range`.
@@ -167,13 +166,13 @@ hook global BufSetOption filetype=rust %{
 }
 ----
 
-* `lsp-object` command to select adjacent or surrounding syntax tree nodes in [object mode](https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#object-mode)
+* `lsp-object` command to select adjacent or surrounding syntax tree nodes in https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#object-mode[object mode]
 ** `lsp-diagnostic-object` does something similar but for inline diagnostics.
 * `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
 * `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
 * Breadcrumbs in the modeline indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).
-** To implement this, kakoune-lsp adds `%opt{lsp_modeline} ` to the front of your global `modelinefmt` at load time.
+** To implement this, kakoune-lsp adds `%opt{lsp_modeline}` to the front of your global `modelinefmt` at load time.
 * An hourglass character (⌛) in the modeline whenever the language server indicates it's busy.
 ** To customize this behavior, override `lsp-handle-progress`.
 * If `lsp_auto_show_code_actions` is `true`, a lightbulb (💡) in the modeline whenever code actions are available at the main cursor position
@@ -248,8 +247,8 @@ hook -group lsp-filetype-clangd global BufSetOption filetype=(?:c|cpp) %{
 
 See link:rc/servers.kak[] for the default set of servers and some commented-out alternatives.
 
-To use different servers, add the corresponding hooks to your `kakrc`.
-To remove the defaults, you can use `remove-hooks global lsp-filetype-.*` in your `kakrc`.
+To use different servers, add the appropriate hooks to your `kakrc` after the `eval %sh{kak-lsp}` line,
+To remove all default servers, use `remove-hooks global lsp-filetype-.*`.
 
 Please let us know if you have any ideas about how to make the default config more sensible.
 
@@ -280,7 +279,7 @@ by the server in `workspace/configuration`.
 === Language ID ("languageId")
 
 The current buffer's `lsp_language_id` option value is sent to the language server as `languageId`.
-By default it's usually the same as Kakoune's filetype option but depending on the language server it may need to be different.
+It should usually be the same as Kakoune's filetype option but depending on the language server it may need to be different.
 See link:rc/servers.kak[] for the default set of exceptions.
 
 === Multiple language servers
@@ -304,7 +303,31 @@ hook global BufSetOption filetype=(?:javascript|typescript) %{
 }
 ----
 
-== Other configuration options
+=== Snippets
+
+Snippets are completions that come with placeholders ("tabstops") in the places you likely want
+to insert text (for example as arguments in a function call).  The placeholders are highlighted with
+the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`.
+
+The `lsp-snippets-select-next-placeholders` command allows to jump to the next tabstop (like
+function call arguments). The suggested mapping uses `<tab>` (see <<Configure key mappings>>). Here's
+a way to bind it to `<c-n>` instead (might need to hide the completion menu with Kakoune's
+`<c-o>` command):
+
+[source,kak]
+----
+map global insert <c-n> '<a-;>:lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
+hook global InsertCompletionShow .* %{
+  unmap global insert <c-n> '<a-;>:lsp-snippets-select-next-placeholders<ret>'
+}
+hook global InsertCompletionHide .* %{
+  map global insert <c-n> '<a-;>:lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
+}
+----
+
+Snippet support can be disabled via `set-option global lsp_snippet_support false` before starting `kak-lsp`.
+
+=== Other configuration options
 
 kakoune-lsp declares the following Kakoune options:
 
@@ -320,7 +343,7 @@ kakoune-lsp declares the following Kakoune options:
 * `lsp_snippet_support` (bool): toggles snippet support (completions with placeholders), see <<Snippets>>
 * `lsp_file_watch_support` (bool): toggles file watch support, see <<Limitations>>
 
-== Inlay hints
+=== Inlay hints
 
 Inlay hints are used to show inferred types, parameter names in function calls, and the types of chained calls inline in the code. To enable support for it, add the following to your `kakrc`:
 
@@ -331,7 +354,7 @@ lsp-inlay-hints-enable global
 
 You can change the hints' face with `set-face global InlayHint <face>`.
 
-== Semantic Tokens
+=== Semantic Tokens
 
 kakoune-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:
 
@@ -411,7 +434,7 @@ kakoune-lsp will perform these mappings:
 
 |===
 
-== Inlay Diagnostics
+=== Inlay Diagnostics
 
 kakoune-lsp supports showing diagnostics inline after their respective line, but this behavior can be somewhat buggy and must be enabled explicitly:
 
@@ -420,7 +443,7 @@ kakoune-lsp supports showing diagnostics inline after their respective line, but
 lsp-inlay-diagnostics-enable global
 ----
 
-== Markdown rendering in info box
+=== Markdown rendering in info box
 
 kakoune-lsp shows some additional information provided by the language server in an info box. This information includes documentation for the token under the cursor (`lsp-hover`) and documentation for completion candidates. In both cases, the Language Server Protocol allows for both plain text and Markdown, and most servers do implement Markdown.
 
@@ -503,30 +526,6 @@ Current limitations of this feature are:
 * For hyperlinks, only their title (the pretty name) is shown.
 * The original syntax for headings is retained to visualize their level.
 
-== Snippets
-
-Snippets are completions that come with placeholders ("tabstops") in the places you likely want
-to insert text (for example function call arguments).  The placeholders are highlighted with
-the two faces `SnippetsNextPlaceholders` and `SnippetsOtherPlaceholders`.
-
-The `lsp-snippets-select-next-placeholders` command allows to jump to the next tabstop (like
-function call arguments). The suggested mapping uses `<tab>` (see <<Configure key mappings>>). Here's
-a way to bind it to `<c-n>` instead (might need to hide the completion menu with Kakoune's
-`<c-o>` command):
-
-[source,kak]
-----
-map global insert <c-n> '<a-;>:lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
-hook global InsertCompletionShow .* %{
-  unmap global insert <c-n> '<a-;>:lsp-snippets-select-next-placeholders<ret>'
-}
-hook global InsertCompletionHide .* %{
-  map global insert <c-n> '<a-;>:lsp-snippets-select-next-placeholders<ret>' -docstring 'Select next snippet placeholder'
-}
-----
-
-Snippet support can be disabled via `set-option global lsp_snippet_support false` before starting `kak-lsp`.
-
 == Limitations
 
 https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles[`workspace/didChangeWatchedFiles`]
@@ -548,7 +547,7 @@ https://clangd.llvm.org/extensions.html#utf-8-offsets[clangd protocol extension]
 
 == Troubleshooting
 
-If kakoune-lsp fails, check the log in the `*debug*` buffer.
+If kakoune-lsp fails, check the log in the `\*debug*` buffer.
 To get more verbose logs, run:
 
 [source,kak]
@@ -561,7 +560,9 @@ please don't hesitate to raise an issue.
 
 === Default configuration
 
-Please also try to reproduce the issue with a minimal configuration. Sometimes the problem occurs only with specific `lsp*` settings in your `~/.config/kak/*`. Use this command to start Kakoune with kakoune-lsp enabled, both with pristine settings.
+Please also try to reproduce the issue with a minimal configuration.
+Sometimes the problem occurs only with specific `lsp*` settings in your `~/.config/kak/*`.
+Use this command to start Kakoune with kakoune-lsp enabled, both with pristine settings.
 
 [source,sh]
 ----
