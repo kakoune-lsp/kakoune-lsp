@@ -25,7 +25,6 @@ Additions:
     `rename-session` does not break LSP by invalidating that argument.
 - Support for multiple project roots if the server supports LSP workspaceFolders:
   a single language server instance will be reused for all projects in a kakoune-lsp session.
-- `kak-lsp` now pipes its output into `${PAGER:-less}` if stdout is a TTY.
 - When declaring language servers, the `command` field is now optional and defaults to the name of the language server.
 - New command `lsp-restart`.
 

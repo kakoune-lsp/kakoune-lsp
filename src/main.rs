@@ -51,15 +51,12 @@ use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
 use std::fs;
-use std::io;
 use std::io::ErrorKind;
-use std::io::Write;
 use std::mem;
 use std::panic;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process;
-use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Mutex;
@@ -134,7 +131,8 @@ fn main() {
 
     let session = env_var("kak_session").or_else(|| matches.get_one::<String>("session").cloned());
     if matches.get_flag("kakoune") || session.is_none() {
-        process::exit(kakoune());
+        kakoune();
+        process::exit(0);
     }
 
     let try_config_dir = |config_dir: Option<PathBuf>| {
@@ -326,7 +324,7 @@ fn env_var(name: &str) -> Option<String> {
     }
 }
 
-fn kakoune() -> i32 {
+fn kakoune() {
     let script = concat!(
         include_str!("../rc/lsp.kak"),
         include_str!("../rc/servers.kak")
@@ -346,39 +344,7 @@ fn kakoune() -> i32 {
             editor_escape(&args)
         )
     };
-    if unsafe { libc::isatty(STDOUT_FILENO) } == 0 {
-        println!("{}{}", script, lsp_cmd);
-        return 0;
-    }
-    let pager = env::var_os("PAGER").unwrap_or("less".into());
-    let mut child = match process::Command::new(&pager).stdin(Stdio::piped()).spawn() {
-        Ok(child) => child,
-        Err(err) => {
-            eprintln!("failed to run pager {}: {}", pager.to_string_lossy(), err);
-            return 1;
-        }
-    };
-    match write!(child.stdin.as_mut().unwrap(), "{}{}", script, lsp_cmd) {
-        Ok(()) => (),
-        Err(err) if err.kind() == io::ErrorKind::BrokenPipe => (),
-        Err(err) => {
-            eprintln!(
-                "failed to run write to pager {}: {}",
-                pager.to_string_lossy(),
-                err
-            );
-            panic!();
-        }
-    };
-    if let Err(err) = child.wait() {
-        eprintln!(
-            "failed to wait for pager {}: {}",
-            pager.to_string_lossy(),
-            err
-        );
-        return 1;
-    }
-    0
+    println!("{}{}", script, lsp_cmd);
 }
 
 fn report_config_error(session: &SessionId, error_message: String) -> ! {
