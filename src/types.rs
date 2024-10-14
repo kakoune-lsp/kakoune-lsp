@@ -40,6 +40,7 @@ pub struct Config {
     #[deprecated(note = "use EditorMeta::semantic_tokens")]
     #[serde(default)]
     pub semantic_tokens: SemanticTokenConfig,
+    #[serde(default)]
     #[deprecated(note = "use EditorMeta::language_id")]
     pub language_ids: HashMap<String, LanguageId>,
 }

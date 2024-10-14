@@ -1,5 +1,7 @@
 ## Unreleased
 
+Fix error parsing a legacy `kak-lsp.toml` that doesn't have a `language_ids` section.
+
 ## 18.0.0 - 2024-10-13
 
 The `kak-lsp.toml` config file has been deprecated, as have been `lsp_config`, `KAK_LSP_PROJECT_ROOT_*` and `KAK_LSP_FORCE_PROJECT_ROOT` as well as commandline flags `--config`, `--log` and `--timeout`.
