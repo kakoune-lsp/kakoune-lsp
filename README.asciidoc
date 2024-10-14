@@ -26,8 +26,8 @@ brew install kakoune-lsp/kakoune-lsp/kakoune-lsp
 
 [source,sh]
 ----
-curl -O -L https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.0/kakoune-lsp-v18.0.0-x86_64-apple-darwin.tar.gz
-tar xzvf kakoune-lsp-v18.0.0-x86_64-apple-darwin.tar.gz
+curl -O -L https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.1/kakoune-lsp-v18.0.1-x86_64-apple-darwin.tar.gz
+tar xzvf kakoune-lsp-v18.0.1-x86_64-apple-darwin.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 ----
@@ -44,8 +44,8 @@ mv kak-lsp ~/.local/bin/
 
 [source,sh]
 ----
-wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.0/kakoune-lsp-v18.0.0-x86_64-unknown-linux-musl.tar.gz
-tar xzvf kak-lsp-v18.0.0-x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.1/kakoune-lsp-v18.0.1-x86_64-unknown-linux-musl.tar.gz
+tar xzvf kak-lsp-v18.0.1-x86_64-unknown-linux-musl.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 ----
