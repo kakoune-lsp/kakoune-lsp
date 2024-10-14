@@ -93,7 +93,7 @@ jobs:
         if [ "${{ matrix.os }}" = "macos-latest" ]; then
           CXX=/opt/homebrew/opt/llvm@15/bin/clang++
         else
-          CXX=g++-10
+          CXX=g++
         fi
         if [ "${{ steps.cache-kakoune.outputs.cache-hit }}" ]; then
           # The source files created by actions/checkout are newer than the
