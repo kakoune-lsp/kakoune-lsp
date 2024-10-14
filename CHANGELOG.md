@@ -1,3 +1,5 @@
+## Unreleased
+
 ## 18.0.1 - 2024-10-14
 
 Fix error parsing a legacy `kak-lsp.toml` that doesn't have a `language_ids` section.
