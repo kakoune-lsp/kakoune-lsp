@@ -3,6 +3,9 @@
 Additions:
 - Worked around a case where an unnecessary `KakEnd` hook in user configuration would cause delay when exiting the editor.
 
+Fixes:
+- Fix crash in `lsp-selection-range`.
+
 ## 18.0.2 - 2024-10-18
 
 Breaking changes:

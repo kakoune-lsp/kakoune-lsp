@@ -1044,7 +1044,7 @@ If cached is given, reuse the ranges from a previous invocation." %{
             exit
         fi
         echo 'lsp-send textDocument/selectionRange %val{cursor_line} %val{cursor_column} \
-                %val{selections_desc}'
+                %val{selection_count} %val{selections_desc}'
     }
 }
 
