@@ -382,7 +382,11 @@ pub fn apply_workspace_edit_editor_command(edit: &WorkspaceEdit, sync: bool) -> 
 
 pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
     let cmd = editor_quote(&command.command);
-    let args = editor_quote(&serde_json::to_string(&command.arguments).unwrap());
+    let args = command
+        .arguments
+        .as_ref()
+        .map(|args| serde_json::to_string(args).unwrap());
+    let args = editor_quote(args.as_deref().unwrap_or_default());
     format!(
         "{} {} {}",
         if sync {

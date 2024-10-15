@@ -199,7 +199,11 @@ pub fn execute_command(meta: EditorMeta, params: EditorExecuteCommand, ctx: &mut
     let req_params = ExecuteCommandParams {
         command: params.command,
         // arguments is quoted to avoid parsing issues
-        arguments: serde_json::from_str(&params.arguments).unwrap(),
+        arguments: if params.arguments.is_empty() {
+            vec![]
+        } else {
+            serde_json::from_str(&params.arguments).unwrap()
+        },
         work_done_progress_params: Default::default(),
     };
     match &*req_params.command {
