@@ -1472,8 +1472,10 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
 }
 
 fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> ControlFlow<()> {
-    ensure_did_open(&request, ctx);
     let method: &str = &request.method;
+    if method != notification::DidOpenTextDocument::METHOD {
+        ensure_did_open(&request, ctx);
+    }
     let meta = request.meta;
     let params = request.params;
     if let Some(client) = &meta.client {
