@@ -1872,7 +1872,7 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
                 ctx,
             );
         }
-        Err(err) => error!(
+        Err(err) => debug!(
             request.meta.session,
             "Failed to read file {} to simulate textDocument/didOpen: {}", buffile, err
         ),
