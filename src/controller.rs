@@ -12,8 +12,6 @@ use std::{iter, mem};
 use crate::capabilities::{self, initialize};
 use crate::context::meta_for_session;
 use crate::context::Context;
-use crate::diagnostics;
-use crate::editor_transport;
 use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
 use crate::log::DEBUG;
@@ -28,6 +26,8 @@ use crate::workspace::{
     self, EditorApplyEdit, EditorDidChangeConfigurationParams, EditorExecuteCommand,
 };
 use crate::{context::*, set_logger};
+use crate::{diagnostics, LOG_LEVEL, LOG_PATH};
+use crate::{editor_transport, LOG_PATH_DYNAMICALLY_SET};
 use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
@@ -368,17 +368,27 @@ fn dispatch_fifo_request(
         }),
         "kakoune/did-change-option" => {
             let hook_param = state.next::<String>();
-            let debug = match hook_param.as_str() {
-                "lsp_debug=true" => true,
-                "lsp_debug=false" => false,
+            let (key, value) = hook_param.as_str().split_once('=').unwrap();
+            match key {
+                "lsp_debug" => {
+                    let debug = bool::from_str(value).unwrap();
+                    DEBUG.store(debug, Relaxed);
+                    *LOG_LEVEL.lock().unwrap() = Some(if debug {
+                        Severity::Debug
+                    } else {
+                        Severity::Info
+                    });
+                    set_logger();
+                }
+                "lsp_log_file" => {
+                    let path = Option::<String>::from_string(value.to_string()).unwrap();
+                    let path = path.map(PathBuf::from);
+                    *LOG_PATH.lock().unwrap() = path;
+                    LOG_PATH_DYNAMICALLY_SET.store(true, Relaxed);
+                    set_logger();
+                }
                 _ => panic!("invalid request"),
             };
-            DEBUG.store(debug, Relaxed);
-            set_logger(if debug {
-                Severity::Debug
-            } else {
-                Severity::Info
-            });
             debug!(state.session, "Applied option change {}", hook_param);
             return ControlFlow::Continue(());
         }

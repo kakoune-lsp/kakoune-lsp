@@ -39,7 +39,17 @@ See https://microsoft.github.io/language-server-protocol/specifications/specific
 declare-option -docstring %{
     By default, only errors, warnings and some infrequent events are logged to the *debug* buffer.
     Set this to true to enable debug logs as well.
+
+    See also the 'lsp_log_file' option.
 } bool lsp_debug false
+
+declare-option -docstring %{
+    If non-empty, write logs to this file instead of the *debug* buffer
+    This option is mostly intended as a workaround and should be avoided.
+    Let's try to instead silence any non-error log messages.
+
+    See also the 'lsp_debug' option.
+} str lsp_log_file ''
 
 declare-option -docstring %{
     Exit session if no requests were received during given period in seconds
@@ -465,7 +475,7 @@ declare-option -hidden str lsp_modeline_message_requests ""
 declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
-hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
+hook -group lsp-option-changed global GlobalSetOption (lsp_debug|lsp_log_file)=.* %{
     try %{
         %opt{lsp_fail_if_disabled}
         lsp-send kakoune/did-change-option %val{hook_param}

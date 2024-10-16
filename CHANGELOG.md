@@ -9,6 +9,7 @@ Fixes:
 - Fix startup error on HTML files.
 - Demote a number of logs to keep the `*debug*` buffer clean. Only errors, warnings and occasional info logs should be shown.
 - The info box shown by `lsp-show-message-{error,warning,info}` is no longer created in the toolsclient but in the most recently used client.
+- Add `lsp_log_file` option to redirect all log output to a file. Please avoid using it; instead let's fix any noisy errors.
 
 ## 18.0.1 - 2024-10-14
 

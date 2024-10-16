@@ -58,11 +58,14 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Mutex;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
-static LOG_PATH: Mutex<OnceCell<Option<PathBuf>>> = Mutex::new(OnceCell::new());
+static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+static LOG_PATH_DYNAMICALLY_SET: AtomicBool = AtomicBool::new(false);
+static LOG_LEVEL: Mutex<Option<Severity>> = Mutex::new(None);
 
 fn main() {
     {
@@ -437,9 +440,10 @@ fn initialize_logger(
         Box::leak(Box::new(path.as_ref().and_then(|path| {
             path.parent().and_then(|parent| parent.canonicalize().ok())
         })));
-    LOG_PATH.lock().unwrap().get_or_init(|| path);
+    *LOG_PATH.lock().unwrap() = path;
+    *LOG_LEVEL.lock().unwrap() = Some(level);
 
-    set_logger(level);
+    set_logger();
 
     let session = session.clone();
     panic::set_hook(Box::new(move |panic_info| {
@@ -455,8 +459,9 @@ fn initialize_logger(
     log_path_parent
 }
 
-fn set_logger(level: Severity) {
-    let logger = if let Some(path) = LOG_PATH.lock().unwrap().get().unwrap().as_ref() {
+fn set_logger() {
+    let level = LOG_LEVEL.lock().unwrap().unwrap();
+    let logger = if let Some(path) = LOG_PATH.lock().unwrap().as_ref() {
         let mut builder = FileLoggerBuilder::new(path.clone());
         builder.level(level);
         builder.build().unwrap()
