@@ -122,10 +122,16 @@ pub fn show_message(
     ctx: &Context,
 ) {
     let command = message_type(&meta.session, typ).unwrap_or("nop");
+    let have_client = meta.client.is_some();
     ctx.exec(
         meta,
         format!(
-            "{} {} {}",
+            "evaluate-commands -verbatim -try-client '{}' {} {} {}",
+            if have_client {
+                ""
+            } else {
+                ctx.last_client.as_deref().unwrap_or_default()
+            },
             command,
             editor_quote(&ctx.server(server_id).name),
             editor_quote(msg)

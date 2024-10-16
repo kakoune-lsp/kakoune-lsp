@@ -1355,9 +1355,7 @@ define-command -hidden lsp-show-message-error -params 2 -docstring %{
     Render language server message of the "error" level.
 } %{
     echo -debug "LSP: error from server %arg{1}: %arg{2}"
-    evaluate-commands -try-client %opt{toolsclient} %{
-        info "LSP: error from server %arg{1}: %arg{2}"
-    }
+    info "LSP: error from server %arg{1}: %arg{2}"
 }
 
 define-command -hidden lsp-show-message-warning -params 2 -docstring %{
@@ -1365,9 +1363,7 @@ define-command -hidden lsp-show-message-warning -params 2 -docstring %{
     Render language server message of the "warning" level.
 } %{
     echo -debug "LSP: warning from server %arg{1}: %arg{2}"
-    evaluate-commands -try-client %opt{toolsclient} %{
-        echo "LSP: warning from server %arg{1}: %arg{2}"
-    }
+    echo "LSP: warning from server %arg{1}: %arg{2}"
 }
 
 define-command -hidden lsp-show-message-info -params 2 -docstring %{
@@ -1375,9 +1371,7 @@ define-command -hidden lsp-show-message-info -params 2 -docstring %{
     Render language server message of the "info" level.
 } %{
     echo -debug "LSP: info from server %arg{1}: %arg{2}"
-    evaluate-commands -try-client %opt{toolsclient} %{
-        echo "LSP: info from server %arg{1}: %arg{2}"
-    }
+    echo "LSP: info from server %arg{1}: %arg{2}"
 }
 
 define-command -hidden lsp-show-message-log -params 2 -docstring %{

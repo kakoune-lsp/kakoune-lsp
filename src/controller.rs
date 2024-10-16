@@ -1476,6 +1476,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
     let method: &str = &request.method;
     let meta = request.meta;
     let params = request.params;
+    if let Some(client) = &meta.client {
+        ctx.last_client = Some(client.clone());
+    }
     match method {
         notification::DidOpenTextDocument::METHOD => {
             text_document_did_open(meta, params.unbox(), ctx);
@@ -1817,7 +1820,8 @@ fn dispatch_server_notification(
             ctx.exec(
                 meta,
                 format!(
-                    "lsp-show-message-log {} {}",
+                    "evaluate-commands -verbatim -try-client '{}' lsp-show-message-log {} {}",
+                    ctx.last_client.as_deref().unwrap_or_default(),
                     editor_quote(&ctx.server(server_id).name),
                     editor_quote(&params.message)
                 ),
