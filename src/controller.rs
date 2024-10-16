@@ -843,12 +843,23 @@ pub fn start(
                                         meta.client.clone(),
                                         &failure.id,
                                     );
-                                    error!(
-                                        meta.session,
-                                        "Error response from server {}: {:?}",
-                                        &ctx.server(server_id).name,
-                                        failure
-                                    );
+                                    if failure.error.code
+                                        == ErrorCode::ServerError(CONTENT_MODIFIED)
+                                    {
+                                        debug!(
+                                            meta.session,
+                                            "Error response from server {}: {:?}",
+                                            &ctx.server(server_id).name,
+                                            failure
+                                        );
+                                    } else {
+                                        error!(
+                                            meta.session,
+                                            "Error response from server {}: {:?}",
+                                            &ctx.server(server_id).name,
+                                            failure
+                                        );
+                                    }
                                     if let Some((vals, callback)) = ctx.batches.remove(&batch_id) {
                                         if let Some(mut batch_seq) =
                                             ctx.batch_sizes.remove(&batch_id)
