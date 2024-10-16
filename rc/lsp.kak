@@ -466,7 +466,6 @@ set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
     try %{
         %opt{lsp_fail_if_disabled}
-        echo -debug LSP: applying option change %val{hook_param}
         lsp-send kakoune/did-change-option %val{hook_param}
     }
 }

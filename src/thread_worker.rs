@@ -19,9 +19,9 @@ impl Drop for ScopedThread {
     fn drop(&mut self) {
         let inner = self.inner.take().unwrap();
         let name = inner.thread().name().unwrap().to_string();
-        info!(self.session, "Waiting for {} to finish...", name);
+        debug!(self.session, "Waiting for {} to finish...", name);
         let res = inner.join();
-        info!(
+        debug!(
             self.session,
             "... {} terminated with {}",
             name,

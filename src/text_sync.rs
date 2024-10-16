@@ -129,7 +129,7 @@ pub fn spawn_file_watcher(
     log_path: &'static Option<PathBuf>,
     watch_requests: HashMap<(ServerId, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
 ) -> Worker<(), Vec<FileEvent>> {
-    info!(session, "starting file watcher");
+    debug!(session, "starting file watcher");
     Worker::spawn(
         session.clone(),
         "File system change watcher",

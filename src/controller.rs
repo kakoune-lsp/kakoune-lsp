@@ -379,7 +379,7 @@ fn dispatch_fifo_request(
             } else {
                 Severity::Info
             });
-            info!(state.session, "Applied option change {}", hook_param);
+            debug!(state.session, "Applied option change {}", hook_param);
             return ControlFlow::Continue(());
         }
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
@@ -703,7 +703,7 @@ pub fn start(
                     }
                 };
                 if process_editor_request(ctx, editor_request).is_break() {
-                    info!(ctx.last_session(), "Processed exit request");
+                    debug!(ctx.last_session(), "Processed exit request");
                     break 'event_loop;
                 }
             }
@@ -936,7 +936,7 @@ pub fn start(
             // If there's an existing watcher, ask nicely to terminate.
             let session = ctx.last_session().clone();
             if let Some(ref fw) = ctx.file_watcher.as_mut() {
-                info!(session, "stopping stale file watcher");
+                debug!(session, "stopping stale file watcher");
                 if let Err(err) = fw.worker.sender().send(()) {
                     error!(session, "{}", err);
                 }
@@ -1040,7 +1040,7 @@ fn handle_broken_editor_request(
 
 /// Shut down all language servers and exit.
 fn stop_session(ctx: &mut Context) {
-    info!(
+    debug!(
         ctx.last_session(),
         "Shutting down language servers and exiting"
     );
@@ -1054,7 +1054,7 @@ fn stop_session(ctx: &mut Context) {
             break;
         }
     }
-    info!(ctx.last_session(), "Exit all servers");
+    debug!(ctx.last_session(), "Exit all servers");
 }
 
 pub fn can_serve(
@@ -1078,7 +1078,7 @@ pub fn can_serve(
 
 fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str) -> bool {
     if request_method == "exit" {
-        info!(
+        debug!(
             meta.session,
             "Editor session `{}` closed, shutting down language servers", meta.session
         );
