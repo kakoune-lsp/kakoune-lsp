@@ -151,7 +151,7 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
         root_globs = ["package.json"]
         args = ["--stdio"]
         settings_section = "_"
-        [html-language-server.settings._]
+        [vscode-html-language-server.settings._]
         # quotePreference = "single"
         # javascript.format.semicolons = "insert"
     }
@@ -172,7 +172,7 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     #     root_globs = ["package.json", "tsconfig.json", ".git", ".hg"]
     #     args = ["lsp"]
     #     settings_section = "deno"
-    #     [deno-lsp.settings.deno]
+    #     [deno.settings.deno]
     #     enable = true
     #     lint = true
     # }
@@ -186,7 +186,7 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     #     root_globs = [".eslintrc", ".eslintrc.json"]
     #     args = ["--stdio"]
     #     workaround_eslint = true
-    #     [eslint.settings]
+    #     [eslint-language-server.settings]
     #     codeActionsOnSave = { mode = "all", "source.fixAll.eslint" = true }
     #     format = { enable = true }
     #     quiet = false
