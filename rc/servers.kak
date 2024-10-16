@@ -384,10 +384,11 @@ hook -group lsp-filetype-python global BufSetOption filetype=python %{
     #     args = ["--stdio"]
     # }
     # set-option -add buffer lsp_servers %{
-    #     [ruff-lsp]
+    #     [ruff]
+    #     args = ["server", "--quiet"]
     #     root_globs = ["requirements.txt", "setup.py", "pyproject.toml", ".git", ".hg"]
     #     settings_section = "_"
-    #     [ruff-lsp.settings._.globalSettings]
+    #     [ruff.settings._.globalSettings]
     #     organizeImports = true
     #     fixAll = true
     # }
