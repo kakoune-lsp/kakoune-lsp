@@ -1,11 +1,11 @@
+use std::borrow::Cow;
 use std::sync::atomic::Ordering::Relaxed;
-use std::{borrow::Cow, sync::atomic::AtomicBool};
 
 use crate::{
     context::meta_for_session, editor_quote, editor_transport::send_command_to_editor,
     EditorResponse,
 };
-use crate::{SessionId, LOG_PATH, LOG_PATH_DYNAMICALLY_SET};
+use crate::{SessionId, LOG_LEVEL, LOG_PATH, LOG_PATH_DYNAMICALLY_SET};
 
 macro_rules! error {
     ($session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
@@ -41,13 +41,11 @@ macro_rules! log_impl {
     };
 }
 
-pub static DEBUG: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn log_to_debug_buffer(session: &SessionId, level: slog::Level, message: String) {
     if LOG_PATH.lock().unwrap().is_some() && LOG_PATH_DYNAMICALLY_SET.load(Relaxed) {
         return;
     }
-    if level == slog::Level::Debug && !DEBUG.load(Relaxed) {
+    if !level.is_at_least(LOG_LEVEL.lock().unwrap().unwrap().as_level()) {
         return;
     }
     let command = format!("echo -debug -- LSP: {} {}", level, editor_quote(&message));

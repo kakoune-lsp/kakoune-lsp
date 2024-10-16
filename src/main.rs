@@ -42,7 +42,6 @@ use libc::SIGINT;
 use libc::SIGQUIT;
 use libc::SIGTERM;
 use libc::STDOUT_FILENO;
-use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
@@ -59,7 +58,6 @@ use std::path::PathBuf;
 use std::process;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Mutex;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
@@ -429,9 +427,6 @@ fn initialize_logger(
         3 => Severity::Debug,
         _ => Severity::Trace,
     };
-    if verbosity >= 3 {
-        DEBUG.store(true, Relaxed);
-    }
 
     let path = matches
         .get_one::<String>("log")

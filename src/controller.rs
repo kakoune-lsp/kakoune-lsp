@@ -14,7 +14,6 @@ use crate::context::meta_for_session;
 use crate::context::Context;
 use crate::language_features::{selection_range, *};
 use crate::language_server_transport;
-use crate::log::DEBUG;
 use crate::progress;
 use crate::project_root::find_project_root;
 use crate::show_message::{self, MessageRequestResponse};
@@ -372,7 +371,6 @@ fn dispatch_fifo_request(
             match key {
                 "lsp_debug" => {
                     let debug = bool::from_str(value).unwrap();
-                    DEBUG.store(debug, Relaxed);
                     *LOG_LEVEL.lock().unwrap() = Some(if debug {
                         Severity::Debug
                     } else {
