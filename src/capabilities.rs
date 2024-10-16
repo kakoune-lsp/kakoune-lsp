@@ -476,7 +476,7 @@ pub fn attempt_server_capability(
     }
 
     if !meta.hook {
-        warn!(
+        debug!(
             meta.session,
             "{} server does not support {}, refusing to send request",
             &server_settings.name,
