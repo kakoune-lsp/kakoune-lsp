@@ -17,6 +17,7 @@ lsp-load-default-config %{
 hook -group lsp-filetype-c-family global BufSetOption filetype=(?:c|cpp|objc) %{
     set-option buffer lsp_servers %{
         [clangd]
+        args = ["--log=error"]
         root_globs = ["compile_commands.json", ".clangd", ".git", ".hg"]
     }
 }
