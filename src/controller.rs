@@ -1171,7 +1171,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
     } else {
         let language_id = &meta.language_id;
         if language_id.is_empty() {
-            let msg = "lsp_language_id is empty, did you forget to run lsp-enable?";
+            let msg = "the lsp_language_id option is empty, did you forget to run lsp-enable?";
             debug!(meta.session, "{}", msg);
             report_error_no_server_configured(&ctx.editor_tx, meta, request_method, msg);
             return false;

@@ -635,7 +635,7 @@ define-command -hidden lsp-disabled -params .. %{
                 if [ "${kak_buffile#/}" = "${kak_buffile}" ]; then
                     echo 'LSP commands are not supported in scratch buffers'
                 else
-                    echo 'LSP commands have been disabled for this buffer, see the *debug* buffer'
+                    echo 'LSP commands have been blocked in this buffer, see the *debug* buffer'
                 fi
             }
     }
