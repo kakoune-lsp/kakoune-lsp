@@ -646,6 +646,12 @@ define-command -hidden lsp-block-in-buffer %{
     alias buffer lsp-did-open lsp-disabled
 }
 
+define-command -hidden lsp-unblock-in-buffer %{
+    unalias buffer lsp-send lsp-disabled
+    unalias buffer lsp-did-change lsp-disabled
+    unalias buffer lsp-did-open lsp-disabled
+}
+
 try %{ evaluate-commands -buffer *debug* lsp-block-in-buffer }
 hook -group lsp-scratch-buffers global BufCreate [^/].* %{
     lsp-block-in-buffer
@@ -1796,6 +1802,7 @@ define-command lsp-enable -docstring "Default LSP integration" %{
 define-command lsp-disable -docstring "Disable LSP" %{
     evaluate-commands -buffer * %{
         remove-hooks buffer lsp
+        lsp-unblock-in-buffer
     }
     lsp-disable-impl global
 }
