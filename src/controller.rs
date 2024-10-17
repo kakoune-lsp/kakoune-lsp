@@ -1108,6 +1108,13 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         ctx.exec(meta.clone(), command);
         return false;
     }
+    if ctx.buffer_tombstones.contains(&meta.buffile) {
+        debug!(
+            ctx.last_session(),
+            "Ignoring request disabled buffer {}", &meta.buffile
+        );
+        return false;
+    }
 
     #[allow(deprecated)]
     if !is_using_legacy_toml(&ctx.config)
@@ -1240,34 +1247,56 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         let server_id = ctx.language_servers.len();
         meta.servers.push(server_id);
 
+        fn disable_in_buffer(ctx: &mut Context, meta: &EditorMeta) {
+            ctx.buffer_tombstones.insert(meta.buffile.clone());
+            let command = format!(
+                "evaluate-commands -buffer {} lsp-block-in-buffer",
+                editor_quote(&meta.buffile),
+            );
+            if ctx
+                .editor_tx
+                .send(EditorResponse {
+                    meta: meta.clone(),
+                    command: Cow::from(command),
+                })
+                .is_err()
+            {
+                error!(meta.session, "Failed to send command to editor");
+            }
+        }
+
         // should be fine to unwrap because request was already routed which means language is configured
         let server_config = &server_configs(&ctx.config, meta)[&server_name];
+        let server_command = server_config.command.as_ref().unwrap_or(&server_name);
+        if ctx.server_tombstones.contains(server_command) {
+            debug!(
+                ctx.last_session(),
+                "Ignoring request for disabled server {}", server_command
+            );
+            disable_in_buffer(ctx, meta);
+            return false;
+        }
+
         let server_transport = match language_server_transport::start(
             meta.session.clone(),
             server_name.clone(),
-            server_config.command.as_ref().unwrap_or(&server_name),
+            server_command,
             &server_config.args,
             &server_config.envs,
         ) {
             Ok(ls) => ls,
             Err(err) => {
-                error!(meta.session, "failed to start language server: {}", err);
-                if meta.hook && !meta.buffile.is_empty() {
-                    let command = format!(
-                        "evaluate-commands -buffer {} lsp-block-in-buffer",
-                        editor_quote(&meta.buffile),
+                ctx.server_tombstones.insert(server_command.to_string());
+                if meta.buffile.is_empty() {
+                    debug!(meta.session, "failed to start language server: {}", err);
+                } else {
+                    debug!(
+                        meta.session,
+                        "failed to start language server, disabling LSP for buffer '{}': {}",
+                        &meta.buffile,
+                        err
                     );
-                    error!(meta.session, "disabling LSP for buffer: {}", &command);
-                    if ctx
-                        .editor_tx
-                        .send(EditorResponse {
-                            meta: meta.clone(),
-                            command: Cow::from(command),
-                        })
-                        .is_err()
-                    {
-                        error!(meta.session, "Failed to send command to editor");
-                    }
+                    disable_in_buffer(ctx, meta);
                 }
                 // If the server command isn't from a hook (e.g. auto-hover),
                 // then send a prominent error to the editor.

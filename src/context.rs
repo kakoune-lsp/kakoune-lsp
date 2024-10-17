@@ -65,6 +65,8 @@ pub struct Context {
     pub batch_sizes: HashMap<BatchNumber, HashMap<ServerId, usize>>,
     pub batches:
         HashMap<BatchNumber, (Vec<(ServerId, serde_json::value::Value)>, ResponsesCallback)>,
+    pub buffer_tombstones: HashSet<String>,
+    pub server_tombstones: HashSet<String>,
     pub code_lenses: HashMap<String, Vec<(ServerId, CodeLens)>>,
     pub completion_items: Vec<(ServerId, CompletionItem)>,
     pub completion_items_timestamp: i32,
@@ -105,6 +107,8 @@ impl Context {
             batch_count: 0,
             batch_sizes: Default::default(),
             batches: Default::default(),
+            buffer_tombstones: Default::default(),
+            server_tombstones: Default::default(),
             code_lenses: Default::default(),
             completion_items: vec![],
             completion_items_timestamp: i32::MAX,
