@@ -581,7 +581,7 @@ pub fn start(
 ) -> i32 {
     info!(
         session,
-        "kak-lsp server starting. To increase log verbosity, run 'set g lsp_debug true'"
+        "kak-lsp server starting. To control log verbosity, set the 'lsp_debug' option"
     );
 
     let editor = editor_transport::start(&session);
