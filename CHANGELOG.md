@@ -7,6 +7,7 @@ Breaking changes:
 
 Fixes:
 - Fix startup error on HTML files.
+- Fix `lsp-workspace-symbol{,-incr}` commands.
 - Demote a number of logs to keep the `*debug*` buffer clean. Only errors, warnings and occasional info logs should be shown.
 - The info box shown by `lsp-show-message-{error,warning,info}` is no longer created in the toolsclient but in the most recently used client.
 

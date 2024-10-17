@@ -1083,18 +1083,18 @@ If <name> is given, jump to the symbol of that name." %{
     lsp-send kakoune/goto-document-symbol %arg{1} # symbol name
 }
 
-define-command -hidden lsp-workspace-symbol-buffer -params 4 -docstring %{
-    buffile language_id timestamp query
+define-command -hidden lsp-workspace-symbol-buffer -params 3 -docstring %{
+    buffile timestamp query
     Open buffer with a list of project-wide symbols matching the query
     on behalf of the buffile at timestamp
 } %{ try %{
     evaluate-commands %sh{
-        if [ -z "${4}" ];
+        if [ -z "${3}" ];
         then echo "fail"
         fi
     }
     lsp-send workspace/symbol \
-        %arg{1} %arg{2} %arg{3} %arg{4} # buffile language_id version query
+        %arg{1} %arg{2} %arg{3} # buffile version query
 }}
 
 define-command lsp-capabilities -docstring "List available commands for current filetype" %{
@@ -1583,28 +1583,34 @@ Jump to the next or previous diagnostic error" %{
 }
 
 define-command lsp-workspace-symbol -params 1 -docstring "lsp-workspace-symbol <query>: open buffer with matching project-wide symbols" %{
-    lsp-workspace-symbol-buffer %val{buffile} %opt{lsp_language_id} %val{timestamp} %arg{1}
+    lsp-workspace-symbol-buffer %val{buffile} %val{timestamp} %arg{1}
 }
 
 define-command lsp-workspace-symbol-incr -docstring "Open buffer with an incrementally updated list of project-wide symbols matching the query" %{
     declare-option -hidden str lsp_ws_buffile %val{buffile}
-    declare-option -hidden str lsp_ws_language_id %opt{lsp_language_id}
     declare-option -hidden int lsp_ws_timestamp %val{timestamp}
     declare-option -hidden str lsp_ws_query
-    evaluate-commands -try-client %opt[toolsclient] %{
-        lsp-show-goto-buffer *symbols* lsp-goto %{} %{}
-        prompt -on-change %{ try %{
-            # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
-            # the following check prevents it
-            evaluate-commands %sh{
-                if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
-                then echo 'fail';
-                else echo 'set current lsp_ws_query %val{text}';
-                fi
-            }
-            lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_language_id} %opt{lsp_ws_timestamp} %val{text}
-        }} -on-abort %{execute-keys ga} 'Query: ' nop
-        focus %val{client}
+    evaluate-commands -save-regs is %{
+        set-register s %opt{lsp_servers}
+        set-register i %opt{lsp_language_id}
+        evaluate-commands -try-client %opt[toolsclient] %{
+            lsp-show-goto-buffer *symbols* lsp-goto %{} %{}
+            set-option buffer lsp_servers %reg{s}
+            set-option buffer lsp_language_id %reg{s}
+            lsp-unblock-in-buffer
+            prompt -on-change %{ try %{
+                # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
+                # the following check prevents it
+                evaluate-commands %sh{
+                    if [ "${kak_opt_lsp_ws_query}" = "${kak_text}" ];
+                    then echo 'fail';
+                    else echo 'set current lsp_ws_query %val{text}';
+                    fi
+                }
+                lsp-workspace-symbol-buffer %opt{lsp_ws_buffile} %opt{lsp_ws_timestamp} %val{text}
+            }} -on-abort %{execute-keys ga} 'Query: ' nop
+            focus %val{client}
+        }
     }
 }
 

@@ -533,7 +533,6 @@ fn dispatch_fifo_request(
         }
         "workspace/symbol" => {
             meta.buffile = state.next();
-            meta.language_id = state.next();
             meta.filetype.clear();
             meta.version = state.next();
             let params = Box::new(WorkspaceSymbolParams {
