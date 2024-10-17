@@ -116,9 +116,16 @@ fn main() {
         )
         .arg(
             Arg::new("v")
+                .hide(true)
                 .short('v')
                 .action(ArgAction::Count)
                 .help("Sets the level of verbosity (use up to 4 times)"),
+        )
+        .arg(
+            Arg::new("debug")
+                .long("debug")
+                .action(ArgAction::SetTrue)
+                .help("Enable debug logging (see the 'lsp_debug' option)"),
         )
         .arg(
             Arg::new("log")
@@ -267,12 +274,17 @@ fn main() {
         config
     };
 
-    if env_var("kak_opt_lsp_debug").is_some_and(|debug| debug != "false") {
+    if let Some(debug) = env_var("kak_opt_lsp_debug") {
+        if debug != "false" {
+            verbosity = 4;
+        }
+    } else if matches.get_flag("debug") {
         verbosity = 4;
-    }
-    let vs = matches.get_count("v");
-    if vs != 0 {
-        verbosity = vs;
+    } else {
+        let vs = matches.get_count("v");
+        if vs != 0 {
+            verbosity = vs;
+        }
     }
 
     if let Some(timeout) = matches.get_one::<String>("timeout").map(|s| {

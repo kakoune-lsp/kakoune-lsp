@@ -1,5 +1,10 @@
 ## Unreleased
 
+Breaking changes:
+- The `-v` parameter is now ignored because, it pollutes the `*debug*` buffer since version 18.0.0.
+  Use the `lsp_debug` option instead. It's only meant to be set temporarily, for debugging.
+  For the case where `kak-lsp` is started outside the editor, an equivalent `--debug` command line flag has been added.
+
 Fixes:
 - Fix startup error on HTML files.
 - Demote a number of logs to keep the `*debug*` buffer clean. Only errors, warnings and occasional info logs should be shown.
