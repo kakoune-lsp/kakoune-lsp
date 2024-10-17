@@ -1141,9 +1141,9 @@ fn editor_breadcrumbs<T: Symbol<T>>(
 
     let breadcrumbs = breadcrumbs.join(" > ") + " ";
     let command = format!(
-        "buffer {}; set-option window lsp_modeline_breadcrumbs {}",
+        "buffer {}; try 'set-option window lsp_modeline_breadcrumbs {}'",
         editor_quote(&meta.buffile),
-        editor_quote(&breadcrumbs)
+        editor_escape(&editor_quote(&breadcrumbs))
     );
     let command = format!(
         "evaluate-commands -draft -client {} -- {}",
