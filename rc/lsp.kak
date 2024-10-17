@@ -625,10 +625,25 @@ define-command -hidden lsp-do-send-sync %{
     }
 }
 
+define-command -hidden lsp-disabled -params .. %{
+    try %{
+        nop %val{hook_param}
+    } catch %{
+        evaluate-commands -verbatim -client %val{client} \
+            info %sh{
+                if [ "${kak_buffile#/}" = "${kak_buffile}" ]; then
+                    echo 'LSP commands are not supported in scratch buffers'
+                else
+                    echo 'LSP commands have been disabled for this buffer, see the *debug* buffer'
+                fi
+            }
+    }
+}
+
 define-command -hidden lsp-block-in-buffer %{
-    alias buffer lsp-send nop
-    alias buffer lsp-did-change nop
-    alias buffer lsp-did-open nop
+    alias buffer lsp-send lsp-disabled
+    alias buffer lsp-did-change lsp-disabled
+    alias buffer lsp-did-open lsp-disabled
 }
 
 try %{ evaluate-commands -buffer *debug* lsp-block-in-buffer }
