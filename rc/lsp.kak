@@ -37,7 +37,8 @@ See https://microsoft.github.io/language-server-protocol/specifications/specific
 } str lsp_language_id
 
 declare-option -docstring %{
-    Turn on verbose log output in the *debug* buffer
+    By default, only errors, warnings and some infrequent events are logged to the *debug* buffer.
+    Set this to true to enable debug logs as well.
 } bool lsp_debug false
 
 declare-option -docstring %{
