@@ -466,10 +466,7 @@ declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
-    try %{
-        %opt{lsp_fail_if_disabled}
-        lsp-send kakoune/did-change-option %val{hook_param}
-    }
+    try %{ lsp-send kakoune/did-change-option %val{hook_param} }
 }
 
 declare-option -hidden -docstring %{
