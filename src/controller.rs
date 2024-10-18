@@ -1906,6 +1906,10 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
     if buffile.is_empty() || ctx.documents.contains_key(buffile) {
         return;
     };
+    if !buffile.starts_with('/') {
+        assert_eq!(&request.method, "exit");
+        return;
+    }
     if request.method == notification::DidChangeTextDocument::METHOD {
         let params: &TextDocumentDidChangeParams = request.params.downcast_ref();
         text_document_did_open(
