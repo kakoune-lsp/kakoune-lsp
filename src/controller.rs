@@ -1099,12 +1099,12 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             meta.session,
             "Unsupported scratch buffer, ignoring request from buffer '{}'", meta.buffile
         );
-        let command = if meta.hook || meta.sourcing {
-            "nop"
-        } else {
-            "lsp-show-error 'scratch buffers are not supported, refusing to forward request'"
-        };
-        ctx.exec(meta.clone(), command);
+        report_error_no_server_configured(
+            &ctx.editor_tx,
+            meta,
+            request_method,
+            "not supported in scratch buffers",
+        );
         return false;
     }
     if ctx.buffer_tombstones.contains(&meta.buffile) {
@@ -1346,7 +1346,9 @@ fn report_error_no_server_configured(
     msg: &str,
 ) {
     let word_regex = meta.word_regex.as_ref();
-    let command = if let Some(multi_cmds) = match request_method {
+    let command = if meta.sourcing {
+        "nop".to_string()
+    } else if let Some(multi_cmds) = match request_method {
         _ if meta.hook => None,
         request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
             "grep {}
