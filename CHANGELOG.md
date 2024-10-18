@@ -11,8 +11,10 @@ Fixes:
 - Fix crash due to a regression in `lsp-highlight-references`.
 - Demote a number of logs to keep the `*debug*` buffer clean. Only errors, warnings and occasional info logs should be shown.
 - The info box shown by `lsp-show-message-{error,warning,info}` is no longer created in the toolsclient but in the most recently used client.
+- Fix missing error messages when LSP commands are run from either a scratch buffer or a buffer where the server is not installed.
 
 Additions
+- Further reduce the number of shell calls caused by hooks, in addition to the work done on this in version 18.0.0.
 - When crashing via a Rust panic, the process is now aborted and creates a coredump.
   Also, crashes are now shown in an info box.
 
