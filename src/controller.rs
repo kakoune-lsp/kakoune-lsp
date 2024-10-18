@@ -580,7 +580,8 @@ pub fn start(
 ) -> i32 {
     info!(
         session,
-        "kak-lsp server starting. To control log verbosity, set the 'lsp_debug' option"
+        "kak-lsp server starting (PID={}). To control log verbosity, set the 'lsp_debug' option",
+        unsafe { libc::getpid() }
     );
 
     let editor = editor_transport::start(&session);
