@@ -8,6 +8,7 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 2. <<Install language servers for your desired languages>>
 3. <<Configure Kakoune to enable LSP integration>>
 4. <<Configure key mappings>>
+5. <<Troubleshooting>>
 
 === Installing
 
@@ -556,35 +557,23 @@ To get more verbose logs, run:
 set global lsp_debug true
 ----
 
-If this does not give enough insight to fix the problem or if the problem is a bug in kakoune-lsp itself
-please don't hesitate to raise an issue.
+If this does not give enough insight to fix the problem, don't hesitate to raise an issue.
 
-=== Default configuration
-
-Please also try to reproduce the issue with a minimal configuration.
-Sometimes the problem occurs only with specific `lsp*` settings in your `~/.config/kak/*`.
-Use this command to start Kakoune with kakoune-lsp enabled, both with pristine settings.
+Please also try to reproduce your issue with a minimal configuration.
+Sometimes a problem occurs only with specific `lsp*` settings in your `~/.config/kak/{kakrc,autoload}`.
+To start both Kakoune and kakoune-lsp without user-specific configuration, use this command:
 
 [source,sh]
 ----
 env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
     eval %sh{kak-lsp}
-    set global lsp_debug true       # Check the *debug* buffer for debug logs.
+    set global lsp_debug true
     lsp-enable'
+# Now reproduce the issue and check the *debug* buffer for logs.
 ----
 
-=== Crashes
-
-For troubleshooting crashes, you might like to run kakoune-lsp outside of
-Kakoune.
-
-To do this, run kakoune-lsp with an arbitrary session ID (here `foobar`):
-
-  kak-lsp -s foobar
-
-In a second terminal, run Kakoune with the same session ID:
-
-  kak -s foobar
+If this works and your configuration doesn't,
+remove lines from your configuration until you find the one that causes the problem.
 
 == Versioning
 
