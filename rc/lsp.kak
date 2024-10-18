@@ -860,7 +860,11 @@ declare-option -hidden str lsp_object_mode
 define-command lsp-object -params .. -shell-script-candidates %opt{lsp_symbol_kind_completion} \
     -docstring "lsp-object [<symbol-kinds>...]: select adjacent or surrounding symbol of a type in <symbol-kinds>, or of any type
 
-The value of the lsp_object_mode option controls the direction. It must be one of <a-a> <a-i> [ ] { }" %{
+This must be run from object mode
+https://github.com/mawww/kakoune/blob/master/doc/pages/modes.asciidoc#object-mode
+
+See also the 'lsp-next-*' and 'lsp-previous-*' commands.
+" %{
     lsp-send kakoune/object %val{count} %opt{lsp_object_mode} \
         %val{selection_count} %val{selections_desc} \
         %sh{echo $(( $# ))} %arg{@} # symbol-kinds

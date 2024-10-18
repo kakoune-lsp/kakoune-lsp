@@ -708,11 +708,20 @@ fn editor_object(
         .map(|s| parse_kakoune_range(s))
         .collect();
 
-    let symbol_kinds_query: Vec<SymbolKind> = params
-        .symbol_kinds
-        .iter()
-        .map(|kind_str| symbol_kind_from_string(kind_str).unwrap())
-        .collect::<Vec<_>>();
+    let mut symbol_kinds_query: Vec<SymbolKind> = vec![];
+    for kind_str in &params.symbol_kinds {
+        symbol_kinds_query.push(match symbol_kind_from_string(kind_str) {
+            Some(kind) => kind,
+            None => {
+                let err = format!("invalid symbol kind '{}'", &kind_str);
+                error!(meta.session, "{}", err);
+                if !meta.hook {
+                    ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
+                }
+                return;
+            }
+        });
+    }
 
     let document = match ctx.documents.get(&meta.buffile) {
         Some(document) => document,
