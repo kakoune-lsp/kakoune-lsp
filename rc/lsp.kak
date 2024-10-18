@@ -542,6 +542,10 @@ declare-option -hidden -docstring 'Temporary storage for messages to server' str
 }
 
 define-command -hidden lsp-send -params 1.. %{
+    lsp-unless-blocked lsp-do-send %arg{@}
+}
+
+define-command -hidden lsp-do-send -params 1.. %{
     %opt{lsp_fail_if_disabled} "lsp-send: run lsp-enable or lsp-enable-window first"
     try %{
         evaluate-commands "nop %%file{%opt{lsp_pid_file}}"
@@ -584,11 +588,11 @@ define-command -hidden lsp-send -params 1.. %{
             %opt{lsp_servers} \
             %opt{lsp_semantic_tokens} \
             %arg{@}
-        %opt{lsp_do_send}
+        %opt{lsp_do_send_maybe_async}
     }
 }
 
-declare-option -hidden str lsp_do_send lsp-do-send-async
+declare-option -hidden str lsp_do_send_maybe_async lsp-do-send-async
 
 define-command -hidden lsp-do-send-async %{
     evaluate-commands %sh{
@@ -607,7 +611,7 @@ define-command -hidden lsp-do-send-async %{
 }
 
 define-command -hidden lsp-do-send-sync %{
-    unset-option buffer lsp_do_send
+    unset-option buffer lsp_do_send_maybe_async
     evaluate-commands %sh{
         printf >>${kak_opt_lsp_msg_file} %s " '${kak_command_fifo}' '${kak_response_fifo}'"
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
@@ -626,7 +630,13 @@ define-command -hidden lsp-do-send-sync %{
     }
 }
 
-define-command -hidden lsp-disabled -params .. %{
+declare-option -hidden str-list lsp_unless_blocked
+
+define-command -hidden lsp-unless-blocked -params 1.. %{
+    %opt{lsp_unless_blocked} %arg{@}
+}
+
+define-command -hidden lsp-blocked -params .. %{
     try %{
         nop %val{hook_param}
     } catch %{
@@ -642,15 +652,11 @@ define-command -hidden lsp-disabled -params .. %{
 }
 
 define-command -hidden lsp-block-in-buffer %{
-    alias buffer lsp-send lsp-disabled
-    alias buffer lsp-did-change lsp-disabled
-    alias buffer lsp-did-open lsp-disabled
+    set-option buffer lsp_unless_blocked lsp-blocked
 }
 
 define-command -hidden lsp-unblock-in-buffer %{
-    unalias buffer lsp-send lsp-disabled
-    unalias buffer lsp-did-change lsp-disabled
-    unalias buffer lsp-did-open lsp-disabled
+    unset-option buffer lsp_unless_blocked
 }
 
 try %{ evaluate-commands -buffer *debug* lsp-block-in-buffer }
@@ -678,7 +684,7 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 }
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
-    lsp-if-changed-since lsp_timestamp %opt{lsp_timestamp} %{
+    lsp-unless-blocked lsp-if-changed-since lsp_timestamp %opt{lsp_timestamp} %{
         evaluate-commands %sh{
             file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
             echo "
@@ -915,7 +921,7 @@ EOF
 define-command lsp-code-actions-sync -params 0.. -docstring %{
     lsp-code-actions-sync [<code-action-kinds>...]: Perform the matching code action for the main cursor position, blocking Kakoune session until done.
 } %{
-    set-option buffer lsp_do_send lsp-do-send-sync
+    set-option buffer lsp_do_send_maybe_async lsp-do-send-sync
     lsp-code-actions-request true is-sync only %arg{@}
 } -shell-script-candidates %{
 cat <<EOF
@@ -937,7 +943,7 @@ define-command -hidden lsp-code-action -params 1 -docstring "DEPRECATED lsp-code
 
 define-command -hidden lsp-code-action-sync -params 1 -docstring "DEPRECATED lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
     lsp-did-change
-    set-option buffer lsp_do_send lsp-do-send-sync
+    set-option buffer lsp_do_send_maybe_async lsp-do-send-sync
     lsp-code-actions-request true is-sync matching %arg{1}
 }
 
@@ -975,7 +981,7 @@ define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <co
 
 define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command, blocking Kakoune session until done" %{
     lsp-did-change
-    set-option buffer lsp_do_send lsp-do-send-sync
+    set-option buffer lsp_do_send_maybe_async lsp-do-send-sync
     lsp-execute-command-request is-sync %arg{@}
 }
 define-command -hidden lsp-execute-command-request -params 3 %{
@@ -1102,15 +1108,17 @@ define-command lsp-capabilities -docstring "List available commands for current 
 }
 
 define-command -hidden lsp-did-open %{
-    evaluate-commands %sh{
-        file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
-        echo "
-            evaluate-commands -no-hooks %{ write -force $file }
-            lsp-send textDocument/didOpen $file
-        "
+    lsp-unless-blocked evaluate-commands %{
+        evaluate-commands %sh{
+            file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
+            echo "
+                evaluate-commands -no-hooks %{ write -force $file }
+                lsp-send textDocument/didOpen $file
+            "
+        }
+        set-option buffer lsp_timestamp %val{timestamp}
+        lsp-code-lens-request
     }
-    set-option buffer lsp_timestamp %val{timestamp}
-    lsp-code-lens-request
 }
 
 define-command -hidden lsp-did-close %{
@@ -1157,7 +1165,7 @@ define-command lsp-apply-workspace-edit -params 1 -hidden %{
 }
 define-command lsp-apply-workspace-edit-sync -params 1 -hidden %{
     lsp-did-change
-    set-option buffer lsp_do_send lsp-do-send-sync
+    set-option buffer lsp_do_send_maybe_async lsp-do-send-sync
     lsp-apply-workspace-edit-request is-sync %arg{1}
 }
 define-command lsp-apply-workspace-edit-request -params 2 -hidden %{
@@ -1170,7 +1178,7 @@ define-command lsp-formatting -params 0..1 -docstring "lsp-formatting [<server_n
 
 define-command lsp-formatting-sync -params 0..1 -docstring "lsp-formatting-sync [<server_name>]: format document, blocking Kakoune session until done" %{
     lsp-did-change
-    set-option buffer lsp_do_send lsp-do-send-sync
+    set-option buffer lsp_do_send_maybe_async lsp-do-send-sync
     lsp-formatting-request is-sync %arg{1}
 }
 
@@ -1185,7 +1193,7 @@ define-command lsp-range-formatting -params 0..1 -docstring "lsp-range-formattin
 
 define-command lsp-range-formatting-sync -params 0..1 -docstring "lsp-range-formatting-sync [<server_name>]: format selections, blocking Kakoune session until done" %{
     lsp-did-change
-    set-option buffer lsp_do_send lsp-do-send-sync
+    set-option buffer lsp_do_send_maybe_async lsp-do-send-sync
     lsp-range-formatting-request is-sync %arg{1}
 }
 
