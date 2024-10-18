@@ -1,4 +1,4 @@
-## Unreleased
+## 18.0.2 - 2024-10-18
 
 Breaking changes:
 - The `-v` parameter is now ignored because, it pollutes the `*debug*` buffer since version 18.0.0.
