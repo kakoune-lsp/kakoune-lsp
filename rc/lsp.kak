@@ -633,7 +633,15 @@ define-command -hidden lsp-do-send-sync %{
 declare-option -hidden str-list lsp_unless_blocked
 
 define-command -hidden lsp-unless-blocked -params 1.. %{
-    %opt{lsp_unless_blocked} %arg{@}
+    try %{
+        # Extra optimization for a common case: if we're in a file with no associated language
+        # server, we can simply ignore all requests that come from hooks. Testing for a file
+        # is important to still allow KakEnd hooks.
+        nop %val{buffile} %val{hook_param}
+        "lsp-nop-with-0%opt{lsp_servers}"
+    } catch %{
+        %opt{lsp_unless_blocked} %arg{@}
+    }
 }
 
 define-command -hidden lsp-blocked -params .. %{
