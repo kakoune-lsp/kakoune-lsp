@@ -40,7 +40,7 @@ hook global -once WinDisplay .* lsp-enable
 EOF
 
 test_tmux_kak_start() {
-	# If we directly run kak, then "lsp-stop" will not send the exit notification.
+	# If we directly run kak, then "lsp-exit" will not send the exit notification.
 	test_tmux new-session -d -x 80 -y 7 /bin/sh
 	test_tmux resize-window -x 80 -y 7 ||: # Workaround for macOS.
 	autoload='
