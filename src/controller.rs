@@ -1170,7 +1170,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
     } else {
         let language_id = &meta.language_id;
         if language_id.is_empty() {
-            let msg = "the lsp_language_id option is empty, did you forget to run lsp-enable?";
+            let msg = "the 'lsp_language_id' option is empty, cannot route request";
             debug!(meta.session, "{}", msg);
             report_error_no_server_configured(&ctx.editor_tx, meta, request_method, msg);
             return false;
@@ -1286,15 +1286,14 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             Ok(ls) => ls,
             Err(err) => {
                 ctx.server_tombstones.insert(server_command.to_string());
-                if meta.buffile.is_empty() {
-                    debug!(meta.session, "failed to start language server: {}", err);
-                } else {
-                    debug!(
-                        meta.session,
-                        "failed to start language server, disabling LSP for buffer '{}': {}",
-                        &meta.buffile,
-                        err
-                    );
+                error!(
+                    meta.session,
+                    "failed to start language server '{}', for file '{}', disabling it: {}",
+                    server_name,
+                    &meta.buffile,
+                    err,
+                );
+                if !meta.buffile.is_empty() {
                     disable_in_buffer(ctx, meta);
                 }
                 // If the server command isn't from a hook (e.g. auto-hover),

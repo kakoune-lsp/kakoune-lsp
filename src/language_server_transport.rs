@@ -26,7 +26,7 @@ pub fn start(
 ) -> Result<LanguageServerTransport, String> {
     info!(
         session,
-        "Starting Language server {server_name} as `{}`",
+        "Starting language server {server_name} as `{}`",
         Some(cmd)
             .into_iter()
             .chain(args.iter().map(|s| s.as_str()))
