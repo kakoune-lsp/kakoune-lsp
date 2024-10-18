@@ -1366,9 +1366,10 @@ fn report_error_no_server_configured(
         _ if meta.hook => None,
         request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
             "grep {}
-             lsp-show-error {}",
+             lsp-show-error '{}. Falling back to: grep {}'",
             editor_quote(word_regex.unwrap()),
-            editor_quote(msg),
+            editor_escape(msg),
+            editor_escape(word_regex.unwrap()),
         )),
         request::DocumentHighlightRequest::METHOD => Some(formatdoc!(
             "evaluate-commands -save-regs a/^ %|
@@ -1380,7 +1381,7 @@ fn report_error_no_server_configured(
              lsp-show-error {}",
             editor_quote(word_regex.unwrap()).replace('|', "||"),
             editor_quote(&format!(
-                "{msg}, falling_back to %s{}<ret>",
+                "{msg}. Falling_back to %s{}<ret>",
                 word_regex.unwrap()
             ))
         )),
