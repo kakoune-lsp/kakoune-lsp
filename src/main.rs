@@ -47,6 +47,7 @@ use sloggers::file::FileLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
+use std::borrow::Cow;
 use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
@@ -58,11 +59,17 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 use std::str::FromStr;
-use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{
+    AtomicBool,
+    Ordering::{AcqRel, Acquire, Relaxed},
+};
 use std::sync::Mutex;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
-static LOG_PATH: Mutex<OnceCell<Option<PathBuf>>> = Mutex::new(OnceCell::new());
+static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+static SESSION: Mutex<SessionId> = Mutex::new(SessionId(String::new()));
+static LAST_CLIENT: Mutex<Option<String>> = Mutex::new(None);
 
 fn main() {
     {
@@ -174,6 +181,7 @@ fn main() {
         goodbye(1);
     };
     let session = SessionId(session);
+    *SESSION.lock().unwrap() = session.clone();
 
     let session_directory = env_var("XDG_RUNTIME_DIR")
         .filter(|dir| unsafe {
@@ -437,18 +445,35 @@ fn initialize_logger(
         Box::leak(Box::new(path.as_ref().and_then(|path| {
             path.parent().and_then(|parent| parent.canonicalize().ok())
         })));
-    LOG_PATH.lock().unwrap().get_or_init(|| path);
+    *LOG_PATH.lock().unwrap() = path;
 
     set_logger(level);
 
     let session = session.clone();
     panic::set_hook(Box::new(move |panic_info| {
-        error!(
-            session,
-            "panic: {}\n{}",
+        let message = format!(
+            "kak-lsp crashed, please report a bug. Find more details in the *debug* buffer.\n{}\n{}",
             panic_info,
             std::backtrace::Backtrace::capture()
         );
+        error!(session, "{message}");
+        static PANICKING: AtomicBool = AtomicBool::new(false);
+        if PANICKING
+            .compare_exchange(false, true, AcqRel, Acquire)
+            .is_err()
+        {
+            process::abort();
+        }
+        let command = format!("lsp-show-error {}", editor_quote(&message));
+        let meta = meta_for_session(
+            std::mem::take(&mut SESSION.lock().unwrap()),
+            std::mem::take(&mut LAST_CLIENT.lock().unwrap()),
+        );
+        let command = EditorResponse {
+            meta,
+            command: Cow::Owned(command),
+        };
+        send_command_to_editor(command, false);
         if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
             (cleanup)();
         }
@@ -459,7 +484,7 @@ fn initialize_logger(
 }
 
 fn set_logger(level: Severity) {
-    let logger = if let Some(path) = LOG_PATH.lock().unwrap().get().unwrap().as_ref() {
+    let logger = if let Some(path) = LOG_PATH.lock().unwrap().as_ref() {
         let mut builder = FileLoggerBuilder::new(path.clone());
         builder.level(level);
         builder.build().unwrap()

@@ -12,6 +12,10 @@ Fixes:
 - Demote a number of logs to keep the `*debug*` buffer clean. Only errors, warnings and occasional info logs should be shown.
 - The info box shown by `lsp-show-message-{error,warning,info}` is no longer created in the toolsclient but in the most recently used client.
 
+Additions
+- When crashing via a Rust panic, the process is now aborted and creates a coredump.
+  Also, crashes are now shown in an info box.
+
 ## 18.0.1 - 2024-10-14
 
 Fix error parsing a legacy `kak-lsp.toml` that doesn't have a `language_ids` section.

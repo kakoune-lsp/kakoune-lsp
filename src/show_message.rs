@@ -9,7 +9,7 @@ use crate::{
     context::Context,
     types::{EditorMeta, ServerId},
     util::editor_quote,
-    SessionId,
+    SessionId, LAST_CLIENT,
 };
 
 // commands to be handled
@@ -123,6 +123,7 @@ pub fn show_message(
 ) {
     let command = message_type(&meta.session, typ).unwrap_or("nop");
     let have_client = meta.client.is_some();
+    let last_client = LAST_CLIENT.lock().unwrap();
     ctx.exec(
         meta,
         format!(
@@ -130,7 +131,7 @@ pub fn show_message(
             if have_client {
                 ""
             } else {
-                ctx.last_client.as_deref().unwrap_or_default()
+                last_client.as_deref().unwrap_or_default()
             },
             command,
             editor_quote(&ctx.server(server_id).name),

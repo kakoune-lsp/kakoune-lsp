@@ -15,7 +15,6 @@ use crate::context::Context;
 use crate::diagnostics;
 use crate::editor_transport;
 use crate::language_features::{selection_range, *};
-use crate::language_server_transport;
 use crate::log::DEBUG;
 use crate::progress;
 use crate::project_root::find_project_root;
@@ -28,6 +27,7 @@ use crate::workspace::{
     self, EditorApplyEdit, EditorDidChangeConfigurationParams, EditorExecuteCommand,
 };
 use crate::{context::*, set_logger};
+use crate::{language_server_transport, LAST_CLIENT};
 use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
@@ -1534,7 +1534,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
     let meta = request.meta;
     let params = request.params;
     if let Some(client) = &meta.client {
-        ctx.last_client = Some(client.clone());
+        *LAST_CLIENT.lock().unwrap() = Some(client.clone());
     }
     match method {
         notification::DidOpenTextDocument::METHOD => {
@@ -1878,7 +1878,7 @@ fn dispatch_server_notification(
                 meta,
                 format!(
                     "evaluate-commands -verbatim -try-client '{}' lsp-show-message-log {} {}",
-                    ctx.last_client.as_deref().unwrap_or_default(),
+                    LAST_CLIENT.lock().unwrap().as_deref().unwrap_or_default(),
                     editor_quote(&ctx.server(server_id).name),
                     editor_quote(&params.message)
                 ),

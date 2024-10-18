@@ -80,7 +80,6 @@ pub struct Context {
     pub dynamic_config: DynamicConfig,
     pub editor_tx: Sender<EditorResponse>,
     pub language_servers: BTreeMap<ServerId, ServerSettings>,
-    pub last_client: Option<String>,
     pub route_cache: HashMap<(ServerName, RootPath), ServerId>,
     pub outstanding_requests:
         HashMap<(ServerId, &'static str, String, Option<String>), OutstandingRequests>,
@@ -119,7 +118,6 @@ impl Context {
             dynamic_config: DynamicConfig::default(),
             editor_tx,
             language_servers: BTreeMap::new(),
-            last_client: None,
             route_cache: HashMap::new(),
             outstanding_requests: HashMap::default(),
             pending_requests: vec![],
