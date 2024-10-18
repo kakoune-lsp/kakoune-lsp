@@ -989,14 +989,19 @@ define-command -hidden lsp-execute-command-request -params 3 %{
 define-command lsp-references -docstring "Open buffer with symbol references" %{
     evaluate-commands -draft -save-regs a %{
         lsp-get-word-regex
-        lsp-send textDocument/references %val{cursor_line} %val{cursor_column} %reg{a}
+        lsp-send textDocument/references %reg{a} %val{cursor_line} %val{cursor_column}
     }
 }
 
 define-command lsp-highlight-references -docstring "Highlight symbol references" %{
-    evaluate-commands -draft -save-regs a %{
-        lsp-get-word-regex
-        lsp-send textDocument/documentHighlight %val{cursor_line} %val{cursor_column}
+    try %{
+        nop %val{hook_param}
+        lsp-send textDocument/documentHighlight %{} %val{cursor_line} %val{cursor_column}
+    } catch %{
+        evaluate-commands -draft -save-regs a %{
+            lsp-get-word-regex
+            lsp-send textDocument/documentHighlight %reg{a} %val{cursor_line} %val{cursor_column}
+        }
     }
 }
 

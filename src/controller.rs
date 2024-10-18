@@ -432,9 +432,12 @@ fn dispatch_fifo_request(
             draft: state.buffer_contents(),
         }),
         "textDocument/didSave" => Box::new(()),
-        "textDocument/documentHighlight" => Box::new(PositionParams {
-            position: state.next(),
-        }),
+        "textDocument/documentHighlight" => {
+            meta.word_regex = Some(state.next());
+            Box::new(PositionParams {
+                position: state.next(),
+            })
+        }
         "textDocument/formatting" => {
             let params = Box::new(<FormattingOptions as Deserializable>::deserialize(state));
             let is_sync = state.next::<String>() == "is-sync";
@@ -477,11 +480,10 @@ fn dispatch_fifo_request(
             params
         }
         "textDocument/references" => {
-            let params = Box::new(PositionParams {
-                position: state.next(),
-            });
             meta.word_regex = Some(state.next());
-            params
+            Box::new(PositionParams {
+                position: state.next(),
+            })
         }
         "textDocument/rename" => Box::new(TextDocumentRenameParams {
             position: state.next(),
