@@ -1110,7 +1110,18 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
     if ctx.buffer_tombstones.contains(&meta.buffile) {
         debug!(
             ctx.last_session(),
-            "Ignoring request disabled buffer {}", &meta.buffile
+            "Ignoring request from disabled buffer {}", &meta.buffile
+        );
+        report_error_no_server_configured(
+            &ctx.editor_tx,
+            meta,
+            request_method,
+            &format!(
+                "blocked in {}, see the *debug* buffer",
+                std::env::current_dir()
+                    .map(|cwd| short_file_path(&meta.buffile, &cwd))
+                    .unwrap_or(&meta.buffile),
+            ),
         );
         return false;
     }

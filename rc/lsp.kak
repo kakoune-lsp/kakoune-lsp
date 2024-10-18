@@ -640,14 +640,7 @@ define-command -hidden lsp-blocked -params .. %{
     try %{
         nop %val{hook_param}
     } catch %{
-        evaluate-commands -verbatim -client %val{client} \
-            info %sh{
-                if [ "${kak_buffile#/}" = "${kak_buffile}" ]; then
-                    echo 'LSP commands are not supported in scratch buffers'
-                else
-                    echo 'LSP commands have been blocked in this buffer, see the *debug* buffer'
-                fi
-            }
+        %arg{@}
     }
 }
 

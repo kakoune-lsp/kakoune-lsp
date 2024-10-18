@@ -128,9 +128,12 @@ pub fn read_document(filename: &str) -> io::Result<String> {
     Ok(String::from_utf8_lossy(&fs::read(filename)?).to_string())
 }
 
-pub fn short_file_path<'a>(target: &'a str, current_dir: &str) -> &'a str {
+pub fn short_file_path<P>(target: &str, current_dir: P) -> &str
+where
+    P: AsRef<Path>,
+{
     Path::new(target)
-        .strip_prefix(current_dir)
+        .strip_prefix(current_dir.as_ref())
         .ok()
         .and_then(|p| p.to_str())
         .unwrap_or(target)
