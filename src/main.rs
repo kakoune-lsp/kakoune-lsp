@@ -449,7 +449,10 @@ fn initialize_logger(
             panic_info,
             std::backtrace::Backtrace::capture()
         );
-        goodbye(1);
+        if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
+            (cleanup)();
+        }
+        process::abort();
     }));
 
     log_path_parent
