@@ -599,7 +599,7 @@ define-command -hidden lsp-do-send-async %{
     evaluate-commands %sh{
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
             exec 3>${kak_opt_lsp_fifo}
-            trap : TERM
+            trap : INT TERM
             # Recreate fifo to guarantee read order.
             rm ${kak_opt_lsp_fifo}
             mkfifo ${kak_opt_lsp_fifo}
@@ -617,7 +617,7 @@ define-command -hidden lsp-do-send-sync %{
         printf >>${kak_opt_lsp_msg_file} %s " '${kak_command_fifo}' '${kak_response_fifo}'"
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
             exec 3>${kak_opt_lsp_fifo}
-            trap : TERM
+            trap : INT TERM
             # Recreate fifo to guarantee read order.
             rm ${kak_opt_lsp_fifo}
             mkfifo ${kak_opt_lsp_fifo}
