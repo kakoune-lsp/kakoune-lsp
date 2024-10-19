@@ -1,6 +1,6 @@
 = Kakoune Language Server Protocol Client
 
-This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for the https://kakoune.org[Kakoune] editor.
+This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for the https://kakoune.org[Kakoune] editor (version `v2021.11.08` or higher).
 
 == Quick Start
 
@@ -14,39 +14,25 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 
 ==== Pre-built binaries
 
-===== MacOS
+===== Package managers
 
-====== Homebrew
+* https://pkgs.alpinelinux.org/package/edge/testing/x86_64/kakoune-lsp[Alpine Linux (edge)]: `apk add kakoune-lsp`
+* https://archlinux.org/packages/extra/x86_64/kakoune-lsp[Arch Linux]: `pacman -S kakoune-lsp` or https://aur.archlinux.org/packages/kakoune-lsp-git/[AUR/kakoune-lsp-git]
+* https://cgit.freebsd.org/ports/tree/editors/kakoune-lsp[FreeBSD] `pkg add kakoune-lsp`
+* https://copr.fedorainfracloud.org/coprs/atim/kakoune[Fedora Copr]: `sudo dnf copr enable atim/kakoune -y && sudo dnf install kakoune-lsp`
+* https://github.com/kakoune-lsp/homebrew-kakoune-lsp[MacOS]: `brew install kakoune-lsp/kakoune-lsp/kakoune-lsp`
+* https://software.opensuse.org/package/kak-lsp[openSUSE]
+* https://github.com/void-linux/void-packages/tree/master/srcpkgs/kak-lsp[Void Linux]: `xbps-install -S kak-lsp`
 
-[source,sh]
-----
-brew install kakoune-lsp/kakoune-lsp/kakoune-lsp
-----
-
-====== Manual
-
-[source,sh]
-----
-curl -O -L https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.2/kakoune-lsp-v18.0.2-x86_64-apple-darwin.tar.gz
-tar xzvf kakoune-lsp-v18.0.2-x86_64-apple-darwin.tar.gz
-# replace `~/.local/bin/` with something on your `$PATH`
-mv kak-lsp ~/.local/bin/
-----
-
-===== Linux
-
-====== Package managers
-
-* Arch Linux: `pacman -S kakoune-lsp` or https://aur.archlinux.org/packages/kak-lsp-git/[AUR/kakoune-lsp-git]
-* Fedora https://copr.fedorainfracloud.org/coprs/atim/kakoune/[Copr]: `sudo dnf copr enable atim/kakoune -y && sudo dnf install kakoune-lsp`
-* Void Linux: `xbps-install -S kak-lsp`
-
-====== Others
+===== Manual
 
 [source,sh]
 ----
-wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.2/kakoune-lsp-v18.0.2-x86_64-unknown-linux-musl.tar.gz
-tar xzvf kak-lsp-v18.0.2-x86_64-unknown-linux-musl.tar.gz
+[ $(uname) = Darwin ] &&
+    wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.2/kakoune-lsp-v18.0.2-x86_64-apple-darwin.tar.gz
+[ $(uname) = Linux ] &&
+    wget https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.2/kakoune-lsp-v18.0.2-x86_64-unknown-linux-musl.tar.gz
+tar xzvf kakoune-lsp-v18.0.2-x86_64-*.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 ----
