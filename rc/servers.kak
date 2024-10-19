@@ -159,7 +159,7 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
 }
 
 hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|typescript) %{
-    set-option -add buffer lsp_servers %{
+    set-option buffer lsp_servers %{
         [typescript-language-server]
         root_globs = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
         args = ["--stdio"]
@@ -295,7 +295,7 @@ hook -group lsp-filetype-lua global BufSetOption filetype=lua %{
 }
 
 hook -group lsp-filetype-markdown global BufSetOption filetype=markdown %{
-    set-option -add buffer lsp_servers %{
+    set-option buffer lsp_servers %{
         [marksman]
         root_globs = [".marksman.toml"]
         args = ["server"]
@@ -369,7 +369,7 @@ hook -group lsp-filetype-purescript global BufSetOption filetype=purescript %{
 }
 
 hook -group lsp-filetype-python global BufSetOption filetype=python %{
-    set-option -add buffer lsp_servers %{
+    set-option buffer lsp_servers %{
         [pylsp]
         root_globs = ["requirements.txt", "setup.py", "pyproject.toml", ".git", ".hg"]
         settings_section = "_"
