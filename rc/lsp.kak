@@ -498,12 +498,16 @@ declare-option -hidden -docstring %{
     find_root}
 
 define-command -hidden lsp-if-no-servers -docstring %{
-    Run the given commands if the 'lsp_servers' option is empty
-} -params 1 %{
-    evaluate-commands %sh{
-        if [ -z "$kak_opt_lsp_servers" ]; then
-            echo evaluate-commands %arg{1}
-        fi
+    Run the given command if the 'lsp_servers' option is empty
+} -params 1.. %{
+    evaluate-commands -save-regs a %{
+        try %{
+            "lsp-nop-with-0%opt{lsp_servers}"
+            set-register a %arg{@}
+        } catch %{
+            set-register a nop
+        }
+        %reg{a}
     }
 }
 
@@ -1799,16 +1803,12 @@ map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
 
 define-command lsp-enable -docstring "Default LSP integration" %{
     hook -group lsp global BufSetOption filetype=(.*) %{
-        lsp-if-no-servers %{
-            trigger-user-hook "LSPDefaultConfig=%val{hook_param_capture_1}"
-        }
+        lsp-if-no-servers trigger-user-hook "LSPDefaultConfig=%val{hook_param_capture_1}"
     }
     lsp-enable-impl global
     evaluate-commands -buffer * %{
         # For kak somefile -e 'eval %sh{kak-lsp}'
-        lsp-if-no-servers %{
-            trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
-        }
+        lsp-if-no-servers trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
         hook -group lsp buffer BufSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
     }
     hook -group lsp global BufClose .* lsp-did-close
@@ -1830,9 +1830,7 @@ define-command lsp-disable -docstring "Disable LSP" %{
 }
 
 define-command lsp-enable-window -docstring "Default LSP integration in the window scope" %{
-    lsp-if-no-servers %{
-        trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
-    }
+    lsp-if-no-servers trigger-user-hook "LSPDefaultConfig=%opt{filetype}"
     lsp-enable-impl window
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window WinSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
