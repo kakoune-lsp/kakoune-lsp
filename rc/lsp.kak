@@ -1827,6 +1827,7 @@ define-command lsp-disable -docstring "Disable LSP" %{
         lsp-unblock-in-buffer
     }
     lsp-disable-impl global
+    set-option global lsp_fail_if_disabled fail
 }
 
 define-command lsp-enable-window -docstring "Default LSP integration in the window scope" %{
@@ -1840,6 +1841,7 @@ define-command lsp-enable-window -docstring "Default LSP integration in the wind
 
 define-command lsp-disable-window -docstring "Disable LSP in the window scope" %{
     lsp-disable-impl window
+    unset-option window lsp_fail_if_disabled
 }
 
 define-command -hidden lsp-enable-impl -params 1 %{
@@ -1899,7 +1901,6 @@ define-command -hidden lsp-disable-impl -params 1 %{
     remove-hooks global lsp-auto-hover-insert-mode
     remove-hooks global lsp-auto-signature-help
     lsp-exit
-    set-option %arg{1} lsp_fail_if_disabled fail
 }
 
 declare-option -hidden str lsp_fail_if_disabled fail
