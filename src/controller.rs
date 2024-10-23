@@ -1211,7 +1211,17 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                 report_error(&ctx.editor_tx, meta, msg);
                 return false;
             }
-            if server.root.is_empty() {
+            if !server.root.is_empty() {
+                if !server.root.starts_with("/") {
+                    let msg = format!(
+                        "root path for '{server_name}' is not an absolute path: {}",
+                        &server.root
+                    );
+                    error!(meta.session, "{}", msg);
+                    report_error(&ctx.editor_tx, meta, &msg);
+                    return false;
+                }
+            } else {
                 if !server.root_globs.is_empty() {
                     server.root = find_project_root(
                         &meta.session,
@@ -1221,7 +1231,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                     );
                 } else {
                     let msg = format!(
-                        "missing project root path for {server_name}, please set the root option"
+                        "missing project root path for '{server_name}', please set the root option"
                     );
                     error!(meta.session, "{}", msg);
                     report_error(&ctx.editor_tx, meta, &msg);
