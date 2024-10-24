@@ -1221,22 +1221,20 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
                     report_error(&ctx.editor_tx, meta, &msg);
                     return false;
                 }
+            } else if !server.root_globs.is_empty() {
+                server.root = find_project_root(
+                    &meta.session,
+                    language_id,
+                    &server.root_globs,
+                    &meta.buffile,
+                );
             } else {
-                if !server.root_globs.is_empty() {
-                    server.root = find_project_root(
-                        &meta.session,
-                        language_id,
-                        &server.root_globs,
-                        &meta.buffile,
-                    );
-                } else {
-                    let msg = format!(
-                        "missing project root path for '{server_name}', please set the root option"
-                    );
-                    error!(meta.session, "{}", msg);
-                    report_error(&ctx.editor_tx, meta, &msg);
-                    return false;
-                }
+                let msg = format!(
+                    "missing project root path for '{server_name}', please set the root option"
+                );
+                error!(meta.session, "{}", msg);
+                report_error(&ctx.editor_tx, meta, &msg);
+                return false;
             }
         }
         server_addresses = meta
