@@ -222,10 +222,10 @@ hook -group lsp-filetype-json global BufSetOption filetype=json %{
 hook -group lsp-filetype-julia global BufSetOption filetype=julia %{
     set-option buffer lsp_servers %{
         # Requires Julia package "LanguageServer"
-        root_globs = ["Project.toml", ".git", ".hg"]
         # Run: `julia --project=@kak-lsp -e 'import Pkg; Pkg.add("LanguageServer")'` to install it
         # Configuration adapted from https://github.com/neovim/nvim-lspconfig/blob/bcebfac7429cd8234960197dca8de1767f3ef5d3/lua/lspconfig/julials.lua
         [julia-language-server]
+        root_globs = ["Project.toml", ".git", ".hg"]
         command = "julia"
         args = [
             "--startup-file=no",
