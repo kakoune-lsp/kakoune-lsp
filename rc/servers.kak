@@ -249,7 +249,7 @@ hook -group lsp-filetype-julia global BufSetOption filetype=julia %{
         # Lint options. See https://github.com/julia-vscode/StaticLint.jl/blob/master/src/linting/checks.jl
         # "julia.lint.call" = true
         # Other options, see https://github.com/julia-vscode/LanguageServer.jl/blob/master/src/requests/workspace.jl
-        # "julia.lint.run" = "true"
+        # "julia.lint.run" = true
     }
 }
 
