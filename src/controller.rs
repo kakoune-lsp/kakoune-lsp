@@ -1298,7 +1298,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
         }
 
         // should be fine to unwrap because request was already routed which means language is configured
-        let server_config = &ctx.server_config(meta, &server_name).unwrap();
+        let server_config = ctx.server_config(meta, &server_name).unwrap();
         let server_command = server_config.command.as_ref().unwrap_or(&server_name);
         if ctx.server_tombstones.contains(server_command) {
             debug!(
@@ -1361,6 +1361,7 @@ fn route_request(ctx: &mut Context, meta: &mut EditorMeta, request_method: &str)
             capabilities: None,
             settings: None,
             users: vec![meta.session.clone()],
+            workaround_eslint: server_config.workaround_eslint.unwrap_or_default(),
         };
         ctx.language_servers.insert(server_id, server_settings);
         ctx.route_cache.insert((server_name, root), server_id);

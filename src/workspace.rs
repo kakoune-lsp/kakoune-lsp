@@ -95,10 +95,12 @@ pub fn configuration(
                 .map(|section| match &settings {
                     None => Value::Null,
                     Some(settings) => {
-                        if ctx
-                            .server_config(&meta, server_name)
-                            .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
-                            && section.is_empty()
+                        if if is_using_legacy_toml(&ctx.config) {
+                            ctx.server_config(&meta, server_name)
+                                .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
+                        } else {
+                            ctx.server(server_id).workaround_eslint
+                        } && section.is_empty()
                         {
                             return settings.clone();
                         }

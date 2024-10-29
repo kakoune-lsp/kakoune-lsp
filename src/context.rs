@@ -53,6 +53,7 @@ pub struct ServerSettings {
     pub capabilities: Option<ServerCapabilities>,
     pub settings: Option<Value>,
     pub users: Vec<SessionId>,
+    pub workaround_eslint: bool,
 }
 
 pub struct FileWatcher {
