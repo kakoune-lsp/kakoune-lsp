@@ -1826,9 +1826,9 @@ define-command lsp-disable -docstring "Disable LSP" %{
         remove-hooks buffer lsp
         lsp-unblock-in-buffer
         unset-option buffer lsp_modeline_code_actions
-        set-option global lsp_modeline_progress ""
-        set-option global lsp_modeline_message_requests ""
     }
+    set-option global lsp_modeline_progress ""
+    set-option global lsp_modeline_message_requests ""
     lsp-disable-impl global
     set-option global lsp_fail_if_disabled fail
 }
