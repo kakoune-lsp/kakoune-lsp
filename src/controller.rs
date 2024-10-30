@@ -503,9 +503,9 @@ fn dispatch_fifo_request(
         "textDocument/switchSourceHeader" => Box::new(()),
         "window/showMessageRequest/showNext" => Box::new(()),
         "window/showMessageRequest/respond" => {
-            let id: toml::Value = toml::from_str(&state.next::<String>()).unwrap();
+            let id = jsonrpc_core::Id::Str(state.next::<String>());
             Box::new(MessageRequestResponse {
-                message_request_id: jsonrpc_core::Id::deserialize(id).unwrap(),
+                message_request_id: id,
                 item: state
                     .next::<Option<String>>()
                     .map(|s| toml::from_str(&s).unwrap()),
