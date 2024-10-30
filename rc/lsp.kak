@@ -31,6 +31,8 @@ Additionally, optional configuration options can be added:
                      request other keys via 'workspace/configuration'.
 - experimental     = table of arbitrary server-specific experimental features to enable during
                      initialization.
+- symbol_kinds     = table where keys are LSP symbol kind names (like 'Function') and values
+                     are strings to render instead
 
 } str lsp_servers %{}
 

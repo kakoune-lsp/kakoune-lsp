@@ -513,6 +513,19 @@ hook -group lsp-filetype-rust global BufSetOption filetype=rust %{
         # See https://rust-analyzer.github.io/manual.html#configuration
         # cargo.features = []
         check.command = "clippy"
+        [rust-analyzer.symbol_kinds]
+        Constant = "const"
+        Enum = "enum"
+        EnumMember = ""
+        Field = ""
+        Function = "fn"
+        Interface = "trait"
+        Method = "fn"
+        Module = "mod"
+        Object = ""
+        Struct = "struct"
+        TypeParameter = "type"
+        Variable = "let"
     }
 }
 

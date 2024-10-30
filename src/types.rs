@@ -87,6 +87,8 @@ pub struct LanguageServerConfig {
     pub settings_section: Option<String>,
     pub settings: Option<Value>,
     pub offset_encoding: Option<OffsetEncoding>,
+    #[serde(default)]
+    pub symbol_kinds: HashMap<String, String>,
     pub experimental: Option<Value>,
     // This does nothing, but is kept so we can still parse old configs.
     #[allow(dead_code)]

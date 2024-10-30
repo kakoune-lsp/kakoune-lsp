@@ -226,6 +226,21 @@ impl fmt::Display for Tree {
     }
 }
 
+fn symbol_kind_prefix<T: Symbol<T>>(
+    symbol: &T,
+    symbol_kind_mapping: Option<&HashMap<String, String>>,
+) -> Option<String> {
+    symbol_kind_mapping?
+        .get(format!("{:?}", symbol.kind()).as_str())
+        .map(|mapped_kind| {
+            if mapped_kind.is_empty() {
+                symbol.name().to_string()
+            } else {
+                format!("{} {}", mapped_kind, symbol.name())
+            }
+        })
+}
+
 /// Represent list of symbols as filetype=grep buffer content.
 /// Paths are converted into relative to project root.
 pub fn format_symbol<T: Symbol<T>>(
@@ -244,6 +259,7 @@ pub fn format_symbol<T: Symbol<T>>(
         ctx: &Context,
         single_file: bool,
         prefix: &mut Vec<bool>,
+        symbol_kind_mapping: Option<&HashMap<String, String>>,
     ) {
         let length = items.len();
         let is_root = prefix.is_empty();
@@ -265,7 +281,10 @@ pub fn format_symbol<T: Symbol<T>>(
                     .join("");
                 format!("{}{}", prefixing_hierarchy_symbols, last_hierarchy_symbol)
             };
-            let description = format!("{}{} ({:?})", hierarchy, symbol.name(), symbol.kind());
+
+            let symbol_designator = symbol_kind_prefix(symbol, symbol_kind_mapping)
+                .unwrap_or(format!("{} ({:?})", symbol.name(), symbol.kind()));
+            let description = format!("{}{}", hierarchy, symbol_designator);
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, symbol, &mut filename_path);
             let position = get_kakoune_position_with_fallback(
@@ -290,7 +309,16 @@ pub fn format_symbol<T: Symbol<T>>(
 
             let children = symbol.children();
             prefix.push(is_last);
-            format_symbol_at_depth(output, children, meta, server, ctx, single_file, prefix);
+            format_symbol_at_depth(
+                output,
+                children,
+                meta,
+                server,
+                ctx,
+                single_file,
+                prefix,
+                symbol_kind_mapping,
+            );
             prefix.pop();
         }
     }
@@ -303,6 +331,9 @@ pub fn format_symbol<T: Symbol<T>>(
         ctx,
         single_file,
         &mut vec![],
+        meta.language_server
+            .get(&server.name)
+            .map(|language_server_config| &language_server_config.symbol_kinds),
     );
     if single_file {
         // Align symbol names (first column is %:line:col).
@@ -1140,10 +1171,29 @@ fn editor_breadcrumbs<T: Symbol<T>>(
     let server = ctx.server(server_id);
     let mut filename_path = PathBuf::default();
     let filename = symbol_filename(&meta, &symbols[0], &mut filename_path).to_string();
-    let mut breadcrumbs = Vec::default();
-    breadcrumbs_calc(&symbols, &params, ctx, server, &filename, &mut breadcrumbs);
-
-    let breadcrumbs = breadcrumbs.join(" > ") + " ";
+    let mut symbol_names = Vec::default();
+    let mut breadcrumbs = "".to_string();
+    if let Some(kind_prefix) =
+        breadcrumbs_calc(&symbols, &params, ctx, server, &filename, &mut symbol_names).and_then(
+            |symbol| {
+                symbol_kind_prefix(
+                    symbol,
+                    meta.language_server
+                        .get(&server.name)
+                        .map(|language_server_config| &language_server_config.symbol_kinds),
+                )
+            },
+        )
+    {
+        breadcrumbs += &kind_prefix;
+    }
+    for (i, symbol_name) in symbol_names.iter().enumerate() {
+        if i != 0 {
+            breadcrumbs += " > ";
+        }
+        breadcrumbs += symbol_name;
+    }
+    breadcrumbs += " ";
     let command = format!(
         "buffer {}; try 'set-option window lsp_modeline_breadcrumbs {}'",
         editor_quote(&meta.buffile),
@@ -1157,22 +1207,25 @@ fn editor_breadcrumbs<T: Symbol<T>>(
     ctx.exec(meta, command);
 }
 
-fn breadcrumbs_calc<T: Symbol<T>>(
-    symbols: &[T],
+fn breadcrumbs_calc<'a, T: Symbol<T>>(
+    symbols: &'a [T],
     params: &BreadcrumbsParams,
     ctx: &Context,
     server: &ServerSettings,
     filename: &str,
     acc: &mut Vec<String>,
-) {
+) -> Option<&'a T> {
     for symbol in symbols {
         let symbol_range = get_kakoune_range(server, filename, &symbol.range(), ctx).unwrap();
         let symbol_lines = symbol_range.start.line..=symbol_range.end.line;
         let is_inside = symbol_lines.contains(&params.position_line);
         if is_inside {
             acc.push(symbol.name().to_owned());
-            breadcrumbs_calc(symbol.children(), params, ctx, server, filename, acc);
-            break;
+            return Some(
+                breadcrumbs_calc(symbol.children(), params, ctx, server, filename, acc)
+                    .unwrap_or(symbol),
+            );
         }
     }
+    None
 }
