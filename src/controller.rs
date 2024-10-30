@@ -502,15 +502,12 @@ fn dispatch_fifo_request(
         "textDocument/semanticTokens/full" => Box::new(()),
         "textDocument/switchSourceHeader" => Box::new(()),
         "window/showMessageRequest/showNext" => Box::new(()),
-        "window/showMessageRequest/respond" => {
-            let id: toml::Value = toml::from_str(&state.next::<String>()).unwrap();
-            Box::new(MessageRequestResponse {
-                message_request_id: jsonrpc_core::Id::deserialize(id).unwrap(),
-                item: state
-                    .next::<Option<String>>()
-                    .map(|s| toml::from_str(&s).unwrap()),
-            })
-        }
+        "window/showMessageRequest/respond" => Box::new(MessageRequestResponse {
+            message_request_id: serde_json::from_str(&state.next::<String>()).unwrap(),
+            item: state
+                .next::<Option<String>>()
+                .map(|s| toml::from_str(&s).unwrap()),
+        }),
         "window/workDoneProgress/cancel" => Box::new(WorkDoneProgressCancelParams {
             token: state.next(),
         }),

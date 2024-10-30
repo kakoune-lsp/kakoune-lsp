@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use itertools::Itertools;
 use jsonrpc_core::{Id, MethodCall};
 use lsp_types::{MessageActionItem, MessageType, ShowMessageRequestParams};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
     context::Context,
@@ -74,9 +74,7 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         }
     };
 
-    let mut request_id = String::new();
-    id.serialize(toml::ser::ValueSerializer::new(&mut request_id))
-        .expect("cannot convert request id to toml");
+    let request_id = serde_json::ser::to_string(&id).unwrap();
     let request_id = editor_quote(&request_id);
 
     let option_menu_opts = options
