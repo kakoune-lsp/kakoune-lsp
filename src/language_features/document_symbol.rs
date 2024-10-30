@@ -244,6 +244,7 @@ pub fn format_symbol<T: Symbol<T>>(
         ctx: &Context,
         single_file: bool,
         prefix: &mut Vec<bool>,
+        symbols_mapping: &HashMap<String, String>,
     ) {
         let length = items.len();
         let is_root = prefix.is_empty();
@@ -265,7 +266,20 @@ pub fn format_symbol<T: Symbol<T>>(
                     .join("");
                 format!("{}{}", prefixing_hierarchy_symbols, last_hierarchy_symbol)
             };
-            let description = format!("{}{} ({:?})", hierarchy, symbol.name(), symbol.kind());
+
+            let mapped_symbol = symbols_mapping
+                .get(format!("{:?}", symbol.kind()).as_str())
+                .map_or(
+                    format!("{} ({:?})", symbol.name(), symbol.kind()),
+                    |mapped_kind| {
+                        if mapped_kind.is_empty() {
+                            symbol.name().to_string()
+                        } else {
+                            format!("{} {}", mapped_kind, symbol.name())
+                        }
+                    },
+                );
+            let description = format!("{}{}", hierarchy, mapped_symbol);
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, symbol, &mut filename_path);
             let position = get_kakoune_position_with_fallback(
@@ -290,7 +304,16 @@ pub fn format_symbol<T: Symbol<T>>(
 
             let children = symbol.children();
             prefix.push(is_last);
-            format_symbol_at_depth(output, children, meta, server, ctx, single_file, prefix);
+            format_symbol_at_depth(
+                output,
+                children,
+                meta,
+                server,
+                ctx,
+                single_file,
+                prefix,
+                symbols_mapping,
+            );
             prefix.pop();
         }
     }
@@ -303,6 +326,12 @@ pub fn format_symbol<T: Symbol<T>>(
         ctx,
         single_file,
         &mut vec![],
+        &meta
+            .language_server
+            .get(&server.name)
+            .map_or(HashMap::new(), |language_server_config| {
+                language_server_config.symbols_mapping.clone()
+            }),
     );
     if single_file {
         // Align symbol names (first column is %:line:col).
