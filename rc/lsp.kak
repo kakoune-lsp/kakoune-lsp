@@ -577,7 +577,7 @@ define-command -hidden lsp-do-send -params 1.. %{
         } catch %{
             set-register t 0
         }
-        echo -to-file %opt{lsp_msg_file} -quoting kakoune \
+        echo -to-file %opt{lsp_msg_file} -quoting kakoune -- \
             %val{session} \
             %val{client} \
             %reg{h} \
