@@ -42,18 +42,12 @@ use lsp_types::*;
 use serde::Deserialize;
 use sloggers::types::Severity;
 
-#[derive(Eq, PartialEq)]
-enum QuoteState {
-    OutsideArg,
-    InsideArg,
-    InsideArgSQ,
-}
-
 pub struct ParserState {
     session: SessionId,
     pub buf: Vec<u8>,
     offset: usize,
-    state: QuoteState,
+    quoted: bool,
+    escaped: bool,
 }
 
 impl ParserState {
@@ -62,52 +56,45 @@ impl ParserState {
             session,
             buf: vec![],
             offset: 0,
-            state: QuoteState::OutsideArg,
+            quoted: false,
+            escaped: false,
         }
     }
 }
 
 fn next_string(state: &mut ParserState) -> String {
-    let mut out = vec![];
     assert!(state.offset < state.buf.len());
-    while state.offset < state.buf.len() {
-        if process(state, &mut out) {
-            break;
-        }
-    }
-    if state.offset == state.buf.len() {
-        assert!(state.state == QuoteState::InsideArgSQ);
-        state.state = QuoteState::OutsideArg;
-    }
+    let out = read_token(state);
     String::from_utf8_lossy(&out).to_string()
 }
 
-fn process(state: &mut ParserState, out: &mut Vec<u8>) -> bool {
-    let c = state.buf[state.offset];
-    state.offset += 1;
-    if state.state == QuoteState::OutsideArg {
-        if c == b'\'' {
-            state.state = QuoteState::InsideArg;
-        } else {
-            assert!(c == b' ', "expected space before quote, saw {}", c);
-        }
-    } else if state.state == QuoteState::InsideArg {
-        if c == b'\'' {
-            state.state = QuoteState::InsideArgSQ;
-        } else {
+fn read_token(state: &mut ParserState) -> Vec<u8> {
+    let mut out = vec![];
+    loop {
+        let c = state.buf[state.offset];
+        state.offset += 1;
+        if state.escaped {
             out.push(c);
-        }
-    } else if state.state == QuoteState::InsideArgSQ {
-        if c == b'\'' {
-            out.push(b'\'');
-            state.state = QuoteState::InsideArg;
+            state.escaped = false;
+        } else if state.quoted {
+            if c == b'\'' {
+                state.quoted = false;
+            } else {
+                out.push(c);
+            }
         } else {
-            state.state = QuoteState::OutsideArg;
-            assert!(c == b' ', "expected space after quote, saw {}", c);
-            return true;
+            match c {
+                b' ' => break,
+                b'\'' => state.quoted = true,
+                b'\\' => state.escaped = true,
+                _ => out.push(c),
+            }
+        }
+        if state.offset == state.buf.len() {
+            break;
         }
     }
-    false
+    out
 }
 
 trait FromString: Sized {
@@ -621,7 +608,8 @@ pub fn start(
                     String::from_utf8_lossy(&state.buf)
                 );
                 state.offset = 0;
-                state.state = QuoteState::OutsideArg;
+                state.quoted = false;
+                state.escaped = false;
                 if dispatch_fifo_request(&mut state, &to_editor, &from_editor).is_break() {
                     break;
                 }

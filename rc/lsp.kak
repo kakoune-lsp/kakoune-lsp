@@ -538,10 +538,6 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
     }
 }
 
-declare-option -hidden -docstring 'Temporary storage for messages to server' str lsp_msg_file %sh{
-    mktemp -q -t 'kak-lsp-msg.XXXXXX' 2>/dev/null || mktemp -q
-}
-
 define-command -hidden lsp-send -params 1.. %{
     lsp-unless-blocked lsp-do-send %arg{@}
 }
@@ -553,7 +549,7 @@ define-command -hidden lsp-do-send -params 1.. %{
     } catch %{
         lsp-start
     }
-    evaluate-commands -save-regs bhst %{
+    evaluate-commands -save-regs abhst %{
         try %{
             nop %val{hook_param}
             set-register h true
@@ -577,7 +573,7 @@ define-command -hidden lsp-do-send -params 1.. %{
         } catch %{
             set-register t 0
         }
-        echo -to-file %opt{lsp_msg_file} -quoting kakoune -- \
+        set-register a \
             %val{session} \
             %val{client} \
             %reg{h} \
@@ -603,7 +599,7 @@ define-command -hidden lsp-do-send-async %{
             # Recreate fifo to guarantee read order.
             rm ${kak_opt_lsp_fifo}
             mkfifo ${kak_opt_lsp_fifo}
-            cat ${kak_opt_lsp_msg_file} >&3
+            printf %s "${kak_quoted_reg_a}" >&3
         '
         if [ $? -eq 124 ]; then
             echo fail "Timed out trying to reach kak-lsp"
@@ -614,18 +610,21 @@ define-command -hidden lsp-do-send-async %{
 define-command -hidden lsp-do-send-sync %{
     unset-option buffer lsp_do_send_maybe_async
     evaluate-commands %sh{
-        printf >>${kak_opt_lsp_msg_file} %s " '${kak_command_fifo}' '${kak_response_fifo}'"
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
             exec 3>${kak_opt_lsp_fifo}
             trap : INT TERM
             # Recreate fifo to guarantee read order.
             rm ${kak_opt_lsp_fifo}
             mkfifo ${kak_opt_lsp_fifo}
-            cat ${kak_opt_lsp_msg_file} >&3
+            {
+                printf %s "${kak_quoted_reg_a}"
+                printf %s " '${kak_command_fifo}' '${kak_response_fifo}'"
+            } >&3
         '
         if [ $? -eq 124 ]; then
             echo >${kak_command_fifo} "fail Timed out trying to reach kak-lsp"
-            echo "fail Timed out trying to reach kak-lsp"
+            echo fail "Timed out trying to reach kak-lsp"
+            exit
         fi
         cat ${kak_response_fifo}
     }
@@ -1469,7 +1468,7 @@ define-command -hidden lsp-get-server-initialization-options -params 1 -docstrin
     lsp-get-server-initialization-options <fifo>
     Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
 } %{
-    echo -to-file %arg{1} -quoting kakoune -- %opt{lsp_server_configuration} map-end
+    echo -to-file %arg{1} -quoting shell -- %opt{lsp_server_configuration} map-end
 }
 
 define-command -hidden lsp-get-config -params 1 -docstring %{
@@ -1913,7 +1912,6 @@ hook -always global KakEnd .* %{
     set-option global lsp_fail_if_disabled nop # hack for lsp-enable-window
     try lsp-exit
     set-option global lsp_unless_blocked lsp-blocked
-    nop %sh{ rm -f ${kak_opt_lsp_msg_file} }
 }
 try %{
     hook -group lsp-session-renamed global SessionRenamed .* %{
