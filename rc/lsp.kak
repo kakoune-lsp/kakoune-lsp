@@ -596,9 +596,6 @@ define-command -hidden lsp-do-send-async %{
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
             exec 3>${kak_opt_lsp_fifo}
             trap : INT TERM
-            # Recreate fifo to guarantee read order.
-            rm ${kak_opt_lsp_fifo}
-            mkfifo ${kak_opt_lsp_fifo}
             printf %s "${kak_quoted_reg_a}" >&3
         '
         if [ $? -eq 124 ]; then
@@ -613,9 +610,6 @@ define-command -hidden lsp-do-send-sync %{
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
             exec 3>${kak_opt_lsp_fifo}
             trap : INT TERM
-            # Recreate fifo to guarantee read order.
-            rm ${kak_opt_lsp_fifo}
-            mkfifo ${kak_opt_lsp_fifo}
             {
                 printf %s "${kak_quoted_reg_a}"
                 printf %s " '${kak_command_fifo}' '${kak_response_fifo}'"

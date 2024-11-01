@@ -1,11 +1,9 @@
 ## Unreleased
 
-This release fixes more regressions identified in version 18.0.0.
+Yet another release to fix regressions identified in the version 18 series:
 
-Additions:
-- Worked around a case where an unnecessary `KakEnd` hook in user configuration would cause delay when exiting the editor.
-
-Fixes:
+- Stop writing temporary files to `/tmp` on every LSP request since /tmp might not be mounted as `tmpfs`.
+- Work around a case where an unnecessary `KakEnd` hook in user configuration would cause delay when exiting the editor.
 - Fix crash when the `language` table is used in the `kak-lsp.toml` file (both of which are deprecated).
 - Fix crashes in `lsp-selection-range` and `lsp-show-message-request-next`.
 - Fix default configuration for Julia.
