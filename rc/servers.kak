@@ -464,10 +464,10 @@ hook -group lsp-filetype-scala global BufSetOption filetype=scala %{
         args = ["-Dmetals.extensions=false"]
         settings_section = "metals"
         [metals.settings.metals]
-        icons = "unicode"
+        icons = "none"
         isHttpEnabled = true
         statusBarProvider = "show-message"
-        compilerOptions = { overrideDefFormat = "unicode" }
+        compilerOptions = { overrideDefFormat = "ascii" }
         inlayHints.hintsInPatternMatch.enable = true
         inlayHints.implicitArguments.enable = true
         inlayHints.implicitConversions.enable = true
