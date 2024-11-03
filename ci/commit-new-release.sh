@@ -30,7 +30,7 @@ sed -i "1s/Unreleased/$new - $(date --iso)/" CHANGELOG.md
 cargo check # update Cargo.lock
 git commit -am "v$new"
 git tag "v$new" --message="$(ci/latest-changelog.sh)"
-cargo publish --dry-run
+cargo publish
 
 sed -i "0,/version/ s/$new/$new-snapshot/" Cargo.toml
 cargo check # update Cargo.lock
@@ -78,4 +78,3 @@ x86_64_sha=$(checksum "$x86_64_url")
 )
 
 git push origin HEAD:master
-cargo publish
