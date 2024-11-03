@@ -511,6 +511,21 @@ hook -group lsp-filetype-toml global BufSetOption filetype=toml %{
     }
 }
 
+hook -group lsp-filetype-typst global BufSetOption filetype=typst %{
+    set-option buffer lsp_servers %{
+        [tinymist]
+        root_globs = [".git", ".hg"]
+        args = ["lsp"]
+        settings_section = "_"
+        [tinymist.settings._]
+        # See https://myriad-dreamin.github.io/tinymist/configurations.html
+        exportPdf = "onDocumentHasTitle"
+        formatterMode = "typstyle"
+        previewFeature = "disable"
+    }
+    set-option -add buffer lsp_servers "formatterPrintWidth = %opt{autowrap_column}"
+}
+
 hook -group lsp-filetype-yaml global BufSetOption filetype=yaml %{
     set-option buffer lsp_servers %{
         [yaml-language-server]

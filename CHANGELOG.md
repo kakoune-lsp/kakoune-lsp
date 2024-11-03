@@ -1,5 +1,7 @@
 ## Unreleased
 
+Default configuration for `typst`, using `tinymist`.
+
 ## 18.0.3 - 2024-11-03
 
 Yet another release to fix regressions present in the 18.0.* series:
