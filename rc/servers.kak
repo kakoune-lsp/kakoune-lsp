@@ -506,17 +506,6 @@ hook -group lsp-filetype-rust global BufSetOption filetype=rust %{
         [rust-analyzer]
         root_globs = ["Cargo.toml"]
         single_instance = true
-        command = "sh"
-        args = [
-            "-c",
-            """
-                if path=$(rustup which rust-analyzer 2>/dev/null); then
-                    exec "$path"
-                else
-                    exec rust-analyzer
-                fi
-            """,
-        ]
         [rust-analyzer.experimental]
         commands.commands = ["rust-analyzer.runSingle"]
         hoverActions = true
