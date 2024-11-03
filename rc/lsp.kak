@@ -2286,6 +2286,7 @@ define-command -hidden lsp-diagnostics-open-error -params 4 %{
 }
 
 declare-option -docstring 'name of the client in which documentation is to be displayed' str docsclient
+declare-option -docstring "maximum amount of characters per line, after which a newline character will be inserted" int autowrap_column 80
 
 hook global -once KakBegin .* %{
     try %{
