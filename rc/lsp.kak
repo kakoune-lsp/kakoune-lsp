@@ -594,9 +594,14 @@ declare-option -hidden str lsp_do_send_maybe_async lsp-do-send-async
 define-command -hidden lsp-do-send-async %{
     evaluate-commands %sh{
         $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
-            exec >${kak_opt_lsp_fifo}
+            exec 3>${kak_opt_lsp_fifo}
             trap : INT TERM
-            printf %s "${kak_quoted_reg_a}"
+            printf >&3 %s "${kak_quoted_reg_a}"
+            case "${kak_reg_a}" in
+                ( *textDocument/didChange | *textDocument/didOpen )
+                    echo evaluate-commands -no-hooks %{ write -force %opt{lsp_fifo} }
+                    ;;
+            esac
         '
         if [ $? -eq 124 ]; then
             echo fail "Timed out trying to reach kak-lsp"
@@ -678,13 +683,7 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
     lsp-unless-blocked lsp-if-changed-since lsp_timestamp %opt{lsp_timestamp} %{
-        evaluate-commands %sh{
-            file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
-            echo "
-                evaluate-commands -no-hooks %{ write -force $file }
-                lsp-send textDocument/didChange $file
-            "
-        }
+        lsp-send textDocument/didChange
     }
 }
 
@@ -1111,13 +1110,7 @@ define-command lsp-capabilities -docstring "List available commands for current 
 
 define-command -hidden lsp-did-open %{
     lsp-unless-blocked evaluate-commands %{
-        evaluate-commands %sh{
-            file=$(mktemp -q -t 'kak-lsp-buffer.XXXXXX' 2>/dev/null || mktemp -q)
-            echo "
-                evaluate-commands -no-hooks %{ write -force $file }
-                lsp-send textDocument/didOpen $file
-            "
-        }
+        lsp-send textDocument/didOpen
         set-option buffer lsp_timestamp %val{timestamp}
         lsp-code-lens-request
     }

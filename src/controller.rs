@@ -191,15 +191,15 @@ impl ParserState {
             .collect()
     }
 
-    pub fn buffer_contents(&mut self) -> String {
-        let path: String = self.next();
-        let mut buf = vec![];
-        fs::File::open(path.clone())
+    pub fn buffer_contents(&mut self, fifo: PathBuf) -> String {
+        assert_eq!(self.offset, self.buf.len());
+        self.buf.clear();
+        fs::File::open(fifo)
             .unwrap()
-            .read_to_end(&mut buf)
+            .read_to_end(&mut self.buf)
             .unwrap();
-        let _ = fs::remove_file(path);
-        String::from_utf8_lossy(&buf).to_string()
+        self.offset = self.buf.len();
+        String::from_utf8_lossy(&self.buf).to_string()
     }
 }
 
@@ -207,6 +207,7 @@ fn dispatch_fifo_request(
     state: &mut ParserState,
     to_editor: &Sender<EditorResponse>,
     from_editor: &Sender<EditorRequest>,
+    fifo: &PathBuf,
 ) -> ControlFlow<()> {
     let session = SessionId(state.next());
     if session.as_str() == "$exit" {
@@ -412,11 +413,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.buffer_contents(),
+            draft: state.buffer_contents(fifo.clone()),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.buffer_contents(),
+            draft: state.buffer_contents(fifo.clone()),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
@@ -539,7 +540,7 @@ fn dispatch_fifo_request(
             panic!("unexpected method {}", method);
         }
     });
-    assert!(state.offset == state.buf.len());
+    assert_eq!(state.offset, state.buf.len());
     let flow = if method == "exit" {
         ControlFlow::Break(())
     } else {
@@ -610,7 +611,7 @@ pub fn start(
                 state.offset = 0;
                 state.quoted = false;
                 state.escaped = false;
-                if dispatch_fifo_request(&mut state, &to_editor, &from_editor).is_break() {
+                if dispatch_fifo_request(&mut state, &to_editor, &from_editor, &fifo).is_break() {
                     break;
                 }
             },
