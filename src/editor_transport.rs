@@ -72,17 +72,8 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
                 }
             };
 
-            if stdin.write_all(command.as_bytes()).is_err() {
-                if log {
-                    error!(response.meta.session, "Failed to write to editor stdin");
-                }
-                return;
-            }
-            // code should fail earlier if Kakoune was not spawned
-            // otherwise something went completely wrong, better to panic
-            let exit_code = child.wait().unwrap();
-            if !exit_code.success() && log {
-                error!(response.meta.session, "kak -p exited with non-zero status");
+            if stdin.write_all(command.as_bytes()).is_err() && log {
+                error!(response.meta.session, "Failed to write to editor stdin");
             }
         }
         Err(e) => {

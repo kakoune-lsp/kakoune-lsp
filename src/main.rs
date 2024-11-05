@@ -201,7 +201,7 @@ fn main() -> Result<(), ()> {
     session_path.push(session.as_str());
     let mut session_directory = SessionDirectory {
         symlink: None,
-        fifo: None,
+        fifos: [None, None],
         pid_file: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
         plugin_directory: TemporaryDirectory::new(plugin_path.clone()),
@@ -233,28 +233,32 @@ fn main() -> Result<(), ()> {
         return Err(());
     }
 
-    let mut fifo = session_path.clone();
-    fifo.push("fifo");
-    let tmp = TemporaryInputFifo::new(fifo.clone());
-    let fifo_cstr = tmp.0 .0;
-    session_directory.fifo = Some(tmp);
     let mut exists = false;
-    if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
-        let err = std::io::Error::last_os_error();
-        if err.kind() == ErrorKind::AlreadyExists {
-            exists = true;
-        } else {
-            report_error(
-                &session,
-                format!(
-                    "failed to create fifo '{}': {}",
-                    fifo.display(),
-                    std::io::Error::last_os_error()
-                ),
-            );
-            return Err(());
+    let mut create_fifo = |offset: usize, name: &str| {
+        let mut fifo = session_path.clone();
+        fifo.push(name);
+        let tmp = TemporaryInputFifo::new(fifo.clone());
+        let fifo_cstr = tmp.0 .0;
+        session_directory.fifos[offset] = Some(tmp);
+        if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
+            let err = std::io::Error::last_os_error();
+            if err.kind() == ErrorKind::AlreadyExists {
+                exists = true;
+            } else {
+                report_error(
+                    &session,
+                    format!(
+                        "failed to create fifo '{}': {}",
+                        fifo.display(),
+                        std::io::Error::last_os_error()
+                    ),
+                );
+                return Err(());
+            }
         }
-    }
+        Ok(fifo)
+    };
+    let fifos = [create_fifo(0, "fifo1")?, create_fifo(1, "fifo2")?];
 
     if exists {
         eprintln!("Server seems to be already running at:");
@@ -354,7 +358,7 @@ fn main() -> Result<(), ()> {
     // Setting up the logger after potential daemonization,
     // otherwise it refuses to work properly.
     let log_path_parent = initialize_logger(&session, &matches, verbosity);
-    let code = controller::start(session.clone(), config, log_path_parent, fifo);
+    let code = controller::start(session.clone(), config, log_path_parent, fifos);
     info!(session, "kak-lsp server exiting");
     goodbye(code);
 }
@@ -595,7 +599,7 @@ impl Drop for TemporaryDirectory {
 
 struct SessionDirectory {
     symlink: Option<TemporaryFile>,
-    fifo: Option<TemporaryInputFifo>,
+    fifos: [Option<TemporaryInputFifo>; 2],
     pid_file: Option<TemporaryFile>,
     #[allow(dead_code)]
     session_directory: TemporaryDirectory,

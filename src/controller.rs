@@ -3,9 +3,10 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{self};
 use std::io::Read;
 use std::ops::ControlFlow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::{AcqRel, Acquire, Relaxed};
 use std::time::Duration;
 use std::{iter, mem};
 
@@ -180,6 +181,8 @@ impl Deserializable for FormattingOptions {
     }
 }
 
+static FIFO_INDEX: AtomicBool = AtomicBool::new(false);
+
 impl ParserState {
     pub fn next<T: Deserializable>(&mut self) -> T {
         T::deserialize(self)
@@ -191,15 +194,22 @@ impl ParserState {
             .collect()
     }
 
-    pub fn buffer_contents(&mut self, fifo: PathBuf) -> String {
+    pub fn read_message(&mut self, fifos: &[PathBuf; 2]) {
         assert_eq!(self.offset, self.buf.len());
         self.buf.clear();
-        fs::File::open(fifo)
+        self.offset = 0;
+        fs::File::open(fifos[usize::from(FIFO_INDEX.fetch_not(AcqRel))].clone())
             .unwrap()
             .read_to_end(&mut self.buf)
             .unwrap();
+    }
+
+    pub fn buffer_contents(&mut self, fifos: &[PathBuf; 2]) -> String {
+        self.read_message(fifos);
         self.offset = self.buf.len();
-        String::from_utf8_lossy(&self.buf).to_string()
+        let buffer = String::from_utf8_lossy(&self.buf).to_string();
+        debug!(self.session, "Buffer contents from editor: <{}>", buffer);
+        buffer
     }
 }
 
@@ -207,7 +217,7 @@ fn dispatch_fifo_request(
     state: &mut ParserState,
     to_editor: &Sender<EditorResponse>,
     from_editor: &Sender<EditorRequest>,
-    fifo: &Path,
+    fifos: &[PathBuf; 2],
 ) -> ControlFlow<()> {
     let session = SessionId(state.next());
     if session.as_str() == "$exit" {
@@ -413,11 +423,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.buffer_contents(fifo.to_path_buf()),
+            draft: state.buffer_contents(fifos),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.buffer_contents(fifo.to_path_buf()),
+            draft: state.buffer_contents(fifos),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
@@ -563,7 +573,7 @@ pub fn start(
     session: SessionId,
     config: Config,
     log_path: &'static Option<PathBuf>,
-    fifo: PathBuf,
+    fifos: [PathBuf; 2],
 ) -> i32 {
     info!(
         session,
@@ -587,31 +597,21 @@ pub fn start(
         let mut state = ParserState::new(session.clone());
         let session = session.clone();
         let to_editor = editor.to_editor.sender().clone();
-        let fifo = fifo.clone();
+        let fifos = fifos.clone();
         Worker::spawn(
             ctx.last_session().clone(),
             "Messages from editor",
             1024, // arbitrary
             move |_receiver: Receiver<()>, from_editor: Sender<EditorRequest>| loop {
-                state.buf.clear();
-                {
-                    let mut file = match fs::File::open(fifo.clone()) {
-                        Ok(file) => file,
-                        Err(err) => {
-                            panic!("failed to open fifo '{}', {}", fifo.display(), err);
-                        }
-                    };
-                    file.read_to_end(&mut state.buf).unwrap();
-                }
+                state.read_message(&fifos);
                 debug!(
                     session,
                     "From editor: <{}>",
                     String::from_utf8_lossy(&state.buf)
                 );
-                state.offset = 0;
                 state.quoted = false;
                 state.escaped = false;
-                if dispatch_fifo_request(&mut state, &to_editor, &from_editor, &fifo).is_break() {
+                if dispatch_fifo_request(&mut state, &to_editor, &from_editor, &fifos).is_break() {
                     break;
                 }
             },
@@ -665,7 +665,10 @@ pub fn start(
         let timeout_op = sel.recv(&timeout_channel);
 
         let force_exit = |ctx: &mut Context| {
-            if let Err(err) = fs::write(fifo.clone(), "'$exit'") {
+            if let Err(err) = fs::write(
+                fifos[usize::from(!FIFO_INDEX.load(Acquire))].clone(),
+                "'$exit'",
+            ) {
                 error!(ctx.last_session(), "Error writing to fifo: {}", err);
             }
         };
