@@ -465,10 +465,6 @@ declare-option -hidden str lsp_modeline_message_requests ""
 declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
-hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
-    try %{ lsp-send kakoune/did-change-option %val{hook_param} }
-}
-
 declare-option -hidden -docstring %{
     echo %sh{eval "$kak_opt_lsp_find_root" <globs>... $(: kak_buffile)}: detect root directory based on the given shell globs.
 
@@ -663,6 +659,10 @@ hook -group lsp-scratch-buffers global BufCreate [^/].* %{
 }
 hook -group lsp-scratch-buffers global WinDisplay \*debug\* %{
     lsp-block-in-buffer
+}
+
+hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
+    try %{ lsp-send kakoune/did-change-option %val{hook_param} }
 }
 
 declare-option -hidden int lsp_timestamp -1
