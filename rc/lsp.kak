@@ -530,13 +530,15 @@ declare-option -hidden -docstring 'PID file for kak-lsp server' str lsp_pid_file
 
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
-        if [ -e "${kak_opt_lsp_fifo}" ]; then
-            printf 'fail lsp-start: fifo already exists at %s\n' "${kak_opt_lsp_fifo}"
-            exit
-        fi
-        if [ -e "${kak_opt_lsp_pid_file}" ]; then
-            printf 'fail lsp-start: PID file already exists at %s\n' "${kak_opt_lsp_pid_file}"
-            exit
+        existing_session_dir=${kak_opt_lsp_pid_file%/*}
+        for attempt in $(seq 30); do
+            if ! [ -e "${existing_session_dir}" ]; then
+                break
+            fi
+            sleep .1
+        done
+        if [ -e "${existing_session_dir}" ]; then
+            echo "fail lsp-start: session directory already exists: ${existing_session_dir}"
         fi
         # kak_session
         # kak_client (for reporting startup errors)
@@ -1156,15 +1158,7 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
 
 define-command lsp-restart -docstring "Restart kak-lsp and language servers" %{
     lsp-exit
-    evaluate-commands %sh{
-        for attempt in $(seq 30); do
-            if ! [ -e ${kak_opt_lsp_pid_file} ] && ! [ -e ${kak_opt_lsp_fifo} ]; then
-                exit
-            fi
-            sleep .1
-        done
-        echo "fail lsp-restart: timed out waiting for kak-lsp to exit"
-    }
+    lsp-start
     lsp-did-change-config
     lsp-did-open
     echo -markup {Information}Restarted LSP servers
