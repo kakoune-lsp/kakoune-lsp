@@ -531,6 +531,7 @@ declare-option -hidden -docstring 'PID file for kak-lsp server' str lsp_pid_file
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
         existing_session_dir=${kak_opt_lsp_pid_file%/*}
+        unset kak_opt_lsp_pid_file
         for attempt in $(seq 30); do
             if ! [ -e "${existing_session_dir}" ]; then
                 break
