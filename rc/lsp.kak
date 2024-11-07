@@ -507,6 +507,22 @@ define-command -hidden lsp-if-no-servers -docstring %{
     }
 }
 
+define-command -hidden lsp-auto-highlight-references nop
+hook -group lsp-hooks global GlobalSetOption lsp_auto_highlight_references=true %{
+    define-command -hidden -override lsp-auto-highlight-references lsp-highlight-references
+}
+hook -group lsp-hooks global GlobalSetOption lsp_auto_highlight_references=false %{
+    define-command -hidden -override lsp-auto-highlight-references nop
+}
+
+define-command -hidden lsp-auto-show-code-actions lsp-code-actions-background-request
+hook -group lsp-hooks global GlobalSetOption lsp_auto_show_code_actions=true %{
+    define-command -hidden -override lsp-auto-show-code-actions lsp-code-actions-background-request
+}
+hook -group lsp-hooks global GlobalSetOption lsp_auto_show_code_actions=false %{
+    define-command -hidden -override lsp-auto-show-code-actions nop
+}
+
 ### Requests ###
 
 declare-option -hidden -docstring 'Acceptor for LSP commands' str lsp_fifo
@@ -1857,10 +1873,8 @@ define-command -hidden lsp-enable-impl -params 1 %{
     hook -group lsp %arg{1} NormalIdle .* %{
         lsp-did-change
         lsp-code-lens-request
-        evaluate-commands %sh{
-            if $kak_opt_lsp_auto_highlight_references; then echo lsp-highlight-references; fi
-            if $kak_opt_lsp_auto_show_code_actions; then echo "lsp-code-actions-background-request"; fi
-        }
+        lsp-auto-show-code-actions
+        lsp-auto-highlight-references
     }
     hook -group lsp %arg{1} NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
         set-option window lsp_object_mode %val{hook_param}
