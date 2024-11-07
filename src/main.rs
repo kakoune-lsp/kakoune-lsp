@@ -37,6 +37,8 @@ use context::meta_for_session;
 use daemonize::Daemonize;
 use editor_transport::send_command_to_editor;
 use itertools::Itertools;
+use libc::O_NONBLOCK;
+use libc::O_RDONLY;
 use libc::SIGHUP;
 use libc::SIGINT;
 use libc::SIGQUIT;
@@ -198,10 +200,11 @@ fn main() -> Result<(), ()> {
     let mut session_path = plugin_path.clone();
     session_path.push(session.as_str());
     let mut session_directory = SessionDirectory {
+        symlink: None,
         fifo: None,
         pid_file: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
-        plugin_directory: TemporaryDirectory::new(plugin_path),
+        plugin_directory: TemporaryDirectory::new(plugin_path.clone()),
     };
     if fs::create_dir_all(session_path.clone()).is_err() {
         report_error(
@@ -214,10 +217,26 @@ fn main() -> Result<(), ()> {
         );
         return Err(());
     }
+
+    let mut session_symlink_path = plugin_path;
+    session_symlink_path.push(format!("{}.ref", session));
+    session_directory.symlink = Some(TemporaryFile::new(session_symlink_path.clone()));
+    if std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()).is_err() {
+        report_error(
+            &session,
+            format!(
+                "failed to create session directory symlink '{}': {}",
+                session_symlink_path.display(),
+                std::io::Error::last_os_error()
+            ),
+        );
+        return Err(());
+    }
+
     let mut fifo = session_path.clone();
     fifo.push("fifo");
-    let tmp = TemporaryFile::new(fifo.clone());
-    let fifo_cstr = tmp.0;
+    let tmp = TemporaryInputFifo::new(fifo.clone());
+    let fifo_cstr = tmp.0 .0;
     session_directory.fifo = Some(tmp);
     let mut exists = false;
     if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
@@ -240,7 +259,7 @@ fn main() -> Result<(), ()> {
     if exists {
         eprintln!("Server seems to be already running at:");
     }
-    println!("{}", session_path.display());
+    println!("{}", session_symlink_path.display());
     unsafe {
         libc::close(STDOUT_FILENO);
     }
@@ -543,6 +562,23 @@ impl Drop for TemporaryFile {
     }
 }
 
+struct TemporaryInputFifo(TemporaryFile);
+impl TemporaryInputFifo {
+    fn new(path: PathBuf) -> Self {
+        Self(TemporaryFile::new(path))
+    }
+}
+impl Drop for TemporaryInputFifo {
+    fn drop(&mut self) {
+        unsafe {
+            let fd = libc::open(self.0 .0.as_ptr(), O_RDONLY | O_NONBLOCK);
+            if fd != -1 {
+                let _ = libc::close(fd);
+            }
+        }
+    }
+}
+
 struct TemporaryDirectory(&'static CString);
 impl TemporaryDirectory {
     fn new(path: PathBuf) -> Self {
@@ -558,7 +594,8 @@ impl Drop for TemporaryDirectory {
 }
 
 struct SessionDirectory {
-    fifo: Option<TemporaryFile>,
+    symlink: Option<TemporaryFile>,
+    fifo: Option<TemporaryInputFifo>,
     pid_file: Option<TemporaryFile>,
     #[allow(dead_code)]
     session_directory: TemporaryDirectory,
