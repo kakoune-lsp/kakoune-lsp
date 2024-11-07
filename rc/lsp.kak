@@ -547,6 +547,9 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
         session_dir=$(eval "${kak_opt_lsp_cmd} --daemonize")
         echo set-option global lsp_fifo "${session_dir}/fifo"
         echo set-option global lsp_pid_file "${session_dir}/pid"
+        until [ -e "${session_dir}/pid" ]; do
+            sleep .010
+        done
     }
 }
 
