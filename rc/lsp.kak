@@ -544,9 +544,9 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
         # kak_opt_lsp_timeout
         # kak_opt_lsp_snippet_support
         # kak_opt_lsp_file_watch_support
-        fifo=$(eval "${kak_opt_lsp_cmd} --daemonize")
-        echo set-option global lsp_fifo ${fifo}
-        echo set-option global lsp_pid_file ${fifo}.pid
+        session_dir=$(eval "${kak_opt_lsp_cmd} --daemonize")
+        echo set-option global lsp_fifo "${session_dir}/fifo"
+        echo set-option global lsp_pid_file "${session_dir}/pid"
     }
 }
 

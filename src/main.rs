@@ -183,7 +183,7 @@ fn main() {
     let session = SessionId(session);
     *SESSION.lock().unwrap() = session.clone();
 
-    let session_directory = env_var("XDG_RUNTIME_DIR")
+    let mut session_directory = env_var("XDG_RUNTIME_DIR")
         .filter(|dir| unsafe {
             let mut stat = mem::zeroed();
             let dir = CString::new(dir.clone()).unwrap();
@@ -195,6 +195,7 @@ fn main() {
             path.push(format!("kakoune-lsp-{}", whoami::username()));
             path
         });
+    session_directory.push(session.as_str());
     if fs::create_dir_all(session_directory.clone()).is_err() {
         report_config_error(
             &session,
@@ -206,7 +207,7 @@ fn main() {
         )
     }
     let mut fifo = session_directory.clone();
-    fifo.push(session.as_str());
+    fifo.push("fifo");
     let fifo_cstring = CString::new(fifo.clone().into_os_string().into_encoded_bytes()).unwrap();
     let mut exists = false;
     if unsafe { libc::mkfifo(fifo_cstring.as_ptr(), 0o600) } != 0 {
@@ -228,7 +229,7 @@ fn main() {
     if exists {
         eprintln!("Server seems to be already running at:");
     }
-    println!("{}", fifo.display());
+    println!("{}", session_directory.display());
     unsafe {
         libc::close(STDOUT_FILENO);
     }
@@ -237,17 +238,20 @@ fn main() {
     }
 
     let mut pid_file = session_directory;
-    pid_file.push(format!("{}.pid", session.as_str()));
+    pid_file.push("pid");
 
     let cleanup = {
         let parent = Path::new(&fifo).parent().unwrap();
         let parent_cstring = CString::new(parent.to_str().unwrap().to_string()).unwrap();
+        let grandparent = parent.parent().unwrap();
+        let grandparent_cstring = CString::new(grandparent.to_str().unwrap().to_string()).unwrap();
         let pid_file_cstring =
             CString::new(pid_file.clone().into_os_string().into_encoded_bytes()).unwrap();
         move || unsafe {
             let _ = libc::unlink(fifo_cstring.as_ptr()) == 0;
             let _ = libc::unlink(pid_file_cstring.as_ptr()) == 0;
             let _ = libc::rmdir(parent_cstring.as_ptr()) == 0;
+            let _ = libc::rmdir(grandparent_cstring.as_ptr()) == 0;
         }
     };
     CLEANUP.lock().unwrap().get_or_init(|| Box::new(cleanup));
