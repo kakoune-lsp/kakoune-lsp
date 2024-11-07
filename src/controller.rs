@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{self};
 use std::io::Read;
 use std::ops::ControlFlow;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
@@ -207,7 +207,7 @@ fn dispatch_fifo_request(
     state: &mut ParserState,
     to_editor: &Sender<EditorResponse>,
     from_editor: &Sender<EditorRequest>,
-    fifo: &PathBuf,
+    fifo: &Path,
 ) -> ControlFlow<()> {
     let session = SessionId(state.next());
     if session.as_str() == "$exit" {
@@ -413,11 +413,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.buffer_contents(fifo.clone()),
+            draft: state.buffer_contents(fifo.to_path_buf()),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.buffer_contents(fifo.clone()),
+            draft: state.buffer_contents(fifo.to_path_buf()),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
