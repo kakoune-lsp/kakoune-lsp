@@ -204,7 +204,7 @@ fn main() {
                 std::io::Error::last_os_error()
             ),
         )
-    };
+    }
     let mut fifo = session_directory.clone();
     fifo.push(session.as_str());
     let fifo_cstring = CString::new(fifo.clone().into_os_string().into_encoded_bytes()).unwrap();
