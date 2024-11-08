@@ -1175,6 +1175,18 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-exit: shutdown language servers associated with current editor session
 } %{
     lsp-send exit
+    evaluate-commands %sh{
+        existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
+        for attempt in $(seq 30); do
+            if ! [ -e "${existing_session_dir}" ]; then
+                break
+            fi
+            sleep .1
+        done
+        if [ -e "${existing_session_dir}" ]; then
+            echo "fail lsp-exit: session directory still exists: ${existing_session_dir}"
+        fi
+    }
 }
 
 define-command lsp-restart -docstring "Restart kak-lsp and language servers" %{
