@@ -71,7 +71,7 @@ static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 static SESSION: Mutex<SessionId> = Mutex::new(SessionId(String::new()));
 static LAST_CLIENT: Mutex<Option<String>> = Mutex::new(None);
 
-fn main() {
+fn main() -> Result<(), ()> {
     {
         let locale = CString::new("").unwrap();
         unsafe { libc::setlocale(libc::LC_ALL, locale.as_ptr()) };
@@ -183,7 +183,7 @@ fn main() {
     let session = SessionId(session);
     *SESSION.lock().unwrap() = session.clone();
 
-    let mut session_directory = env_var("XDG_RUNTIME_DIR")
+    let plugin_path = env_var("XDG_RUNTIME_DIR")
         .filter(|dir| unsafe {
             let mut stat = mem::zeroed();
             let dir = CString::new(dir.clone()).unwrap();
@@ -195,41 +195,52 @@ fn main() {
             path.push(format!("kakoune-lsp-{}", whoami::username()));
             path
         });
-    session_directory.push(session.as_str());
-    if fs::create_dir_all(session_directory.clone()).is_err() {
-        report_config_error(
+    let mut session_path = plugin_path.clone();
+    session_path.push(session.as_str());
+    let mut session_directory = SessionDirectory {
+        fifo: None,
+        pid_file: None,
+        session_directory: TemporaryDirectory::new(session_path.clone()),
+        plugin_directory: TemporaryDirectory::new(plugin_path),
+    };
+    if fs::create_dir_all(session_path.clone()).is_err() {
+        report_error(
             &session,
             format!(
                 "failed to create session directory '{}': {}",
-                session_directory.display(),
+                session_path.display(),
                 std::io::Error::last_os_error()
             ),
-        )
+        );
+        return Err(());
     }
-    let mut fifo = session_directory.clone();
+    let mut fifo = session_path.clone();
     fifo.push("fifo");
-    let fifo_cstring = CString::new(fifo.clone().into_os_string().into_encoded_bytes()).unwrap();
+    let tmp = TemporaryFile::new(fifo.clone());
+    let fifo_cstr = tmp.0;
+    session_directory.fifo = Some(tmp);
     let mut exists = false;
-    if unsafe { libc::mkfifo(fifo_cstring.as_ptr(), 0o600) } != 0 {
+    if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
         let err = std::io::Error::last_os_error();
         if err.kind() == ErrorKind::AlreadyExists {
             exists = true;
         } else {
-            report_config_error(
+            report_error(
                 &session,
                 format!(
                     "failed to create fifo '{}': {}",
                     fifo.display(),
                     std::io::Error::last_os_error()
                 ),
-            )
+            );
+            return Err(());
         }
     }
 
     if exists {
         eprintln!("Server seems to be already running at:");
     }
-    println!("{}", session_directory.display());
+    println!("{}", session_path.display());
     unsafe {
         libc::close(STDOUT_FILENO);
     }
@@ -237,24 +248,15 @@ fn main() {
         process::exit(0);
     }
 
-    let mut pid_file = session_directory;
+    let mut pid_file = session_path;
     pid_file.push("pid");
+    session_directory.pid_file = Some(TemporaryFile::new(pid_file.clone()));
 
-    let cleanup = {
-        let parent = Path::new(&fifo).parent().unwrap();
-        let parent_cstring = CString::new(parent.to_str().unwrap().to_string()).unwrap();
-        let grandparent = parent.parent().unwrap();
-        let grandparent_cstring = CString::new(grandparent.to_str().unwrap().to_string()).unwrap();
-        let pid_file_cstring =
-            CString::new(pid_file.clone().into_os_string().into_encoded_bytes()).unwrap();
-        move || unsafe {
-            let _ = libc::unlink(fifo_cstring.as_ptr()) == 0;
-            let _ = libc::unlink(pid_file_cstring.as_ptr()) == 0;
-            let _ = libc::rmdir(parent_cstring.as_ptr()) == 0;
-            let _ = libc::rmdir(grandparent_cstring.as_ptr()) == 0;
-        }
-    };
-    CLEANUP.lock().unwrap().get_or_init(|| Box::new(cleanup));
+    CLEANUP.lock().unwrap().get_or_init(|| {
+        Box::new(move || {
+            drop(session_directory);
+        })
+    });
 
     for signal in [SIGTERM, SIGHUP, SIGINT, SIGQUIT] {
         unsafe {
@@ -274,7 +276,10 @@ fn main() {
         config.server.timeout = 18000;
         if let Some(timeout) = env_var("kak_opt_lsp_timeout") {
             config.server.timeout = timeout.parse().unwrap_or_else(|err| {
-                report_config_error(&session, format!("failed to parse lsp_timeout: {err}"))
+                report_config_error_and_exit(
+                    &session,
+                    format!("failed to parse lsp_timeout: {err}"),
+                )
             });
         }
         if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support") {
@@ -301,7 +306,7 @@ fn main() {
 
     if let Some(timeout) = matches.get_one::<String>("timeout").map(|s| {
         s.parse().unwrap_or_else(|err| {
-            report_config_error(
+            report_config_error_and_exit(
                 &session,
                 format!("failed to parse --timeout parameter: {err}"),
             )
@@ -321,7 +326,7 @@ fn main() {
     }
 
     if let Err(err) = fs::write(pid_file.clone(), process::id().to_string().as_bytes()) {
-        report_config_error(
+        report_config_error_and_exit(
             &session,
             format!("failed to write pid file '{}': {}", pid_file.display(), err),
         )
@@ -371,7 +376,7 @@ fn kakoune() {
     println!("{}{}", script, lsp_cmd);
 }
 
-fn report_config_error(session: &SessionId, error_message: String) -> ! {
+fn report_error(session: &SessionId, error_message: String) {
     let command = format!("lsp-show-error {}", &editor_quote(&error_message));
     send_command_to_editor(
         EditorResponse {
@@ -381,6 +386,10 @@ fn report_config_error(session: &SessionId, error_message: String) -> ! {
         false,
     );
     eprintln!("{}", error_message);
+}
+
+fn report_config_error_and_exit(session: &SessionId, error_message: String) -> ! {
+    report_error(session, error_message);
     goodbye(1);
 }
 
@@ -415,7 +424,7 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
             Ok(cfg)
         }) {
         Ok(cfg) => cfg,
-        Err(err) => report_config_error(
+        Err(err) => report_config_error_and_exit(
             session,
             format!(
                 "failed to parse config file {}: {}",
@@ -511,4 +520,48 @@ fn goodbye(code: i32) -> ! {
 
 extern "C" fn handle_interrupt(_sig: libc::c_int) -> ! {
     goodbye(1)
+}
+
+// for async-signal-safe cleanup
+fn immortalize_path(path: PathBuf) -> &'static CString {
+    Box::leak(Box::new(
+        CString::new(path.into_os_string().into_encoded_bytes()).unwrap(),
+    ))
+}
+
+struct TemporaryFile(&'static CString);
+impl TemporaryFile {
+    fn new(path: PathBuf) -> Self {
+        Self(immortalize_path(path))
+    }
+}
+impl Drop for TemporaryFile {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = libc::unlink(self.0.as_ptr());
+        }
+    }
+}
+
+struct TemporaryDirectory(&'static CString);
+impl TemporaryDirectory {
+    fn new(path: PathBuf) -> Self {
+        Self(immortalize_path(path))
+    }
+}
+impl Drop for TemporaryDirectory {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = libc::rmdir(self.0.as_ptr());
+        }
+    }
+}
+
+struct SessionDirectory {
+    fifo: Option<TemporaryFile>,
+    pid_file: Option<TemporaryFile>,
+    #[allow(dead_code)]
+    session_directory: TemporaryDirectory,
+    #[allow(dead_code)]
+    plugin_directory: TemporaryDirectory,
 }
