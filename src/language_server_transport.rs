@@ -3,7 +3,9 @@ use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
 use jsonrpc_core::{self, Call, Output};
+use libc::SIGTERM;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 
@@ -143,7 +145,7 @@ pub fn start(
                     session,
                     "Language server process has still not exited, sending SIGTERM"
                 );
-                child.kill().unwrap();
+                unsafe { libc::kill(child.id().try_into().unwrap(), SIGTERM) };
             },
         )
     };
