@@ -536,11 +536,11 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
         existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
         unset kak_opt_lsp_pid_file
-        for attempt in $(seq 30); do
+        for attempt in $(seq 100); do
             if ! [ -e "${existing_session_dir}" ]; then
                 break
             fi
-            sleep .1
+            sleep .030
         done
         if [ -e "${existing_session_dir}" ]; then
             echo "fail lsp-start: session directory already exists: ${existing_session_dir}"
@@ -1177,11 +1177,11 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-send exit
     evaluate-commands %sh{
         existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
-        for attempt in $(seq 30); do
+        for attempt in $(seq 100); do
             if ! [ -e "${existing_session_dir}" ]; then
                 break
             fi
-            sleep .1
+            sleep .030
         done
         if [ -e "${existing_session_dir}" ]; then
             echo "fail lsp-exit: session directory still exists: ${existing_session_dir}"

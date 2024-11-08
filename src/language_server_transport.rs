@@ -123,32 +123,27 @@ pub fn start(
                 drop(child.stdin.take());
                 drop(child.stdout.take());
                 drop(child.stderr.take());
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                match child.try_wait() {
-                    Ok(Some(status)) => {
-                        debug!(session, "Language server process exited with {status}");
-                    }
-                    Ok(None) => {
-                        std::thread::sleep(std::time::Duration::from_secs(1));
-                        match child.try_wait() {
-                            Ok(Some(status)) => {
-                                debug!(session, "Language server process exited with {status}");
-                            }
-                            Ok(None) => {
-                                // Okay, we asked politely enough and waited long enough.
-                                debug!(
-                                    session,
-                                    "Language server process has still not exited, sending SIGTERM"
-                                );
-                                child.kill().unwrap();
-                            }
-                            Err(_) => (),
+                for _attempt in 0..10 {
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            debug!(session, "Language server process exited with {status}");
+                            return;
+                        }
+                        Ok(None) => {
+                            std::thread::sleep(std::time::Duration::from_millis(10));
+                        }
+                        Err(_) => {
+                            error!(session, "Language server wasn't running was it?!");
+                            return;
                         }
                     }
-                    Err(_) => {
-                        error!(session, "Language server wasn't running was it?!");
-                    }
                 }
+                // Okay, we asked politely enough and waited long enough.
+                debug!(
+                    session,
+                    "Language server process has still not exited, sending SIGTERM"
+                );
+                child.kill().unwrap();
             },
         )
     };
