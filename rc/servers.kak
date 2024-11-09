@@ -168,7 +168,7 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
         # quotePreference = "double"
         # typescript.format.semicolons = "insert"
     }
-    # set-option -add buffer lsp_servers %{
+    # set-option buffer lsp_servers %{
     #     [deno]
     #     root_globs = ["package.json", "tsconfig.json", ".git", ".hg"]
     #     args = ["lsp"]
@@ -177,12 +177,12 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     #     enable = true
     #     lint = true
     # }
-    # set-option -add buffer lsp_servers %{
+    # set-option buffer lsp_servers %{
     #     [biome]
     #     root_globs = ["biome.json", "package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
     #     args = ["lsp-proxy"]
     # }
-    # set-option -add buffer lsp_servers %{
+    # set-option buffer lsp_servers %{
     #     [eslint-language-server]
     #     root_globs = [".eslintrc", ".eslintrc.json"]
     #     args = ["--stdio"]
@@ -300,7 +300,7 @@ hook -group lsp-filetype-markdown global BufSetOption filetype=markdown %{
         root_globs = [".marksman.toml"]
         args = ["server"]
     }
-    # set-option -add buffer lsp_servers %{
+    # set-option buffer lsp_servers %{
     #     [zk]
     #     root_globs = [".zk"]
     #     args = ["lsp"]
@@ -378,7 +378,7 @@ hook -group lsp-filetype-python global BufSetOption filetype=python %{
         # pylsp.configurationSources = ["flake8"]
         pylsp.plugins.jedi_completion.include_params = true
     }
-    # set-option -add buffer lsp_servers %{
+    # set-option buffer lsp_servers %{
     #     [pyright-langserver]
     #     root_globs = ["requirements.txt", "setup.py", "pyproject.toml", "pyrightconfig.json", ".git", ".hg"]
     #     args = ["--stdio"]
