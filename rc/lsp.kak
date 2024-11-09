@@ -534,17 +534,6 @@ declare-option -hidden str lsp_pid
 
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
-        existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
-        unset kak_opt_lsp_pid_file
-        for attempt in $(seq 100); do
-            if ! [ -e "${existing_session_dir}" ]; then
-                break
-            fi
-            sleep .030
-        done
-        if [ -e "${existing_session_dir}" ]; then
-            echo "fail lsp-start: session directory already exists: ${existing_session_dir}"
-        fi
         # kak_session
         # kak_client (for reporting startup errors)
         # kak_opt_lsp_debug

@@ -218,22 +218,27 @@ fn main() -> Result<(), ()> {
         return Err(());
     }
 
+    let mut exists = false;
+
     let mut session_symlink_path = plugin_path;
     session_symlink_path.push(format!("{}.ref", session));
     session_directory.symlink = Some(TemporaryFile::new(session_symlink_path.clone()));
-    if std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()).is_err() {
-        report_error(
-            &session,
-            format!(
-                "failed to create session directory symlink '{}': {}",
-                session_symlink_path.display(),
-                std::io::Error::last_os_error()
-            ),
-        );
-        return Err(());
+    if let Err(err) = std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()) {
+        if err.kind() == ErrorKind::AlreadyExists {
+            exists = true;
+        } else {
+            report_error(
+                &session,
+                format!(
+                    "failed to create session directory symlink '{}': {}",
+                    session_symlink_path.display(),
+                    err,
+                ),
+            );
+            return Err(());
+        }
     }
 
-    let mut exists = false;
     let mut create_fifo = |offset: usize, name: &str| {
         let mut fifo = session_path.clone();
         fifo.push(name);
