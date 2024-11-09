@@ -39,10 +39,14 @@ use editor_transport::send_command_to_editor;
 use itertools::Itertools;
 use libc::O_NONBLOCK;
 use libc::O_RDONLY;
+use libc::SA_NOCLDWAIT;
+use libc::SA_RESTART;
+use libc::SIGCHLD;
 use libc::SIGHUP;
 use libc::SIGINT;
 use libc::SIGQUIT;
 use libc::SIGTERM;
+use libc::SIG_IGN;
 use libc::STDOUT_FILENO;
 use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
@@ -377,6 +381,14 @@ fn main() -> Result<(), ()> {
                 err
             ),
         )
+    }
+
+    unsafe {
+        let mut act: libc::sigaction = std::mem::zeroed();
+        act.sa_sigaction = SIG_IGN;
+        libc::sigemptyset(&mut act.sa_mask);
+        act.sa_flags = SA_RESTART | SA_NOCLDWAIT;
+        libc::sigaction(SIGCHLD, &act, std::ptr::null_mut());
     }
 
     // Setting up the logger after potential daemonization,

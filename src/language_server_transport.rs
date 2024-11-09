@@ -3,10 +3,11 @@ use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
 use jsonrpc_core::{self, Call, Output};
-use libc::SIGTERM;
+use libc::{SIGCHLD, SIGTERM, SIG_DFL};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
+use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
 pub struct LanguageServerTransport {
@@ -34,13 +35,20 @@ pub fn start(
             .chain(args.iter().map(|s| s.as_str()))
             .join(" ")
     );
-    let mut child = match Command::new(cmd)
-        .args(args)
-        .envs(envs)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+    let mut child = match unsafe {
+        Command::new(cmd).pre_exec(|| {
+            let mut act: libc::sigaction = std::mem::zeroed();
+            act.sa_sigaction = SIG_DFL;
+            libc::sigaction(SIGCHLD, &act, std::ptr::null_mut());
+            Ok(())
+        })
+    }
+    .args(args)
+    .envs(envs)
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()
     {
         Ok(c) => c,
         Err(err) => {
