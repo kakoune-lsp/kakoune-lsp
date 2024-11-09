@@ -556,9 +556,11 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
         echo set-option global lsp_fifo1 "${session_dir}/fifo1"
         echo set-option global lsp_fifo2 "${session_dir}/fifo2"
         echo set-option global lsp_pid_file "${session_dir}/pid"
-        until [ -e "${session_dir}/pid" ]; do
+        until pid=$(cat "${session_dir}/pid" 2>/dev/null); do
             sleep .010
         done
+        echo set-option global lsp_pid $pid
+        echo alias global lsp-pid-$pid nop
     }
 }
 
@@ -572,18 +574,17 @@ define-command -hidden lsp-do-send -params 1.. %{
         set-register p
         try %{
             evaluate-commands "set-register p %%file{%opt{lsp_pid_file}}"
+            try %{
+                "lsp-pid-%reg{p}"
+            } catch %{
+                unalias global "lsp-pid-%opt{lsp_pid}" nop
+                set-option global lsp_pid %reg{p}
+                alias global "lsp-pid-%reg{p}" nop
+                set-option global lsp_fifo %opt{lsp_fifo1}
+                set-option global lsp_fifo_toggle fail
+            }
         } catch %{
             lsp-start
-        }
-        try %{
-            "lsp-pid-%reg{p}"
-        } catch %{
-            unalias global "lsp-pid-%opt{lsp_pid}" nop
-            evaluate-commands "set-register p %%file{%opt{lsp_pid_file}}"
-            set-option global lsp_pid %reg{p}
-            alias global "lsp-pid-%reg{p}" nop
-            set-option global lsp_fifo %opt{lsp_fifo1}
-            set-option global lsp_fifo_toggle fail
         }
         try %{
             nop %val{hook_param}

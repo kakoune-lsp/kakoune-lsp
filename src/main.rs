@@ -202,7 +202,7 @@ fn main() -> Result<(), ()> {
     let mut session_directory = SessionDirectory {
         symlink: None,
         fifos: [None, None],
-        pid_file: None,
+        pid_files: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
         plugin_directory: TemporaryDirectory::new(plugin_path.clone()),
     };
@@ -271,9 +271,14 @@ fn main() -> Result<(), ()> {
         process::exit(0);
     }
 
-    let mut pid_file = session_path;
+    let mut pid_file = session_path.clone();
     pid_file.push("pid");
-    session_directory.pid_file = Some(TemporaryFile::new(pid_file.clone()));
+    let mut pid_file_tmp = session_path;
+    pid_file_tmp.push("pid.tmp");
+    session_directory.pid_files = Some([
+        TemporaryFile::new(pid_file.clone()),
+        TemporaryFile::new(pid_file_tmp.clone()),
+    ]);
 
     CLEANUP.lock().unwrap().get_or_init(|| {
         Box::new(move || {
@@ -348,10 +353,24 @@ fn main() -> Result<(), ()> {
         }
     }
 
-    if let Err(err) = fs::write(pid_file.clone(), process::id().to_string().as_bytes()) {
+    if let Err(err) = fs::write(pid_file_tmp.clone(), process::id().to_string().as_bytes()) {
         report_config_error_and_exit(
             &session,
-            format!("failed to write pid file '{}': {}", pid_file.display(), err),
+            format!(
+                "failed to write pid file '{}': {}",
+                pid_file_tmp.display(),
+                err
+            ),
+        )
+    }
+    if let Err(err) = fs::rename(pid_file_tmp.clone(), pid_file.clone()) {
+        report_config_error_and_exit(
+            &session,
+            format!(
+                "failed to rename pid file '{}': {}",
+                pid_file.display(),
+                err
+            ),
         )
     }
 
@@ -600,7 +619,7 @@ impl Drop for TemporaryDirectory {
 struct SessionDirectory {
     symlink: Option<TemporaryFile>,
     fifos: [Option<TemporaryInputFifo>; 2],
-    pid_file: Option<TemporaryFile>,
+    pid_files: Option<[TemporaryFile; 2]>,
     #[allow(dead_code)]
     session_directory: TemporaryDirectory,
     #[allow(dead_code)]
