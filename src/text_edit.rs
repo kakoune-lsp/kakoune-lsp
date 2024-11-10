@@ -276,7 +276,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
         let last_line = text.line(text.len_lines() - 1);
         let missing_eol = {
             let line_len = last_line.len_chars();
-            line_len == 0 || last_line.char(line_len - 1) == '\n'
+            line_len != 0 && last_line.char(line_len - 1) == '\n'
         };
         let text_end = if missing_eol {
             Position {
@@ -789,6 +789,50 @@ mod tests {
                    let<esc>z7)<space><esc>,<esc>cargs<esc>z8)<space><esc>,<esc>c= env::args().skip(1);<esc>z9)<space><esc>,<esc>c
                <esc>""#
         ).to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn lsp_text_edits_to_kakoune_rewrite_whole_buffer_missing_eol() {
+        let buffer = Rope::from_str(indoc!(
+            r#"<head/>
+                   <body>
+                   asdf
+               </body>
+             "#
+        ));
+        let text_edits = vec![edit(
+            0,
+            0,
+            4,
+            0,
+            indoc!(
+                r#"<head/>
+
+                   <body>
+                           asdf
+                   </body>
+                 "#
+            )
+            .trim_end(),
+        )];
+        let result = lsp_text_edits_to_kakoune(
+            &SessionId("test_session".to_string()),
+            &Some("test_client".to_string()),
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
+        let expected = indoc!(
+            r#"select 1.1,4.1000000
+               execute-keys -save-regs "" Z
+               execute-keys "z<space><esc>,<esc>c<lt>head/>
+
+               <lt>body>
+                       asdf
+               <lt>/body><esc>""#
+        )
+        .to_string();
         assert_eq!(result, Some(expected));
     }
 }
