@@ -24,10 +24,6 @@ pub fn temp_dir() -> path::PathBuf {
     path
 }
 
-pub struct TempFifo {
-    pub path: String,
-}
-
 pub fn mkfifo(session: &SessionId) -> String {
     let mut path = temp_dir();
     for attempt in 0..10 {
@@ -43,18 +39,6 @@ pub fn mkfifo(session: &SessionId) -> String {
         error!(session, "mkfifo attempt {attempt} failed, retrying");
     }
     panic!("failed to create fifo");
-}
-
-pub fn temp_fifo(session: &SessionId) -> TempFifo {
-    TempFifo {
-        path: mkfifo(session),
-    }
-}
-
-impl Drop for TempFifo {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.path);
-    }
 }
 
 /// Escape Kakoune string wrapped into single quote

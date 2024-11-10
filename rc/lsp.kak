@@ -610,6 +610,8 @@ define-command -hidden lsp-do-send -params 1.. %{
             %opt{lsp_language_id} \
             %opt{lsp_servers} \
             %opt{lsp_semantic_tokens} \
+            %opt{lsp_config} \
+            %opt{lsp_server_initialization_options} map-end \
             %arg{@}
         %opt{lsp_do_send_maybe_async}
     }
@@ -1482,22 +1484,6 @@ define-command -hidden lsp-handle-progress -params 6 -docstring %{
             # echo "$2${5:+" ($5%)"}${4:+": $4"}"
         fi
     }
-}
-
-### Handling requests from server ###
-
-define-command -hidden lsp-get-server-initialization-options -params 1 -docstring %{
-    lsp-get-server-initialization-options <fifo>
-    Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
-} %{
-    echo -to-file %arg{1} -quoting shell -- %opt{lsp_server_initialization_options} map-end
-}
-
-define-command -hidden lsp-get-config -params 1 -docstring %{
-    lsp-get-config <fifo>
-    Format lsp_config as TOML and write to the given <fifo> path.
-} %{
-    echo -to-file %arg{1} -- %opt{lsp_config}
 }
 
 ### Other commands ###

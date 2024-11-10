@@ -43,7 +43,7 @@ use lsp_types::*;
 use serde::Deserialize;
 use sloggers::types::Severity;
 
-pub struct ParserState {
+struct ParserState {
     session: SessionId,
     pub buf: Vec<u8>,
     offset: usize,
@@ -52,7 +52,7 @@ pub struct ParserState {
 }
 
 impl ParserState {
-    pub fn new(session: SessionId) -> Self {
+    fn new(session: SessionId) -> Self {
         ParserState {
             session,
             buf: vec![],
@@ -149,7 +149,7 @@ impl UseFromStr for u32 {}
 impl UseFromStr for isize {}
 impl UseFromStr for usize {}
 
-pub trait Deserializable {
+trait Deserializable {
     fn deserialize(state: &mut ParserState) -> Self;
 }
 impl<T: FromString> Deserializable for T
@@ -232,6 +232,10 @@ fn dispatch_fifo_request(
     let language_id = state.next();
     let lsp_servers: String = state.next();
     let lsp_semantic_tokens: String = state.next();
+    let lsp_config: String = state.next();
+    let lsp_server_initialization_options: Vec<String> = iter::from_fn(|| state.next())
+        .take_while(|s| s != "map-end")
+        .collect();
 
     let parse_error = |what, err| {
         handle_broken_editor_request(to_editor, &session, &client, hook, what, err);
@@ -256,6 +260,7 @@ fn dispatch_fifo_request(
         Ok(st) => st,
         Err(err) => return parse_error("%opt{lsp_semantic_tokens}", err),
     };
+    #[allow(deprecated)]
     let mut meta = EditorMeta {
         session: session.clone(),
         client: (!client.is_empty()).then_some(client),
@@ -272,6 +277,8 @@ fn dispatch_fifo_request(
         server: None,
         word_regex: None,
         servers: Default::default(),
+        legacy_dynamic_config: lsp_config,
+        legacy_server_initialization_options: lsp_server_initialization_options,
     };
 
     fn sync_trailer(meta: &mut EditorMeta, state: &mut ParserState, is_sync: bool) {

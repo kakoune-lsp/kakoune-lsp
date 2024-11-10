@@ -459,6 +459,8 @@ pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMet
         server: None,
         word_regex: None,
         servers: vec![],
+        legacy_dynamic_config: "".to_string(),
+        legacy_server_initialization_options: vec![],
     }
 }
 

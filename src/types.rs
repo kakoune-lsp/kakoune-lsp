@@ -185,6 +185,13 @@ pub struct EditorMeta {
     pub word_regex: Option<String>,
     #[serde(default)]
     pub servers: Vec<ServerId>,
+
+    #[deprecated]
+    #[serde(default)]
+    pub legacy_dynamic_config: String,
+    #[deprecated]
+    #[serde(default)]
+    pub legacy_server_initialization_options: Vec<String>,
 }
 
 pub fn is_using_legacy_toml(config: &Config) -> bool {

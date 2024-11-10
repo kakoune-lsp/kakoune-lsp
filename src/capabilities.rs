@@ -1,6 +1,7 @@
 use crate::context::*;
 use crate::controller;
-use crate::settings::request_initialization_options_from_kakoune;
+use crate::settings::initialization_options;
+use crate::settings::record_dynamic_config;
 use crate::types::*;
 use crate::util::*;
 use indoc::formatdoc;
@@ -15,7 +16,9 @@ use std::process;
 use url::Url;
 
 pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
-    let initialization_options = request_initialization_options_from_kakoune(&servers, &meta, ctx);
+    #[allow(deprecated)]
+    record_dynamic_config(&meta, ctx, &meta.legacy_dynamic_config);
+    let initialization_options = initialization_options(&servers, &meta, ctx);
     let symbol_kind_capability = Some(SymbolKindCapability {
         value_set: Some(vec![
             SymbolKind::FILE,

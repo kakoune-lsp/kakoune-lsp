@@ -1,29 +1,13 @@
-use std::fs;
-use std::iter;
-
 use crate::context::*;
-use crate::controller::ParserState;
 use crate::types::*;
 use crate::util::*;
 use serde_json::Value;
 
-fn request_dynamic_configuration_from_kakoune(meta: &EditorMeta, ctx: &mut Context) -> Option<()> {
-    let fifo = temp_fifo(&meta.session);
-    ctx.exec(
-        meta.clone(),
-        format!("lsp-get-config {}", editor_quote(&fifo.path)),
-    );
-    let config = std::fs::read_to_string(&fifo.path).unwrap();
-    record_dynamic_config(meta, ctx, &config);
-    Some(())
-}
-
-pub fn request_initialization_options_from_kakoune(
+pub fn initialization_options(
     servers: &[ServerId],
     meta: &EditorMeta,
     ctx: &mut Context,
 ) -> Vec<Option<Value>> {
-    request_dynamic_configuration_from_kakoune(meta, ctx);
     let mut sections = Vec::with_capacity(servers.len());
     for &server_id in servers {
         let server_name = &ctx.server(server_id).name;
@@ -38,7 +22,7 @@ pub fn request_initialization_options_from_kakoune(
             continue;
         }
 
-        let legacy_settings = request_legacy_initialization_options_from_kakoune(meta, ctx);
+        let legacy_settings = legacy_initialization_options(meta);
         if legacy_settings.is_some() {
             sections.push(legacy_settings);
             continue;
@@ -98,29 +82,14 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
 /// with `lsp_server_initialization_options` option in Kakoune
 /// (i.e. to customize it for specific project).
 /// This function asks Kakoune to give such override if any.
-pub fn request_legacy_initialization_options_from_kakoune(
-    meta: &EditorMeta,
-    ctx: &mut Context,
-) -> Option<Value> {
-    let fifo = temp_fifo(&meta.session);
-    ctx.exec(
-        meta.clone(),
-        format!(
-            "lsp-get-server-initialization-options {}",
-            editor_quote(&fifo.path)
-        ),
-    );
-    let mut state = ParserState::new(meta.session.clone());
-    state.buf = fs::read(fifo.path.clone()).unwrap();
-    let server_configuration: Vec<String> = iter::from_fn(|| state.next())
-        .take_while(|s| s != "map-end")
-        .collect();
-    if server_configuration.is_empty() {
+fn legacy_initialization_options(meta: &EditorMeta) -> Option<Value> {
+    #[allow(deprecated)]
+    if meta.legacy_server_initialization_options.is_empty() {
         None
     } else {
         Some(Value::Object(explode_str_to_str_map(
             &meta.session,
-            &server_configuration,
+            &meta.legacy_server_initialization_options,
         )))
     }
 }
