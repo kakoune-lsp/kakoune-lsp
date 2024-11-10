@@ -1489,7 +1489,7 @@ define-command -hidden lsp-get-server-initialization-options -params 1 -docstrin
     lsp-get-server-initialization-options <fifo>
     Format lsp_server_initialization_options as TOML and write to the given <fifo> path.
 } %{
-    echo -to-file %arg{1} -quoting shell -- %opt{lsp_server_configuration} map-end
+    echo -to-file %arg{1} -quoting shell -- %opt{lsp_server_initialization_options} map-end
 }
 
 define-command -hidden lsp-get-config -params 1 -docstring %{
