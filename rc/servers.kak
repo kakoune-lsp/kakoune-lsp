@@ -52,6 +52,8 @@ hook -group lsp-filetype-css global BufSetOption filetype=(?:css|less|scss) %{
         [vscode-css-language-server]
         root_globs = ["package.json", ".git", ".hg"]
         args = ["--stdio"]
+        [vscode-css-language-server.settings]
+        css.validProperties = []
     }
 }
 
@@ -151,10 +153,8 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
         [vscode-html-language-server]
         root_globs = ["package.json"]
         args = ["--stdio"]
-        settings_section = "_"
-        [vscode-html-language-server.settings._]
-        # quotePreference = "single"
-        # javascript.format.semicolons = "insert"
+        [vscode-html-language-server.settings]
+        css.validProperties = []
     }
 }
 
