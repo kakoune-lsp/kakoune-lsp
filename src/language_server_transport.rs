@@ -3,9 +3,8 @@ use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
 use jsonrpc_core::{self, Call, Output};
-use libc::{SIGCHLD, SIGTERM, SIG_DFL};
+use libc::{SIGCHLD, SIG_DFL};
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
@@ -128,32 +127,9 @@ pub fn start(
                 if writer_loop(&session, server_name, writer, &receiver).is_err() {
                     error!(session, "Failed to write message to language server");
                 }
-                // NOTE prevent zombie
-                debug!(session, "Waiting for language server process end");
                 drop(child.stdin.take());
                 drop(child.stdout.take());
                 drop(child.stderr.take());
-                for _attempt in 0..10 {
-                    match child.try_wait() {
-                        Ok(Some(status)) => {
-                            debug!(session, "Language server process exited with {status}");
-                            return;
-                        }
-                        Ok(None) => {
-                            std::thread::sleep(std::time::Duration::from_millis(10));
-                        }
-                        Err(_) => {
-                            error!(session, "Language server wasn't running was it?!");
-                            return;
-                        }
-                    }
-                }
-                // Okay, we asked politely enough and waited long enough.
-                debug!(
-                    session,
-                    "Language server process has still not exited, sending SIGTERM"
-                );
-                unsafe { libc::kill(child.id().try_into().unwrap(), SIGTERM) };
             },
         )
     };
