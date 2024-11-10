@@ -526,6 +526,6 @@ pub fn remove_outstanding_request(
         key.0,
         key.1,
         key.2,
-        key.3.unwrap_or_default()
+        key.3.as_deref().unwrap_or_default()
     );
 }
