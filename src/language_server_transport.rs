@@ -38,6 +38,8 @@ pub fn start(
         Command::new(cmd).pre_exec(|| {
             let mut act: libc::sigaction = std::mem::zeroed();
             act.sa_sigaction = SIG_DFL;
+            libc::sigemptyset(&mut act.sa_mask);
+            act.sa_flags = 0;
             libc::sigaction(SIGCHLD, &act, std::ptr::null_mut());
             Ok(())
         })

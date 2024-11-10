@@ -13,7 +13,6 @@ use std::{iter, mem};
 use crate::capabilities::{self, initialize};
 use crate::context::meta_for_session;
 use crate::context::Context;
-use crate::diagnostics;
 use crate::editor_transport;
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
@@ -28,6 +27,7 @@ use crate::workspace::{
     self, EditorApplyEdit, EditorDidChangeConfigurationParams, EditorExecuteCommand,
 };
 use crate::{context::*, set_logger};
+use crate::{diagnostics, RECEIVED_SIGCHLD};
 use crate::{language_server_transport, LAST_CLIENT};
 use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
@@ -36,6 +36,7 @@ use indoc::formatdoc;
 use inlay_hints::InlayHintsOptions;
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
+use libc::{P_ALL, SIGCHLD, WEXITED, WNOHANG};
 use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
@@ -626,6 +627,14 @@ pub fn start(
     };
 
     'event_loop: loop {
+        if RECEIVED_SIGCHLD.load(Relaxed) {
+            unsafe {
+                let mut info: libc::siginfo_t = std::mem::zeroed();
+                while libc::waitid(P_ALL, 0, &mut info, WEXITED | WNOHANG) == 0
+                    && info.si_signo == SIGCHLD
+                {}
+            }
+        }
         let server_rxs: Vec<&Receiver<ServerMessage>> = ctx
             .language_servers
             .values()

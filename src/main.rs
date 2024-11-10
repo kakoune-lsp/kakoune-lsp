@@ -39,14 +39,12 @@ use editor_transport::send_command_to_editor;
 use itertools::Itertools;
 use libc::O_NONBLOCK;
 use libc::O_RDONLY;
-use libc::SA_NOCLDWAIT;
 use libc::SA_RESTART;
 use libc::SIGCHLD;
 use libc::SIGHUP;
 use libc::SIGINT;
 use libc::SIGQUIT;
 use libc::SIGTERM;
-use libc::SIG_IGN;
 use libc::STDOUT_FILENO;
 use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
@@ -71,6 +69,7 @@ use std::sync::atomic::{
 };
 use std::sync::Mutex;
 
+static RECEIVED_SIGCHLD: AtomicBool = AtomicBool::new(false);
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
 static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 
@@ -385,9 +384,9 @@ fn main() -> Result<(), ()> {
 
     unsafe {
         let mut act: libc::sigaction = std::mem::zeroed();
-        act.sa_sigaction = SIG_IGN;
+        act.sa_sigaction = handle_sigchld as usize;
         libc::sigemptyset(&mut act.sa_mask);
-        act.sa_flags = SA_RESTART | SA_NOCLDWAIT;
+        act.sa_flags = SA_RESTART;
         libc::sigaction(SIGCHLD, &act, std::ptr::null_mut());
     }
 
@@ -579,6 +578,10 @@ fn goodbye(code: i32) -> ! {
 
 extern "C" fn handle_interrupt(_sig: libc::c_int) -> ! {
     goodbye(1)
+}
+
+extern "C" fn handle_sigchld(_sig: libc::c_int) {
+    RECEIVED_SIGCHLD.store(true, Relaxed);
 }
 
 // for async-signal-safe cleanup
