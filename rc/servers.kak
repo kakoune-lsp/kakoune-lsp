@@ -52,6 +52,10 @@ hook -group lsp-filetype-css global BufSetOption filetype=(?:css|less|scss) %{
         [vscode-css-language-server]
         root_globs = ["package.json", ".git", ".hg"]
         args = ["--stdio"]
+        settings_section = "_"
+        [vscode-css-language-server.settings._]
+        handledSchemas = ["file"]
+        provideFormatter = true
         [vscode-css-language-server.settings]
         css.validProperties = []
     }
@@ -153,6 +157,10 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
         [vscode-html-language-server]
         root_globs = ["package.json"]
         args = ["--stdio"]
+        settings_section = "_"
+        [vscode-html-language-server.settings._]
+        handledSchemas = ["file"]
+        provideFormatter = true
         [vscode-html-language-server.settings]
         css.validProperties = []
     }
