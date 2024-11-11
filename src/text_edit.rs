@@ -9,6 +9,7 @@ use itertools::Itertools;
 use lsp_types::notification::DidOpenTextDocument;
 use lsp_types::*;
 use ropey::Rope;
+use std::borrow::Cow;
 use std::fs::{self, File};
 use std::io::{BufReader, Write};
 use std::os::unix::io::FromRawFd;
@@ -274,14 +275,12 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
             character: 0,
         };
         let last_line = text.line(text.len_lines() - 1);
-        let missing_eol = {
-            let line_len = last_line.len_chars();
-            line_len != 0 && last_line.char(line_len - 1) == '\n'
-        };
-        let text_end = if missing_eol {
+        let last_line_len = last_line.len_chars();
+        assert!(last_line_len == 0 || last_line.char(last_line_len - 1) == '\n');
+        let text_end = if last_line_len == 0 && text.len_lines() >= 2 {
             Position {
-                line: (text.len_lines() - 1) as _,
-                character: (last_line.len_chars().saturating_sub(1)) as _,
+                line: (text.len_lines() - 2) as _,
+                character: text.line(text.len_lines() - 2).len_chars() as _,
             }
         } else {
             Position {
@@ -291,11 +290,13 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
         };
 
         if range.start == text_begin && range.end >= text_end {
-            text_edits = minimal_edit_sequence(
-                text,
-                &Rope::from_str(&text_edits[0].as_ref().new_text),
-                if missing_eol { Some(text_end) } else { None },
-            );
+            let new_text = &text_edits[0].as_ref().new_text;
+            let new_text = if new_text.ends_with('\n') {
+                Cow::Borrowed(new_text)
+            } else {
+                Cow::Owned(new_text.to_string() + "\n")
+            };
+            text_edits = minimal_edit_sequence(text, &Rope::from_str(&new_text));
             debug!(
                 session,
                 "Computed edit script to split up whole-buffer text edit"
@@ -530,17 +531,11 @@ fn lsp_text_edit_to_kakoune<T: TextEditish<T>>(
     }
 }
 
-fn minimal_edit_sequence<T: TextEditish<T>>(
-    old: &Rope,
-    new: &Rope,
-    old_end: Option<Position>,
-) -> Vec<T> {
+fn minimal_edit_sequence<T: TextEditish<T>>(old: &Rope, new: &Rope) -> Vec<T> {
     let oldv = old.lines().collect::<Vec<_>>();
     let newv = new.lines().collect::<Vec<_>>();
     struct BuildEditScript<'a, T: TextEditish<T>> {
-        old: &'a Rope,
         new: &'a Rope,
-        old_end: Option<Position>,
         edits: Vec<T>,
     }
     impl<T: TextEditish<T>> diffs::Diff for BuildEditScript<'_, T> {
@@ -550,13 +545,10 @@ fn minimal_edit_sequence<T: TextEditish<T>>(
                 line: o as _,
                 character: 0,
             };
-            let mut end = Position {
+            let end = Position {
                 line: (o + len) as _,
                 character: 0,
             };
-            if (o + len) == self.old.len_lines() {
-                end = self.old_end.unwrap_or(end);
-            }
             self.edits.push(T::from_text_edit(TextEdit {
                 range: Range { start, end },
                 new_text: "".to_string(),
@@ -579,13 +571,10 @@ fn minimal_edit_sequence<T: TextEditish<T>>(
                 line: o as _,
                 character: 0,
             };
-            let mut end = Position {
+            let end = Position {
                 line: (o + len) as _,
                 character: 0,
             };
-            if (o + len) == self.old.len_lines() {
-                end = self.old_end.unwrap_or(end);
-            }
             self.edits.push(T::from_text_edit(TextEdit {
                 range: Range { start, end },
                 new_text: self.new.lines_at(n).take(new_len).join(""),
@@ -593,12 +582,7 @@ fn minimal_edit_sequence<T: TextEditish<T>>(
             Ok(())
         }
     }
-    let mut builder = BuildEditScript::<T> {
-        old,
-        new,
-        old_end,
-        edits: vec![],
-    };
+    let mut builder = BuildEditScript::<T> { new, edits: vec![] };
     let _result = diffs::patience::diff(&mut builder, &oldv, 0, oldv.len(), &newv, 0, newv.len());
     builder.edits
 }
@@ -824,13 +808,67 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 1.1,4.1000000
+            r#"select 2.1,3.1000000
                execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>c<lt>head/>
-
+               execute-keys "z<space><esc>,<esc>c
                <lt>body>
                        asdf
-               <lt>/body><esc>""#
+               <esc>""#
+        )
+        .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn lsp_text_edits_to_kakoune_rewrite_whole_buffer_text_edit_missing_eol() {
+        let buffer = Rope::from_str(indoc!(
+            r#"<body>
+                               asdf
+
+                       asdf
+                       asdf
+                       asdf
+                       asdf
+                       sadf
+               </body>
+             "#
+        ));
+        let text_edits = vec![edit(
+            0,
+            0,
+            9,
+            0,
+            indoc!(
+                r#"<body>
+                           asdf
+
+                           asdf
+                           asdf
+                           asdf
+                           asdf
+                           sadf
+                   </body>"#
+            )
+            .trim_end(),
+        )];
+        let result = lsp_text_edits_to_kakoune(
+            &SessionId("test_session".to_string()),
+            &Some("test_client".to_string()),
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
+        /* This used to produce
+              select 2.1,2.1000000 9.1,10.1000000
+              execute-keys -save-regs "" Z
+              execute-keys "z<space><esc>,<esc>c        asdf
+              <esc>z1)<space><esc>,<esc>c<lt>/body><esc>"
+        */
+        let expected = indoc!(
+            r#"select 2.1,2.1000000
+               execute-keys -save-regs "" Z
+               execute-keys "z<space><esc>,<esc>c        asdf
+               <esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
