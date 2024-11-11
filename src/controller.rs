@@ -627,7 +627,10 @@ pub fn start(
     };
 
     'event_loop: loop {
-        if RECEIVED_SIGCHLD.load(Relaxed) {
+        if RECEIVED_SIGCHLD
+            .compare_exchange_weak(true, false, Relaxed, Relaxed)
+            .is_ok()
+        {
             unsafe {
                 let mut info: libc::siginfo_t = std::mem::zeroed();
                 while libc::waitid(P_ALL, 0, &mut info, WEXITED | WNOHANG) == 0
