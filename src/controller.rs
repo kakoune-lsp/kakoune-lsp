@@ -635,7 +635,9 @@ pub fn start(
                 let mut info: libc::siginfo_t = std::mem::zeroed();
                 while libc::waitid(P_ALL, 0, &mut info, WEXITED | WNOHANG) == 0
                     && info.si_signo == SIGCHLD
-                {}
+                {
+                    info.si_signo = 0;
+                }
             }
         }
         let server_rxs: Vec<&Receiver<ServerMessage>> = ctx
