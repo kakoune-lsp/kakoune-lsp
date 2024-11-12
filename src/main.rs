@@ -81,7 +81,7 @@ fn main() -> Result<(), ()> {
         let locale = CString::new("").unwrap();
         unsafe { libc::setlocale(libc::LC_ALL, locale.as_ptr()) };
     }
-    let matches = clap::Command::new("kak-lsp")
+    let mut command = clap::Command::new("kak-lsp")
         .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
@@ -93,7 +93,7 @@ fn main() -> Result<(), ()> {
                 .hide(true)
                 .long("kakoune")
                 .action(ArgAction::SetTrue)
-                .help("Generate commands for Kakoune to plug in kak-lsp"),
+                .help("generate commands for Kakoune to plug in kak-lsp"),
         )
         .arg(
             Arg::new("config")
@@ -101,7 +101,7 @@ fn main() -> Result<(), ()> {
                 .short('c')
                 .long("config")
                 .value_name("FILE")
-                .help("Read config from FILE"),
+                .help("read config from FILE"),
         )
         .arg(
             Arg::new("daemonize")
@@ -109,14 +109,14 @@ fn main() -> Result<(), ()> {
                 .short('d')
                 .long("daemonize")
                 .action(ArgAction::SetTrue)
-                .help("Daemonize kak-lsp process (server only)"),
+                .help("raemonize kak-lsp process (server only)"),
         )
         .arg(
             Arg::new("session")
                 .short('s')
                 .long("session")
                 .value_name("SESSION")
-                .help("Name of the Kakoune session to talk to (defaults to $kak_session)"),
+                .help("name of the Kakoune session to talk to (defaults to $kak_session)"),
         )
         .arg(
             Arg::new("timeout")
@@ -124,29 +124,55 @@ fn main() -> Result<(), ()> {
                 .short('t')
                 .long("timeout")
                 .value_name("TIMEOUT")
-                .help("Session timeout in seconds (default is 18000 seconds)"),
+                .help("session timeout in seconds (default is 18000 seconds)"),
         )
         .arg(
             Arg::new("v")
                 .hide(true)
                 .short('v')
                 .action(ArgAction::Count)
-                .help("Sets the level of verbosity (use up to 4 times)"),
+                .help("set the level of verbosity (use up to 4 times)"),
         )
         .arg(
             Arg::new("debug")
                 .long("debug")
                 .action(ArgAction::SetTrue)
-                .help("Enable debug logging (see the 'lsp_debug' option)"),
+                .help("enable debug logging (see the 'lsp_debug' option)"),
         )
         .arg(
             Arg::new("log")
                 .hide(true)
                 .long("log")
                 .value_name("PATH")
-                .help("File to write the log into, in addition to the *debug* buffer"),
+                .help("file to write the log into, in addition to the *debug* buffer"),
         )
-        .get_matches();
+        .disable_help_flag(true)
+        .disable_version_flag(true)
+        .arg(
+            Arg::new("help")
+                .short('h')
+                .long("help")
+                .action(ArgAction::SetTrue)
+                .help("print help"),
+        )
+        .arg(
+            Arg::new("version")
+                .short('V')
+                .long("version")
+                .action(ArgAction::SetTrue)
+                .help("print version"),
+        );
+    let matches = command.clone().get_matches();
+
+    if matches.get_flag("help") {
+        let _ = command.print_help();
+        return Ok(());
+    }
+
+    if matches.get_flag("version") {
+        println!("{}", crate_version!());
+        return Ok(());
+    }
 
     let session = env_var("kak_session").or_else(|| matches.get_one::<String>("session").cloned());
     if matches.get_flag("kakoune") || session.is_none() {
