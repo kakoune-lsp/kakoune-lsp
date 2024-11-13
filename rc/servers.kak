@@ -169,6 +169,7 @@ hook -group lsp-filetype-haskell global BufSetOption filetype=haskell %{
     #     [static-ls]
     #     root_globs = ["*.cabal", "stack.yaml", "cabal.project", "package.yaml", "hie.yaml", "Setup.hs"]
     #     command = "static-ls"
+    # }
 }
 
 hook -group lsp-filetype-html global BufSetOption filetype=html %{
