@@ -276,7 +276,6 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
         };
         let last_line = text.line(text.len_lines() - 1);
         let last_line_len = last_line.len_chars();
-        assert!(last_line_len == 0 || last_line.char(last_line_len - 1) == '\n');
         let text_end = if last_line_len == 0 && text.len_lines() >= 2 {
             Position {
                 line: (text.len_lines() - 2) as _,
