@@ -49,15 +49,25 @@ hook -group lsp-filetype-crystal global BufSetOption filetype=crystal %{
 
 hook -group lsp-filetype-css global BufSetOption filetype=(?:css|less|scss) %{
     set-option buffer lsp_servers %{
+        # Documented options see
+        # https://github.com/sublimelsp/LSP-css/blob/master/LSP-css.sublime-settings
         [vscode-css-language-server]
         root_globs = ["package.json", ".git", ".hg"]
         args = ["--stdio"]
         settings_section = "_"
         [vscode-css-language-server.settings._]
-        handledSchemas = ["file"]
         provideFormatter = true
+        handledSchemas = ["file"]
         [vscode-css-language-server.settings]
+        css.format.enable = true
         css.validProperties = []
+        css.validate = true
+        scss.validProperties = []
+        scss.format.enable = true
+        scss.validate = true
+        less.validProperties = []
+        less.format.enable = true
+        less.validate = true
     }
 }
 
@@ -150,19 +160,46 @@ hook -group lsp-filetype-haskell global BufSetOption filetype=haskell %{
         # See https://haskell-language-server.readthedocs.io/en/latest/configuration.html
         # haskell.formattingProvider = "ormolu"
     }
+    # There now exists also static-ls, which uses less memory, is faster and suited
+    # even for big Haskell code bases. But it needs more configuration.
+    # https://github.com/josephsumabat/static-ls
+    # See https://github.com/josephsumabat/static-ls?tab=readme-ov-file#quick-start
+    # and https://github.com/josephsumabat/static-ls/blob/main/docs/advanced-setup.md
+    # set-option buffer lsp_servers %{
+    #     [static-ls]
+    #     root_globs = ["*.cabal", "stack.yaml", "cabal.project", "package.yaml", "hie.yaml", "Setup.hs"]
+    #     command = "static-ls"
+    # }
 }
 
 hook -group lsp-filetype-html global BufSetOption filetype=html %{
     set-option buffer lsp_servers %{
+        # Documented options see
+        # https://github.com/sublimelsp/LSP-html/blob/master/LSP-html.sublime-settings
         [vscode-html-language-server]
-        root_globs = ["package.json"]
+        root_globs = ["package.json", ".git", ".hg"]
         args = ["--stdio"]
         settings_section = "_"
         [vscode-html-language-server.settings._]
-        handledSchemas = ["file"]
         provideFormatter = true
         [vscode-html-language-server.settings]
+        embeddedLanguages.css = true
+        embeddedLanguages.javascript = true
+        html.autoClosingTags = true
+        html.format.enable = true
+        html.mirrorCursorOnMatchingTag = true
+        html.validate.scripts = true
+        html.validate.styles = true
+        css.validate = true
+        css.format.enable = true
         css.validProperties = []
+        javascript.format.enable = true
+        javascript.validate.enable = true
+        # This is mainly a linter for HTML and to be used together with vscode-html-language-server
+        # https://github.com/kristoff-it/superhtml
+        # [superhtml]
+        # root_globs = ["package.json", ".git", ".hg"]
+        # args = ["lsp"]
     }
 }
 
@@ -222,8 +259,32 @@ hook -group lsp-filetype-java global BufSetOption filetype=java %{
 hook -group lsp-filetype-json global BufSetOption filetype=json %{
     set-option buffer lsp_servers %{
         [vscode-json-language-server]
-        root_globs = ["package.json"]
+        root_globs = ["package.json", ".git", ".hg"]
         args = ["--stdio"]
+        settings_section = "_"
+        [vscode-json-language-server.settings._]
+        provideFormatter = true
+        json.format.enable = true
+        json.validate.enable = true
+        # These are just some example JSON schemas, you need to add whatever JSON files you edit.
+        # The needed URLs you can find at https://www.schemastore.org/json/
+        # Configuration see
+        # https://github.com/microsoft/vscode/blob/main/extensions/json-language-features/server/README.md#configuration
+        [[vscode-json-language-server.settings._.json.schemas]]
+        fileMatch = ["/package.json"]
+        url = "https://json.schemastore.org/package.json"
+        [[vscode-json-language-server.settings._.json.schemas]]
+        fileMatch = ["/.markdownlintrc","/.markdownlint.json","/.markdownlint.jsonc"]
+        url = "https://raw.githubusercontent.com/DavidAnson/markdownlint/main/schema/markdownlint-config-schema.json"
+        [[vscode-json-language-server.settings._.json.schemas]]
+        fileMatch = ["/.prettierrc", "/.prettierrc.json"]
+        url = "https://json.schemastore.org/prettierrc.json"
+        [[vscode-json-language-server.settings._.json.schemas]]
+        fileMatch = ["/compile_commands.json"]
+        url = "https://json.schemastore.org/compile-commands.json"
+        [[vscode-json-language-server.settings._.json.schemas]]
+        fileMatch = ["/tsconfig*.json"]
+        url = "https://json.schemastore.org/tsconfig.json"
     }
 }
 
