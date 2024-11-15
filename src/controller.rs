@@ -13,7 +13,6 @@ use std::{iter, mem};
 use crate::capabilities::{self, initialize};
 use crate::context::meta_for_session;
 use crate::context::Context;
-use crate::editor_transport;
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
 use crate::progress;
@@ -28,6 +27,7 @@ use crate::workspace::{
 };
 use crate::{context::*, set_logger};
 use crate::{diagnostics, RECEIVED_SIGCHLD};
+use crate::{editor_transport, CLEANUP};
 use crate::{language_server_transport, LAST_CLIENT};
 use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
@@ -1067,6 +1067,9 @@ fn stop_session(ctx: &mut Context) {
         ctx.last_session(),
         "Shutting down language servers and exiting"
     );
+    if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
+        (cleanup)();
+    }
     for session in ctx.sessions.clone().into_iter() {
         let request = EditorRequest {
             meta: meta_for_session(session.clone(), None),

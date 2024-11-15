@@ -1186,15 +1186,9 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-send exit
     evaluate-commands %sh{
         existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
-        for attempt in $(seq 100); do
-            if ! [ -e "${existing_session_dir}" ]; then
-                break
-            fi
+        until ! [ -e "${existing_session_dir}" ]; fi
             sleep .030
         done
-        if [ -e "${existing_session_dir}" ]; then
-            echo "fail lsp-exit: session directory still exists: ${existing_session_dir}"
-        fi
     }
 }
 
