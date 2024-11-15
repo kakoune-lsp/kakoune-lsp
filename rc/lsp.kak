@@ -617,7 +617,11 @@ define-command -hidden lsp-do-send -params 1.. %{
     }
 }
 
-declare-option -hidden str lsp_do_send_maybe_async lsp-do-send-async
+declare-option -hidden str lsp_do_send_maybe_async %sh{
+    [ "$(uname)" = Darwin ] &&
+        echo lsp-do-send-async-via-shell ||
+        echo lsp-do-send-async
+}
 
 define-command -hidden lsp-fifo-toggle %{
     try %{
@@ -633,6 +637,18 @@ define-command -hidden lsp-fifo-toggle %{
 define-command -hidden lsp-do-send-async %{
     echo -quoting shell -to-file %opt{lsp_fifo} %reg{a}
     lsp-fifo-toggle
+}
+
+define-command -hidden lsp-do-send-async-via-shell %{
+    evaluate-commands %sh{
+        write() {
+            trap : INT TERM HUP QUIT
+            printf >&3 %s "${kak_quoted_reg_a}" && echo lsp-fifo-toggle
+            exit
+        }
+        trap write INT TERM HUP QUIT
+        exec 3>${kak_opt_lsp_fifo} && write
+    }
 }
 
 define-command -hidden lsp-do-send-sync %{

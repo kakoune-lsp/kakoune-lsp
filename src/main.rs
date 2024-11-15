@@ -109,7 +109,7 @@ fn main() -> Result<(), ()> {
                 .short('d')
                 .long("daemonize")
                 .action(ArgAction::SetTrue)
-                .help("raemonize kak-lsp process (server only)"),
+                .help("daemonize kak-lsp process (server only)"),
         )
         .arg(
             Arg::new("session")
