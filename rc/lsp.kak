@@ -558,6 +558,13 @@ define-command -hidden lsp-send -params 1.. %{
     lsp-unless-blocked lsp-do-send %arg{@}
 }
 
+define-command -hidden lsp-if-running -params 1 %{
+    try %{
+        evaluate-commands "nop %%file{%opt{lsp_pid_file}}"
+        evaluate-commands %arg{1}
+    }
+}
+
 define-command -hidden lsp-do-send -params 1.. %{
     %opt{lsp_fail_if_disabled} "lsp-send: run lsp-enable or lsp-enable-window first"
     evaluate-commands -save-regs abhpst %{
@@ -709,7 +716,9 @@ hook -group lsp-scratch-buffers global WinDisplay \*debug\* %{
 }
 
 hook -group lsp-option-changed global GlobalSetOption lsp_debug=.* %{
-    try %{ lsp-send kakoune/did-change-option %val{hook_param} }
+    lsp-if-running %{
+        lsp-send kakoune/did-change-option %val{hook_param}
+    }
 }
 
 declare-option -hidden int lsp_timestamp -1
@@ -1926,7 +1935,7 @@ declare-option -hidden str lsp_fail_if_disabled fail
 hook -always global KakEnd .* %{
     remove-hooks global lsp # BufClose
     set-option global lsp_fail_if_disabled nop # hack for lsp-enable-window
-    try lsp-exit
+    lsp-if-running lsp-exit
     set-option global lsp_unless_blocked lsp-blocked
 }
 try %{
