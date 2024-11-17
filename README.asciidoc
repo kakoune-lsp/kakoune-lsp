@@ -14,7 +14,7 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 1. <<Installing>>
 2. <<Install language servers for your desired languages>>
 3. <<Configure Kakoune to enable LSP integration>>
-4. <<Configure key mappings>>
+4. <<Configure key mappings and modeline>>
 5. <<Troubleshooting>>
 
 === Installing
@@ -90,16 +90,18 @@ hook global WinSetOption filetype=(rust|python|go|javascript|typescript|c|cpp) %
 }
 ----
 
-=== Configure key mappings
+=== Configure key mappings and modeline
 
 There are three default mappings in goto-mode: `gd` (`lsp-definition`), `gy`
 (`lsp-type-definition`) and `gr` (`lsp-references`).  You can override them in your kakrc after
 this plugin is loaded.
 
-Here are additional recommended mappings. See below for the meaning of each command.
+Below snippet adds useful info to the modeline and creates recommended mappings.
 
 [source,kak]
 ----
+set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
+
 map global user l ':enter-user-mode lsp<ret>' -docstring 'LSP mode'
 
 map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' -docstring 'Select next snippet placeholder'
@@ -170,11 +172,10 @@ hook global BufSetOption filetype=rust %{
 * `lsp-next-symbol` and `lsp-previous-symbol` command to go to the buffer's next and current/previous symbol.
 * `lsp-hover-next-symbol` and `lsp-hover-previous-symbol` to show hover of the buffer's next and current/previous symbol.
 * `lsp-rename <new_name>` and `lsp-rename-prompt` commands to rename the symbol under the main cursor.
-* Breadcrumbs in the modeline indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).
-** To implement this, kakoune-lsp adds `%opt{lsp_modeline}` to the front of your global `modelinefmt` at load time.
-* An hourglass character (⌛) in the modeline whenever the language server indicates it's busy.
+* Breadcrumbs in the `lsp_modeline` option, indicating the symbol around the main cursor, like (`somemodule > someclass > somefunction`).
+* An hourglass character (⌛) in the `lsp_modeline` whenever the language server indicates it's busy.
 ** To customize this behavior, override `lsp-handle-progress`.
-* If `lsp_auto_show_code_actions` is `true`, a lightbulb (💡) in the modeline whenever code actions are available at the main cursor position
+* If `lsp_auto_show_code_actions` is `true`, a lightbulb (💡) in the `lsp_modeline` option whenever code actions are available at the main cursor position
 ** To customize the lightbulb, you can override `lsp-show-code-actions` and `lsp-hide-code-actions`
 * `lsp-code-actions` to open a menu to choose a code action to run
 ** To customize the menu, you can override `lsp-perform-code-action`

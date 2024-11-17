@@ -452,7 +452,6 @@ declare-option -hidden str lsp_modeline_code_actions
 declare-option -hidden str lsp_modeline_progress ""
 declare-option -hidden str lsp_modeline_message_requests ""
 declare-option -hidden str lsp_modeline '%opt{lsp_modeline_breadcrumbs}%opt{lsp_modeline_code_actions}%opt{lsp_modeline_progress}%opt{lsp_modeline_message_requests}'
-set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
 
 declare-option -hidden -docstring %{
     echo %sh{eval "$kak_opt_lsp_find_root" <globs>... $(: kak_buffile)}: detect root directory based on the given shell globs.
