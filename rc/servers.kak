@@ -88,7 +88,7 @@ hook -group lsp-filetype-dart global BufSetOption filetype=dart %{
     }
 }
 
-hook -group lsp-filetype-elixir global BufSetOption filetype=elixir %{
+hook -group lsp-filetype-elixir global BufSetOption filetype=(?:elixir|eex) %{
     set-option buffer lsp_servers %{
         [elixir-ls]
         root_globs = ["mix.exs"]
