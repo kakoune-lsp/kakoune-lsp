@@ -540,7 +540,10 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
         # kak_opt_lsp_timeout
         # kak_opt_lsp_snippet_support
         # kak_opt_lsp_file_watch_support
-        session_dir=$(eval "${kak_opt_lsp_cmd} --daemonize")
+        if ! session_dir=$(eval "${kak_opt_lsp_cmd} --daemonize"); then
+            echo 'fail Failed to start kak-lsp server, see the *debug* buffer'
+            exit
+        fi
         echo set-option global lsp_fifo "${session_dir}/fifo1"
         echo set-option global lsp_fifo_toggle fail
         echo set-option global lsp_fifo1 "${session_dir}/fifo1"
