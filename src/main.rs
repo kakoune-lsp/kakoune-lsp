@@ -233,7 +233,6 @@ fn main() -> Result<(), ()> {
         fifos: [None, None],
         pid_files: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
-        plugin_directory: TemporaryDirectory::new(plugin_path.clone()),
     };
     if fs::create_dir_all(session_path.clone()).is_err() {
         report_error(
@@ -668,6 +667,4 @@ struct SessionDirectory {
     pid_files: Option<[TemporaryFile; 2]>,
     #[allow(dead_code)]
     session_directory: TemporaryDirectory,
-    #[allow(dead_code)]
-    plugin_directory: TemporaryDirectory,
 }
