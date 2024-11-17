@@ -1186,7 +1186,7 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-send exit
     evaluate-commands %sh{
         existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
-        until ! [ -e "${existing_session_dir}" ]; fi
+        until ! [ -e "${existing_session_dir}" ]; do
             sleep .030
         done
     }
