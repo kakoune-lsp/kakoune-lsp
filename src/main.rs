@@ -173,7 +173,10 @@ fn main() -> Result<(), ()> {
         return Ok(());
     }
 
-    let session = env_var("kak_session").or_else(|| matches.get_one::<String>("session").cloned());
+    let kak_session = env_var("kak_session");
+    let externally_started = kak_session.is_none();
+
+    let session = kak_session.or_else(|| matches.get_one::<String>("session").cloned());
     if matches.get_flag("kakoune") || session.is_none() {
         kakoune();
         process::exit(0);
@@ -231,16 +234,37 @@ fn main() -> Result<(), ()> {
     let mut session_symlink_path = plugin_path;
     session_symlink_path.push(format!("{}.ref", session));
 
-    let exists =
-        session_path.exists() || fs::symlink_metadata(session_symlink_path.clone()).is_ok();
-    if exists {
-        eprintln!("May attach to externally-started server running at:");
+    let existing_path = [&session_path, &session_symlink_path]
+        .iter()
+        .cloned()
+        .find(|p| fs::symlink_metadata(p).is_ok());
+    let externally_started_file = |session_path: &PathBuf| {
+        let mut tmp = session_path.to_owned();
+        tmp.push("externally-started");
+        tmp
+    };
+
+    if let Some(existing_path) = existing_path {
+        let was_externally_started = externally_started_file(&session_path).exists();
+        if !was_externally_started {
+            report_error(
+                &session,
+                format!(
+                    "kak-lsp session file already exists at '{}'",
+                    existing_path.display()
+                ),
+            );
+            process::exit(1);
+        }
+        if !externally_started {
+            eprintln!("Attaching to externally-started kak-lsp server");
+        }
     }
     println!("{}", session_symlink_path.display());
     unsafe {
         libc::close(STDOUT_FILENO);
     }
-    if exists {
+    if existing_path.is_some() {
         process::exit(0);
     }
 
@@ -248,6 +272,7 @@ fn main() -> Result<(), ()> {
         symlink: None,
         fifos: [None, None],
         pid_files: None,
+        externally_started_file: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
     };
     if fs::create_dir_all(session_path.clone()).is_err() {
@@ -274,6 +299,17 @@ fn main() -> Result<(), ()> {
             ),
         );
         return Err(());
+    }
+    if externally_started {
+        let file = externally_started_file(&session_path);
+        if let Err(err) = fs::File::create(file.clone()) {
+            report_error(
+                &session,
+                format!("failed to create '{}': {}", file.display(), err),
+            );
+            return Err(());
+        }
+        session_directory.externally_started_file = Some(TemporaryFile::new(file));
     }
     let mut create_fifo = |offset: usize, name: &str| {
         let mut fifo = session_path.clone();
@@ -654,6 +690,7 @@ struct SessionDirectory {
     symlink: Option<TemporaryFile>,
     fifos: [Option<TemporaryInputFifo>; 2],
     pid_files: Option<[TemporaryFile; 2]>,
+    externally_started_file: Option<TemporaryFile>,
     #[allow(dead_code)]
     session_directory: TemporaryDirectory,
 }
