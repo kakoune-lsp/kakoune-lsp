@@ -56,7 +56,6 @@ use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
 use std::fs;
-use std::io::ErrorKind;
 use std::mem;
 use std::panic;
 use std::path::Path;
@@ -228,6 +227,23 @@ fn main() -> Result<(), ()> {
         });
     let mut session_path = plugin_path.clone();
     session_path.push(session.as_str());
+
+    let mut session_symlink_path = plugin_path;
+    session_symlink_path.push(format!("{}.ref", session));
+
+    let exists =
+        session_path.exists() || fs::symlink_metadata(session_symlink_path.clone()).is_ok();
+    if exists {
+        eprintln!("May attach to externally-started server running at:");
+    }
+    println!("{}", session_symlink_path.display());
+    unsafe {
+        libc::close(STDOUT_FILENO);
+    }
+    if exists {
+        process::exit(0);
+    }
+
     let mut session_directory = SessionDirectory {
         symlink: None,
         fifos: [None, None],
@@ -246,27 +262,19 @@ fn main() -> Result<(), ()> {
         return Err(());
     }
 
-    let mut exists = false;
-
-    let mut session_symlink_path = plugin_path;
-    session_symlink_path.push(format!("{}.ref", session));
     session_directory.symlink = Some(TemporaryFile::new(session_symlink_path.clone()));
-    if let Err(err) = std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()) {
-        if err.kind() == ErrorKind::AlreadyExists {
-            exists = true;
-        } else {
-            report_error(
-                &session,
-                format!(
-                    "failed to create session directory symlink '{}': {}",
-                    session_symlink_path.display(),
-                    err,
-                ),
-            );
-            return Err(());
-        }
-    }
 
+    if let Err(err) = std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()) {
+        report_error(
+            &session,
+            format!(
+                "failed to create session directory symlink '{}': {}",
+                session_symlink_path.display(),
+                err,
+            ),
+        );
+        return Err(());
+    }
     let mut create_fifo = |offset: usize, name: &str| {
         let mut fifo = session_path.clone();
         fifo.push(name);
@@ -275,34 +283,15 @@ fn main() -> Result<(), ()> {
         session_directory.fifos[offset] = Some(tmp);
         if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
             let err = std::io::Error::last_os_error();
-            if err.kind() == ErrorKind::AlreadyExists {
-                exists = true;
-            } else {
-                report_error(
-                    &session,
-                    format!(
-                        "failed to create fifo '{}': {}",
-                        fifo.display(),
-                        std::io::Error::last_os_error()
-                    ),
-                );
-                return Err(());
-            }
+            report_error(
+                &session,
+                format!("failed to create fifo '{}': {}", fifo.display(), err),
+            );
+            return Err(());
         }
         Ok(fifo)
     };
     let fifos = [create_fifo(0, "fifo1")?, create_fifo(1, "fifo2")?];
-
-    if exists {
-        eprintln!("Server seems to be already running at:");
-    }
-    println!("{}", session_symlink_path.display());
-    unsafe {
-        libc::close(STDOUT_FILENO);
-    }
-    if exists {
-        process::exit(0);
-    }
 
     let mut pid_file = session_path.clone();
     pid_file.push("pid");
