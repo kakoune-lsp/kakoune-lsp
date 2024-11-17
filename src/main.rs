@@ -513,11 +513,16 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
                 && (!cfg.language_server.is_empty() || !cfg.language_ids.is_empty())
             {
                 return Err(
-                    "incompatible options: language_server/language_id and legacy language"
+                    "incompatible options: language_server/language_id and legacy language table"
                         .to_string(),
                 );
             }
             if cfg.language_server.is_empty() {
+                for (_language_id, language) in &cfg.language {
+                    if language.command.is_none() {
+                        return Err("missing 'command' field in legacy language table".to_string());
+                    }
+                }
                 for (language_id, language) in &cfg.language {
                     cfg.language_server.insert(
                         format!(
