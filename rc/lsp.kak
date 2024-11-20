@@ -525,12 +525,8 @@ hook -group lsp-hooks global GlobalSetOption lsp_auto_show_code_actions=false %{
 
 ### Requests ###
 
-declare-option -hidden str lsp_fifo1
-declare-option -hidden str lsp_fifo2
 declare-option -hidden str lsp_fifo
-declare-option -hidden str lsp_fifo_toggle fail
 declare-option -hidden -docstring 'PID file for kak-lsp server' str lsp_pid_file
-declare-option -hidden str lsp_pid
 
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
@@ -544,16 +540,11 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
             echo 'fail Failed to start kak-lsp server, see the *debug* buffer'
             exit
         fi
-        echo set-option global lsp_fifo "${session_dir}/fifo1"
-        echo set-option global lsp_fifo_toggle fail
-        echo set-option global lsp_fifo1 "${session_dir}/fifo1"
-        echo set-option global lsp_fifo2 "${session_dir}/fifo2"
+        echo set-option global lsp_fifo "${session_dir}/fifo"
         echo set-option global lsp_pid_file "${session_dir}/pid"
         until pid=$(cat "${session_dir}/pid" 2>/dev/null); do
             sleep .010
         done
-        echo set-option global lsp_pid $pid
-        echo alias global lsp-pid-$pid nop
     }
 }
 
@@ -573,16 +564,7 @@ define-command -hidden lsp-do-send -params 1.. %{
     evaluate-commands -save-regs abhpst %{
         set-register p
         try %{
-            evaluate-commands "set-register p %%file{%opt{lsp_pid_file}}"
-            try %{
-                "lsp-pid-%reg{p}"
-            } catch %{
-                unalias global "lsp-pid-%opt{lsp_pid}" nop
-                set-option global lsp_pid %reg{p}
-                alias global "lsp-pid-%reg{p}" nop
-                set-option global lsp_fifo %opt{lsp_fifo1}
-                set-option global lsp_fifo_toggle fail
-            }
+            evaluate-commands "nop %%file{%opt{lsp_pid_file}}"
         } catch %{
             lsp-start
         }
@@ -629,72 +611,17 @@ define-command -hidden lsp-do-send -params 1.. %{
 
 declare-option -hidden str lsp_do_send_maybe_async lsp-do-send-async
 
-define-command -hidden lsp-fifo-toggle %{
-    try %{
-        %opt{lsp_fifo_toggle}
-        set-option global lsp_fifo_toggle fail
-        set-option global lsp_fifo %opt{lsp_fifo1}
-    } catch %{
-        set-option global lsp_fifo_toggle nop
-        set-option global lsp_fifo %opt{lsp_fifo2}
-    }
-}
-
 define-command -hidden lsp-do-send-async %{
     echo -quoting shell -to-file %opt{lsp_fifo} %reg{a}
-    lsp-fifo-toggle
-}
-
-define-command -hidden lsp-do-send-async-via-shell %{
-    evaluate-commands %sh{
-        write() {
-            trap : INT TERM HUP QUIT
-            printf >&3 %s "${kak_quoted_reg_a}" && echo lsp-fifo-toggle
-            exit
-        }
-        trap write INT TERM HUP QUIT
-        exec 3>${kak_opt_lsp_fifo} && write
-    }
+    echo -to-file %opt{lsp_fifo} ' '
 }
 
 define-command -hidden lsp-do-send-sync %{
     unset-option buffer lsp_do_send_maybe_async
     evaluate-commands %sh{
-        $(command -v timeout 2>/dev/null && echo 1.5) sh -c '
-            exec >${kak_opt_lsp_fifo}
-            trap : INT TERM
-            printf %s "${kak_quoted_reg_a}"
-            printf %s " '${kak_command_fifo}' '${kak_response_fifo}'"
-        '
-        if [ $? -eq 124 ]; then
-            echo >${kak_command_fifo} "fail Timed out trying to reach kak-lsp"
-            echo fail "Timed out trying to reach kak-lsp"
-            exit
-        fi
-        echo lsp-fifo-toggle
+        printf >${kak_opt_lsp_fifo} "%s '\''%s'\'' '\''%s'\'' " \
+            "${kak_quoted_reg_a}" "${kak_command_fifo}" "${kak_response_fifo}"
         cat ${kak_response_fifo}
-    }
-}
-
-declare-option -hidden str lsp_send_buffer lsp-send-buffer
-
-evaluate-commands %sh{
-    if [ "$(uname)" = Darwin ]; then
-        echo set-option global lsp_do_send_maybe_async lsp-do-send-async-via-shell
-        echo set-option global lsp_send_buffer lsp-send-buffer-via-shell
-    fi
-}
-
-define-command -hidden lsp-send-buffer -params 1 %{
-    lsp-send %arg{1} buffer-is-next-message
-    evaluate-commands -no-hooks %{ write -force %opt{lsp_fifo} }
-    lsp-fifo-toggle
-}
-
-define-command -hidden lsp-send-buffer-via-shell -params 1 %{
-    evaluate-commands -draft %{
-        execute-keys '%'
-        lsp-send %arg{1} buffer-is-argument %val{selection}
     }
 }
 
@@ -758,9 +685,16 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
     }
 }
 
+define-command -hidden lsp-send-buffer -params 1 %{
+    evaluate-commands -draft %{
+        execute-keys '%'
+        lsp-send %arg{1} %val{selection}
+    }
+}
+
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
     lsp-unless-blocked lsp-if-changed-since lsp_timestamp %opt{lsp_timestamp} %{
-        %opt{lsp_send_buffer} textDocument/didChange
+        lsp-send-buffer textDocument/didChange
     }
 }
 
@@ -1187,7 +1121,7 @@ define-command lsp-capabilities -docstring "List available commands for current 
 
 define-command -hidden lsp-did-open %{
     lsp-unless-blocked evaluate-commands %{
-        %opt{lsp_send_buffer} textDocument/didOpen
+        lsp-send-buffer textDocument/didOpen
         lsp-code-lens-request
     }
 }
@@ -1959,8 +1893,6 @@ try %{
         try lsp-exit
         set-option global lsp_pid_file %{}
         set-option global lsp_fifo %{}
-        set-option global lsp_fifo1 %{}
-        set-option global lsp_fifo2 %{}
     }
 }
 

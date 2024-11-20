@@ -1,12 +1,13 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self};
-use std::io::Read;
+use std::io::{self, Read};
 use std::ops::ControlFlow;
+use std::os::fd::AsRawFd;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering::{AcqRel, Acquire, Relaxed};
+use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
 use std::{iter, mem};
 
@@ -36,7 +37,7 @@ use indoc::formatdoc;
 use inlay_hints::InlayHintsOptions;
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
-use libc::{P_ALL, SIGCHLD, WEXITED, WNOHANG};
+use libc::{O_NONBLOCK, P_ALL, SIGCHLD, WEXITED, WNOHANG};
 use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
@@ -46,57 +47,119 @@ use sloggers::types::Severity;
 
 struct ParserState {
     session: SessionId,
-    pub buf: Vec<u8>,
-    offset: usize,
-    quoted: bool,
-    escaped: bool,
+    fifo: fs::File,
+    poll: mio::Poll,
+    events: mio::Events,
+    input: Vec<u8>,
+    input_offset: usize,
+    output: Vec<u8>,
+    debug: bool,
+    debug_output: String,
 }
 
 impl ParserState {
-    fn new(session: SessionId) -> Self {
+    fn new(session: SessionId, fifo: fs::File) -> Self {
+        let poll = mio::Poll::new().expect("failed to create poll");
+        let source = fifo.as_raw_fd();
+        let mut source = mio::unix::SourceFd(&source);
+        poll.registry()
+            .register(&mut source, mio::Token(0), mio::Interest::READABLE)
+            .unwrap();
         ParserState {
             session,
-            buf: vec![],
-            offset: 0,
-            quoted: false,
-            escaped: false,
+            fifo,
+            poll,
+            events: mio::Events::with_capacity(1024),
+            input: vec![],
+            input_offset: 0,
+            output: vec![],
+            debug: false,
+            debug_output: String::new(),
         }
     }
 }
 
 fn next_string(state: &mut ParserState) -> String {
-    assert!(state.offset < state.buf.len());
-    let out = read_token(state);
-    String::from_utf8_lossy(&out).to_string()
+    read_token(state);
+    let token = String::from_utf8_lossy(&state.output).to_string();
+    state.output.clear();
+    if state.debug {
+        state.debug_output.push_str(" {");
+        state.debug_output.push_str(&token);
+        state.debug_output.push('}');
+    }
+    token
 }
 
-fn read_token(state: &mut ParserState) -> Vec<u8> {
-    let mut out = vec![];
+fn read_token(state: &mut ParserState) {
+    let mut escaped = false;
+    let mut quoted = false;
+    let mut offset = state.input_offset;
     loop {
-        let c = state.buf[state.offset];
-        state.offset += 1;
-        if state.escaped {
-            out.push(c);
-            state.escaped = false;
-        } else if state.quoted {
+        if offset == state.input.len() {
+            let n = blocking_read(state);
+            state.input.truncate(n);
+            offset = 0;
+        }
+        let c = state.input[offset];
+        offset += 1;
+        if escaped {
+            state.output.push(c);
+            escaped = false;
+        } else if quoted {
             if c == b'\'' {
-                state.quoted = false;
+                quoted = false;
             } else {
-                out.push(c);
+                state.output.push(c);
             }
         } else {
             match c {
                 b' ' => break,
-                b'\'' => state.quoted = true,
-                b'\\' => state.escaped = true,
-                _ => out.push(c),
+                b'\'' => quoted = true,
+                b'\\' => escaped = true,
+                _ => panic!(),
             }
         }
-        if state.offset == state.buf.len() {
+    }
+    state.input_offset = offset;
+}
+
+fn blocking_read(state: &mut ParserState) -> usize {
+    state.input.clear();
+    state.input.resize(4096, 0_u8);
+    let n = match state.fifo.read(&mut state.input) {
+        Ok(n) => n,
+        Err(err) => {
+            if err.kind() == io::ErrorKind::WouldBlock {
+                0
+            } else {
+                panic!("read error: {}", err);
+            }
+        }
+    };
+
+    if n != 0 {
+        return n;
+    }
+    loop {
+        if let Err(err) = state.poll.poll(&mut state.events, None) {
+            if err.kind() == io::ErrorKind::Interrupted {
+                continue;
+            }
+            panic!("poll error: {}", err);
+        }
+        let readable = state.events.iter().any(|evt| evt.is_readable());
+        state.events.clear();
+        if readable {
             break;
         }
     }
-    out
+    match state.fifo.read(&mut state.input) {
+        Ok(n) => n,
+        Err(err) => {
+            panic!("read error: {}", err);
+        }
+    }
 }
 
 trait FromString: Sized {
@@ -182,8 +245,6 @@ impl Deserializable for FormattingOptions {
     }
 }
 
-static FIFO_INDEX: AtomicBool = AtomicBool::new(false);
-
 impl ParserState {
     pub fn next<T: Deserializable>(&mut self) -> T {
         T::deserialize(self)
@@ -194,38 +255,12 @@ impl ParserState {
             .take(n)
             .collect()
     }
-
-    pub fn read_message(&mut self, fifos: &[PathBuf; 2]) {
-        assert_eq!(self.offset, self.buf.len());
-        self.buf.clear();
-        self.offset = 0;
-        fs::File::open(fifos[usize::from(FIFO_INDEX.fetch_xor(true, AcqRel))].clone())
-            .unwrap()
-            .read_to_end(&mut self.buf)
-            .unwrap();
-    }
-
-    pub fn buffer_contents(&mut self, fifos: &[PathBuf; 2]) -> String {
-        let source: String = self.next();
-        match source.as_str() {
-            "buffer-is-next-message" => {
-                self.read_message(fifos);
-                self.offset = self.buf.len();
-                let buffer = String::from_utf8_lossy(&self.buf).to_string();
-                debug!(self.session, "Buffer contents from editor: <{}>", buffer);
-                buffer
-            }
-            "buffer-is-argument" => self.next(),
-            _ => panic!(),
-        }
-    }
 }
 
 fn dispatch_fifo_request(
     state: &mut ParserState,
     to_editor: &Sender<EditorResponse>,
     from_editor: &Sender<EditorRequest>,
-    fifos: &[PathBuf; 2],
 ) -> ControlFlow<()> {
     let session = SessionId(state.next());
     if session.as_str() == "$exit" {
@@ -438,11 +473,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.buffer_contents(fifos),
+            draft: state.next(),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.buffer_contents(fifos),
+            draft: state.next(),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
@@ -565,7 +600,6 @@ fn dispatch_fifo_request(
             panic!("unexpected method {}", method);
         }
     });
-    assert_eq!(state.offset, state.buf.len());
     let flow = if method == "exit" {
         ControlFlow::Break(())
     } else {
@@ -588,7 +622,7 @@ pub fn start(
     session: SessionId,
     config: Config,
     log_path: &'static Option<PathBuf>,
-    fifos: [PathBuf; 2],
+    fifo: PathBuf,
 ) -> i32 {
     info!(
         session,
@@ -609,24 +643,29 @@ pub fn start(
 
     let session = ctx.last_session().clone();
     let fifo_worker = {
-        let mut state = ParserState::new(session.clone());
-        let session = session.clone();
+        let fifo = fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(O_NONBLOCK)
+            .open(fifo.clone())
+            .unwrap();
+        let mut state = ParserState::new(session.clone(), fifo);
         let to_editor = editor.to_editor.sender().clone();
-        let fifos = fifos.clone();
         Worker::spawn(
             ctx.last_session().clone(),
             "Messages from editor",
             1024, // arbitrary
             move |_receiver: Receiver<()>, from_editor: Sender<EditorRequest>| loop {
-                state.read_message(&fifos);
-                debug!(
-                    session,
-                    "From editor: <{}>",
-                    String::from_utf8_lossy(&state.buf)
-                );
-                state.quoted = false;
-                state.escaped = false;
-                if dispatch_fifo_request(&mut state, &to_editor, &from_editor, &fifos).is_break() {
+                state.debug = DEBUG.load(Relaxed);
+                let done = dispatch_fifo_request(&mut state, &to_editor, &from_editor).is_break();
+                if state.debug {
+                    debug!(
+                        state.session,
+                        "From editor: {{{}}}",
+                        &state.debug_output[1..]
+                    );
+                    state.debug_output.clear();
+                }
+                if done {
                     break;
                 }
             },
@@ -693,10 +732,7 @@ pub fn start(
         let timeout_op = sel.recv(&timeout_channel);
 
         let force_exit = |ctx: &mut Context| {
-            if let Err(err) = fs::write(
-                fifos[usize::from(!FIFO_INDEX.load(Acquire))].clone(),
-                "'$exit'",
-            ) {
+            if let Err(err) = fs::write(fifo.clone(), "'$exit'") {
                 error!(ctx.last_session(), "Error writing to fifo: {}", err);
             }
         };
