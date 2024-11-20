@@ -627,11 +627,7 @@ define-command -hidden lsp-do-send -params 1.. %{
     }
 }
 
-declare-option -hidden str lsp_do_send_maybe_async %sh{
-    [ "$(uname)" = Darwin ] &&
-        echo lsp-do-send-async-via-shell ||
-        echo lsp-do-send-async
-}
+declare-option -hidden str lsp_do_send_maybe_async lsp-do-send-async
 
 define-command -hidden lsp-fifo-toggle %{
     try %{
@@ -677,6 +673,28 @@ define-command -hidden lsp-do-send-sync %{
         fi
         echo lsp-fifo-toggle
         cat ${kak_response_fifo}
+    }
+}
+
+declare-option -hidden str lsp_send_buffer lsp-send-buffer
+
+evaluate-commands %sh{
+    if [ "$(uname)" = Darwin ]; then
+        echo set-option global lsp_do_send_maybe_async lsp-do-send-async-via-shell
+        echo set-option global lsp_send_buffer lsp-send-buffer-via-shell
+    fi
+}
+
+define-command -hidden lsp-send-buffer -params 1 %{
+    lsp-send %arg{1} buffer-is-next-message
+    evaluate-commands -no-hooks %{ write -force %opt{lsp_fifo} }
+    lsp-fifo-toggle
+}
+
+define-command -hidden lsp-send-buffer-via-shell -params 1 %{
+    evaluate-commands -draft %{
+        execute-keys '%'
+        lsp-send %arg{1} buffer-is-argument %val{selection}
     }
 }
 
@@ -742,9 +760,7 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
     lsp-unless-blocked lsp-if-changed-since lsp_timestamp %opt{lsp_timestamp} %{
-        lsp-send textDocument/didChange
-        evaluate-commands -no-hooks %{ write -force %opt{lsp_fifo} }
-        lsp-fifo-toggle
+        %opt{lsp_send_buffer} textDocument/didChange
     }
 }
 
@@ -1171,10 +1187,7 @@ define-command lsp-capabilities -docstring "List available commands for current 
 
 define-command -hidden lsp-did-open %{
     lsp-unless-blocked evaluate-commands %{
-        lsp-send textDocument/didOpen
-        evaluate-commands -no-hooks %{ write -force %opt{lsp_fifo} }
-        lsp-fifo-toggle
-        set-option buffer lsp_timestamp %val{timestamp}
+        %opt{lsp_send_buffer} textDocument/didOpen
         lsp-code-lens-request
     }
 }

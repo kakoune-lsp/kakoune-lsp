@@ -206,11 +206,18 @@ impl ParserState {
     }
 
     pub fn buffer_contents(&mut self, fifos: &[PathBuf; 2]) -> String {
-        self.read_message(fifos);
-        self.offset = self.buf.len();
-        let buffer = String::from_utf8_lossy(&self.buf).to_string();
-        debug!(self.session, "Buffer contents from editor: <{}>", buffer);
-        buffer
+        let source: String = self.next();
+        match source.as_str() {
+            "buffer-is-next-message" => {
+                self.read_message(fifos);
+                self.offset = self.buf.len();
+                let buffer = String::from_utf8_lossy(&self.buf).to_string();
+                debug!(self.session, "Buffer contents from editor: <{}>", buffer);
+                buffer
+            }
+            "buffer-is-argument" => self.next(),
+            _ => panic!(),
+        }
     }
 }
 
