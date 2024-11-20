@@ -1,6 +1,21 @@
 ## Unreleased
 
-Default configuration for `typst`, using `tinymist`.
+Additions:
+- Default configuration for `typst`, using `tinymist`.
+- Improve default configuration for HTML/CSS/JSON language servers, fixing `lsp-formatting` and others.
+- Further improve performance on systems where `TMPDIR` is not on `tmpfs`.
+- Remove shell calls from most request sending, improving performance on some platforms.
+- We used to send SIGKILL to language servers that fail to shutdown promptly.
+  This code has been removed, giving the servers arbitrary time to exit.
+- Fail properly if an earlier session crashed and failed to clean up.
+
+Fixes:
+- Fix a race condition that would cause `kak-lsp` to fail to restart.
+- Fix potential race conditions where two successive LSP requests might both start a new server.
+- Fix `kak-lsp` shutdown due to timeout potentially hanging the Kakoune session
+- Fix a race condition in `lsp-disable; lsp-enable` by making `lsp-disable`
+  wait until the exiting `kak-lsp` server is fully detached from the Kakoune
+  session.
 
 ## 18.0.3 - 2024-11-03
 
