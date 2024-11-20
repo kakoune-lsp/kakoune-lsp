@@ -518,10 +518,8 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
                 );
             }
             if cfg.language_server.is_empty() {
-                for (_language_id, language) in &cfg.language {
-                    if language.command.is_none() {
-                        return Err("missing 'command' field in legacy language table".to_string());
-                    }
+                if cfg.language.values().any(|l| l.command.is_none()) {
+                    return Err("missing 'command' field in legacy language table".to_string());
                 }
                 for (language_id, language) in &cfg.language {
                     cfg.language_server.insert(
