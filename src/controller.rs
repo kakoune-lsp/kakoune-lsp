@@ -48,30 +48,47 @@ use sloggers::types::Severity;
 struct ParserState {
     session: SessionId,
     fifo: fs::File,
+    alt_fifo: fs::File,
     poll: mio::Poll,
+    poll_both: mio::Poll,
     events: mio::Events,
     input: Vec<u8>,
     input_offset: usize,
+    buffer_input: Vec<u8>,
     output: Vec<u8>,
     debug: bool,
     debug_output: String,
 }
 
 impl ParserState {
-    fn new(session: SessionId, fifo: fs::File) -> Self {
+    fn new(session: SessionId, fifo: fs::File, alt_fifo: fs::File) -> Self {
         let poll = mio::Poll::new().expect("failed to create poll");
         let source = fifo.as_raw_fd();
         let mut source = mio::unix::SourceFd(&source);
+        let alt_source = alt_fifo.as_raw_fd();
+        let mut alt_source = mio::unix::SourceFd(&alt_source);
         poll.registry()
             .register(&mut source, mio::Token(0), mio::Interest::READABLE)
+            .unwrap();
+        let poll_both = mio::Poll::new().expect("failed to create poll");
+        poll_both
+            .registry()
+            .register(&mut source, mio::Token(0), mio::Interest::READABLE)
+            .unwrap();
+        poll_both
+            .registry()
+            .register(&mut alt_source, mio::Token(1), mio::Interest::READABLE)
             .unwrap();
         ParserState {
             session,
             fifo,
+            alt_fifo,
             poll,
+            poll_both,
             events: mio::Events::with_capacity(1024),
             input: vec![],
             input_offset: 0,
+            buffer_input: vec![],
             output: vec![],
             debug: false,
             debug_output: String::new(),
@@ -254,6 +271,44 @@ impl ParserState {
         iter::from_fn(|| Some(T::deserialize(self)))
             .take(n)
             .collect()
+    }
+
+    pub fn buffer_contents(&mut self) -> String {
+        let mut seen_stop_marker = false;
+        loop {
+            let (read_alt_fifo, read_fifo) = if seen_stop_marker {
+                (true, false)
+            } else {
+                loop {
+                    if let Err(err) = self.poll_both.poll(&mut self.events, None) {
+                        if err.kind() == io::ErrorKind::Interrupted {
+                            continue;
+                        }
+                        panic!("poll error: {}", err);
+                    }
+                    break;
+                }
+                let mut readables = self.events.iter().filter(|evt| evt.is_readable());
+                (
+                    readables.clone().any(|evt| evt.token() == mio::Token(1)),
+                    readables.any(|evt| evt.token() == mio::Token(0)),
+                )
+            };
+            if read_alt_fifo {
+                self.alt_fifo.read_to_end(&mut self.buffer_input).unwrap();
+                if seen_stop_marker {
+                    break;
+                }
+            }
+            if read_fifo {
+                let stop_marker = self.next::<String>();
+                assert!(stop_marker == "stop");
+                seen_stop_marker = true;
+            }
+        }
+        let result = String::from_utf8_lossy(&self.buffer_input).to_string();
+        self.buffer_input.clear();
+        result
     }
 }
 
@@ -473,11 +528,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.next(),
+            draft: state.buffer_contents(),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.next(),
+            draft: state.buffer_contents(),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
@@ -623,6 +678,7 @@ pub fn start(
     config: Config,
     log_path: &'static Option<PathBuf>,
     fifo: PathBuf,
+    alt_fifo: PathBuf,
 ) -> i32 {
     info!(
         session,
@@ -643,12 +699,11 @@ pub fn start(
 
     let session = ctx.last_session().clone();
     let fifo_worker = {
-        let fifo = fs::OpenOptions::new()
-            .read(true)
-            .custom_flags(O_NONBLOCK)
-            .open(fifo.clone())
-            .unwrap();
-        let mut state = ParserState::new(session.clone(), fifo);
+        let mut opts = fs::OpenOptions::new();
+        opts.read(true).custom_flags(O_NONBLOCK);
+        let fifo = opts.open(fifo.clone()).unwrap();
+        let alt_fifo = opts.open(alt_fifo.clone()).unwrap();
+        let mut state = ParserState::new(session.clone(), fifo, alt_fifo);
         let to_editor = editor.to_editor.sender().clone();
         Worker::spawn(
             ctx.last_session().clone(),

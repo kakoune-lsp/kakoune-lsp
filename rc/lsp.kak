@@ -526,6 +526,7 @@ hook -group lsp-hooks global GlobalSetOption lsp_auto_show_code_actions=false %{
 ### Requests ###
 
 declare-option -hidden str lsp_fifo
+declare-option -hidden str lsp_alt_fifo
 declare-option -hidden -docstring 'PID file for kak-lsp server' str lsp_pid_file
 
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
@@ -541,6 +542,7 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
             exit
         fi
         echo set-option global lsp_fifo "${session_dir}/fifo"
+        echo set-option global lsp_alt_fifo "${session_dir}/alt-fifo"
         echo set-option global lsp_pid_file "${session_dir}/pid"
         until pid=$(cat "${session_dir}/pid" 2>/dev/null); do
             sleep .010
@@ -686,10 +688,9 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 }
 
 define-command -hidden lsp-send-buffer -params 1 %{
-    evaluate-commands -draft %{
-        execute-keys '%'
-        lsp-send %arg{1} %val{selection}
-    }
+    lsp-send %arg{1}
+    evaluate-commands -no-hooks %{ write -force %opt{lsp_alt_fifo} }
+    echo -to-file %opt{lsp_fifo} "'stop' "
 }
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
@@ -1893,6 +1894,7 @@ try %{
         try lsp-exit
         set-option global lsp_pid_file %{}
         set-option global lsp_fifo %{}
+        set-option global lsp_alt_fifo %{}
     }
 }
 

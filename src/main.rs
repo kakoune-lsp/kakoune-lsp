@@ -268,7 +268,7 @@ fn main() -> Result<(), ()> {
 
     let mut session_directory = SessionDirectory {
         symlink: None,
-        fifo: None,
+        fifos: [None, None],
         pid_files: None,
         externally_started_file: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
@@ -309,12 +309,12 @@ fn main() -> Result<(), ()> {
         }
         session_directory.externally_started_file = Some(TemporaryFile::new(file));
     }
-    let fifo = (|| {
+    let mut create_fifo = |offset: usize, name: &str| {
         let mut fifo = session_path.clone();
-        fifo.push("fifo");
+        fifo.push(name);
         let tmp = TemporaryFile::new(fifo.clone());
         let fifo_cstr = tmp.0;
-        session_directory.fifo = Some(tmp);
+        session_directory.fifos[offset] = Some(tmp);
         if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
             let err = std::io::Error::last_os_error();
             report_error(
@@ -324,7 +324,9 @@ fn main() -> Result<(), ()> {
             return Err(());
         }
         Ok(fifo)
-    })()?;
+    };
+    let fifo = create_fifo(0, "fifo")?;
+    let alt_fifo = create_fifo(1, "alt-fifo")?;
 
     let mut pid_file = session_path.clone();
     pid_file.push("pid");
@@ -440,7 +442,7 @@ fn main() -> Result<(), ()> {
     // Setting up the logger after potential daemonization,
     // otherwise it refuses to work properly.
     let log_path_parent = initialize_logger(&session, &matches, verbosity);
-    let code = controller::start(session.clone(), config, log_path_parent, fifo);
+    let code = controller::start(session.clone(), config, log_path_parent, fifo, alt_fifo);
     info!(session, "kak-lsp server exiting");
     goodbye(code);
 }
@@ -671,7 +673,7 @@ impl Drop for TemporaryDirectory {
 
 struct SessionDirectory {
     symlink: Option<TemporaryFile>,
-    fifo: Option<TemporaryFile>,
+    fifos: [Option<TemporaryFile>; 2],
     pid_files: Option<[TemporaryFile; 2]>,
     externally_started_file: Option<TemporaryFile>,
     #[allow(dead_code)]
