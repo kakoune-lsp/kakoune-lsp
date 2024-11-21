@@ -116,6 +116,11 @@ fn read_token(state: &mut ParserState) {
         if offset == state.input.len() {
             let n = blocking_read(state);
             state.input.truncate(n);
+            debug!(
+                state.session,
+                "From editor (raw): {{{}}}",
+                &String::from_utf8_lossy(&state.input)
+            );
             offset = 0;
         }
         let c = state.input[offset];
@@ -134,7 +139,12 @@ fn read_token(state: &mut ParserState) {
                 b' ' => break,
                 b'\'' => quoted = true,
                 b'\\' => escaped = true,
-                _ => panic!(),
+                _ => {
+                    panic!(
+                        "expected quote, backslash or space at offset {offset}, saw '{}'",
+                        char::from(c)
+                    )
+                }
             }
         }
     }
@@ -295,7 +305,11 @@ impl ParserState {
                 )
             };
             if read_alt_fifo {
-                self.alt_fifo.read_to_end(&mut self.buffer_input).unwrap();
+                if let Err(err) = self.alt_fifo.read_to_end(&mut self.buffer_input) {
+                    if err.kind() != io::ErrorKind::WouldBlock {
+                        panic!("error reading buffer contents: {}", err);
+                    }
+                }
                 if seen_stop_marker {
                     break;
                 }
@@ -308,6 +322,7 @@ impl ParserState {
         }
         let result = String::from_utf8_lossy(&self.buffer_input).to_string();
         self.buffer_input.clear();
+        debug!(self.session, "Buffer contents from editor: {{{}}}", &result);
         result
     }
 }
