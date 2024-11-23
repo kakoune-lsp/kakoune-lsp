@@ -282,10 +282,10 @@ set up TSServer and TailwindCSS to use in React projects:
 hook global BufSetOption filetype=(?:javascript|typescript) %{
     set-option buffer lsp_servers %{
         [typescript-language-server]
-        root_globs = ["tailwind.config.ts", "tailwind.config.js"]
+        root_globs = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
         args = ["--stdio"]
         [tailwindcss-language-server]
-        root_globs = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+        root_globs = ["tailwind.config.ts", "tailwind.config.js"]
         args = ["--stdio"]
         [tailwindcss-language-server.settings.tailwindcss]
         editor = {}
