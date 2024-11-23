@@ -63,6 +63,8 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         }
     };
 
+    update_modeline(meta.clone(), ctx);
+
     let options = match &params.actions {
         Some(opts) if !opts.is_empty() => &opts[..],
         _ => {
@@ -97,7 +99,7 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
         .join(" ");
     // send the command to the editor
     ctx.exec(
-        meta.clone(),
+        meta,
         format!(
             "lsp-show-message-request {} {} {}",
             editor_quote(&params.message),
@@ -108,7 +110,6 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
             option_menu_opts
         ),
     );
-    update_modeline(meta, ctx);
 }
 
 /// Implements ShowMessage notification.
