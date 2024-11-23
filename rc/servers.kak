@@ -522,6 +522,9 @@ hook -group lsp-filetype-ruby global BufSetOption filetype=ruby %{
         [solargraph.settings._]
         # See https://github.com/castwide/solargraph/blob/master/lib/solargraph/language_server/host.rb
         # diagnostics = false
+        # [ruby-lsp]
+        # root_globs = ["Gemfile"]
+        # args = ["stdio"]
     }
 }
 
