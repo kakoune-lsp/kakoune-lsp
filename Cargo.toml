@@ -23,6 +23,7 @@ jsonrpc-core = "18.0.0"
 lazy_static = "1.5.0"
 libc = "0.2.155"
 lsp-types = { version = "0.95.0", features = ["proposed"] }
+mio = { version = "1.0.2", features = ["os-ext"] }
 notify-debouncer-full = "0.3.1"
 pulldown-cmark = "0.9.2"
 rand = "0.8.4"

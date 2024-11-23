@@ -37,8 +37,6 @@ use context::meta_for_session;
 use daemonize::Daemonize;
 use editor_transport::send_command_to_editor;
 use itertools::Itertools;
-use libc::O_NONBLOCK;
-use libc::O_RDONLY;
 use libc::SA_RESTART;
 use libc::SIGCHLD;
 use libc::SIGHUP;
@@ -314,8 +312,8 @@ fn main() -> Result<(), ()> {
     let mut create_fifo = |offset: usize, name: &str| {
         let mut fifo = session_path.clone();
         fifo.push(name);
-        let tmp = TemporaryInputFifo::new(fifo.clone());
-        let fifo_cstr = tmp.0 .0;
+        let tmp = TemporaryFile::new(fifo.clone());
+        let fifo_cstr = tmp.0;
         session_directory.fifos[offset] = Some(tmp);
         if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
             let err = std::io::Error::last_os_error();
@@ -327,7 +325,8 @@ fn main() -> Result<(), ()> {
         }
         Ok(fifo)
     };
-    let fifos = [create_fifo(0, "fifo1")?, create_fifo(1, "fifo2")?];
+    let fifo = create_fifo(0, "fifo")?;
+    let alt_fifo = create_fifo(1, "alt-fifo")?;
 
     let mut pid_file = session_path.clone();
     pid_file.push("pid");
@@ -443,7 +442,7 @@ fn main() -> Result<(), ()> {
     // Setting up the logger after potential daemonization,
     // otherwise it refuses to work properly.
     let log_path_parent = initialize_logger(&session, &matches, verbosity);
-    let code = controller::start(session.clone(), config, log_path_parent, fifos);
+    let code = controller::start(session.clone(), config, log_path_parent, fifo, alt_fifo);
     info!(session, "kak-lsp server exiting");
     goodbye(code);
 }
@@ -518,10 +517,8 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
                 );
             }
             if cfg.language_server.is_empty() {
-                for (_language_id, language) in &cfg.language {
-                    if language.command.is_none() {
-                        return Err("missing 'command' field in legacy language table".to_string());
-                    }
+                if cfg.language.values().any(|l| l.command.is_none()) {
+                    return Err("missing 'command' field in legacy language table".to_string());
                 }
                 for (language_id, language) in &cfg.language {
                     cfg.language_server.insert(
@@ -660,23 +657,6 @@ impl Drop for TemporaryFile {
     }
 }
 
-struct TemporaryInputFifo(TemporaryFile);
-impl TemporaryInputFifo {
-    fn new(path: PathBuf) -> Self {
-        Self(TemporaryFile::new(path))
-    }
-}
-impl Drop for TemporaryInputFifo {
-    fn drop(&mut self) {
-        unsafe {
-            let fd = libc::open(self.0 .0.as_ptr(), O_RDONLY | O_NONBLOCK);
-            if fd != -1 {
-                let _ = libc::close(fd);
-            }
-        }
-    }
-}
-
 struct TemporaryDirectory(&'static CString);
 impl TemporaryDirectory {
     fn new(path: PathBuf) -> Self {
@@ -693,7 +673,7 @@ impl Drop for TemporaryDirectory {
 
 struct SessionDirectory {
     symlink: Option<TemporaryFile>,
-    fifos: [Option<TemporaryInputFifo>; 2],
+    fifos: [Option<TemporaryFile>; 2],
     pid_files: Option<[TemporaryFile; 2]>,
     externally_started_file: Option<TemporaryFile>,
     #[allow(dead_code)]
