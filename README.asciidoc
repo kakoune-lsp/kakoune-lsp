@@ -29,12 +29,12 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 [source,sh]
 ----
 [ $(uname -sm) = 'Darwin arm64' ] &&
-    curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.3/kakoune-lsp-v18.0.3-aarch64-apple-darwin.tar.gz
+    curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.1.0/kakoune-lsp-v18.1.0-aarch64-apple-darwin.tar.gz
 [ $(uname -sm) = 'Darwin x86_64' ] &&
-    curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.3/kakoune-lsp-v18.0.3-x86_64-apple-darwin.tar.gz
+    curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.1.0/kakoune-lsp-v18.1.0-x86_64-apple-darwin.tar.gz
 [ $(uname) = Linux ] &&
-    curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.0.3/kakoune-lsp-v18.0.3-x86_64-unknown-linux-musl.tar.gz
-tar xzvf kakoune-lsp-v18.0.3-*.tar.gz
+    curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.1.0/kakoune-lsp-v18.1.0-x86_64-unknown-linux-musl.tar.gz
+tar xzvf kakoune-lsp-v18.1.0-*.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
 mv kak-lsp ~/.local/bin/
 ----

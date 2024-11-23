@@ -1,4 +1,4 @@
-## Unreleased
+## 18.1.0 - 2024-11-23
 
 Additions:
 - Default configuration for `typst`, using `tinymist`.
