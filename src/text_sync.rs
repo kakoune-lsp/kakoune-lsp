@@ -274,7 +274,7 @@ pub fn register_workspace_did_change_watched_files(
             if bare_pattern.contains('{') {
                 error!(
                     ctx.last_session(),
-                    "unsupported braces in glob patttern: '{}'", &bare_pattern
+                    "unsupported braces in glob pattern: '{}'", &bare_pattern
                 );
                 continue;
             }

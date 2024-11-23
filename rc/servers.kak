@@ -374,6 +374,10 @@ hook -group lsp-filetype-markdown global BufSetOption filetype=markdown %{
     #     root_globs = [".zk"]
     #     args = ["lsp"]
     # }
+    # set-option buffer lsp_servers %{
+    #     [markdown-oxide]
+    #     root_globs = ["logseq"]
+    # }
 }
 
 hook -group lsp-filetype-mojo global BufSetOption filetype=mojo %{
