@@ -244,6 +244,11 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     #     codeAction.disableRuleComment = { enable = true, location = "separateLine" }
     #     codeAction.showDocumentation = { enable = false }
     # }
+    # set-option buffer lsp_servers %{
+    #     [tailwindcss-language-server]
+    #     root_globs = ["tailwind.*"]
+    #     args = ["--stdio"]
+    # }
 }
 
 hook -group lsp-filetype-java global BufSetOption filetype=java %{
