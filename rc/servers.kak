@@ -634,7 +634,12 @@ hook -group lsp-language-id global BufSetOption filetype=(?:c|cpp) %{
     set-option buffer lsp_language_id c_cpp
 }
 hook -group lsp-language-id global BufSetOption filetype=javascript %{
-    set-option buffer lsp_language_id javascriptreact
+    set-option buffer lsp_language_id javascript
+}
+hook -group lsp-language-id global BufCreate .*[.]jsx %{
+    hook -group lsp-language-id buffer BufSetOption filetype=javascript %{
+        set-option buffer lsp_language_id javascriptreact
+    }
 }
 hook -group lsp-language-id global BufSetOption filetype=protobuf %{
     set-option buffer lsp_language_id proto
@@ -643,5 +648,10 @@ hook -group lsp-language-id global BufSetOption filetype=sh %{
     set-option buffer lsp_language_id shellscript
 }
 hook -group lsp-language-id global BufSetOption filetype=typescript %{
-    set-option buffer lsp_language_id typescriptreact
+    set-option buffer lsp_language_id typescript
+}
+hook -group lsp-language-id global BufCreate .*[.]tsx %{
+    hook -group lsp-language-id buffer BufSetOption filetype=typescript %{
+        set-option buffer lsp_language_id typescriptreact
+    }
 }
