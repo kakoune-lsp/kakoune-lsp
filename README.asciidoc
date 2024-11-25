@@ -53,10 +53,13 @@ cargo install --locked --force --path .
 
 === Install language servers for your desired languages
 
-kakoune-lsp doesn't manage installation of language servers, please install them
-by yourself for the languages you plan to use kakoune-lsp with. Please consult the
-https://github.com/kakoune-lsp/kakoune-lsp/wiki/How-to-install-servers[How to install servers] wiki page for
-quick installation of language servers supported by kakoune-lsp out of the box.
+kakoune-lsp doesn't manage installation of language servers, please install them by yourself.
+To see the default set of servers, that work out of the box once installed, see link:rc/servers.kak[] or run this command
+
+[source,sh]
+----
+kak -e 'exec %{!kak-lsp<ret>/hook -group lsp-filetype<ret>vt}'
+----
 
 === Configure Kakoune to enable LSP integration
 
@@ -562,10 +565,3 @@ env -u XDG_CONFIG_HOME HOME=$(mktemp -d) kak -e '
 
 If this works and your configuration doesn't,
 remove lines from your configuration until you find the one that causes the problem.
-
-== Versioning
-
-kakoune-lsp follows https://semver.org/[SemVer] with one notable difference from common practice: we
-don't use 0 major version to indicate that product is not yet reached stability. Even for non-stable
-and not feature-complete product user should be clearly informed about breaking change. Therefore we
-start with major version 1 and increment it each time when upgrade requires user's attention.
