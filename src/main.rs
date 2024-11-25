@@ -41,6 +41,7 @@ use libc::SA_RESTART;
 use libc::SIGCHLD;
 use libc::SIGHUP;
 use libc::SIGINT;
+use libc::SIGPIPE;
 use libc::SIGQUIT;
 use libc::SIGTERM;
 use libc::STDOUT_FILENO;
@@ -54,6 +55,9 @@ use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
 use std::fs;
+use std::io;
+use std::io::stdout;
+use std::io::Write;
 use std::mem;
 use std::panic;
 use std::path::Path;
@@ -73,11 +77,16 @@ static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 static SESSION: Mutex<SessionId> = Mutex::new(SessionId(String::new()));
 static LAST_CLIENT: Mutex<Option<String>> = Mutex::new(None);
 
-fn main() -> Result<(), ()> {
+fn main() {
+    process::exit(i32::from(run_main().is_err()))
+}
+
+fn run_main() -> Result<(), ()> {
     {
         let locale = CString::new("").unwrap();
         unsafe { libc::setlocale(libc::LC_ALL, locale.as_ptr()) };
     }
+
     let mut command = clap::Command::new("kak-lsp")
         .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
@@ -167,8 +176,13 @@ fn main() -> Result<(), ()> {
     }
 
     if matches.get_flag("version") {
-        println!("{}", crate_version!());
-        return Ok(());
+        return match handle_epipe(writeln!(stdout(), "{}", crate_version!())) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                eprintln!("Error writing version: {}", err);
+                Err(())
+            }
+        };
     }
 
     let kak_session = env_var("kak_session");
@@ -176,8 +190,7 @@ fn main() -> Result<(), ()> {
 
     let session = kak_session.or_else(|| matches.get_one::<String>("session").cloned());
     if matches.get_flag("kakoune") || session.is_none() {
-        kakoune();
-        process::exit(0);
+        return kakoune();
     }
 
     let try_config_dir = |config_dir: Option<PathBuf>| {
@@ -273,13 +286,13 @@ fn main() -> Result<(), ()> {
         externally_started_file: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
     };
-    if fs::create_dir_all(session_path.clone()).is_err() {
+    if let Err(err) = fs::create_dir_all(session_path.clone()) {
         report_error(
             &session,
             format!(
                 "failed to create session directory '{}': {}",
                 session_path.display(),
-                std::io::Error::last_os_error()
+                err
             ),
         );
         return Err(());
@@ -343,7 +356,7 @@ fn main() -> Result<(), ()> {
         })
     });
 
-    for signal in [SIGTERM, SIGHUP, SIGINT, SIGQUIT] {
+    for signal in [SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGTERM] {
         unsafe {
             libc::signal(signal, handle_interrupt as libc::sighandler_t);
         }
@@ -460,7 +473,14 @@ fn env_var(name: &str) -> Option<String> {
     }
 }
 
-fn kakoune() {
+fn handle_epipe(r: io::Result<()>) -> io::Result<()> {
+    match r {
+        Err(err) if err.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+        _ => r,
+    }
+}
+
+fn kakoune() -> Result<(), ()> {
     let script = concat!(
         include_str!("../rc/lsp.kak"),
         include_str!("../rc/servers.kak")
@@ -480,7 +500,13 @@ fn kakoune() {
             editor_escape(&args)
         )
     };
-    println!("{}{}", script, lsp_cmd);
+    match handle_epipe(writeln!(stdout(), "{}{}", script, lsp_cmd)) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            eprintln!("Error writing Kakoune script: {}", err);
+            Err(())
+        }
+    }
 }
 
 fn report_error(session: &SessionId, error_message: String) {
@@ -628,8 +654,8 @@ fn goodbye(code: i32) -> ! {
     process::exit(code);
 }
 
-extern "C" fn handle_interrupt(_sig: libc::c_int) -> ! {
-    goodbye(1)
+extern "C" fn handle_interrupt(sig: libc::c_int) -> ! {
+    goodbye(if sig == SIGPIPE { 0 } else { 1 })
 }
 
 extern "C" fn handle_sigchld(_sig: libc::c_int) {
