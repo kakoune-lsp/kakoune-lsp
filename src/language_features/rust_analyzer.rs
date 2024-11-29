@@ -72,7 +72,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
         for op in document_changes {
             match op {
                 SnippetDocumentChangeOperation::Op(resource_op) => {
-                    if let Err(e) = workspace::apply_document_resource_op(&meta, resource_op, ctx) {
+                    if let Err(e) = workspace::apply_document_resource_op(resource_op) {
                         error!(meta.session, "failed to apply document change: {}", e);
                     }
                 }

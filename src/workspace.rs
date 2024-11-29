@@ -224,11 +224,7 @@ pub fn execute_command(meta: EditorMeta, params: EditorExecuteCommand, ctx: &mut
     }
 }
 
-pub fn apply_document_resource_op(
-    _meta: &EditorMeta,
-    op: ResourceOp,
-    _ctx: &mut Context,
-) -> io::Result<()> {
+pub fn apply_document_resource_op(op: ResourceOp) -> io::Result<()> {
     match op {
         ResourceOp::Create(op) => {
             let path = op.uri.to_file_path().unwrap();
@@ -318,7 +314,7 @@ pub fn apply_edit(
                             );
                         }
                         DocumentChangeOperation::Op(op) => {
-                            if let Err(e) = apply_document_resource_op(meta, op, ctx) {
+                            if let Err(e) = apply_document_resource_op(op) {
                                 error!(
                                     ctx.last_session(),
                                     "failed to apply document change operation: {}", e
