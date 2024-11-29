@@ -1618,7 +1618,7 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
     {
         assert!(request.meta.fifo.is_none());
         // Wait for buffer update.
-        ctx.pending_requests.push(request);
+        ctx.pending_requests_from_future.push(request);
         return ControlFlow::Continue(());
     }
 
@@ -1633,7 +1633,7 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
     if !version_bump {
         return ControlFlow::Continue(());
     }
-    let mut requests = mem::take(&mut ctx.pending_requests);
+    let mut requests = mem::take(&mut ctx.pending_requests_from_future);
     let mut all_exited = false;
     requests.retain_mut(|request| {
         if all_exited {
@@ -1667,8 +1667,8 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
         }
         false
     });
-    assert!(ctx.pending_requests.is_empty());
-    ctx.pending_requests = mem::take(&mut requests);
+    assert!(ctx.pending_requests_from_future.is_empty());
+    ctx.pending_requests_from_future = mem::take(&mut requests);
     ControlFlow::Continue(())
 }
 

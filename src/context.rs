@@ -85,6 +85,7 @@ pub struct Context {
     pub outstanding_requests:
         HashMap<(ServerId, &'static str, String, Option<String>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
+    pub pending_requests_from_future: Vec<EditorRequest>,
     pub pending_message_requests: VecDeque<(Id, ServerId, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
@@ -122,6 +123,7 @@ impl Context {
             route_cache: HashMap::new(),
             outstanding_requests: HashMap::default(),
             pending_requests: vec![],
+            pending_requests_from_future: vec![],
             pending_message_requests: VecDeque::new(),
             request_counter: 0,
             response_waitlist: HashMap::default(),
