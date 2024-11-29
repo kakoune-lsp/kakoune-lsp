@@ -396,7 +396,7 @@ impl Context {
         {
             debug!(
                 session,
-                "To editor `{}` via {}: {}", meta.session, which, command
+                "To editor `{}` via {} {}: {}", meta.session, which, fifo, command
             );
             fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
             return;
