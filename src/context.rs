@@ -386,17 +386,20 @@ impl Context {
     where
         S: Into<Cow<'static, str>>,
     {
+        self.exec_fifo(meta, None, command);
+    }
+
+    pub fn exec_fifo<S>(&self, meta: EditorMeta, response_fifo: Option<ResponseFifo>, command: S)
+    where
+        S: Into<Cow<'static, str>>,
+    {
         let command = command.into();
         let session = meta.session.clone();
-        if let Some((fifo, which)) = meta
-            .fifo
-            .as_ref()
-            .map(|f| (f, "fifo"))
-            .or_else(|| meta.command_fifo.as_ref().map(|f| (f, "kak_command_fifo")))
-        {
+        if let Some(mut response_fifo) = response_fifo {
+            let fifo = response_fifo.take().unwrap();
             debug!(
                 session,
-                "To editor `{}` via {} {}: {}", meta.session, which, fifo, command
+                "To editor `{}` via fifo '{}': {}", &fifo, meta.session, command
             );
             fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
             return;
@@ -452,8 +455,6 @@ pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMet
         language_id: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
         filetype: "".to_string(),
         version: 0,
-        fifo: None,
-        command_fifo: None,
         hook: false,
         sourcing: false,
         language_server: HashMap::new(),

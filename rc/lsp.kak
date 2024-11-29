@@ -600,8 +600,8 @@ define-command -hidden lsp-do-send-async %{
 define-command -hidden lsp-do-send-sync %{
     unset-option buffer lsp_do_send_maybe_sync
     evaluate-commands %sh{
-        printf >${kak_opt_lsp_fifo} "%s '%s' '%s' " \
-            "${kak_quoted_reg_a}" "${kak_command_fifo}" "${kak_response_fifo}"
+        printf >${kak_opt_lsp_fifo} "%s '%s' " \
+            "${kak_quoted_reg_a}" "${kak_response_fifo}"
         cat ${kak_response_fifo}
     }
 }

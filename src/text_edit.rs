@@ -69,6 +69,23 @@ impl TextEditish<OneOf<TextEdit, AnnotatedTextEdit>> for OneOf<TextEdit, Annotat
 /// buffer or by editing file directly when it's not open in editor.
 pub fn apply_text_edits<T: TextEditish<T>>(
     server_id: ServerId,
+    meta: EditorMeta,
+    uri: Url,
+    edits: Vec<T>,
+    ctx: &mut Context,
+) {
+    let mut command = String::new();
+    apply_text_edits_try_deferred(&mut command, server_id, &meta, uri, edits, ctx);
+    if !command.is_empty() {
+        ctx.exec(meta, command);
+    }
+}
+
+/// Apply text edits to the file pointed by uri either by asking Kakoune to modify corresponding
+/// buffer or by editing file directly when it's not open in editor.
+pub fn apply_text_edits_try_deferred<T: TextEditish<T>>(
+    command: &mut String,
+    server_id: ServerId,
     meta: &EditorMeta,
     uri: Url,
     edits: Vec<T>,
@@ -77,14 +94,13 @@ pub fn apply_text_edits<T: TextEditish<T>>(
     let path = uri.to_file_path().ok().unwrap();
     let buffile = path.to_str().unwrap();
     if let Some(document) = ctx.documents.get(buffile) {
-        let meta = meta.clone();
         // Write hidden buffers unless they were already dirty.
         let write_to_disk = buffile != meta.buffile
             && fs::read_to_string(buffile)
                 .map(|disk_contents| disk_contents == document.text)
                 .unwrap_or(false);
         let server = ctx.server(server_id);
-        match apply_text_edits_to_buffer(
+        if let Some(cmd) = apply_text_edits_to_buffer(
             ctx.last_session(),
             &meta.client,
             Some(uri),
@@ -93,10 +109,10 @@ pub fn apply_text_edits<T: TextEditish<T>>(
             server.offset_encoding,
             write_to_disk,
         ) {
-            Some(cmd) => ctx.exec(meta, cmd),
-            // Nothing to do, but sending command back to the editor is required to handle case when
-            // editor is blocked waiting for response via fifo.
-            None => ctx.exec(meta, "nop"),
+            if !command.is_empty() {
+                command.push('\n');
+            }
+            command.push_str(&cmd);
         }
     } else if let Err(e) = apply_text_edits_to_file(server_id, &uri, edits, &meta.language_id, ctx)
     {

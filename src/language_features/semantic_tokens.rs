@@ -17,7 +17,7 @@ pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SEMANTIC_TOKENS))
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
         return;
     }
 

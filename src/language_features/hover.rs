@@ -19,7 +19,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mu
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_HOVER))
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
         return;
     }
 

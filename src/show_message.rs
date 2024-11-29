@@ -120,7 +120,9 @@ pub fn show_message(
     msg: &str,
     ctx: &Context,
 ) {
-    let command = message_type(&meta.session, typ).unwrap_or("nop");
+    let Some(command) = message_type(&meta.session, typ) else {
+        return;
+    };
     let have_client = meta.client.is_some();
     let last_client = LAST_CLIENT.lock().unwrap();
     ctx.exec(

@@ -381,8 +381,6 @@ fn dispatch_fifo_request(
         language_id,
         filetype,
         version,
-        fifo: None,
-        command_fifo: None,
         hook,
         sourcing,
         language_server,
@@ -394,12 +392,13 @@ fn dispatch_fifo_request(
         legacy_server_initialization_options: lsp_server_initialization_options,
     };
 
-    fn sync_trailer(meta: &mut EditorMeta, state: &mut ParserState, is_sync: bool) {
+    let mut response_fifo = None;
+
+    let mut sync_trailer = |state: &mut ParserState, is_sync: bool| {
         if is_sync {
-            meta.command_fifo = Some(state.next());
-            meta.fifo = Some(state.next());
+            response_fifo = Some(ResponseFifo::new(state.next()));
         }
-    }
+    };
 
     let method: String = state.next();
     let params = EditorParams(match method.as_str() {
@@ -426,7 +425,7 @@ fn dispatch_fifo_request(
         "apply-workspace-edit" => {
             let is_sync = state.next::<String>() == "is-sync";
             let params = Box::new(EditorApplyEdit { edit: state.next() });
-            sync_trailer(&mut meta, state, is_sync);
+            sync_trailer(state, is_sync);
             params
         }
         "capabilities" => Box::new(()),
@@ -520,7 +519,7 @@ fn dispatch_fifo_request(
                     _ => panic!("invalid request"),
                 },
             });
-            sync_trailer(&mut meta, state, is_sync);
+            sync_trailer(state, is_sync);
             params
         }
         "textDocument/codeLens" => Box::new(()),
@@ -562,7 +561,7 @@ fn dispatch_fifo_request(
             if let Some(server_override) = state.next() {
                 meta.server = Some(server_override);
             }
-            sync_trailer(&mut meta, state, is_sync);
+            sync_trailer(state, is_sync);
             params
         }
         "textDocument/forwardSearch" => Box::new(PositionParams {
@@ -594,7 +593,7 @@ fn dispatch_fifo_request(
             if let Some(server_override) = state.next() {
                 meta.server = Some(server_override);
             }
-            sync_trailer(&mut meta, state, is_sync);
+            sync_trailer(state, is_sync);
             params
         }
         "textDocument/references" => {
@@ -645,7 +644,7 @@ fn dispatch_fifo_request(
                 command: state.next(),
                 arguments: state.next(),
             });
-            sync_trailer(&mut meta, state, is_sync);
+            sync_trailer(state, is_sync);
             params
         }
         "workspace/symbol" => {
@@ -678,6 +677,7 @@ fn dispatch_fifo_request(
     from_editor
         .send(EditorRequest {
             meta,
+            response_fifo,
             method,
             params,
         })
@@ -1022,12 +1022,7 @@ pub fn start(
                                     match failure.error.code {
                                         code if code
                                             == ErrorCode::ServerError(CONTENT_MODIFIED)
-                                            || method == request::CodeActionRequest::METHOD =>
-                                        {
-                                            // Nothing to do, but sending command back to the editor is required to handle case when
-                                            // editor is blocked waiting for response via fifo.
-                                            ctx.exec(meta, "nop".to_string());
-                                        }
+                                            || method == request::CodeActionRequest::METHOD => {}
                                         code => {
                                             let msg = match code {
                                                 ErrorCode::MethodNotFound => format!(
@@ -1138,7 +1133,7 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
             notification::DidSaveTextDocument::METHOD => (),
             request::CodeLensRequest::METHOD => (),
             _ => {
-                if !request.meta.hook {
+                if !request.meta.hook && request.response_fifo.is_none() {
                     ctx.exec(request.meta.clone(), err);
                 }
             }
@@ -1187,7 +1182,7 @@ fn stop_session(ctx: &mut Context) {
         let request = EditorRequest {
             meta: meta_for_session(session.clone(), None),
             method: notification::Exit::METHOD.to_string(),
-            params: EditorParams(Box::new(())),
+            ..Default::default()
         };
         if process_editor_request(ctx, request).is_break() {
             break;
@@ -1505,10 +1500,11 @@ fn report_error_no_server_configured(
     request_method: &str,
     msg: &str,
 ) {
+    if meta.sourcing {
+        return;
+    }
     let word_regex = meta.word_regex.as_ref();
-    let command = if meta.sourcing {
-        "nop".to_string()
-    } else if let Some(multi_cmds) = match request_method {
+    let command = if let Some(multi_cmds) = match request_method {
         _ if meta.hook => None,
         request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
             "grep {}
@@ -1553,11 +1549,6 @@ pub fn report_error(to_editor: &Sender<EditorResponse>, meta: &EditorMeta, msg: 
 }
 
 fn report_error_impl(to_editor: &Sender<EditorResponse>, meta: &EditorMeta, command: String) {
-    // If editor is expecting a fifo response, give it one, so it won't hang.
-    if let Some(ref fifo) = meta.fifo {
-        std::fs::write(fifo, &command).expect("Failed to write command to fifo");
-    }
-
     if !meta.hook {
         let response = EditorResponse {
             meta: meta.clone(),
@@ -1616,7 +1607,7 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
             // smuggle completion-related requests through.
             && method != request::ResolveCompletionItem::METHOD
     {
-        assert!(request.meta.fifo.is_none());
+        assert!(request.response_fifo.is_none());
         // Wait for buffer update.
         ctx.pending_requests_from_future.push(request);
         return ControlFlow::Continue(());
@@ -1678,6 +1669,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         ensure_did_open(&request, ctx);
     }
     let meta = request.meta;
+    let response_fifo = request.response_fifo;
     let params = request.params;
     if let Some(client) = &meta.client {
         *LAST_CLIENT.lock().unwrap() = Some(client.clone());
@@ -1711,13 +1703,13 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
             completion::completion_item_resolve(meta, params.unbox(), ctx);
         }
         request::CodeActionRequest::METHOD => {
-            code_action::text_document_code_action(meta, params.unbox(), ctx);
+            code_action::text_document_code_action(meta, response_fifo, params.unbox(), ctx);
         }
         request::CodeActionResolveRequest::METHOD => {
             code_action::text_document_code_action_resolve(meta, params.unbox(), ctx);
         }
         request::ExecuteCommand::METHOD => {
-            workspace::execute_command(meta, params.unbox(), ctx);
+            workspace::execute_command(meta, response_fifo, params.unbox(), ctx);
         }
         request::HoverRequest::METHOD => {
             hover::text_document_hover(meta, params.unbox(), ctx);
@@ -1792,10 +1784,15 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
             code_lens::resolve_and_perform_code_lens(meta, params.unbox(), ctx);
         }
         request::Formatting::METHOD => {
-            formatting::text_document_formatting(meta, params.unbox(), ctx);
+            formatting::text_document_formatting(meta, response_fifo, params.unbox(), ctx);
         }
         request::RangeFormatting::METHOD => {
-            range_formatting::text_document_range_formatting(meta, params.unbox(), ctx);
+            range_formatting::text_document_range_formatting(
+                meta,
+                response_fifo,
+                params.unbox(),
+                ctx,
+            );
         }
         request::WorkspaceSymbolRequest::METHOD => {
             workspace::workspace_symbol(meta, params.unbox(), ctx);
@@ -1811,7 +1808,13 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         }
         "apply-workspace-edit" => {
             if let Some(&server_id) = meta.servers.first() {
-                workspace::apply_edit_from_editor(server_id, &meta, params.unbox(), ctx);
+                workspace::apply_edit_from_editor(
+                    server_id,
+                    meta,
+                    response_fifo,
+                    params.unbox(),
+                    ctx,
+                );
             }
         }
         request::SemanticTokensFullRequest::METHOD => {

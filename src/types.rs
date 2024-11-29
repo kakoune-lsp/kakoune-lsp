@@ -9,6 +9,7 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::fs;
 use std::io::Error;
 use std::ops::Deref;
 
@@ -172,8 +173,6 @@ pub struct EditorMeta {
     pub language_id: LanguageId,
     pub filetype: String,
     pub version: i32,
-    pub fifo: Option<String>,
-    pub command_fifo: Option<String>,
     #[serde(default)]
     pub hook: bool,
     #[serde(default)]
@@ -248,8 +247,31 @@ impl EditorParams {
 }
 
 #[derive(Debug)]
+pub struct ResponseFifo(Option<String>);
+
+impl ResponseFifo {
+    pub fn new(fifo: String) -> Self {
+        Self(Some(fifo))
+    }
+    pub fn take(&mut self) -> Option<String> {
+        self.0.take()
+    }
+}
+
+impl Drop for ResponseFifo {
+    fn drop(&mut self) {
+        if let Some(fifo) = self.take() {
+            // Nothing to do, but sending command back to the editor is required to handle case
+            // when editor is blocked waiting for response via fifo.
+            let _ = fs::write(fifo, b"nop");
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct EditorRequest {
     pub meta: EditorMeta,
+    pub response_fifo: Option<ResponseFifo>,
     pub method: String,
     pub params: EditorParams,
 }
@@ -258,6 +280,7 @@ impl Default for EditorRequest {
     fn default() -> Self {
         Self {
             meta: Default::default(),
+            response_fifo: None,
             method: Default::default(),
             params: EditorParams(Box::new(())),
         }

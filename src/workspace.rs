@@ -1,7 +1,7 @@
 use crate::context::*;
 use crate::language_features::{document_symbol, rust_analyzer};
 use crate::settings::*;
-use crate::text_edit::apply_text_edits;
+use crate::text_edit::apply_text_edits_try_deferred;
 use crate::types::*;
 use crate::util::*;
 use jsonrpc_core::Params;
@@ -196,7 +196,12 @@ pub struct EditorExecuteCommand {
     pub arguments: String,
 }
 
-pub fn execute_command(meta: EditorMeta, params: EditorExecuteCommand, ctx: &mut Context) {
+pub fn execute_command(
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    params: EditorExecuteCommand,
+    ctx: &mut Context,
+) {
     let req_params = ExecuteCommandParams {
         command: params.command,
         // arguments is quoted to avoid parsing issues
@@ -209,16 +214,18 @@ pub fn execute_command(meta: EditorMeta, params: EditorExecuteCommand, ctx: &mut
     };
     match &*req_params.command {
         "rust-analyzer.applySourceChange" => {
-            rust_analyzer::apply_source_change(meta, req_params, ctx);
+            rust_analyzer::apply_source_change(meta, response_fifo, req_params, ctx);
         }
         "rust-analyzer.runSingle" => {
-            rust_analyzer::run_single(meta, req_params, ctx);
+            rust_analyzer::run_single(meta, response_fifo, req_params, ctx);
         }
         _ => {
             ctx.call::<ExecuteCommand, _>(
                 meta,
                 RequestParams::All(vec![req_params]),
-                move |_: &mut Context, _, _| (),
+                move |_: &mut Context, _, _| {
+                    let _response_fifo = response_fifo;
+                },
             );
         }
     }
@@ -284,24 +291,34 @@ pub fn apply_document_resource_op(op: ResourceOp) -> io::Result<()> {
 // TODO handle version, so change is not applied if buffer is modified (and need to show a warning)
 pub fn apply_edit(
     server_id: ServerId,
-    meta: &EditorMeta,
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
     edit: WorkspaceEdit,
     ctx: &mut Context,
 ) -> ApplyWorkspaceEditResponse {
+    let mut command = String::new();
     if let Some(document_changes) = edit.document_changes {
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    apply_text_edits(server_id, meta, edit.text_document.uri, edit.edits, ctx);
+                    apply_text_edits_try_deferred(
+                        &mut command,
+                        server_id,
+                        &meta,
+                        edit.text_document.uri,
+                        edit.edits,
+                        ctx,
+                    );
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
                         DocumentChangeOperation::Edit(edit) => {
-                            apply_text_edits(
+                            apply_text_edits_try_deferred(
+                                &mut command,
                                 server_id,
-                                meta,
+                                &meta,
                                 edit.text_document.uri,
                                 edit.edits,
                                 ctx,
@@ -326,8 +343,11 @@ pub fn apply_edit(
         }
     } else if let Some(changes) = edit.changes {
         for (uri, change) in changes {
-            apply_text_edits(server_id, meta, uri, change, ctx);
+            apply_text_edits_try_deferred(&mut command, server_id, &meta, uri, change, ctx);
         }
+    }
+    if !command.is_empty() {
+        ctx.exec_fifo(meta, response_fifo, command);
     }
     ApplyWorkspaceEditResponse {
         applied: true,
@@ -343,14 +363,15 @@ pub struct EditorApplyEdit {
 
 pub fn apply_edit_from_editor(
     server_id: ServerId,
-    meta: &EditorMeta,
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
     params: EditorApplyEdit,
     ctx: &mut Context,
 ) {
     let edit = WorkspaceEdit::deserialize(serde_json::from_str::<Value>(&params.edit).unwrap())
         .expect("Failed to parse edit");
 
-    apply_edit(server_id, meta, edit, ctx);
+    apply_edit(server_id, meta, response_fifo, edit, ctx);
 }
 
 pub fn apply_edit_from_server(
@@ -360,6 +381,6 @@ pub fn apply_edit_from_server(
     ctx: &mut Context,
 ) -> Result<Value, jsonrpc_core::Error> {
     let params: ApplyWorkspaceEditParams = params.parse()?;
-    let response = apply_edit(server_id, &meta, params.edit, ctx);
+    let response = apply_edit(server_id, meta, None, params.edit, ctx);
     Ok(serde_json::to_value(response).unwrap())
 }

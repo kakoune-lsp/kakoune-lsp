@@ -1,9 +1,9 @@
 use crate::context::{Context, RequestParams};
 use crate::position::{get_lsp_position, lsp_position_to_kakoune};
-use crate::text_edit::apply_text_edits;
+use crate::text_edit::apply_text_edits_try_deferred;
 use crate::types::{EditorMeta, KakounePosition, PositionParams};
 use crate::util::{editor_escape, editor_quote};
-use crate::workspace;
+use crate::{workspace, ResponseFifo};
 use itertools::Itertools;
 use lsp_types::request::Request;
 use lsp_types::*;
@@ -51,7 +51,12 @@ pub struct SnippetTextEdit {
     pub insert_text_format: Option<InsertTextFormat>,
 }
 
-pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: &mut Context) {
+pub fn apply_source_change(
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    params: ExecuteCommandParams,
+    ctx: &mut Context,
+) {
     let arg = params
         .arguments
         .into_iter()
@@ -68,6 +73,7 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
     } = serde_json::from_value(arg).expect("Invalid source change");
 
     let server_id = meta.servers[0];
+    let mut command = String::new();
     if let Some(document_changes) = document_changes {
         for op in document_changes {
             match op {
@@ -90,48 +96,52 @@ pub fn apply_source_change(meta: EditorMeta, params: ExecuteCommandParams, ctx: 
                              }| TextEdit { range, new_text },
                         )
                         .collect();
-                    apply_text_edits(server_id, &meta, uri, edits, ctx);
+                    apply_text_edits_try_deferred(&mut command, server_id, &meta, uri, edits, ctx);
                 }
             }
         }
     } else if let Some(changes) = changes {
         for (uri, change) in changes {
-            apply_text_edits(server_id, &meta, uri, change, ctx);
+            apply_text_edits_try_deferred(&mut command, server_id, &meta, uri, change, ctx);
         }
     }
-    if let (
+    let (
         Some(client),
         Some(TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri },
             position,
         }),
     ) = (&meta.client, &cursor_position)
-    {
-        let buffile = uri.to_file_path().unwrap();
-        let buffile = buffile.to_str().unwrap();
-        let position = match ctx.documents.get(buffile) {
-            Some(document) => {
-                let server = ctx.server(server_id);
-                lsp_position_to_kakoune(position, &document.text, server.offset_encoding)
-            }
-            _ => KakounePosition {
-                line: position.line + 1,
-                column: position.character + 1,
-            },
-        };
-        let command = format!(
-            "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
-            editor_quote(buffile),
-            position.line,
-            position.column - 1
-        );
-        let command = format!(
-            "evaluate-commands -client {} -verbatim -- {}",
-            editor_quote(client),
-            command
-        );
-        ctx.exec(meta, command);
-    }
+    else {
+        if !command.is_empty() {
+            ctx.exec_fifo(meta, response_fifo, command);
+        }
+        return;
+    };
+    let buffile = uri.to_file_path().unwrap();
+    let buffile = buffile.to_str().unwrap();
+    let position = match ctx.documents.get(buffile) {
+        Some(document) => {
+            let server = ctx.server(server_id);
+            lsp_position_to_kakoune(position, &document.text, server.offset_encoding)
+        }
+        _ => KakounePosition {
+            line: position.line + 1,
+            column: position.character + 1,
+        },
+    };
+    let goto_command = format!(
+        "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
+        editor_quote(buffile),
+        position.line,
+        position.column - 1
+    );
+    let command = format!(
+        "{command}; evaluate-commands -client {} -verbatim -- {}",
+        editor_quote(client),
+        goto_command
+    );
+    ctx.exec_fifo(meta, response_fifo, command);
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -216,7 +226,12 @@ struct RunSingleArgs {
     workspace_root: String,
 }
 
-pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut Context) {
+pub fn run_single(
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    mut params: ExecuteCommandParams,
+    ctx: &mut Context,
+) {
     if params.arguments.len() != 1 {
         error!(
             meta.session,
@@ -248,5 +263,5 @@ pub fn run_single(meta: EditorMeta, mut params: ExecuteCommandParams, ctx: &mut 
         editor_quote(&args),
         meta.client.as_ref().unwrap()
     );
-    ctx.exec(meta, cmd);
+    ctx.exec_fifo(meta, response_fifo, cmd);
 }

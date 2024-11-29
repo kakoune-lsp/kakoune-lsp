@@ -15,7 +15,7 @@ pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ct
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SIGNATURE_HELP))
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
         return;
     }
 

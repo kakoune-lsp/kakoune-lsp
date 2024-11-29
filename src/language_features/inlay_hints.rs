@@ -23,7 +23,7 @@ pub fn inlay_hints(meta: EditorMeta, params: InlayHintsOptions, ctx: &mut Contex
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_INLAY_HINTS))
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
         return;
     }
 

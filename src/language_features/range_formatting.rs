@@ -14,6 +14,7 @@ use url::Url;
 
 pub fn text_document_range_formatting(
     meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
     params: RangeFormattingParams,
     ctx: &mut Context,
 ) {
@@ -35,9 +36,6 @@ pub fn text_document_range_formatting(
         })
         .collect();
     if eligible_servers.is_empty() {
-        if meta.fifo.is_some() {
-            ctx.exec(meta, "nop");
-        }
         return;
     }
 
@@ -46,7 +44,7 @@ pub fn text_document_range_formatting(
         let choices = eligible_servers
             .into_iter()
             .map(|(_server_id, server)| {
-                let cmd = if meta.fifo.is_some() {
+                let cmd = if response_fifo.is_some() {
                     "lsp-range-formatting-sync"
                 } else {
                     "lsp-range-formatting"
@@ -55,7 +53,7 @@ pub fn text_document_range_formatting(
                 format!("{} {}", editor_quote(&server.name), editor_quote(&cmd))
             })
             .join(" ");
-        ctx.exec(meta, format!("lsp-menu {}", choices));
+        ctx.exec_fifo(meta, response_fifo, format!("lsp-menu {}", choices));
         return;
     }
 
@@ -98,19 +96,20 @@ pub fn text_document_range_formatting(
                 .filter_map(|(_, v)| v)
                 .flatten()
                 .collect::<Vec<_>>();
-            editor_range_formatting(meta, (server_id, text_edits), ctx)
+            editor_range_formatting(meta, response_fifo, (server_id, text_edits), ctx)
         },
     );
 }
 
 pub fn editor_range_formatting<T: TextEditish<T>>(
     meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
     result: (ServerId, Vec<T>),
     ctx: &mut Context,
 ) {
     let (server_id, text_edits) = result;
     let server = ctx.server(server_id);
-    let cmd = ctx.documents.get(&meta.buffile).and_then(|document| {
+    let Some(cmd) = ctx.documents.get(&meta.buffile).and_then(|document| {
         apply_text_edits_to_buffer(
             &meta.session,
             &meta.client,
@@ -120,11 +119,8 @@ pub fn editor_range_formatting<T: TextEditish<T>>(
             server.offset_encoding,
             false,
         )
-    });
-    match cmd {
-        Some(cmd) => ctx.exec(meta, cmd),
-        // Nothing to do, but sending command back to the editor is required to handle case when
-        // editor is blocked waiting for response via fifo.
-        None => ctx.exec(meta, "nop"),
-    }
+    }) else {
+        return;
+    };
+    ctx.exec_fifo(meta, response_fifo, cmd);
 }

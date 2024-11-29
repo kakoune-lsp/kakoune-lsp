@@ -54,5 +54,5 @@ fn editor_rename(meta: EditorMeta, result: (ServerId, Option<WorkspaceEdit>), ct
         return;
     }
     let result = result.unwrap();
-    workspace::apply_edit(server_id, &meta, result, ctx);
+    workspace::apply_edit(server_id, meta, None, result, ctx);
 }

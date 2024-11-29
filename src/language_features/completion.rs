@@ -352,7 +352,7 @@ pub fn completion_item_resolve(
             Some(edits) if !edits.is_empty() => {
                 // Not sure if this case ever happens, the spec is unclear.
                 let uri = Url::from_file_path(&meta.buffile).unwrap();
-                apply_text_edits(server_id, &meta, uri, edits, ctx);
+                apply_text_edits(server_id, meta, uri, edits, ctx);
                 return;
             }
             _ => (),
@@ -406,6 +406,6 @@ fn editor_completion_item_resolve(
         );
     } else if let Some(resolved_edits) = new_item.additional_text_edits {
         let uri = Url::from_file_path(&meta.buffile).unwrap();
-        apply_text_edits(server_id, &meta, uri, resolved_edits.clone(), ctx)
+        apply_text_edits(server_id, meta, uri, resolved_edits.clone(), ctx)
     }
 }

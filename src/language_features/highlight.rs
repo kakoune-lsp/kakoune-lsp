@@ -15,7 +15,7 @@ pub fn text_document_highlight(meta: EditorMeta, params: PositionParams, ctx: &m
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT))
         .collect();
-    if meta.fifo.is_none() && eligible_servers.is_empty() {
+    if eligible_servers.is_empty() {
         return;
     }
 

@@ -10,7 +10,12 @@ use lsp_types::request::*;
 use lsp_types::*;
 use url::Url;
 
-pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx: &mut Context) {
+pub fn text_document_formatting(
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    params: FormattingOptions,
+    ctx: &mut Context,
+) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|server| attempt_server_capability(*server, &meta, CAPABILITY_FORMATTING))
@@ -29,9 +34,6 @@ pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx
         })
         .collect();
     if eligible_servers.is_empty() {
-        if meta.fifo.is_some() {
-            ctx.exec(meta, "nop");
-        }
         return;
     }
 
@@ -40,7 +42,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx
         let choices = eligible_servers
             .into_iter()
             .map(|(_server_id, server)| {
-                let cmd = if meta.fifo.is_some() {
+                let cmd = if response_fifo.is_some() {
                     "lsp-formatting-sync"
                 } else {
                     "lsp-formatting"
@@ -49,7 +51,7 @@ pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx
                 format!("{} {}", editor_quote(&server.name), editor_quote(&cmd))
             })
             .join(" ");
-        ctx.exec(meta, format!("lsp-menu {}", choices));
+        ctx.exec_fifo(meta, response_fifo, format!("lsp-menu {}", choices));
         return;
     }
 
@@ -74,7 +76,12 @@ pub fn text_document_formatting(meta: EditorMeta, params: FormattingOptions, ctx
                 .first_mut()
                 .and_then(|(_, v)| v.take())
                 .unwrap_or_default();
-            super::range_formatting::editor_range_formatting(meta, (server_id, text_edits), ctx)
+            super::range_formatting::editor_range_formatting(
+                meta,
+                response_fifo,
+                (server_id, text_edits),
+                ctx,
+            )
         },
     );
 }

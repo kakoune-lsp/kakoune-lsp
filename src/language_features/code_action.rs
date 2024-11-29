@@ -18,15 +18,17 @@ use lsp_types::request::*;
 use lsp_types::*;
 use url::Url;
 
-pub fn text_document_code_action(meta: EditorMeta, params: CodeActionsParams, ctx: &mut Context) {
+pub fn text_document_code_action(
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    params: CodeActionsParams,
+    ctx: &mut Context,
+) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_CODE_ACTIONS))
         .collect();
     if eligible_servers.is_empty() {
-        if meta.fifo.is_some() {
-            ctx.exec(meta, "nop");
-        }
         return;
     }
 
@@ -36,7 +38,11 @@ pub fn text_document_code_action(meta: EditorMeta, params: CodeActionsParams, ct
             let err = format!("Missing document for {}", &meta.buffile);
             error!(meta.session, "{}", err);
             if !meta.hook {
-                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
+                ctx.exec_fifo(
+                    meta,
+                    response_fifo,
+                    format!("lsp-show-error '{}'", &editor_escape(&err)),
+                );
             }
             return;
         }
@@ -54,11 +60,12 @@ pub fn text_document_code_action(meta: EditorMeta, params: CodeActionsParams, ct
             )
         })
         .collect();
-    code_actions_for_ranges(meta, params, ctx, document.version, ranges)
+    code_actions_for_ranges(meta, response_fifo, params, ctx, document.version, ranges)
 }
 
 fn code_actions_for_ranges(
     meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
     mut params: CodeActionsParams,
     ctx: &mut Context,
     version: i32,
@@ -115,19 +122,22 @@ fn code_actions_for_ranges(
     ctx.call::<CodeActionRequest, _>(
         meta,
         RequestParams::Each(req_params),
-        move |ctx, meta, results| editor_code_actions(meta, results, ctx, params, version, ranges),
+        move |ctx, meta, results| {
+            editor_code_actions(meta, response_fifo, results, ctx, params, version, ranges)
+        },
     );
 }
 
 fn editor_code_actions(
     meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
     results: Vec<(ServerId, Option<CodeActionResponse>)>,
     ctx: &mut Context,
     params: CodeActionsParams,
     version: i32,
     mut ranges: HashMap<ServerId, Range>,
 ) {
-    let sync = meta.fifo.is_some();
+    let sync = response_fifo.is_some();
     if !meta.hook
         && results
             .iter()
@@ -148,9 +158,6 @@ fn editor_code_actions(
         // convenient by requesting on whole lines.
         let Some(document) = ctx.documents.get(&meta.buffile) else {
             error!(meta.session, "Missing document for {}", &meta.buffile);
-            if sync {
-                ctx.exec(meta, "nop");
-            }
             return;
         };
         if document.version != version {
@@ -161,9 +168,6 @@ fn editor_code_actions(
                 version,
                 document.version
             );
-            if sync {
-                ctx.exec(meta, "nop");
-            }
             return;
         }
         for (server_id, range) in &mut ranges {
@@ -179,7 +183,7 @@ fn editor_code_actions(
             )
             .character;
         }
-        code_actions_for_ranges(meta, params, ctx, version, ranges);
+        code_actions_for_ranges(meta, response_fifo, params, ctx, version, ranges);
         return;
     }
 
@@ -226,7 +230,7 @@ fn editor_code_actions(
                         "lsp-show-error 'invalid pattern: {}'",
                         &editor_escape(&error.to_string())
                     );
-                    ctx.exec(meta, command);
+                    ctx.exec_fifo(meta, response_fifo, command);
                     return;
                 }
             };
@@ -260,12 +264,15 @@ fn editor_code_actions(
             }
             _ => fail + " 'multiple matching actions'",
         };
-        ctx.exec(
+        ctx.exec_fifo(
             meta,
+            response_fifo,
             format!("evaluate-commands -- {}", &editor_quote(&command)),
         );
         return;
     }
+
+    assert!(response_fifo.is_none());
 
     actions.sort_by_key(|(_server, ca)| {
         // TODO Group by server?
