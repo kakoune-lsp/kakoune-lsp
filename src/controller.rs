@@ -1599,29 +1599,29 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
         );
         // Keep it nevertheless because at least "completionItem/resolve" is useful.
     }
-    if request.meta.fifo.is_none() {
-        let notifications = &[
-            notification::DidOpenTextDocument::METHOD,
-            notification::DidChangeTextDocument::METHOD,
-            notification::DidCloseTextDocument::METHOD,
-            notification::DidSaveTextDocument::METHOD,
-            notification::DidChangeConfiguration::METHOD,
-            notification::Exit::METHOD,
-            notification::WorkDoneProgressCancel::METHOD,
-        ];
+    let notifications = &[
+        notification::DidOpenTextDocument::METHOD,
+        notification::DidChangeTextDocument::METHOD,
+        notification::DidCloseTextDocument::METHOD,
+        notification::DidSaveTextDocument::METHOD,
+        notification::DidChangeConfiguration::METHOD,
+        notification::Exit::METHOD,
+        notification::WorkDoneProgressCancel::METHOD,
+    ];
 
-        if !request.meta.buffile.is_empty()
+    if !request.meta.buffile.is_empty()
             && document_version < request.meta.version
             && !notifications.contains(&method)
             // InsertIdle is not triggered while the completion pager is active, so let's
             // smuggle completion-related requests through.
             && method != request::ResolveCompletionItem::METHOD
-        {
-            // Wait for buffer update.
-            ctx.pending_requests.push(request);
-            return ControlFlow::Continue(());
-        }
-    };
+    {
+        assert!(request.meta.fifo.is_none());
+        // Wait for buffer update.
+        ctx.pending_requests.push(request);
+        return ControlFlow::Continue(());
+    }
+
     let version_bump = [
         notification::DidOpenTextDocument::METHOD,
         notification::DidChangeTextDocument::METHOD,

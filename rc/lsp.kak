@@ -607,6 +607,7 @@ define-command -hidden lsp-do-send-sync %{
 }
 
 define-command -hidden lsp-synchronously -params 1.. %{
+    lsp-did-change
     set-option buffer lsp_do_send_maybe_sync lsp-do-send-sync
     try %{
         %arg{@}
@@ -938,7 +939,6 @@ define-command -hidden lsp-code-action -params 1 -docstring "DEPRECATED lsp-code
 }
 
 define-command -hidden lsp-code-action-sync -params 1 -docstring "DEPRECATED lsp-code-action-sync <pattern>: perform the code action that matches the given regex, blocking Kakoune session until done" %{
-    lsp-did-change
     lsp-synchronously lsp-code-actions-request true is-sync matching %arg{1}
 }
 
@@ -975,7 +975,6 @@ define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <co
 }
 
 define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command, blocking Kakoune session until done" %{
-    lsp-did-change
     lsp-synchronously lsp-execute-command-request is-sync %arg{@}
 }
 define-command -hidden lsp-execute-command-request -params 3 %{
@@ -1154,7 +1153,6 @@ define-command lsp-apply-workspace-edit -params 1 -hidden %{
     lsp-apply-workspace-edit-request is-async %arg{1}
 }
 define-command lsp-apply-workspace-edit-sync -params 1 -hidden %{
-    lsp-did-change
     lsp-synchronously lsp-apply-workspace-edit-request is-sync %arg{1}
 }
 define-command lsp-apply-workspace-edit-request -params 2 -hidden %{
@@ -1166,7 +1164,6 @@ define-command lsp-formatting -params 0..1 -docstring "lsp-formatting [<server_n
 }
 
 define-command lsp-formatting-sync -params 0..1 -docstring "lsp-formatting-sync [<server_name>]: format document, blocking Kakoune session until done" %{
-    lsp-did-change
     lsp-synchronously lsp-formatting-request is-sync %arg{1}
 }
 
@@ -1180,7 +1177,6 @@ define-command lsp-range-formatting -params 0..1 -docstring "lsp-range-formattin
 }
 
 define-command lsp-range-formatting-sync -params 0..1 -docstring "lsp-range-formatting-sync [<server_name>]: format selections, blocking Kakoune session until done" %{
-    lsp-did-change
     lsp-synchronously lsp-range-formatting-request is-sync %arg{1}
 }
 
