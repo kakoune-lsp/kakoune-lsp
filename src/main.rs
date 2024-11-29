@@ -454,7 +454,7 @@ fn run_main() -> Result<(), ()> {
 
     // Setting up the logger after potential daemonization,
     // otherwise it refuses to work properly.
-    let log_path_parent = initialize_logger(&session, &matches, verbosity);
+    let log_path_parent = initialize_logger(&matches, verbosity);
     let code = controller::start(session.clone(), config, log_path_parent, fifo, alt_fifo);
     info!(session, "kak-lsp server exiting");
     goodbye(code);
@@ -571,11 +571,7 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
     }
 }
 
-fn initialize_logger(
-    session: &SessionId,
-    matches: &ArgMatches,
-    verbosity: u8,
-) -> &'static Option<PathBuf> {
+fn initialize_logger(matches: &ArgMatches, verbosity: u8) -> &'static Option<PathBuf> {
     let level = match verbosity {
         0 => Severity::Error,
         1 => Severity::Warning,
@@ -598,14 +594,7 @@ fn initialize_logger(
 
     set_logger(level);
 
-    let session = session.clone();
     panic::set_hook(Box::new(move |panic_info| {
-        let message = format!(
-            "kak-lsp crashed, please report a bug. Find more details in the *debug* buffer.\n{}\n{}",
-            panic_info,
-            std::backtrace::Backtrace::capture()
-        );
-        error!(session, "{message}");
         static PANICKING: AtomicBool = AtomicBool::new(false);
         if PANICKING
             .compare_exchange(false, true, AcqRel, Acquire)
@@ -613,6 +602,11 @@ fn initialize_logger(
         {
             process::abort();
         }
+        let message = format!(
+            "kak-lsp crashed, please report a bug. Find more details in the *debug* buffer.\n{}\n{}",
+            panic_info,
+            std::backtrace::Backtrace::capture()
+        );
         let command = format!("lsp-show-error {}", editor_quote(&message));
         let meta = meta_for_session(
             std::mem::take(&mut SESSION.lock().unwrap()),
