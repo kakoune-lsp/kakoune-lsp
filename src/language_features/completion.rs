@@ -1,6 +1,7 @@
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_COMPLETION;
 use crate::context::*;
+use crate::editor_transport::ToEditor;
 use crate::markup::*;
 use crate::position::*;
 use crate::text_edit::apply_text_edits;
@@ -134,7 +135,7 @@ fn editor_completion(
             let on_select = formatdoc!(
                 "lsp-completion-item-selected {completion_item_index}
                  {maybe_resolve}info -markup -style menu -- %§{}§",
-                completion_menu_text(ctx.session(), x).replace('§', "§§")
+                completion_menu_text(ctx.to_editor(), x).replace('§', "§§")
             );
 
             let entry = match x.kind {
@@ -274,7 +275,7 @@ fn editor_completion(
     ctx.exec(meta, command);
 }
 
-fn completion_menu_text(session: &SessionId, x: &CompletionItem) -> String {
+fn completion_menu_text(to_editor: &ToEditor, x: &CompletionItem) -> String {
     // Combine the 'detail' line and the full-text documentation into
     // a single string. If both exist, separate them with a horizontal rule.
     let mut markup = String::new();
@@ -292,7 +293,7 @@ fn completion_menu_text(session: &SessionId, x: &CompletionItem) -> String {
         Some(Documentation::MarkupContent(content)) => match content.kind {
             MarkupKind::PlainText => markup.push_str(&escape_kakoune_markup(&content.value)),
             MarkupKind::Markdown => {
-                markup.push_str(&markdown_to_kakoune_markup(session, &content.value))
+                markup.push_str(&markdown_to_kakoune_markup(to_editor, &content.value))
             }
         },
         _ => (),
@@ -396,7 +397,7 @@ fn editor_completion_item_resolve(
         if new_item.detail == old_detail || new_item.documentation == old_documentation {
             return;
         }
-        let menu_text = completion_menu_text(ctx.session(), &new_item);
+        let menu_text = completion_menu_text(ctx.to_editor(), &new_item);
         ctx.exec(
             meta,
             format!(

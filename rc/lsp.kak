@@ -1129,7 +1129,7 @@ define-command -hidden lsp-did-change-config %{
 define-command -hidden lsp-exit -params 0..1 -docstring %{
     lsp-exit: shutdown language servers associated with current editor session
 } %{
-    lsp-send exit
+    lsp-send kakoune/exit
     evaluate-commands %sh{
         existing_session_dir=${kak_opt_lsp_pid_file%.ref/*}
         until ! [ -e "${existing_session_dir}" ]; do

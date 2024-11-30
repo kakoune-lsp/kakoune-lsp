@@ -1,8 +1,8 @@
+use crate::editor_transport::{send_command_to_editor, ToEditor};
 use crate::language_server_transport::LanguageServerTransport;
 use crate::text_sync::CompiledFileSystemWatcher;
 use crate::thread_worker::Worker;
 use crate::{filetype_to_language_id_map, types::*};
-use crossbeam_channel::Sender;
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
 use lsp_types::notification::{Cancel, Notification};
 use lsp_types::request::*;
@@ -78,7 +78,6 @@ pub struct Context {
     pub diagnostics: HashMap<String, Vec<(ServerId, Diagnostic)>>,
     pub documents: HashMap<String, Document>,
     pub dynamic_config: DynamicConfig,
-    pub editor_tx: Sender<EditorResponse>,
     pub language_servers: BTreeMap<ServerId, ServerSettings>,
     pub route_cache: HashMap<(ServerName, RootPath), ServerId>,
     pub outstanding_requests:
@@ -89,6 +88,7 @@ pub struct Context {
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub session: SessionId,
+    pub to_editor: ToEditor,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
     pub pending_file_watchers:
@@ -100,7 +100,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(session: SessionId, editor_tx: Sender<EditorResponse>, config: Config) -> Self {
+    pub fn new(session: SessionId, to_editor: ToEditor, config: Config) -> Self {
         let legacy_filetypes = filetype_to_language_id_map(&config);
         #[allow(deprecated)]
         Context {
@@ -117,7 +117,6 @@ impl Context {
             diagnostics: Default::default(),
             documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
-            editor_tx,
             language_servers: BTreeMap::new(),
             route_cache: HashMap::new(),
             outstanding_requests: HashMap::default(),
@@ -127,6 +126,7 @@ impl Context {
             request_counter: 0,
             response_waitlist: HashMap::default(),
             session,
+            to_editor,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
             pending_file_watchers: HashMap::default(),
@@ -140,8 +140,8 @@ impl Context {
         &self.session
     }
 
-    pub fn to_editor(&self) -> &SessionId {
-        self.session()
+    pub fn to_editor(&self) -> &ToEditor {
+        &self.to_editor
     }
 
     pub fn main_root<'a>(&'a self, meta: &'a EditorMeta) -> &'a RootPath {
@@ -409,13 +409,7 @@ impl Context {
             fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
             return;
         }
-        if self
-            .editor_tx
-            .send(EditorResponse { meta, command })
-            .is_err()
-        {
-            error!(self.to_editor(), "Failed to send command to editor");
-        }
+        send_command_to_editor(self.to_editor(), EditorResponse::new(meta, command))
     }
 
     fn next_batch_id(&mut self) -> BatchNumber {
@@ -428,47 +422,6 @@ impl Context {
         let id = Id::Num(self.request_counter);
         self.request_counter += 1;
         id
-    }
-
-    pub fn meta_for_buffer(&self, client: Option<String>, buffile: &str) -> Option<EditorMeta> {
-        let document = self.documents.get(buffile)?;
-        let mut meta = meta_for_session(self.session().clone(), client);
-        meta.buffile = buffile.to_string();
-        meta.version = document.version;
-        Some(meta)
-    }
-
-    pub fn meta_for_buffer_version(
-        &self,
-        client: Option<String>,
-        buffile: &str,
-        version: i32,
-    ) -> EditorMeta {
-        let mut meta = meta_for_session(self.session().clone(), client);
-        meta.buffile = buffile.to_string();
-        meta.version = version;
-        meta
-    }
-}
-
-pub fn meta_for_session(session: SessionId, client: Option<String>) -> EditorMeta {
-    #[allow(deprecated)]
-    EditorMeta {
-        session,
-        client,
-        buffile: "".to_string(),
-        language_id: "".to_string(), // filetype is not used by ctx.exec, but it's definitely a code smell
-        filetype: "".to_string(),
-        version: 0,
-        hook: false,
-        sourcing: false,
-        language_server: HashMap::new(),
-        semantic_tokens: SemanticTokenConfig::default(),
-        server: None,
-        word_regex: None,
-        servers: vec![],
-        legacy_dynamic_config: "".to_string(),
-        legacy_server_initialization_options: vec![],
     }
 }
 

@@ -6,39 +6,67 @@ use std::thread;
 
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 
+use crate::editor_transport::ToEditor;
 use crate::SessionId;
+
+#[derive(Clone)]
+pub enum ToEditorDispatcher {
+    ThisThread(SessionId),
+    OtherThread(ToEditor),
+}
 
 /// Like `std::thread::JoinHandle<()>`, but joins thread in drop automatically.
 pub struct ScopedThread {
     // Option for drop
     inner: Option<thread::JoinHandle<()>>,
-    session: SessionId,
+    to_editor_dispatcher: ToEditorDispatcher,
+}
+
+impl ScopedThread {
+    fn log_debug(&self, message: String) {
+        match &self.to_editor_dispatcher {
+            ToEditorDispatcher::ThisThread(session) => debug!(session:session, "{}", message),
+            ToEditorDispatcher::OtherThread(to_editor) => debug!(to_editor, "{}", message),
+        }
+    }
 }
 
 impl Drop for ScopedThread {
     fn drop(&mut self) {
         let inner = self.inner.take().unwrap();
         let name = inner.thread().name().unwrap().to_string();
-        debug!(self.session, "Waiting for {} to finish...", name);
+        self.log_debug(format!("Waiting for {} to finish...", name));
         let res = inner.join();
-        debug!(
-            self.session,
+        self.log_debug(format!(
             "... {} terminated with {}",
             name,
             if res.is_ok() { "ok" } else { "err" }
-        );
+        ));
 
         // escalate panic, but avoid aborting the process
         if let Err(e) = res {
-            if !thread::panicking() {
-                panic::panic_any(e);
-            }
+            panic::panic_any(e);
         }
     }
 }
 
 impl ScopedThread {
     pub fn spawn(
+        to_editor: ToEditor,
+        name: &'static str,
+        f: impl FnOnce(ToEditor) + Send + 'static,
+    ) -> ScopedThread {
+        let to_editor_copy = to_editor.clone();
+        let inner = thread::Builder::new()
+            .name(name.into())
+            .spawn(|| f(to_editor_copy))
+            .unwrap();
+        ScopedThread {
+            inner: Some(inner),
+            to_editor_dispatcher: ToEditorDispatcher::OtherThread(to_editor),
+        }
+    }
+    pub fn spawn_to_editor_dispatcher(
         session: SessionId,
         name: &'static str,
         f: impl FnOnce() + Send + 'static,
@@ -46,7 +74,7 @@ impl ScopedThread {
         let inner = thread::Builder::new().name(name.into()).spawn(f).unwrap();
         ScopedThread {
             inner: Some(inner),
-            session,
+            to_editor_dispatcher: ToEditorDispatcher::ThisThread(session),
         }
     }
 }
@@ -70,7 +98,31 @@ pub struct Worker<I, O> {
 }
 
 impl<I, O> Worker<I, O> {
-    pub fn spawn<F>(session: SessionId, name: &'static str, buf: usize, f: F) -> Worker<I, O>
+    pub fn spawn<F>(to_editor: ToEditor, name: &'static str, buf: usize, f: F) -> Worker<I, O>
+    where
+        F: FnOnce(ToEditor, Receiver<I>, Sender<O>) + Send + 'static,
+        I: Send + 'static,
+        O: Send + 'static,
+    {
+        // Set up worker channels in a deadlock-avoiding way. If one sets both input
+        // and output buffers to a fixed size, a worker might get stuck.
+        let (sender, input_receiver) = bounded::<I>(buf);
+        let (output_sender, receiver) = unbounded::<O>();
+        let _thread = ScopedThread::spawn(to_editor, name, move |to_editor| {
+            f(to_editor, input_receiver, output_sender)
+        });
+        Worker {
+            sender,
+            _thread,
+            receiver,
+        }
+    }
+    pub fn spawn_to_editor_dispatcher<F>(
+        session: SessionId,
+        name: &'static str,
+        buf: usize,
+        f: F,
+    ) -> Worker<I, O>
     where
         F: FnOnce(Receiver<I>, Sender<O>) + Send + 'static,
         I: Send + 'static,
@@ -80,7 +132,9 @@ impl<I, O> Worker<I, O> {
         // and output buffers to a fixed size, a worker might get stuck.
         let (sender, input_receiver) = bounded::<I>(buf);
         let (output_sender, receiver) = unbounded::<O>();
-        let _thread = ScopedThread::spawn(session, name, move || f(input_receiver, output_sender));
+        let _thread = ScopedThread::spawn_to_editor_dispatcher(session, name, move || {
+            f(input_receiver, output_sender)
+        });
         Worker {
             sender,
             _thread,

@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::editor_transport::ToEditor;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
@@ -101,7 +102,7 @@ pub fn apply_text_edits_try_deferred<T: TextEditish<T>>(
                 .unwrap_or(false);
         let server = ctx.server(server_id);
         if let Some(cmd) = apply_text_edits_to_buffer(
-            ctx.session(),
+            ctx.to_editor(),
             &meta.client,
             Some(uri),
             edits,
@@ -117,7 +118,7 @@ pub fn apply_text_edits_try_deferred<T: TextEditish<T>>(
     } else if let Err(e) = apply_text_edits_to_file(server_id, &uri, edits, &meta.language_id, ctx)
     {
         error!(
-            ctx.session(),
+            ctx.to_editor(),
             "Failed to apply edits to file {} ({})", &uri, e
         );
     }
@@ -257,7 +258,7 @@ fn cvt(t: i32) -> std::io::Result<i32> {
 }
 
 pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
-    session: &SessionId,
+    to_editor: &ToEditor,
     client: &Option<String>,
     mut text_edits: Vec<T>,
     text: &Rope,
@@ -301,11 +302,11 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
             };
             text_edits = minimal_edit_sequence(text, &Rope::from_str(&new_text));
             debug!(
-                session,
+                to_editor,
                 "Computed edit script to split up whole-buffer text edit"
             );
             for te in &text_edits {
-                debug!(session, "{:?}", te.as_ref());
+                debug!(to_editor, "{:?}", te.as_ref());
             }
         }
     }
@@ -431,7 +432,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
 }
 
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
-    session: &SessionId,
+    to_editor: &ToEditor,
     client: &Option<String>,
     uri: Option<Url>,
     text_edits: Vec<T>,
@@ -442,7 +443,7 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     let mut apply_edits = formatdoc!(
         "{}
          lsp-did-change",
-        lsp_text_edits_to_kakoune(session, client, text_edits, text, offset_encoding)?
+        lsp_text_edits_to_kakoune(to_editor, client, text_edits, text, offset_encoding)?
     );
 
     if write_to_disk {
@@ -593,6 +594,7 @@ fn minimal_edit_sequence<T: TextEditish<T>>(old: &Rope, new: &Rope) -> Vec<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::editor_transport::mock_to_editor;
 
     fn edit(
         start_line: u32,
@@ -628,7 +630,7 @@ mod tests {
         ];
         let buffer = Rope::from_str("use std::ffi::CString;");
         let result = lsp_text_edits_to_kakoune(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             &None,
             text_edits,
             &buffer,
@@ -648,7 +650,7 @@ mod tests {
         let text_edits = vec![edit(0, 1, 0, 1, "inserted"), edit(0, 2, 0, 3, "replaced")];
         let buffer = Rope::from_str("0123");
         let result = lsp_text_edits_to_kakoune(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             &None,
             text_edits,
             &buffer,
@@ -685,7 +687,7 @@ mod tests {
     }",
         );
         let result = lsp_text_edits_to_kakoune(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             &None,
             text_edits,
             &buffer,
@@ -757,7 +759,7 @@ mod tests {
                "#
         ));
         let result = lsp_text_edits_to_kakoune(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             &None,
             text_edits,
             &buffer,
@@ -804,7 +806,7 @@ mod tests {
             .trim_end(),
         )];
         let result = lsp_text_edits_to_kakoune(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             &Some("test_client".to_string()),
             text_edits,
             &buffer,
@@ -855,7 +857,7 @@ mod tests {
             .trim_end(),
         )];
         let result = lsp_text_edits_to_kakoune(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             &Some("test_client".to_string()),
             text_edits,
             &buffer,

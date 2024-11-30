@@ -104,8 +104,7 @@ fn editor_code_lens(
         editor_quote(buffile),
         command.replace('§', "§§")
     );
-    let meta = ctx.meta_for_buffer_version(None, buffile, version);
-    ctx.exec(meta, command);
+    ctx.exec(EditorMeta::default(), command);
 }
 
 #[derive(Clone, Debug)]

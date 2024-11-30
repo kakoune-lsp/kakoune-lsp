@@ -1,36 +1,64 @@
 use crate::thread_worker::Worker;
 use crate::types::*;
-use crossbeam_channel::Receiver;
+use crossbeam_channel::{Receiver, Sender};
 use std::borrow::Cow;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-pub struct EditorTransport {
-    pub to_editor: Worker<EditorResponse, Void>,
+pub type ToEditor = Sender<EditorResponse>;
+
+pub fn send_command_to_editor(to_editor: &ToEditor, response: EditorResponse) {
+    let log = !response.suppress_logging;
+    let result = to_editor.send(response);
+    if log {
+        if let Err(err) = result {
+            error!(to_editor, "Failed to send error message to editor: {}", err);
+        }
+    }
 }
 
-pub fn start(session: &SessionId) -> Result<EditorTransport, i32> {
+pub fn start(session: SessionId) -> Worker<EditorResponse, Void> {
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
 
-    let to_editor = Worker::spawn(
+    Worker::spawn_to_editor_dispatcher(
         session.clone(),
         "Messages to editor",
         channel_capacity,
         move |receiver: Receiver<EditorResponse>, _| {
             for response in receiver {
-                send_command_to_editor(response, true);
+                send_command_to_editor_here(&session, response);
             }
         },
-    );
-
-    Ok(EditorTransport { to_editor })
+    )
 }
 
-pub fn send_command_to_editor(response: EditorResponse, log: bool) {
-    let to_editor = &response.meta.session;
+#[cfg(test)]
+pub fn mock_to_editor() -> ToEditor {
+    let (to_editor, _) = crossbeam_channel::unbounded::<EditorResponse>();
+    to_editor
+}
+
+pub fn send_command_to_editor_here(session: &SessionId, response: EditorResponse) {
+    let log = !response.suppress_logging;
+
+    let client = response.meta.client.as_ref();
+    let command = match client.filter(|&s| !s.is_empty()) {
+        Some(client) => {
+            let command = format!(
+                "evaluate-commands -client {} -verbatim -- {}",
+                client, response.command
+            );
+            Cow::from(command)
+        }
+        None => response.command,
+    };
+    if log {
+        debug!(session:session, "To editor `{}`: {}", session, command);
+    }
+
     match Command::new("kak")
-        .args(["-p", &response.meta.session])
+        .args(["-p", session])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -41,45 +69,24 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
                 Some(stdin) => stdin,
                 None => {
                     if log {
-                        error!(to_editor, "failed to get editor stdin");
+                        error!(session:session, "failed to get editor stdin");
                     }
                     return;
                 }
             };
-
-            let client = response.meta.client.as_ref();
-            let command = match client.filter(|&s| !s.is_empty()) {
-                Some(client) => {
-                    let command = format!(
-                        "evaluate-commands -client {} -verbatim -- {}",
-                        client, response.command
-                    );
-                    if log {
-                        debug!(
-                            to_editor,
-                            "To editor `{}`: {}", response.meta.session, command
-                        );
-                    }
-                    Cow::from(command)
-                }
-                None => {
-                    if log {
-                        debug!(
-                            to_editor,
-                            "To editor `{}`: {}", response.meta.session, response.command
-                        );
-                    }
-                    response.command
+            if let Err(err) = stdin.write_all(command.as_bytes()) {
+                if log {
+                    error!(session:session, "Failed to write to editor stdin: {}", err);
                 }
             };
-
-            if stdin.write_all(command.as_bytes()).is_err() && log {
-                error!(to_editor, "Failed to write to editor stdin");
+            let exit_code = child.wait().unwrap();
+            if !exit_code.success() && log {
+                error!(session:session, "kak -p exited with non-zero status");
             }
         }
-        Err(e) => {
+        Err(err) => {
             if log {
-                error!(to_editor, "Failed to run Kakoune: {}", e);
+                error!(session:session, "Failed to run Kakoune: {}", err);
             }
         }
     }

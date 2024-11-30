@@ -188,7 +188,7 @@ pub fn editor_hover(
                 ),
             }
         } else {
-            marked_string_to_kakoune_markup(ctx.session(), ms)
+            marked_string_to_kakoune_markup(ctx.to_editor(), ms)
         }
     };
 
@@ -217,7 +217,7 @@ pub fn editor_hover(
                             if for_hover_buffer {
                                 contents.value
                             } else {
-                                markdown_to_kakoune_markup(ctx.session(), contents.value)
+                                markdown_to_kakoune_markup(ctx.to_editor(), contents.value)
                             },
                         ),
                         MarkupKind::PlainText => (false, contents.value),
@@ -338,7 +338,7 @@ fn show_hover_in_hover_client(
 
     // Use a fifo buffer instead of a plain scratch buffer so Kakoune will keep the existing
     // buffer alive, keeping it visible in any clients.
-    let fifo = mkfifo(ctx.session());
+    let fifo = mkfifo(ctx.to_editor());
 
     let command = format!(
         "%[

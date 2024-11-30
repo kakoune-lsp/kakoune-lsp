@@ -4,9 +4,9 @@ use std::{
     time::Duration,
 };
 
-use crate::context::*;
 use crate::thread_worker::Worker;
 use crate::types::*;
+use crate::{context::*, editor_transport::ToEditor};
 use crossbeam_channel::{Receiver, Sender};
 use jsonrpc_core::Value;
 use lsp_types::notification::*;
@@ -125,21 +125,23 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
 }
 
 pub fn spawn_file_watcher(
-    session: SessionId,
+    to_editor: ToEditor,
     log_path: &'static Option<PathBuf>,
     watch_requests: HashMap<(ServerId, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
 ) -> Worker<(), Vec<FileEvent>> {
-    debug!(session, "starting file watcher");
+    debug!(to_editor, "starting file watcher");
     Worker::spawn(
-        session.clone(),
+        to_editor,
         "File system change watcher",
         1024, // arbitrary
-        move |receiver: Receiver<()>, sender: Sender<Vec<FileEvent>>| {
+        move |to_editor: Sender<EditorResponse>,
+              receiver: Receiver<()>,
+              sender: Sender<Vec<FileEvent>>| {
             let mut debouncers = Vec::new();
             for ((_, root_path, path), path_watch_requests) in watch_requests {
                 let sender = sender.clone();
                 let callback = {
-                    let session = session.clone();
+                    let to_editor = to_editor.clone();
                     move |res: DebounceEventResult| {
                         match res {
                             Ok(debounced_events) => {
@@ -154,13 +156,13 @@ pub fn spawn_file_watcher(
                                 }
                                 if !file_changes.is_empty() {
                                     if let Err(err) = sender.send(file_changes) {
-                                        error!(session, "{}", err);
+                                        error!(to_editor, "{}", err);
                                     }
                                 }
                             }
                             Err(errors) => {
                                 for e in errors {
-                                    error!(session, "{}", e)
+                                    error!(to_editor, "{}", e)
                                 }
                             }
                         };
@@ -170,19 +172,19 @@ pub fn spawn_file_watcher(
                 let mut debouncer = match new_debouncer(Duration::from_secs(1), None, callback) {
                     Ok(debouncer) => debouncer,
                     Err(err) => {
-                        error!(session, "{}", err);
+                        error!(to_editor, "{}", err);
                         return;
                     }
                 };
 
                 let path = path.as_deref().unwrap_or_else(|| Path::new(&root_path));
                 if let Err(err) = debouncer.watcher().watch(path, RecursiveMode::Recursive) {
-                    error!(session, "{:?}: {}", path, err);
+                    error!(to_editor, "{:?}: {}", path, err);
                 }
                 debouncers.push(debouncer);
             }
             if let Err(err) = receiver.recv() {
-                error!(session, "{}", err);
+                error!(to_editor, "{}", err);
             }
         },
     )

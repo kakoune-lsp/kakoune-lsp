@@ -53,7 +53,7 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
                     Some(DiagnosticSeverity::WARNING) | None => "DiagnosticWarning",
                     Some(_) => {
                         warn!(
-                            ctx.session(),
+                            ctx.to_editor(),
                             "Unexpected DiagnosticSeverity: {:?}", x.severity
                         );
                         "DiagnosticWarning"
@@ -94,7 +94,7 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
             Some(DiagnosticSeverity::WARNING) | None => "InlayDiagnosticWarning",
             Some(_) => {
                 warn!(
-                    ctx.session(),
+                    ctx.to_editor(),
                     "Unexpected DiagnosticSeverity: {:?}", diagnostic.severity
                 );
                 "InlayDiagnosticWarning"
@@ -177,8 +177,7 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
         editor_quote(buffile),
         command.replace('§', "§§")
     );
-    let meta = ctx.meta_for_buffer_version(None, buffile, version);
-    ctx.exec(meta, command);
+    ctx.exec(EditorMeta::default(), command);
 }
 
 pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32, u32) {

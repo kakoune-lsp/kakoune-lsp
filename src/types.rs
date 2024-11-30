@@ -193,6 +193,15 @@ pub struct EditorMeta {
     pub legacy_server_initialization_options: Vec<String>,
 }
 
+impl EditorMeta {
+    pub fn for_client(client: String) -> Self {
+        Self {
+            client: Some(client),
+            ..Default::default()
+        }
+    }
+}
+
 pub fn is_using_legacy_toml(config: &Config) -> bool {
     #[allow(deprecated)]
     !config.language_server.is_empty()
@@ -291,6 +300,25 @@ impl Default for EditorRequest {
 pub struct EditorResponse {
     pub meta: EditorMeta,
     pub command: Cow<'static, str>,
+    // Set for the commands used to transport a log statement.
+    pub suppress_logging: bool,
+}
+
+impl EditorResponse {
+    pub fn new(meta: EditorMeta, command: Cow<'static, str>) -> Self {
+        Self {
+            meta,
+            command,
+            suppress_logging: false,
+        }
+    }
+    pub fn new_without_logging(meta: EditorMeta, command: Cow<'static, str>) -> Self {
+        Self {
+            meta,
+            command,
+            suppress_logging: true,
+        }
+    }
 }
 
 /// Kakoune session ID.

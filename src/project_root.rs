@@ -3,31 +3,31 @@ use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 
+use crate::editor_transport::ToEditor;
 use crate::types::LanguageId;
-use crate::SessionId;
 
 pub fn find_project_root(
-    session: &SessionId,
+    to_editor: &ToEditor,
     language_id: &LanguageId,
     markers: &[String],
     path: &str,
 ) -> String {
     if let Ok(force_root) = env::var("KAK_LSP_FORCE_PROJECT_ROOT") {
         debug!(
-            session,
+            to_editor,
             "Using $KAK_LSP_FORCE_PROJECT_ROOT as project root: \"{}\"", force_root
         );
         return force_root;
     }
-    let vars = gather_env_roots(session, language_id);
+    let vars = gather_env_roots(to_editor, language_id);
     if vars.is_empty() {
-        roots_by_marker(session, markers, path)
+        roots_by_marker(to_editor, markers, path)
     } else {
-        roots_by_env(&vars, path).unwrap_or_else(|| roots_by_marker(session, markers, path))
+        roots_by_env(&vars, path).unwrap_or_else(|| roots_by_marker(to_editor, markers, path))
     }
 }
 
-fn roots_by_marker(session: &SessionId, roots: &[String], path: &str) -> String {
+fn roots_by_marker(to_editor: &ToEditor, roots: &[String], path: &str) -> String {
     let mut src = PathBuf::from(path);
     // For scratch buffers we get a bare filename.
     if !src.is_absolute() {
@@ -47,7 +47,7 @@ fn roots_by_marker(session: &SessionId, roots: &[String], path: &str) -> String 
                     // ditto unwrap
                     let root_dir = pwd.to_str().unwrap().to_string();
                     debug!(
-                        session,
+                        to_editor,
                         "Found project root \"{}\" because it contains \"{}\"", root_dir, root
                     );
                     return root_dir;
@@ -61,9 +61,9 @@ fn roots_by_marker(session: &SessionId, roots: &[String], path: &str) -> String 
     src.to_str().unwrap().to_string()
 }
 
-fn gather_env_roots(session: &SessionId, language_id: &LanguageId) -> HashSet<PathBuf> {
+fn gather_env_roots(to_editor: &ToEditor, language_id: &LanguageId) -> HashSet<PathBuf> {
     let prefix = format!("KAK_LSP_PROJECT_ROOT_{}", language_id.to_uppercase());
-    debug!(session, "Searching for vars starting with {}", prefix);
+    debug!(to_editor, "Searching for vars starting with {}", prefix);
     env::vars()
         .filter(|(k, _v)| k.starts_with(&prefix))
         .map(|(_k, v)| PathBuf::from(v))

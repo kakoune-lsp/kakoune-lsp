@@ -7,9 +7,10 @@ use serde::Deserialize;
 
 use crate::{
     context::Context,
+    editor_transport::ToEditor,
     types::{EditorMeta, ServerId},
     util::editor_quote,
-    SessionId, LAST_CLIENT,
+    LAST_CLIENT,
 };
 
 // commands to be handled
@@ -157,14 +158,14 @@ fn update_modeline(meta: EditorMeta, ctx: &Context) {
     );
 }
 
-fn message_type(session: &SessionId, typ: MessageType) -> Option<&'static str> {
+fn message_type(to_editor: &ToEditor, typ: MessageType) -> Option<&'static str> {
     Some(match typ {
         MessageType::ERROR => "lsp-show-message-error",
         MessageType::WARNING => "lsp-show-message-warning",
         MessageType::INFO => "lsp-show-message-info",
         MessageType::LOG => "lsp-show-message-log",
         _ => {
-            warn!(session, "Unexpected ShowMessageParams type: {:?}", typ);
+            warn!(to_editor, "Unexpected ShowMessageParams type: {:?}", typ);
             return None;
         }
     })

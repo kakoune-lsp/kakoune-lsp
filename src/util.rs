@@ -1,3 +1,4 @@
+use crate::editor_transport::ToEditor;
 use crate::types::*;
 use std::os::unix::fs::DirBuilderExt;
 use std::{collections::HashMap, path::Path};
@@ -24,7 +25,7 @@ pub fn temp_dir() -> path::PathBuf {
     path
 }
 
-pub fn mkfifo(session: &SessionId) -> String {
+pub fn mkfifo(to_editor: &ToEditor) -> String {
     let mut path = temp_dir();
     for attempt in 0..10 {
         path.push(format!("{:x}", rand::random::<u64>()));
@@ -36,7 +37,7 @@ pub fn mkfifo(session: &SessionId) -> String {
         if mkfifo_result == 0 {
             return path;
         }
-        error!(session, "mkfifo attempt {attempt} failed, retrying");
+        error!(to_editor, "mkfifo attempt {attempt} failed, retrying");
     }
     panic!("failed to create fifo");
 }

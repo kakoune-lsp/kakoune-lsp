@@ -464,9 +464,6 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
         Some(document) => document,
         None => return,
     };
-    let Some(meta) = ctx.meta_for_buffer(None, buffile) else {
-        return;
-    };
     let server = ctx.server(server_id);
     let ranges = params
         .symbols
@@ -494,8 +491,8 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
     let command = format!(
         "evaluate-commands -buffer {} -verbatim -- set-option buffer cquery_semhl {} {}",
         editor_quote(buffile),
-        meta.version,
+        document.version,
         ranges
     );
-    ctx.exec(meta, command);
+    ctx.exec(EditorMeta::default(), command);
 }

@@ -1,12 +1,11 @@
+use crate::editor_transport::ToEditor;
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
 use jsonrpc_core::{self, Call, Output};
-use libc::{SIGCHLD, SIG_DFL};
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
-use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
 pub struct LanguageServerTransport {
@@ -20,36 +19,27 @@ pub struct LanguageServerTransport {
 }
 
 pub fn start(
-    session: SessionId,
+    to_editor: &ToEditor,
     server_name: ServerName,
     cmd: &str,
     args: &[String],
     envs: &HashMap<String, String>,
 ) -> Result<LanguageServerTransport, String> {
     info!(
-        session,
+        to_editor,
         "Starting language server {server_name} as `{}`",
         Some(cmd)
             .into_iter()
             .chain(args.iter().map(|s| s.as_str()))
             .join(" ")
     );
-    let mut child = match unsafe {
-        Command::new(cmd).pre_exec(|| {
-            let mut act: libc::sigaction = std::mem::zeroed();
-            act.sa_sigaction = SIG_DFL;
-            libc::sigemptyset(&mut act.sa_mask);
-            act.sa_flags = 0;
-            libc::sigaction(SIGCHLD, &act, std::ptr::null_mut());
-            Ok(())
-        })
-    }
-    .args(args)
-    .envs(envs)
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()
+    let mut child = match Command::new(cmd)
+        .args(args)
+        .envs(envs)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
     {
         Ok(c) => c,
         Err(err) => {
@@ -66,15 +56,13 @@ pub fn start(
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
 
-    // XXX temporary way of tracing language server errors
     let stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
     let errors = {
-        let session = session.clone();
         Worker::spawn(
-            session.clone(),
+            to_editor.clone(),
             "Language server errors",
             channel_capacity,
-            move |receiver, _| {
+            move |to_editor, receiver, _| {
                 if let Err(TryRecvError::Disconnected) = receiver.try_recv() {
                     return;
                 }
@@ -93,7 +81,7 @@ pub fn start(
                         line.push(b);
                     }
                     info!(
-                        session,
+                        to_editor,
                         "Language server stderr: {}",
                         String::from_utf8_lossy(&line)
                     );
@@ -101,37 +89,36 @@ pub fn start(
             },
         )
     };
-    // XXX
 
     let from_lang_server = {
-        let session = session.clone();
         let server_name = server_name.clone();
         Worker::spawn(
-            session.clone(),
+            to_editor.clone(),
             "Messages from language server",
             channel_capacity,
-            move |receiver, sender| {
-                if let Err(msg) = reader_loop(&session, server_name, reader, receiver, &sender) {
-                    error!(session, "{}", msg);
+            move |to_editor, receiver, sender| {
+                if let Err(msg) = reader_loop(&to_editor, server_name, reader, receiver, &sender) {
+                    error!(to_editor, "{}", msg);
                 }
             },
         )
     };
 
     let to_lang_server = {
-        let session = session.clone();
         let server_name = server_name.clone();
         Worker::spawn(
-            session.clone(),
+            to_editor.clone(),
             "Messages to language server",
             channel_capacity,
-            move |receiver, _| {
-                if writer_loop(&session, server_name, writer, &receiver).is_err() {
-                    error!(session, "Failed to write message to language server");
+            move |to_editor, receiver, _| {
+                if writer_loop(&to_editor, server_name, writer, &receiver).is_err() {
+                    error!(to_editor, "Failed to write message to language server");
                 }
-                drop(child.stdin.take());
-                drop(child.stdout.take());
-                drop(child.stderr.take());
+                let exit_code = child.wait().unwrap();
+                debug!(
+                    to_editor,
+                    "Language server exited with status: {}", exit_code
+                );
             },
         )
     };
@@ -144,7 +131,7 @@ pub fn start(
 }
 
 fn reader_loop(
-    session: &SessionId,
+    to_editor: &ToEditor,
     server_name: ServerName,
     mut reader: impl BufRead,
     receiver: Receiver<Void>,
@@ -160,7 +147,7 @@ fn reader_loop(
             let mut header = String::new();
             if reader.read_line(&mut header)? == 0 {
                 debug!(
-                    session,
+                    to_editor,
                     "Language server {server_name} closed pipe, stopping reading"
                 );
                 return Ok(());
@@ -184,7 +171,7 @@ fn reader_loop(
         reader.read_exact(&mut content)?;
         let msg = String::from_utf8(content)
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to read content as UTF-8 string"))?;
-        debug!(session, "From server {server_name}: {msg}");
+        debug!(to_editor, "From server {server_name}: {msg}");
         let output: serde_json::Result<Output> = serde_json::from_str(&msg);
         match output {
             Ok(output) => {
@@ -205,7 +192,7 @@ fn reader_loop(
 }
 
 fn writer_loop(
-    session: &SessionId,
+    to_editor: &ToEditor,
     server_name: ServerName,
     mut writer: impl Write,
     receiver: &Receiver<ServerMessage>,
@@ -215,7 +202,7 @@ fn writer_loop(
             ServerMessage::Request(request) => serde_json::to_string(&request),
             ServerMessage::Response(response) => serde_json::to_string(&response),
         }?;
-        debug!(session, "To server {server_name}: {request}",);
+        debug!(to_editor, "To server {server_name}: {request}",);
         write!(
             writer,
             "Content-Length: {}\r\n\r\n{}",
@@ -227,7 +214,7 @@ fn writer_loop(
     // NOTE we rely on the assumption that language server will exit when its stdin is closed
     // without need to kill child process
     debug!(
-        session,
+        to_editor,
         "Received signal to stop language server, closing pipe"
     );
     Ok(())

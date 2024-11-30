@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::editor_transport::ToEditor;
 use crate::types::*;
 use crate::util::*;
 use serde_json::Value;
@@ -128,7 +129,7 @@ where
 }
 // Take flattened tables like "a.b=1" and produce "{"a":{"b":1}}".
 pub fn explode_str_to_str_map(
-    session: &SessionId,
+    to_editor: &ToEditor,
     map: &[String],
 ) -> serde_json::value::Map<String, Value> {
     let mut settings = serde_json::Map::new();
@@ -140,7 +141,7 @@ pub fn explode_str_to_str_map(
             Some(name) => name,
             None => {
                 warn!(
-                    session,
+                    to_editor,
                     "Got a setting with an empty local name: {:?}", raw_key
                 );
                 continue;
@@ -150,7 +151,7 @@ pub fn explode_str_to_str_map(
             Ok(toml_value) => toml_value,
             Err(e) => {
                 warn!(
-                    session,
+                    to_editor,
                     "Could not parse TOML setting {:?}: {}", raw_value, e
                 );
                 continue;
@@ -161,7 +162,7 @@ pub fn explode_str_to_str_map(
             Ok(value) => value,
             Err(e) => {
                 warn!(
-                    session,
+                    to_editor,
                     "Could not convert setting {:?} to JSON: {}", raw_value, e
                 );
                 continue;
@@ -172,7 +173,7 @@ pub fn explode_str_to_str_map(
             Ok(_) => (),
             Err(e) => {
                 warn!(
-                    session,
+                    to_editor,
                     "Could not set {:?} to {:?}: {}", raw_key, raw_value, e
                 );
                 continue;

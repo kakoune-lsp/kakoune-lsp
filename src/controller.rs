@@ -12,8 +12,8 @@ use std::time::Duration;
 use std::{iter, mem};
 
 use crate::capabilities::{self, initialize};
-use crate::context::meta_for_session;
 use crate::context::Context;
+use crate::editor_transport::{send_command_to_editor, ToEditor};
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
 use crate::progress;
@@ -27,8 +27,7 @@ use crate::workspace::{
     self, EditorApplyEdit, EditorDidChangeConfigurationParams, EditorExecuteCommand,
 };
 use crate::{context::*, set_logger};
-use crate::{diagnostics, RECEIVED_SIGCHLD};
-use crate::{editor_transport, CLEANUP};
+use crate::{diagnostics, do_cleanup};
 use crate::{language_server_transport, LAST_CLIENT};
 use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
@@ -37,7 +36,7 @@ use indoc::formatdoc;
 use inlay_hints::InlayHintsOptions;
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
-use libc::{O_NONBLOCK, P_ALL, SIGCHLD, WEXITED, WNOHANG};
+use libc::O_NONBLOCK;
 use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
@@ -46,7 +45,7 @@ use serde::Deserialize;
 use sloggers::types::Severity;
 
 struct ParserState {
-    session: SessionId,
+    to_editor: ToEditor,
     fifo: fs::File,
     alt_fifo: fs::File,
     poll: mio::Poll,
@@ -61,7 +60,7 @@ struct ParserState {
 }
 
 impl ParserState {
-    fn new(session: SessionId, fifo: fs::File, alt_fifo: fs::File) -> Self {
+    fn new(to_editor: ToEditor, fifo: fs::File, alt_fifo: fs::File) -> Self {
         let poll = mio::Poll::new().expect("failed to create poll");
         let source = fifo.as_raw_fd();
         let mut source = mio::unix::SourceFd(&source);
@@ -80,7 +79,7 @@ impl ParserState {
             .register(&mut alt_source, mio::Token(1), mio::Interest::READABLE)
             .unwrap();
         ParserState {
-            session,
+            to_editor,
             fifo,
             alt_fifo,
             poll,
@@ -117,7 +116,7 @@ fn read_token(state: &mut ParserState) {
             let n = blocking_read(state);
             state.input.truncate(n);
             debug!(
-                state.session,
+                state.to_editor,
                 "From editor (raw): {{{}}}",
                 &String::from_utf8_lossy(&state.input)
             );
@@ -322,14 +321,16 @@ impl ParserState {
         }
         let result = String::from_utf8_lossy(&self.buffer_input).to_string();
         self.buffer_input.clear();
-        debug!(self.session, "Buffer contents from editor: {{{}}}", &result);
+        debug!(
+            self.to_editor,
+            "Buffer contents from editor: {{{}}}", &result
+        );
         result
     }
 }
 
 fn dispatch_fifo_request(
     state: &mut ParserState,
-    to_editor: &Sender<EditorResponse>,
     from_editor: &Sender<EditorRequest>,
 ) -> ControlFlow<()> {
     let session = SessionId(state.next());
@@ -351,7 +352,7 @@ fn dispatch_fifo_request(
         .collect();
 
     let parse_error = |what, err| {
-        handle_broken_editor_request(to_editor, &session, &client, hook, what, err);
+        handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
         ControlFlow::Continue(())
     };
 
@@ -375,7 +376,7 @@ fn dispatch_fifo_request(
     };
     #[allow(deprecated)]
     let mut meta = EditorMeta {
-        session: session.clone(),
+        session,
         client: (!client.is_empty()).then_some(client),
         buffile,
         language_id,
@@ -444,10 +445,10 @@ fn dispatch_fifo_request(
             params
         }
         "eclipse.jdt.ls/organizeImports" => Box::new(()),
-        "exit" => Box::new(()),
         "kakoune/breadcrumbs" => Box::new(BreadcrumbsParams {
             position_line: state.next(),
         }),
+        "kakoune/exit" => Box::new(()),
         "kakoune/goto-document-symbol" => Box::new(GotoSymbolParams {
             goto_symbol: state.next(),
         }),
@@ -496,7 +497,7 @@ fn dispatch_fifo_request(
             } else {
                 Severity::Info
             });
-            debug!(state.session, "Applied option change {}", hook_param);
+            debug!(state.to_editor, "Applied option change {}", hook_param);
             return ControlFlow::Continue(());
         }
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
@@ -669,7 +670,7 @@ fn dispatch_fifo_request(
             panic!("unexpected method {}", method);
         }
     });
-    let flow = if method == "exit" {
+    let flow = if method == "kakoune/exit" {
         ControlFlow::Break(())
     } else {
         ControlFlow::Continue(())
@@ -691,71 +692,53 @@ fn dispatch_fifo_request(
 pub fn start(
     session: SessionId,
     config: Config,
+    to_editor: &ToEditor,
     log_path: &'static Option<PathBuf>,
     fifo: PathBuf,
     alt_fifo: PathBuf,
-) -> i32 {
+) {
     info!(
-        session,
+        to_editor,
         "kak-lsp server starting (PID={}). To control log verbosity, set the 'lsp_debug' option",
         unsafe { libc::getpid() }
     );
 
-    let editor = editor_transport::start(&session);
-    if let Err(code) = editor {
-        return code;
-    }
-    let editor = editor.unwrap();
-
-    let mut ctx = Context::new(session, editor.to_editor.sender().clone(), config);
+    let mut ctx = Context::new(session, to_editor.clone(), config);
     let ctx = &mut ctx;
 
     let timeout = ctx.config.server.timeout;
 
-    let session = ctx.session().clone();
     let fifo_worker = {
         let mut opts = fs::OpenOptions::new();
         opts.read(true).custom_flags(O_NONBLOCK);
         let fifo = opts.open(fifo.clone()).unwrap();
         let alt_fifo = opts.open(alt_fifo.clone()).unwrap();
-        let mut state = ParserState::new(session.clone(), fifo, alt_fifo);
-        let to_editor = editor.to_editor.sender().clone();
         Worker::spawn(
-            ctx.session().clone(),
+            to_editor.clone(),
             "Messages from editor",
             1024, // arbitrary
-            move |_receiver: Receiver<()>, from_editor: Sender<EditorRequest>| loop {
-                state.debug = DEBUG.load(Relaxed);
-                let done = dispatch_fifo_request(&mut state, &to_editor, &from_editor).is_break();
-                if state.debug {
-                    debug!(
-                        state.session,
-                        "From editor: {{{}}}",
-                        &state.debug_output[1..]
-                    );
-                    state.debug_output.clear();
-                }
-                if done {
-                    break;
+            move |to_editor, _receiver: Receiver<()>, from_editor: Sender<EditorRequest>| {
+                let mut state = ParserState::new(to_editor, fifo, alt_fifo);
+                loop {
+                    state.debug = DEBUG.load(Relaxed);
+                    let done = dispatch_fifo_request(&mut state, &from_editor).is_break();
+                    if state.debug {
+                        debug!(
+                            state.to_editor,
+                            "From editor: {{{}}}",
+                            &state.debug_output[1..]
+                        );
+                        state.debug_output.clear();
+                    }
+                    if done {
+                        break;
+                    }
                 }
             },
         )
     };
 
     'event_loop: loop {
-        if RECEIVED_SIGCHLD
-            .compare_exchange_weak(true, false, Relaxed, Relaxed)
-            .is_ok()
-        {
-            unsafe {
-                let mut info: libc::siginfo_t = std::mem::zeroed();
-                while libc::waitid(P_ALL, 0, &mut info, WEXITED | WNOHANG) == 0
-                    && info.si_signo == SIGCHLD
-                {
-                    info.si_signo = 0;
-                }
-            }
-        }
         let server_rxs: Vec<&Receiver<ServerMessage>> = ctx
             .language_servers
             .values()
@@ -884,17 +867,12 @@ pub fn start(
                 match msg {
                     ServerMessage::Request(call) => match call {
                         Call::MethodCall(request) => {
-                            dispatch_server_request(
-                                server_id,
-                                meta_for_session(ctx.session().clone(), None),
-                                request,
-                                ctx,
-                            );
+                            dispatch_server_request(server_id, EditorMeta::default(), request, ctx);
                         }
                         Call::Notification(notification) => {
                             dispatch_server_notification(
                                 server_id,
-                                meta_for_session(ctx.session().clone(), None),
+                                EditorMeta::default(),
                                 &notification.method,
                                 notification.params,
                                 ctx,
@@ -1060,25 +1038,20 @@ pub fn start(
         if !ctx.pending_file_watchers.is_empty() {
             let requested_watchers = mem::take(&mut ctx.pending_file_watchers);
             // If there's an existing watcher, ask nicely to terminate.
-            let session = ctx.session().clone();
+            let to_editor = ctx.to_editor().clone();
             if let Some(ref fw) = ctx.file_watcher.as_mut() {
-                debug!(session, "stopping stale file watcher");
+                debug!(to_editor, "stopping stale file watcher");
                 if let Err(err) = fw.worker.sender().send(()) {
-                    error!(session, "{}", err);
+                    error!(to_editor, "{}", err);
                 }
             }
             ctx.file_watcher = Some(FileWatcher {
                 pending_file_events: HashSet::new(),
-                worker: Box::new(spawn_file_watcher(
-                    ctx.session().clone(),
-                    log_path,
-                    requested_watchers,
-                )),
+                worker: Box::new(spawn_file_watcher(to_editor, log_path, requested_watchers)),
             });
         }
     }
     stop_session(ctx);
-    0
 }
 
 pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> ControlFlow<()> {
@@ -1104,27 +1077,30 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
             .map(|server_id| &ctx.server(*server_id).name)
             .join(", ");
         debug!(
-            ctx.session(),
+            ctx.to_editor(),
             "Language server(s) {} are still not initialized, parking request {:?}",
             servers,
             request
         );
-        let err = format!(
-            "lsp-show-error 'language servers {} are still not initialized, parking request {}'",
-            servers, &request.method
-        );
-        match &*request.method {
-            notification::DidOpenTextDocument::METHOD => (),
-            notification::DidChangeTextDocument::METHOD => (),
-            notification::DidChangeConfiguration::METHOD => (),
-            notification::DidCloseTextDocument::METHOD => (),
-            notification::DidSaveTextDocument::METHOD => (),
-            request::CodeLensRequest::METHOD => (),
-            _ => {
-                if !request.meta.hook && request.response_fifo.is_none() {
-                    ctx.exec(request.meta.clone(), err);
-                }
-            }
+        if request.response_fifo.is_none()
+            && !matches!(
+                &*request.method,
+                notification::DidOpenTextDocument::METHOD
+                    | notification::DidChangeTextDocument::METHOD
+                    | notification::DidChangeConfiguration::METHOD
+                    | notification::DidCloseTextDocument::METHOD
+                    | notification::DidSaveTextDocument::METHOD
+                    | request::CodeLensRequest::METHOD
+            )
+        {
+            report_error(
+                ctx.to_editor(),
+                &request.meta,
+                &format!(
+                    "language servers {} are still not initialized, parking request {}",
+                    servers, &request.method
+                ),
+            );
         }
         ctx.pending_requests.push(request);
     }
@@ -1134,42 +1110,33 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
 
 /// Tries to send an error to the client about a request that failed to parse.
 fn handle_broken_editor_request(
-    to_editor: &Sender<EditorResponse>,
-    session: &SessionId,
+    to_editor: &ToEditor,
     client: &str,
     hook: bool,
     what: &str,
     err: toml::de::Error,
 ) {
     let msg = format!("Failed to parse {what}: {err}");
-    error!(session, "{msg}");
-    // We don't want to spam the user if a hook triggered the error.
-    if !hook {
-        let meta = meta_for_session(session.clone(), Some(client.to_string()));
-        let command = format!("lsp-show-error {}", editor_quote(&msg));
-        let response = EditorResponse {
-            meta,
-            command: command.into(),
-        };
-        if let Err(err) = to_editor.send(response) {
-            error!(session, "Failed to send error message to editor: {err}");
-        };
-    }
+    error!(to_editor, "{}", msg);
+    let mut meta = EditorMeta::for_client(client.to_string());
+    meta.hook = hook;
+    report_error(to_editor, &meta, &format!("Failed to parse {what}: {err}"));
 }
 
 /// Shut down all language servers and exit.
 fn stop_session(ctx: &mut Context) {
-    debug!(ctx.session(), "Shutting down language servers and exiting");
-    if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
-        (cleanup)();
-    }
+    debug!(
+        ctx.to_editor(),
+        "Shutting down language servers and exiting"
+    );
+    do_cleanup();
     let request = EditorRequest {
         method: notification::Exit::METHOD.to_string(),
         ..Default::default()
     };
     let flow = process_editor_request(ctx, request);
     assert!(flow.is_break());
-    debug!(ctx.session(), "Exit all servers");
+    debug!(ctx.to_editor(), "Exit all servers");
 }
 
 pub fn can_serve(
@@ -1196,12 +1163,15 @@ fn route_request(
     meta: &mut EditorMeta,
     request_method: &str,
 ) -> Option<ControlFlow<()>> {
-    if request_method == "exit" {
+    if request_method == "kakoune/exit" {
         debug!(
             ctx.to_editor(),
             "Editor session `{}` closed, shutting down language servers",
             ctx.session()
         );
+        return Some(ControlFlow::Break(()));
+    }
+    if request_method == notification::Exit::METHOD {
         return None;
     }
     if !meta.session.is_empty() && &meta.session != ctx.session() {
@@ -1219,7 +1189,7 @@ fn route_request(
             "Unsupported scratch buffer, ignoring request from buffer '{}'", meta.buffile
         );
         report_error_no_server_configured(
-            &ctx.editor_tx,
+            ctx.to_editor(),
             meta,
             request_method,
             "not supported in scratch buffers",
@@ -1228,11 +1198,11 @@ fn route_request(
     }
     if ctx.buffer_tombstones.contains(&meta.buffile) {
         debug!(
-            ctx.session(),
+            ctx.to_editor(),
             "Ignoring request from disabled buffer {}", &meta.buffile
         );
         report_error_no_server_configured(
-            &ctx.editor_tx,
+            ctx.to_editor(),
             meta,
             request_method,
             &format!(
@@ -1253,8 +1223,8 @@ fn route_request(
             .any(|server| !server.roots.is_empty())
     {
         let msg = "Error: the lsp_servers configuration does not support the roots parameter, please use root_globs or root";
-        debug!(ctx.to_editor(), "{}", msg);
-        report_error(&ctx.editor_tx, meta, msg);
+        error!(ctx.to_editor(), "{}", msg);
+        report_error(ctx.to_editor(), meta, msg);
         return Some(ControlFlow::Continue(()));
     }
 
@@ -1270,7 +1240,7 @@ fn route_request(
                 &meta.filetype
             );
             debug!(ctx.to_editor(), "{}", msg);
-            report_error_no_server_configured(&ctx.editor_tx, meta, request_method, &msg);
+            report_error_no_server_configured(ctx.to_editor(), meta, request_method, &msg);
 
             return Some(ControlFlow::Continue(()));
         };
@@ -1310,7 +1280,7 @@ fn route_request(
         if language_id.is_empty() {
             let msg = "the 'lsp_language_id' option is empty, cannot route request";
             debug!(ctx.to_editor(), "{}", msg);
-            report_error_no_server_configured(&ctx.editor_tx, meta, request_method, msg);
+            report_error_no_server_configured(ctx.to_editor(), meta, request_method, msg);
             return Some(ControlFlow::Continue(()));
         }
         let servers = server_configs(&ctx.config, meta);
@@ -1325,14 +1295,14 @@ fn route_request(
                 }
             );
             debug!(ctx.to_editor(), "{}", msg);
-            report_error_no_server_configured(&ctx.editor_tx, meta, request_method, &msg);
+            report_error_no_server_configured(ctx.to_editor(), meta, request_method, &msg);
             return Some(ControlFlow::Continue(()));
         };
         for (server_name, server) in &mut meta.language_server {
             if !server.root.is_empty() && !server.root_globs.is_empty() {
                 let msg = "cannot specify both root and root_globs";
                 error!(ctx.to_editor(), "{}", msg);
-                report_error(&ctx.editor_tx, meta, msg);
+                report_error(ctx.to_editor(), meta, msg);
                 return Some(ControlFlow::Continue(()));
             }
             if !server.root.is_empty() {
@@ -1342,7 +1312,7 @@ fn route_request(
                         &server.root
                     );
                     error!(ctx.to_editor(), "{}", msg);
-                    report_error(&ctx.editor_tx, meta, &msg);
+                    report_error(ctx.to_editor(), meta, &msg);
                     return Some(ControlFlow::Continue(()));
                 }
             } else if !server.root_globs.is_empty() {
@@ -1357,7 +1327,7 @@ fn route_request(
                     "missing project root path for '{server_name}', please set the root option"
                 );
                 error!(ctx.to_editor(), "{}", msg);
-                report_error(&ctx.editor_tx, meta, &msg);
+                report_error(ctx.to_editor(), meta, &msg);
                 return Some(ControlFlow::Continue(()));
             }
         }
@@ -1398,16 +1368,10 @@ fn route_request(
                 "evaluate-commands -buffer {} lsp-block-in-buffer",
                 editor_quote(&meta.buffile),
             );
-            if ctx
-                .editor_tx
-                .send(EditorResponse {
-                    meta: meta.clone(),
-                    command: Cow::from(command),
-                })
-                .is_err()
-            {
-                error!(ctx.to_editor(), "Failed to send command to editor");
-            }
+            send_command_to_editor(
+                ctx.to_editor(),
+                EditorResponse::new(meta.clone(), Cow::from(command)),
+            );
         }
 
         // should be fine to unwrap because request was already routed which means language is configured
@@ -1415,7 +1379,7 @@ fn route_request(
         let server_command = server_config.command.as_ref().unwrap_or(&server_name);
         if ctx.server_tombstones.contains(server_command) {
             debug!(
-                ctx.session(),
+                ctx.to_editor(),
                 "Ignoring request for disabled server {}", server_command
             );
             disable_in_buffer(ctx, meta);
@@ -1423,7 +1387,7 @@ fn route_request(
         }
 
         let server_transport = match language_server_transport::start(
-            ctx.session().clone(),
+            ctx.to_editor(),
             server_name.clone(),
             server_command,
             &server_config.args,
@@ -1442,24 +1406,11 @@ fn route_request(
                 if !meta.buffile.is_empty() {
                     disable_in_buffer(ctx, meta);
                 }
-                // If the server command isn't from a hook (e.g. auto-hover),
-                // then send a prominent error to the editor.
-                if !meta.hook {
-                    let command = format!(
-                        "lsp-show-error {}",
-                        editor_quote(&format!("failed to start language server: {}", err)),
-                    );
-                    if ctx
-                        .editor_tx
-                        .send(EditorResponse {
-                            meta: meta.clone(),
-                            command: Cow::from(command),
-                        })
-                        .is_err()
-                    {
-                        error!(ctx.to_editor(), "Failed to send command to editor");
-                    }
-                }
+                report_error(
+                    ctx.to_editor(),
+                    meta,
+                    &format!("failed to start language server: {}", err),
+                );
                 return Some(ControlFlow::Continue(()));
             }
         };
@@ -1486,7 +1437,7 @@ fn route_request(
 }
 
 fn report_error_no_server_configured(
-    to_editor: &Sender<EditorResponse>,
+    to_editor: &ToEditor,
     meta: &EditorMeta,
     request_method: &str,
     msg: &str,
@@ -1531,7 +1482,7 @@ fn report_error_no_server_configured(
 ///
 /// This will cancel any blocking requests and also print an error if the
 /// request was not triggered by an editor hook.
-pub fn report_error(to_editor: &Sender<EditorResponse>, meta: &EditorMeta, msg: &str) {
+pub fn report_error(to_editor: &ToEditor, meta: &EditorMeta, msg: &str) {
     report_error_impl(
         to_editor,
         meta,
@@ -1539,18 +1490,12 @@ pub fn report_error(to_editor: &Sender<EditorResponse>, meta: &EditorMeta, msg: 
     )
 }
 
-fn report_error_impl(to_editor: &Sender<EditorResponse>, meta: &EditorMeta, command: String) {
+fn report_error_impl(to_editor: &ToEditor, meta: &EditorMeta, command: String) {
+    // If the server command isn't from a hook (e.g. auto-hover),
+    // then send a prominent error to the editor.
     if !meta.hook {
-        let response = EditorResponse {
-            meta: meta.clone(),
-            command: command.into(),
-        };
-        if let Err(err) = to_editor.send(response) {
-            error!(
-                meta.session,
-                "Failed to send error message to editor: {err}"
-            );
-        };
+        let response = EditorResponse::new(meta.clone(), command.into());
+        send_command_to_editor(to_editor, response);
     }
 }
 
@@ -1723,7 +1668,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         notification::Exit::METHOD => {
             for server in ctx.language_servers.values() {
                 debug!(
-                    meta.session,
+                    ctx.to_editor(),
                     "Sending exit notification to server {}", server.name
                 );
             }
@@ -2043,7 +1988,7 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
         return;
     };
     if !buffile.starts_with('/') {
-        assert_eq!(&request.method, "exit");
+        assert_eq!(&request.method, notification::Exit::METHOD);
         return;
     }
     if request.method == notification::DidChangeTextDocument::METHOD {

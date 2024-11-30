@@ -1,8 +1,9 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::{Context, RequestParams};
+use crate::editor_transport::ToEditor;
+use crate::position::*;
 use crate::types::{EditorMeta, KakounePosition, KakouneRange, PositionParams, ServerId};
 use crate::util::editor_quote;
-use crate::{position::*, SessionId};
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
@@ -105,7 +106,7 @@ fn editor_document_highlight(
 }
 
 fn select_ranges_and(
-    session: &SessionId,
+    to_editor: &ToEditor,
     command: String,
     ranges: Vec<KakouneRange>,
     main_cursor: KakounePosition,
@@ -116,7 +117,7 @@ fn select_ranges_and(
     {
         Some(range) => range,
         None => {
-            error!(session, "main cursor lies outside ranges");
+            error!(to_editor, "main cursor lies outside ranges");
             return command;
         }
     };

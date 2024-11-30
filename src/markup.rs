@@ -4,7 +4,7 @@ use lsp_types::*;
 use pulldown_cmark::{Event, Parser, Tag};
 use std::fmt::Write as _;
 
-use crate::SessionId;
+use crate::editor_transport::ToEditor;
 
 pub const FACE_INFO_DEFAULT: &str = "InfoDefault";
 
@@ -28,7 +28,7 @@ pub fn escape_kakoune_markup(s: &str) -> String {
 }
 
 /// Transpile Markdown into Kakoune's markup syntax using faces for highlighting
-pub fn markdown_to_kakoune_markup<S: AsRef<str>>(session: &SessionId, markdown: S) -> String {
+pub fn markdown_to_kakoune_markup<S: AsRef<str>>(to_editor: &ToEditor, markdown: S) -> String {
     let markdown = markdown.as_ref();
     let parser = Parser::new(markdown);
     let mut markup = String::with_capacity(markdown.len());
@@ -148,7 +148,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(session: &SessionId, markdown: 
                     let _ = write!(markup, "{{{}}}", FACE_INFO_LINK);
                 }
                 Tag::Image(_, _, _) => (),
-                tag => warn!(session, "Unsupported Markdown tag: {:?}", tag),
+                tag => warn!(to_editor, "Unsupported Markdown tag: {:?}", tag),
             },
             Event::End(t) => match t {
                 Tag::Paragraph => markup.push('\n'),
@@ -182,7 +182,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(session: &SessionId, markdown: 
                     let _ = write!(markup, "{{{}}}", base_face);
                 }
                 Tag::Image(_, _, _) => (),
-                tag => warn!(session, "Unsupported Markdown tag: {:?}", tag),
+                tag => warn!(to_editor, "Unsupported Markdown tag: {:?}", tag),
             },
             Event::Text(text) => {
                 is_table = text.starts_with('|');
@@ -209,7 +209,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(session: &SessionId, markdown: 
                 );
             }
             Event::Html(html) => markup.push_str(&escape_kakoune_markup(&html)),
-            Event::FootnoteReference(_) => warn!(session, "Unsupported Markdown event: {:?}", e),
+            Event::FootnoteReference(_) => warn!(to_editor, "Unsupported Markdown event: {:?}", e),
             // Soft breaks should be kept in `<pre>`-style blocks.
             // Anywhere else, let the renderer handle line breaks.
             Event::SoftBreak => {
@@ -226,7 +226,7 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(session: &SessionId, markdown: 
                 let base_face = base_face(&face_stack);
                 let _ = write!(markup, "\n{{{}}}---{{{}}}\n", FACE_INFO_RULE, base_face);
             }
-            Event::TaskListMarker(_) => warn!(session, "Unsupported Markdown event: {:?}", e),
+            Event::TaskListMarker(_) => warn!(to_editor, "Unsupported Markdown event: {:?}", e),
         }
     }
 
@@ -240,9 +240,9 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(session: &SessionId, markdown: 
 }
 
 /// Transpile the contents of an `lsp_types::MarkedString` into Kakoune markup
-pub fn marked_string_to_kakoune_markup(session: &SessionId, contents: MarkedString) -> String {
+pub fn marked_string_to_kakoune_markup(to_editor: &ToEditor, contents: MarkedString) -> String {
     match contents {
-        MarkedString::String(s) => markdown_to_kakoune_markup(session, s),
+        MarkedString::String(s) => markdown_to_kakoune_markup(to_editor, s),
         MarkedString::LanguageString(s) => {
             format!(
                 "{{{}}}{}{{{}}}",
@@ -257,11 +257,12 @@ pub fn marked_string_to_kakoune_markup(session: &SessionId, contents: MarkedStri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::editor_transport::mock_to_editor;
 
     #[test]
     fn test_markdown_to_kakoune_markup() {
         let markup = markdown_to_kakoune_markup(
-            &SessionId("test_session".to_string()),
+            &mock_to_editor(),
             indoc!(
                 r#"# heading
                body"#

@@ -150,10 +150,7 @@ pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
     match read_document(filename) {
         Ok(text) => Some(Rope::from_str(&text)),
         Err(err) => {
-            error!(
-                ctx.session(),
-                "Failed to read file {}: {}", filename, err
-            );
+            error!(ctx.to_editor(), "Failed to read file {}: {}", filename, err);
             None
         }
     }

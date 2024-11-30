@@ -33,12 +33,9 @@ use crate::types::*;
 use crate::util::*;
 use clap::ArgMatches;
 use clap::{self, crate_version, Arg, ArgAction};
-use context::meta_for_session;
 use daemonize::Daemonize;
-use editor_transport::send_command_to_editor;
+use editor_transport::send_command_to_editor_here;
 use itertools::Itertools;
-use libc::SA_RESTART;
-use libc::SIGCHLD;
 use libc::SIGHUP;
 use libc::SIGINT;
 use libc::SIGPIPE;
@@ -47,6 +44,7 @@ use libc::SIGTERM;
 use libc::STDOUT_FILENO;
 use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
+use sloggers::null::NullLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
@@ -59,6 +57,7 @@ use std::io;
 use std::io::stdout;
 use std::io::Write;
 use std::mem;
+use std::os::unix::ffi::OsStrExt;
 use std::panic;
 use std::path::Path;
 use std::path::PathBuf;
@@ -70,11 +69,8 @@ use std::sync::atomic::{
 };
 use std::sync::Mutex;
 
-static RECEIVED_SIGCHLD: AtomicBool = AtomicBool::new(false);
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
 static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
-
-static SESSION: Mutex<SessionId> = Mutex::new(SessionId(String::new()));
 static LAST_CLIENT: Mutex<Option<String>> = Mutex::new(None);
 
 fn main() {
@@ -185,7 +181,7 @@ fn run_main() -> Result<(), ()> {
         };
     }
 
-    let kak_session = env_var("kak_session");
+    let kak_session = environment_variable(None, "kak_session")?;
     let externally_started = kak_session.is_none();
 
     let session = kak_session.or_else(|| matches.get_one::<String>("session").cloned());
@@ -221,13 +217,17 @@ fn run_main() -> Result<(), ()> {
         ;
 
     let Some(session) = session else {
-        eprintln!("Error: no session name given, please export '$kak_session'");
-        goodbye(1);
+        report_fatal_error(
+            None,
+            "Error: no session name given, please export '$kak_session'",
+        );
+        return Err(());
     };
     let session = SessionId(session);
-    *SESSION.lock().unwrap() = session.clone();
+    let env_var = |name| environment_variable(Some(&session), name);
+    let fatal_error = |message: String| report_fatal_error(Some(&session), &message);
 
-    let plugin_path = env_var("XDG_RUNTIME_DIR")
+    let plugin_path = env_var("XDG_RUNTIME_DIR")?
         .filter(|dir| unsafe {
             let mut stat = mem::zeroed();
             let dir = CString::new(dir.clone()).unwrap();
@@ -258,14 +258,10 @@ fn run_main() -> Result<(), ()> {
     if let Some(existing_path) = existing_path {
         let was_externally_started = externally_started_file(&session_path).exists();
         if !was_externally_started {
-            report_error(
-                &session,
-                format!(
-                    "kak-lsp session file already exists at '{}'",
-                    existing_path.display()
-                ),
-            );
-            process::exit(1);
+            return Err(fatal_error(format!(
+                "kak-lsp session file already exists at '{}'",
+                existing_path.display()
+            )));
         }
         if !externally_started {
             eprintln!("Attaching to externally-started kak-lsp server");
@@ -276,7 +272,7 @@ fn run_main() -> Result<(), ()> {
         libc::close(STDOUT_FILENO);
     }
     if existing_path.is_some() {
-        process::exit(0);
+        return Ok(());
     }
 
     let mut session_directory = SessionDirectory {
@@ -287,38 +283,30 @@ fn run_main() -> Result<(), ()> {
         session_directory: TemporaryDirectory::new(session_path.clone()),
     };
     if let Err(err) = fs::create_dir_all(session_path.clone()) {
-        report_error(
-            &session,
-            format!(
-                "failed to create session directory '{}': {}",
-                session_path.display(),
-                err
-            ),
-        );
-        return Err(());
+        return Err(fatal_error(format!(
+            "failed to create session directory '{}': {}",
+            session_path.display(),
+            err
+        )));
     }
 
     session_directory.symlink = Some(TemporaryFile::new(session_symlink_path.clone()));
 
     if let Err(err) = std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()) {
-        report_error(
-            &session,
-            format!(
-                "failed to create session directory symlink '{}': {}",
-                session_symlink_path.display(),
-                err,
-            ),
-        );
-        return Err(());
+        return Err(fatal_error(format!(
+            "failed to create session directory symlink '{}': {}",
+            session_symlink_path.display(),
+            err,
+        )));
     }
     if externally_started {
         let file = externally_started_file(&session_path);
         if let Err(err) = fs::File::create(file.clone()) {
-            report_error(
-                &session,
-                format!("failed to create '{}': {}", file.display(), err),
-            );
-            return Err(());
+            return Err(fatal_error(format!(
+                "failed to create '{}': {}",
+                file.display(),
+                err
+            )));
         }
         session_directory.externally_started_file = Some(TemporaryFile::new(file));
     }
@@ -330,11 +318,11 @@ fn run_main() -> Result<(), ()> {
         session_directory.fifos[offset] = Some(tmp);
         if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
             let err = std::io::Error::last_os_error();
-            report_error(
-                &session,
-                format!("failed to create fifo '{}': {}", fifo.display(), err),
-            );
-            return Err(());
+            return Err(fatal_error(format!(
+                "failed to create fifo '{}': {}",
+                fifo.display(),
+                err
+            )));
         }
         Ok(fifo)
     };
@@ -350,6 +338,7 @@ fn run_main() -> Result<(), ()> {
         TemporaryFile::new(pid_file_tmp.clone()),
     ]);
 
+    let _cleanup = ScopeEnd::new(do_cleanup);
     CLEANUP.lock().unwrap().get_or_init(|| {
         Box::new(move || {
             drop(session_directory);
@@ -365,31 +354,28 @@ fn run_main() -> Result<(), ()> {
     let mut verbosity;
     #[allow(deprecated)]
     let mut config = if let Some(config_path) = config_path {
-        let config = parse_legacy_config(&config_path, &session);
+        let config = parse_legacy_config(&config_path, &session)?;
         verbosity = config.verbosity;
         config
     } else {
         let mut config = Config::default();
         verbosity = 2;
         config.server.timeout = 18000;
-        if let Some(timeout) = env_var("kak_opt_lsp_timeout") {
-            config.server.timeout = timeout.parse().unwrap_or_else(|err| {
-                report_config_error_and_exit(
-                    &session,
-                    format!("failed to parse lsp_timeout: {err}"),
-                )
-            });
+        if let Some(timeout) = env_var("kak_opt_lsp_timeout")? {
+            config.server.timeout = timeout
+                .parse()
+                .map_err(|err| fatal_error(format!("failed to parse lsp_timeout: {err}")))?;
         }
-        if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support") {
+        if let Some(snippet_support) = env_var("kak_opt_lsp_snippet_support")? {
             config.snippet_support = snippet_support != "false";
         }
-        if let Some(file_watch_support) = env_var("kak_opt_lsp_file_watch_support") {
+        if let Some(file_watch_support) = env_var("kak_opt_lsp_file_watch_support")? {
             config.file_watch_support = file_watch_support != "false";
         }
         config
     };
 
-    if let Some(debug) = env_var("kak_opt_lsp_debug") {
+    if let Some(debug) = env_var("kak_opt_lsp_debug")? {
         if debug != "false" {
             verbosity = 4;
         }
@@ -402,15 +388,10 @@ fn run_main() -> Result<(), ()> {
         }
     }
 
-    if let Some(timeout) = matches.get_one::<String>("timeout").map(|s| {
-        s.parse().unwrap_or_else(|err| {
-            report_config_error_and_exit(
-                &session,
-                format!("failed to parse --timeout parameter: {err}"),
-            )
-        })
-    }) {
-        config.server.timeout = timeout;
+    if let Some(timeout) = matches.get_one::<String>("timeout") {
+        config.server.timeout = timeout
+            .parse()
+            .map_err(|err| fatal_error(format!("failed to parse --timeout parameter: {err}")))?;
     }
 
     if matches.get_flag("daemonize") {
@@ -418,59 +399,95 @@ fn run_main() -> Result<(), ()> {
             .working_directory(std::env::current_dir().unwrap())
             .start()
         {
-            eprintln!("Failed to daemonize process: {:?}", e);
-            goodbye(1);
+            return Err(fatal_error(format!("Failed to daemonize process: {:?}", e)));
         }
     }
 
     if let Err(err) = fs::write(pid_file_tmp.clone(), process::id().to_string().as_bytes()) {
-        report_config_error_and_exit(
-            &session,
-            format!(
-                "failed to write pid file '{}': {}",
-                pid_file_tmp.display(),
-                err
-            ),
-        )
+        return Err(fatal_error(format!(
+            "failed to write pid file '{}': {}",
+            pid_file_tmp.display(),
+            err
+        )));
     }
     if let Err(err) = fs::rename(pid_file_tmp.clone(), pid_file.clone()) {
-        report_config_error_and_exit(
-            &session,
-            format!(
-                "failed to rename pid file '{}': {}",
-                pid_file.display(),
-                err
-            ),
-        )
+        return Err(fatal_error(format!(
+            "failed to rename pid file '{}': {}",
+            pid_file.display(),
+            err
+        )));
     }
 
-    unsafe {
-        let mut act: libc::sigaction = std::mem::zeroed();
-        act.sa_sigaction = handle_sigchld as usize;
-        libc::sigemptyset(&mut act.sa_mask);
-        act.sa_flags = SA_RESTART;
-        libc::sigaction(SIGCHLD, &act, std::ptr::null_mut());
-    }
+    let editor_transport = editor_transport::start(session.clone());
+    let to_editor = editor_transport.sender();
 
     // Setting up the logger after potential daemonization,
     // otherwise it refuses to work properly.
+    let _cleanup = ScopeEnd::new(destroy_logger);
     let log_path_parent = initialize_logger(&matches, verbosity);
-    let code = controller::start(session.clone(), config, log_path_parent, fifo, alt_fifo);
-    info!(session, "kak-lsp server exiting");
-    goodbye(code);
+
+    let old_hook = panic::take_hook();
+    let _restore_hook = ScopeEnd::new(move || panic::set_hook(old_hook));
+    {
+        let session = session.clone();
+        panic::set_hook(Box::new(move |panic_info| {
+            static PANICKING: AtomicBool = AtomicBool::new(false);
+            if PANICKING
+                .compare_exchange(false, true, AcqRel, Acquire)
+                .is_err()
+            {
+                process::abort();
+            }
+            let message = format!(
+                "kak-lsp crashed, please report a bug. Find more details in the *debug* buffer.\n{}\n{}",
+                panic_info,
+                std::backtrace::Backtrace::capture()
+            );
+            let command = format!("lsp-show-error {}", editor_quote(&message));
+            let meta = LAST_CLIENT
+                .lock()
+                .unwrap()
+                .take()
+                .map(EditorMeta::for_client)
+                .unwrap_or_default();
+            let command = EditorResponse::new_without_logging(meta, Cow::Owned(command));
+            send_command_to_editor_here(&session, command);
+            error!(log:only, "{}", message);
+            destroy_logger();
+            do_cleanup();
+            process::abort();
+        }));
+    }
+
+    controller::start(
+        session.clone(),
+        config,
+        to_editor,
+        log_path_parent,
+        fifo,
+        alt_fifo,
+    );
+    info!(to_editor, "kak-lsp server exiting");
+    Ok(())
 }
 
-fn env_var(name: &str) -> Option<String> {
+fn environment_variable(session: Option<&SessionId>, name: &str) -> Result<Option<String>, ()> {
     match env::var(name) {
-        Ok(value) => Some(value),
+        Ok(value) => Ok(Some(value)),
         Err(err) => match err {
-            env::VarError::NotPresent => None,
-            env::VarError::NotUnicode(_bytes) => {
-                eprintln!("environment variable '{name}' is not valid UTF-8");
-                goodbye(1);
-            }
+            env::VarError::NotPresent => Ok(None),
+            env::VarError::NotUnicode(bytes) => Err(bytes),
         },
     }
+    .map_err(|bytes| {
+        report_fatal_error(
+            session,
+            &format!(
+                "environment variable '{name}' value is not valid UTF-8: {}",
+                String::from_utf8_lossy(bytes.as_bytes())
+            ),
+        )
+    })
 }
 
 fn handle_epipe(r: io::Result<()>) -> io::Result<()> {
@@ -509,28 +526,27 @@ fn kakoune() -> Result<(), ()> {
     }
 }
 
-fn report_error(session: &SessionId, error_message: String) {
-    let command = format!("lsp-show-error {}", &editor_quote(&error_message));
-    send_command_to_editor(
-        EditorResponse {
-            meta: meta_for_session(session.clone(), env_var("kak_client")),
-            command: command.into(),
-        },
-        false,
-    );
+fn report_fatal_error(session: Option<&SessionId>, error_message: &str) -> () {
+    if let Some(session) = session {
+        let Ok(maybe_client) = environment_variable(Some(session), "kak_client") else {
+            return ();
+        };
+        send_command_to_editor_here(
+            session,
+            EditorResponse::new(
+                maybe_client.map(EditorMeta::for_client).unwrap_or_default(),
+                format!("lsp-show-error {}", &editor_quote(error_message)).into(),
+            ),
+        );
+    }
     eprintln!("{}", error_message);
+    ()
 }
 
-fn report_config_error_and_exit(session: &SessionId, error_message: String) -> ! {
-    report_error(session, error_message);
-    goodbye(1);
-}
-
-fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
+fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Result<Config, ()> {
     let raw_config = fs::read_to_string(config_path).expect("Failed to read config");
     #[allow(deprecated)]
-    #[allow(clippy::blocks_in_conditions)]
-    match toml::from_str(&raw_config)
+    toml::from_str(&raw_config)
         .map_err(|err| err.to_string())
         .and_then(|mut cfg: Config| {
             // Translate legacy config.
@@ -558,17 +574,17 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Config {
                 }
             }
             Ok(cfg)
-        }) {
-        Ok(cfg) => cfg,
-        Err(err) => report_config_error_and_exit(
-            session,
-            format!(
-                "failed to parse config file {}: {}",
-                config_path.display(),
-                err
-            ),
-        ),
-    }
+        })
+        .map_err(|err| {
+            report_fatal_error(
+                Some(session),
+                &format!(
+                    "failed to parse config file {}: {}",
+                    config_path.display(),
+                    err
+                ),
+            )
+        })
 }
 
 fn initialize_logger(matches: &ArgMatches, verbosity: u8) -> &'static Option<PathBuf> {
@@ -594,35 +610,6 @@ fn initialize_logger(matches: &ArgMatches, verbosity: u8) -> &'static Option<Pat
 
     set_logger(level);
 
-    panic::set_hook(Box::new(move |panic_info| {
-        static PANICKING: AtomicBool = AtomicBool::new(false);
-        if PANICKING
-            .compare_exchange(false, true, AcqRel, Acquire)
-            .is_err()
-        {
-            process::abort();
-        }
-        let message = format!(
-            "kak-lsp crashed, please report a bug. Find more details in the *debug* buffer.\n{}\n{}",
-            panic_info,
-            std::backtrace::Backtrace::capture()
-        );
-        let command = format!("lsp-show-error {}", editor_quote(&message));
-        let meta = meta_for_session(
-            std::mem::take(&mut SESSION.lock().unwrap()),
-            std::mem::take(&mut LAST_CLIENT.lock().unwrap()),
-        );
-        let command = EditorResponse {
-            meta,
-            command: Cow::Owned(command),
-        };
-        send_command_to_editor(command, false);
-        if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
-            (cleanup)();
-        }
-        process::abort();
-    }));
-
     log_path_parent
 }
 
@@ -640,20 +627,20 @@ fn set_logger(level: Severity) {
     slog_scope::set_global_logger(logger).cancel_reset();
 }
 
-// Cleanup and gracefully exit
-fn goodbye(code: i32) -> ! {
+fn destroy_logger() {
+    slog_scope::set_global_logger(NullLoggerBuilder {}.build().unwrap()).cancel_reset();
+}
+
+fn do_cleanup() {
     if let Some(cleanup) = CLEANUP.lock().unwrap().take() {
         (cleanup)();
     }
-    process::exit(code);
 }
 
 extern "C" fn handle_interrupt(sig: libc::c_int) -> ! {
-    goodbye(if sig == SIGPIPE { 0 } else { 1 })
-}
-
-extern "C" fn handle_sigchld(_sig: libc::c_int) {
-    RECEIVED_SIGCHLD.store(true, Relaxed);
+    destroy_logger();
+    do_cleanup();
+    process::exit(if sig == SIGPIPE { 0 } else { 1 });
 }
 
 // for async-signal-safe cleanup
@@ -698,4 +685,18 @@ struct SessionDirectory {
     externally_started_file: Option<TemporaryFile>,
     #[allow(dead_code)]
     session_directory: TemporaryDirectory,
+}
+
+struct ScopeEnd<F: FnOnce()>(Option<F>);
+
+impl<F: FnOnce()> ScopeEnd<F> {
+    pub fn new(f: F) -> Self {
+        Self(Some(f))
+    }
+}
+
+impl<F: FnOnce()> Drop for ScopeEnd<F> {
+    fn drop(&mut self) {
+        (self.0.take().unwrap())()
+    }
 }

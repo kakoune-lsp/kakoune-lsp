@@ -2,6 +2,7 @@ use crate::context::*;
 use crate::position::*;
 use crate::types::ServerId;
 use crate::util::*;
+use crate::EditorMeta;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::{NumberOrString, Range};
@@ -158,7 +159,6 @@ pub struct PublishSemanticHighlightingParams {
 pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
-    let client = None;
     let path = params.uri.to_file_path().unwrap();
     let buffile = path.to_str().unwrap();
     let document = ctx.documents.get(buffile);
@@ -175,10 +175,10 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
             let face = x.get_face();
             let offset_encoding = server.offset_encoding;
             x.ranges.iter().filter_map({
-                let session = ctx.session();
+                let to_editor = ctx.to_editor();
                 move |r| {
                     if face.is_empty() {
-                        warn!(session, "No face found for {:?}", x);
+                        warn!(to_editor, "No face found for {:?}", x);
                         Option::None
                     } else {
                         Option::Some(format!(
@@ -197,6 +197,5 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
         editor_quote(buffile),
         command
     );
-    let meta = ctx.meta_for_buffer_version(client, buffile, version);
-    ctx.exec(meta, command);
+    ctx.exec(EditorMeta::default(), command);
 }
