@@ -615,6 +615,7 @@ define-command -hidden lsp-synchronously -params 1.. %{
         unset-option buffer lsp_do_send_maybe_sync
         fail -- %val{error}
     }
+    unset-option buffer lsp_do_send_maybe_sync
 }
 
 declare-option -hidden str-list lsp_unless_blocked
