@@ -1,5 +1,8 @@
 ## Unreleased
 
+Fixes:
+- Fixed a regression from 18.0.0 that caused crashes when a `*-sync` request was used before `lsp-enable`.
+
 ## 18.1.0 - 2024-11-23
 
 Additions:
