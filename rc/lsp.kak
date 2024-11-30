@@ -409,27 +409,6 @@ define-command -hidden lsp-menu-impl %{
             echo 'lsp-show-error %{lsp-menu: encountered an error, see *debug* buffer}';
     }
 }
-define-command -hidden lsp-with-option -params 3.. -docstring %{
-    lsp-with-option <option_name> <new_value> <command> [<arguments>]: evaluate a command with a modified option
-} %{
-    evaluate-commands -save-regs s %{
-        evaluate-commands set-register s "%%opt{%arg{1}}"
-        set-option current %arg{1} %arg{2}
-        try %{
-            evaluate-commands %sh{
-                shift 2
-                for arg
-                do
-                    printf "'%s' " "$(printf %s "$arg" | sed "s/'/''/g")"
-                done
-            }
-        } catch %{
-            set-option current %arg{1} %reg{s}
-            fail "lsp-with-option: %val{error}"
-        }
-        set-option current %arg{1} %reg{s}
-    }
-}
 
 # Options for information exposed by kakoune-lsp.
 
