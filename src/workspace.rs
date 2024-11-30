@@ -1,7 +1,7 @@
 use crate::context::*;
 use crate::language_features::{document_symbol, rust_analyzer};
 use crate::settings::*;
-use crate::text_edit::{apply_annotated_text_edits, apply_text_edits};
+use crate::text_edit::apply_text_edits;
 use crate::types::*;
 use crate::util::*;
 use jsonrpc_core::Params;
@@ -292,20 +292,14 @@ pub fn apply_edit(
         match document_changes {
             DocumentChanges::Edits(edits) => {
                 for edit in edits {
-                    apply_annotated_text_edits(
-                        server_id,
-                        meta,
-                        edit.text_document.uri,
-                        edit.edits,
-                        ctx,
-                    );
+                    apply_text_edits(server_id, meta, edit.text_document.uri, edit.edits, ctx);
                 }
             }
             DocumentChanges::Operations(ops) => {
                 for op in ops {
                     match op {
                         DocumentChangeOperation::Edit(edit) => {
-                            apply_annotated_text_edits(
+                            apply_text_edits(
                                 server_id,
                                 meta,
                                 edit.text_document.uri,
