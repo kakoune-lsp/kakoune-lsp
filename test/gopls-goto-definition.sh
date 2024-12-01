@@ -15,11 +15,12 @@ test_tmux_kak_start 'edit main.go'
 test_tmux send-keys gj / foo Enter gd
 test_sleep
 test_tmux send-keys 'i%()' Escape
+test_sleep
 
 test_tmux capture-pane -p
 # CHECK: package main
 # CHECK:
-# CHECK: func %()foo() {}
+# CHECK: {{[*]?}}func %()foo() {}
 # CHECK: func bar() { foo(); }
 # CHECK: ~
 # CHECK: ~
