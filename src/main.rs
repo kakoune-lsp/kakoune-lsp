@@ -71,7 +71,7 @@ use std::sync::Mutex;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
 static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
-static LAST_CLIENT: Mutex<Option<String>> = Mutex::new(None);
+static LAST_CLIENT: Mutex<Option<ClientId>> = Mutex::new(None);
 
 fn main() {
     process::exit(i32::from(run_main().is_err()))
@@ -534,7 +534,10 @@ fn report_fatal_error(session: Option<&SessionId>, error_message: &str) -> () {
         send_command_to_editor_here(
             session,
             EditorResponse::new(
-                maybe_client.map(EditorMeta::for_client).unwrap_or_default(),
+                maybe_client
+                    .map(ClientId)
+                    .map(EditorMeta::for_client)
+                    .unwrap_or_default(),
                 format!("lsp-show-error {}", &editor_quote(error_message)).into(),
             ),
         );

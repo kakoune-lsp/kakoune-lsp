@@ -168,7 +168,7 @@ pub struct SemanticTokenFace {
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct EditorMeta {
     pub session: SessionId,
-    pub client: Option<String>,
+    pub client: Option<ClientId>,
     pub buffile: String,
     pub language_id: LanguageId,
     pub filetype: String,
@@ -194,7 +194,7 @@ pub struct EditorMeta {
 }
 
 impl EditorMeta {
-    pub fn for_client(client: String) -> Self {
+    pub fn for_client(client: ClientId) -> Self {
         Self {
             client: Some(client),
             ..Default::default()
@@ -338,6 +338,23 @@ impl Display for SessionId {
     }
 }
 
+/// Kakoune client ID.
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ClientId(pub String);
+
+impl Deref for ClientId {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Display for ClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 pub type LanguageId = String;
 pub type ServerName = String;
 pub type RootPath = String;
@@ -380,7 +397,7 @@ pub struct PositionParams {
 pub struct EditorHoverParams {
     pub selection_desc: String,
     pub tabstop: usize,
-    pub hover_client: Option<String>,
+    pub hover_client: Option<ClientId>,
 }
 
 #[derive(Clone, Debug)]
@@ -504,7 +521,7 @@ pub enum HoverType {
         do_after: String,
     },
     HoverBuffer {
-        client: String,
+        client: ClientId,
     },
 }
 

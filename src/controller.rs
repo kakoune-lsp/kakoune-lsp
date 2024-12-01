@@ -337,7 +337,7 @@ fn dispatch_fifo_request(
     if session.as_str() == "$exit" {
         return ControlFlow::Break(());
     }
-    let client: String = state.next();
+    let client = ClientId(state.next());
     let hook = state.next();
     let sourcing = state.next();
     let buffile = state.next();
@@ -571,7 +571,7 @@ fn dispatch_fifo_request(
         "textDocument/hover" => Box::new(EditorHoverParams {
             selection_desc: state.next(),
             tabstop: state.next(),
-            hover_client: state.next(),
+            hover_client: state.next::<Option<String>>().map(ClientId),
         }),
         "textDocument/inlayHint" => Box::new(InlayHintsOptions {
             buf_line_count: state.next(),
@@ -1111,14 +1111,14 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
 /// Tries to send an error to the client about a request that failed to parse.
 fn handle_broken_editor_request(
     to_editor: &ToEditor,
-    client: &str,
+    client: &ClientId,
     hook: bool,
     what: &str,
     err: toml::de::Error,
 ) {
     let msg = format!("Failed to parse {what}: {err}");
     error!(to_editor, "{}", msg);
-    let mut meta = EditorMeta::for_client(client.to_string());
+    let mut meta = EditorMeta::for_client(client.clone());
     meta.hook = hook;
     report_error(to_editor, &meta, &format!("Failed to parse {what}: {err}"));
 }
@@ -1955,7 +1955,12 @@ fn dispatch_server_notification(
                 meta,
                 format!(
                     "evaluate-commands -verbatim -try-client '{}' lsp-show-message-log {} {}",
-                    LAST_CLIENT.lock().unwrap().as_deref().unwrap_or_default(),
+                    LAST_CLIENT
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .map(|client| client.as_str())
+                        .unwrap_or_default(),
                     editor_quote(&ctx.server(server_id).name),
                     editor_quote(&params.message)
                 ),

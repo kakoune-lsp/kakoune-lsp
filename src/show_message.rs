@@ -133,7 +133,10 @@ pub fn show_message(
             if have_client {
                 ""
             } else {
-                last_client.as_deref().unwrap_or_default()
+                &last_client
+                    .as_ref()
+                    .map(|client| client.as_str())
+                    .unwrap_or_default()
             },
             command,
             editor_quote(&ctx.server(server_id).name),

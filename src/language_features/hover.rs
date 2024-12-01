@@ -313,7 +313,7 @@ fn show_hover_modal(
 fn show_hover_in_hover_client(
     meta: EditorMeta,
     ctx: &Context,
-    hover_client: String,
+    hover_client: ClientId,
     contents: Vec<(bool, String)>,
     diagnostics: String,
 ) {

@@ -73,7 +73,7 @@ pub struct Context {
     // We currently only track one client's completion items, to simplify cleanup (else we
     // might need to hook into ClientClose). Track the client name, so we can check if the
     // completions are valid.
-    pub completion_last_client: Option<String>,
+    pub completion_last_client: Option<ClientId>,
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<(ServerId, Diagnostic)>>,
     pub documents: HashMap<String, Document>,
@@ -81,7 +81,7 @@ pub struct Context {
     pub language_servers: BTreeMap<ServerId, ServerSettings>,
     pub route_cache: HashMap<(ServerName, RootPath), ServerId>,
     pub outstanding_requests:
-        HashMap<(ServerId, &'static str, String, Option<String>), OutstandingRequests>,
+        HashMap<(ServerId, &'static str, String, Option<ClientId>), OutstandingRequests>,
     pub pending_requests: Vec<EditorRequest>,
     pub pending_requests_from_future: Vec<EditorRequest>,
     pub pending_message_requests: VecDeque<(Id, ServerId, ShowMessageRequestParams)>,
@@ -430,7 +430,7 @@ fn add_outstanding_request(
     ctx: &mut Context,
     method: &'static str,
     buffile: String,
-    client: Option<String>,
+    client: Option<ClientId>,
     id: Id,
 ) {
     let to_cancel = match ctx
@@ -466,7 +466,7 @@ pub fn remove_outstanding_request(
     ctx: &mut Context,
     method: &'static str,
     buffile: String,
-    client: Option<String>,
+    client: Option<ClientId>,
     id: &Id,
 ) {
     let key = (server_id, method, buffile, client);
@@ -486,6 +486,6 @@ pub fn remove_outstanding_request(
         key.0,
         key.1,
         key.2,
-        key.3.as_deref().unwrap_or_default()
+        key.3.unwrap_or_default()
     );
 }
