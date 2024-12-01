@@ -175,7 +175,7 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
             let face = x.get_face();
             let offset_encoding = server.offset_encoding;
             x.ranges.iter().filter_map({
-                let session = ctx.last_session();
+                let session = ctx.session();
                 move |r| {
                     if face.is_empty() {
                         warn!(session, "No face found for {:?}", x);

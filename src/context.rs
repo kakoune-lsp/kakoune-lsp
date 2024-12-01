@@ -52,7 +52,6 @@ pub struct ServerSettings {
     pub transport: LanguageServerTransport,
     pub capabilities: Option<ServerCapabilities>,
     pub settings: Option<Value>,
-    pub users: Vec<SessionId>,
     pub workaround_eslint: bool,
 }
 
@@ -89,7 +88,7 @@ pub struct Context {
     pub pending_message_requests: VecDeque<(Id, ServerId, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
-    pub sessions: Vec<SessionId>,
+    pub session: SessionId,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
     pub pending_file_watchers:
@@ -127,7 +126,7 @@ impl Context {
             pending_message_requests: VecDeque::new(),
             request_counter: 0,
             response_waitlist: HashMap::default(),
-            sessions: vec![session],
+            session,
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
             pending_file_watchers: HashMap::default(),
@@ -137,8 +136,8 @@ impl Context {
         }
     }
 
-    pub fn last_session(&self) -> &SessionId {
-        self.sessions.last().unwrap()
+    pub fn session(&self) -> &SessionId {
+        &self.session
     }
 
     pub fn main_root<'a>(&'a self, meta: &'a EditorMeta) -> &'a RootPath {
@@ -304,7 +303,7 @@ impl Context {
             }
             None => {
                 error!(
-                    self.last_session(),
+                    self.session(),
                     "Failed to cancel request {id:?} to server {}",
                     &self.server(server_id).name,
                 );
@@ -347,7 +346,7 @@ impl Context {
             .is_err()
         {
             error!(
-                self.last_session(),
+                self.session(),
                 "Failed to reply to language server {}", &server.name
             );
         };
@@ -359,7 +358,7 @@ impl Context {
     {
         let params = params.into_params();
         if params.is_err() {
-            error!(self.last_session(), "Failed to convert params");
+            error!(self.session(), "Failed to convert params");
             return;
         }
         let notification = jsonrpc_core::Notification {
@@ -376,7 +375,7 @@ impl Context {
             .is_err()
         {
             error!(
-                self.last_session(),
+                self.session(),
                 "Failed to send notification to language server {}", &server.name,
             );
         }
@@ -427,7 +426,7 @@ impl Context {
 
     pub fn meta_for_buffer(&self, client: Option<String>, buffile: &str) -> Option<EditorMeta> {
         let document = self.documents.get(buffile)?;
-        let mut meta = meta_for_session(self.last_session().clone(), client);
+        let mut meta = meta_for_session(self.session().clone(), client);
         meta.buffile = buffile.to_string();
         meta.version = document.version;
         Some(meta)
@@ -439,7 +438,7 @@ impl Context {
         buffile: &str,
         version: i32,
     ) -> EditorMeta {
-        let mut meta = meta_for_session(self.last_session().clone(), client);
+        let mut meta = meta_for_session(self.session().clone(), client);
         meta.buffile = buffile.to_string();
         meta.version = version;
         meta

@@ -327,7 +327,7 @@ pub fn apply_edit(
                         DocumentChangeOperation::Op(op) => {
                             if let Err(e) = apply_document_resource_op(op) {
                                 error!(
-                                    ctx.last_session(),
+                                    ctx.session(),
                                     "failed to apply document change operation: {}", e
                                 );
                                 return ApplyWorkspaceEditResponse {

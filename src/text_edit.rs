@@ -101,7 +101,7 @@ pub fn apply_text_edits_try_deferred<T: TextEditish<T>>(
                 .unwrap_or(false);
         let server = ctx.server(server_id);
         if let Some(cmd) = apply_text_edits_to_buffer(
-            ctx.last_session(),
+            ctx.session(),
             &meta.client,
             Some(uri),
             edits,
@@ -117,7 +117,7 @@ pub fn apply_text_edits_try_deferred<T: TextEditish<T>>(
     } else if let Err(e) = apply_text_edits_to_file(server_id, &uri, edits, &meta.language_id, ctx)
     {
         error!(
-            ctx.last_session(),
+            ctx.session(),
             "Failed to apply edits to file {} ({})", &uri, e
         );
     }

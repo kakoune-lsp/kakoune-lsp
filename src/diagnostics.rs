@@ -53,7 +53,7 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
                     Some(DiagnosticSeverity::WARNING) | None => "DiagnosticWarning",
                     Some(_) => {
                         warn!(
-                            ctx.last_session(),
+                            ctx.session(),
                             "Unexpected DiagnosticSeverity: {:?}", x.severity
                         );
                         "DiagnosticWarning"
@@ -94,7 +94,7 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
             Some(DiagnosticSeverity::WARNING) | None => "InlayDiagnosticWarning",
             Some(_) => {
                 warn!(
-                    ctx.last_session(),
+                    ctx.session(),
                     "Unexpected DiagnosticSeverity: {:?}", diagnostic.severity
                 );
                 "InlayDiagnosticWarning"
@@ -219,7 +219,7 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
                 }
                 Some(_) => {
                     warn!(
-                        ctx.last_session(),
+                        ctx.session(),
                         "Unexpected DiagnosticSeverity: {:?}", x.severity
                     );
                     ""
