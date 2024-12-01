@@ -1,4 +1,11 @@
-= Kakoune Language Server Protocol Client
+= kakoune-lsp image:{release-img}[] image:{release-date-img}[] image:{irc-img}[link="{irc-url}"] image:{discord-img}[link="{discord-url}"]
+ifdef::env-github,env-browser[:outfilesuffix: .asciidoc]
+:release-img: https://img.shields.io/github/v/release/kakoune-lsp/kakoune-lsp
+:release-date-img: https://img.shields.io/github/release-date/kakoune-lsp/kakoune-lsp
+:irc-img: https://img.shields.io/badge/IRC-%23kakoune-blue.svg
+:irc-url: https://web.libera.chat/?channels=kakoune
+:discord-img: https://img.shields.io/discord/968932220549103686.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2
+:discord-url: https://discord.gg/UGE8UPt6
 
 This is a https://microsoft.github.io/language-server-protocol/[Language Server Protocol] client for the https://kakoune.org[Kakoune] editor (version `v2021.11.08` or higher).
 
@@ -573,4 +580,5 @@ Submit questions, feedback or patches on GitHub, or by sending email to
 mailto:~krobelus/kakoune@lists.sr.ht[the public mailing list]
 (see https://lists.sr.ht/~krobelus/kakoune[archives]).
 
-You can also chat with us on Libera IRC at https://web.libera.chat/?channels=kakoune[#Kakoune].
+Chat with us on Libera IRC at https://web.libera.chat/?channels=kakoune[#Kakoune] or on the
+https://discord.gg/UGE8UPt6[Kakoune Community Discord].
