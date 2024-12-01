@@ -139,7 +139,7 @@ pub fn text_document_definition(
 ) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DEFINITION))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DEFINITION))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
@@ -190,7 +190,7 @@ pub fn text_document_definition(
 pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_IMPLEMENTATION))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_IMPLEMENTATION))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
@@ -234,7 +234,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ct
 pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_TYPE_DEFINITION))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_TYPE_DEFINITION))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(
@@ -278,7 +278,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, c
 pub fn text_document_references(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_REFERENCES))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_REFERENCES))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
         let cmd = format!(

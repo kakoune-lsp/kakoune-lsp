@@ -140,6 +140,10 @@ impl Context {
         &self.session
     }
 
+    pub fn to_editor(&self) -> &SessionId {
+        self.session()
+    }
+
     pub fn main_root<'a>(&'a self, meta: &'a EditorMeta) -> &'a RootPath {
         let first_server = &self.servers(meta).next().unwrap().1;
         &self.server_config(meta, &first_server.name).unwrap().root
@@ -252,7 +256,7 @@ impl Context {
         for (server_id, params) in ops {
             let params = params.into_params();
             if params.is_err() {
-                error!(meta.session, "Failed to convert params");
+                error!(self.to_editor(), "Failed to convert params");
                 return;
             }
             let id = self.next_request_id();
@@ -282,15 +286,15 @@ impl Context {
                 .send(ServerMessage::Request(Call::MethodCall(call)))
                 .is_err()
             {
-                error!(meta.session, "Failed to call language server");
+                error!(self.to_editor(), "Failed to call language server");
             };
         }
     }
 
     pub fn cancel(&mut self, server_id: ServerId, id: Id) {
-        if let Some((meta, method, _batch_id, _canceled)) = self.response_waitlist.get(&id) {
+        if let Some((_meta, method, _batch_id, _canceled)) = self.response_waitlist.get(&id) {
             debug!(
-                meta.session,
+                self.to_editor(),
                 "Canceling request to server {}: {:?} ({})",
                 &self.server(server_id).name,
                 id,
@@ -303,7 +307,7 @@ impl Context {
             }
             None => {
                 error!(
-                    self.session(),
+                    self.to_editor(),
                     "Failed to cancel request {id:?} to server {}",
                     &self.server(server_id).name,
                 );
@@ -346,7 +350,7 @@ impl Context {
             .is_err()
         {
             error!(
-                self.session(),
+                self.to_editor(),
                 "Failed to reply to language server {}", &server.name
             );
         };
@@ -358,7 +362,7 @@ impl Context {
     {
         let params = params.into_params();
         if params.is_err() {
-            error!(self.session(), "Failed to convert params");
+            error!(self.to_editor(), "Failed to convert params");
             return;
         }
         let notification = jsonrpc_core::Notification {
@@ -375,7 +379,7 @@ impl Context {
             .is_err()
         {
             error!(
-                self.session(),
+                self.to_editor(),
                 "Failed to send notification to language server {}", &server.name,
             );
         }
@@ -393,12 +397,14 @@ impl Context {
         S: Into<Cow<'static, str>>,
     {
         let command = command.into();
-        let session = meta.session.clone();
         if let Some(mut response_fifo) = response_fifo {
             let fifo = response_fifo.take().unwrap();
             debug!(
-                session,
-                "To editor `{}` via fifo '{}': {}", &fifo, meta.session, command
+                self.to_editor(),
+                "To editor `{}` via fifo '{}': {}",
+                &fifo,
+                self.session(),
+                command
             );
             fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
             return;
@@ -408,7 +414,7 @@ impl Context {
             .send(EditorResponse { meta, command })
             .is_err()
         {
-            error!(session, "Failed to send command to editor");
+            error!(self.to_editor(), "Failed to send command to editor");
         }
     }
 
@@ -506,7 +512,6 @@ pub fn remove_outstanding_request(
     server_id: ServerId,
     ctx: &mut Context,
     method: &'static str,
-    session: &SessionId,
     buffile: String,
     client: Option<String>,
     id: &Id,
@@ -523,7 +528,7 @@ pub fn remove_outstanding_request(
         }
     }
     error!(
-        session,
+        ctx.to_editor(),
         "[{}] Not in outstanding requests: method {} buffile {} client {}",
         key.0,
         key.1,

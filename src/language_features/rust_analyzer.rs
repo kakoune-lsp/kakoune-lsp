@@ -79,7 +79,7 @@ pub fn apply_source_change(
             match op {
                 SnippetDocumentChangeOperation::Op(resource_op) => {
                     if let Err(e) = workspace::apply_document_resource_op(resource_op) {
-                        error!(meta.session, "failed to apply document change: {}", e);
+                        error!(ctx.to_editor(), "failed to apply document change: {}", e);
                     }
                 }
                 SnippetDocumentChangeOperation::Edit(SnippetTextDocumentEdit {
@@ -234,7 +234,7 @@ pub fn run_single(
 ) {
     if params.arguments.len() != 1 {
         error!(
-            meta.session,
+            ctx.to_editor(),
             "Unsupported number of runSingle arguments: {}",
             params.arguments.len()
         );
@@ -245,7 +245,7 @@ pub fn run_single(
 
     if argument.kind != "cargo" {
         error!(
-            meta.session,
+            ctx.to_editor(),
             "Unsupported runSingle kind: {}", argument.kind
         );
         return;

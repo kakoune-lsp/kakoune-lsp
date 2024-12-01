@@ -15,7 +15,7 @@ use url::Url;
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SEMANTIC_TOKENS))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_SEMANTIC_TOKENS))
         .collect();
     if eligible_servers.is_empty() {
         return;

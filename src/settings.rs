@@ -22,7 +22,7 @@ pub fn initialization_options(
             continue;
         }
 
-        let legacy_settings = legacy_initialization_options(meta);
+        let legacy_settings = legacy_initialization_options(ctx, meta);
         if legacy_settings.is_some() {
             sections.push(legacy_settings);
             continue;
@@ -51,7 +51,7 @@ pub fn configured_section(
 }
 
 pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str) {
-    debug!(meta.session, "lsp_config:\n{}", config);
+    debug!(ctx.to_editor(), "lsp_config:\n{}", config);
     match toml::from_str(config) {
         Ok(cfg) => {
             ctx.dynamic_config = cfg;
@@ -82,13 +82,13 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
 /// with `lsp_server_initialization_options` option in Kakoune
 /// (i.e. to customize it for specific project).
 /// This function asks Kakoune to give such override if any.
-fn legacy_initialization_options(meta: &EditorMeta) -> Option<Value> {
+fn legacy_initialization_options(ctx: &Context, meta: &EditorMeta) -> Option<Value> {
     #[allow(deprecated)]
     if meta.legacy_server_initialization_options.is_empty() {
         None
     } else {
         Some(Value::Object(explode_str_to_str_map(
-            &meta.session,
+            ctx.to_editor(),
             &meta.legacy_server_initialization_options,
         )))
     }

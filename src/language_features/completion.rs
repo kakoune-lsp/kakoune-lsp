@@ -24,7 +24,7 @@ pub fn text_document_completion(
 ) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_COMPLETION))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_COMPLETION))
         .collect();
 
     let req_params = eligible_servers
@@ -134,7 +134,7 @@ fn editor_completion(
             let on_select = formatdoc!(
                 "lsp-completion-item-selected {completion_item_index}
                  {maybe_resolve}info -markup -style menu -- %§{}§",
-                completion_menu_text(&meta.session, x).replace('§', "§§")
+                completion_menu_text(ctx.session(), x).replace('§', "§§")
             );
 
             let entry = match x.kind {
@@ -152,7 +152,7 @@ fn editor_completion(
                     Some(doc) => doc,
                     None => {
                         warn!(
-                            meta.session,
+                            ctx.to_editor(),
                             "No document in context for file: {}", &meta.buffile
                         );
                         return false;
@@ -322,7 +322,7 @@ pub fn completion_item_resolve(
 
     if completion_item_index >= ctx.completion_items.len().try_into().unwrap() {
         error!(
-            meta.session,
+            ctx.to_editor(),
             "ignoring request to resolve completion item of invalid index {completion_item_index}"
         );
         return;
@@ -396,7 +396,7 @@ fn editor_completion_item_resolve(
         if new_item.detail == old_detail || new_item.documentation == old_documentation {
             return;
         }
-        let menu_text = completion_menu_text(&meta.session, &new_item);
+        let menu_text = completion_menu_text(ctx.session(), &new_item);
         ctx.exec(
             meta,
             format!(

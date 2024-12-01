@@ -25,7 +25,7 @@ pub fn text_document_selection_range(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(meta.session, "{}", err);
+            error!(ctx.to_editor(), "{}", err);
             if !meta.hook {
                 ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
             }
@@ -91,7 +91,7 @@ fn editor_selection_range(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(meta.session, "{}", err);
+            error!(ctx.to_editor(), "{}", err);
             if !meta.hook {
                 ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
             }

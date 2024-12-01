@@ -408,9 +408,10 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
         })
         .collect();
 
-    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params), move |ctx, meta, results| {
+    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params), move |ctx, _meta, results| {
         let results: HashMap<_,_> = results.into_iter().collect();
 
+        let to_editor = ctx.to_editor().clone();
         for server_id in servers {
             let result = &results[&server_id];
             if let Some(server) = ctx.language_servers.get_mut(&server_id) {
@@ -424,7 +425,9 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                         "utf-8" => OffsetEncoding::Utf8,
                         "utf-16" => OffsetEncoding::Utf16,
                         encoding => {
-                            error!(meta.session, "Language server sent unsupported offset encoding: {encoding}");
+                            error!(
+                                &to_editor,
+                                "Language server sent unsupported offset encoding: {encoding}");
                             OffsetEncoding::Utf16
                         }
                     })
@@ -433,7 +436,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                     (server.preferred_offset_encoding, server.offset_encoding),
                     (Some(OffsetEncoding::Utf8), OffsetEncoding::Utf16)) {
                         warn!(
-                            meta.session,
+                            to_editor,
                             "Requested offset encoding utf-8 is not supported by {} server, falling back to utf-16",
                             &server.name,
                         );
@@ -469,6 +472,7 @@ pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
 pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
 
 pub fn attempt_server_capability(
+    ctx: &Context,
     server: (ServerId, &ServerSettings),
     meta: &EditorMeta,
     feature: &'static str,
@@ -480,7 +484,7 @@ pub fn attempt_server_capability(
 
     if !meta.hook {
         debug!(
-            meta.session,
+            ctx.to_editor(),
             "{} server does not support {}, refusing to send request",
             &server_settings.name,
             feature

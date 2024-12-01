@@ -17,7 +17,7 @@ use url::Url;
 pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_HOVER))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_HOVER))
         .collect();
     if eligible_servers.is_empty() {
         return;
@@ -117,7 +117,7 @@ pub fn editor_hover(
                             DiagnosticSeverity::INFORMATION => FACE_INFO_DIAGNOSTIC_INFO,
                             DiagnosticSeverity::HINT => FACE_INFO_DIAGNOSTIC_HINT,
                             _ => {
-                                warn!(meta.session, "Unexpected DiagnosticSeverity: {:?}", sev);
+                                warn!(ctx.to_editor(), "Unexpected DiagnosticSeverity: {:?}", sev);
                                 FACE_INFO_DEFAULT
                             }
                         })
@@ -188,7 +188,7 @@ pub fn editor_hover(
                 ),
             }
         } else {
-            marked_string_to_kakoune_markup(&meta.session, ms)
+            marked_string_to_kakoune_markup(ctx.session(), ms)
         }
     };
 
@@ -217,7 +217,7 @@ pub fn editor_hover(
                             if for_hover_buffer {
                                 contents.value
                             } else {
-                                markdown_to_kakoune_markup(&meta.session, contents.value)
+                                markdown_to_kakoune_markup(ctx.session(), contents.value)
                             },
                         ),
                         MarkupKind::PlainText => (false, contents.value),
@@ -338,7 +338,7 @@ fn show_hover_in_hover_client(
 
     // Use a fifo buffer instead of a plain scratch buffer so Kakoune will keep the existing
     // buffer alive, keeping it visible in any clients.
-    let fifo = mkfifo(&meta.session);
+    let fifo = mkfifo(ctx.session());
 
     let command = format!(
         "%[

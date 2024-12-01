@@ -475,10 +475,10 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
             let face = x.get_face();
             let offset_encoding = server.offset_encoding;
             x.ls_ranges.iter().filter_map({
-                let session = &meta.session;
+                let ctx = &ctx;
                 move |r| {
                     if face.is_empty() {
-                        warn!(session, "No face found for {:?}", x);
+                        warn!(ctx.to_editor(), "No face found for {:?}", x);
                         Option::None
                     } else {
                         Option::Some(format!(

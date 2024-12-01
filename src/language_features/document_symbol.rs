@@ -24,7 +24,7 @@ use url::Url;
 pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
@@ -59,7 +59,7 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
 pub fn next_or_prev_symbol(meta: EditorMeta, params: NextOrPrevSymbolParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
@@ -714,7 +714,7 @@ fn editor_object(
             Some(kind) => kind,
             None => {
                 let err = format!("invalid symbol kind '{}'", &kind_str);
-                error!(meta.session, "{}", err);
+                error!(ctx.to_editor(), "{}", err);
                 if !meta.hook {
                     ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
                 }
@@ -727,7 +727,7 @@ fn editor_object(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(meta.session, "{}", err);
+            error!(ctx.to_editor(), "{}", err);
             if !meta.hook {
                 ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
             }
@@ -899,7 +899,7 @@ fn flat_symbol_ranges<T: Symbol<T>>(
 pub fn document_symbol_menu(meta: EditorMeta, params: GotoSymbolParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()
@@ -1093,7 +1093,7 @@ fn symbol_search<T: Symbol<T>>(
 pub fn breadcrumbs(meta: EditorMeta, params: BreadcrumbsParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
         .collect();
     let req_params = eligible_servers
         .into_iter()

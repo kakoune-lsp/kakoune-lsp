@@ -28,6 +28,7 @@ pub fn start(session: &SessionId) -> Result<EditorTransport, i32> {
 }
 
 pub fn send_command_to_editor(response: EditorResponse, log: bool) {
+    let to_editor = &response.meta.session;
     match Command::new("kak")
         .args(["-p", &response.meta.session])
         .stdin(Stdio::piped())
@@ -40,7 +41,7 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
                 Some(stdin) => stdin,
                 None => {
                     if log {
-                        error!(response.meta.session, "failed to get editor stdin");
+                        error!(to_editor, "failed to get editor stdin");
                     }
                     return;
                 }
@@ -55,7 +56,7 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
                     );
                     if log {
                         debug!(
-                            response.meta.session,
+                            to_editor,
                             "To editor `{}`: {}", response.meta.session, command
                         );
                     }
@@ -64,7 +65,7 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
                 None => {
                     if log {
                         debug!(
-                            response.meta.session,
+                            to_editor,
                             "To editor `{}`: {}", response.meta.session, response.command
                         );
                     }
@@ -73,12 +74,12 @@ pub fn send_command_to_editor(response: EditorResponse, log: bool) {
             };
 
             if stdin.write_all(command.as_bytes()).is_err() && log {
-                error!(response.meta.session, "Failed to write to editor stdin");
+                error!(to_editor, "Failed to write to editor stdin");
             }
         }
         Err(e) => {
             if log {
-                error!(response.meta.session, "Failed to run Kakoune: {}", e);
+                error!(to_editor, "Failed to run Kakoune: {}", e);
             }
         }
     }

@@ -120,7 +120,7 @@ pub fn show_message(
     msg: &str,
     ctx: &Context,
 ) {
-    let Some(command) = message_type(&meta.session, typ) else {
+    let Some(command) = message_type(ctx.to_editor(), typ) else {
         return;
     };
     let have_client = meta.client.is_some();

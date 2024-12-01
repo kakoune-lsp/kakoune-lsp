@@ -219,7 +219,7 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
                 }
                 Some(_) => {
                     warn!(
-                        ctx.session(),
+                        ctx.to_editor(),
                         "Unexpected DiagnosticSeverity: {:?}", x.severity
                     );
                     ""
@@ -260,7 +260,10 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                     let p = match get_kakoune_position(server, filename, &x.range.start, ctx) {
                         Some(position) => position,
                         None => {
-                            warn!(meta.session, "Cannot get position from file {}", filename);
+                            warn!(
+                                ctx.to_editor(),
+                                "Cannot get position from file {}", filename
+                            );
                             return "".to_string();
                         }
                     };
@@ -281,7 +284,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             Some(DiagnosticSeverity::WARNING) | None => "warning",
                             Some(_) => {
                                 warn!(
-                                    meta.session,
+                                    ctx.to_editor(),
                                     "Unexpected DiagnosticSeverity: {:?}", x.severity
                                 );
                                 "warning"

@@ -26,7 +26,7 @@ pub fn text_document_code_action(
 ) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_CODE_ACTIONS))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_CODE_ACTIONS))
         .collect();
     if eligible_servers.is_empty() {
         return;
@@ -36,7 +36,7 @@ pub fn text_document_code_action(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(meta.session, "{}", err);
+            error!(ctx.to_editor(), "{}", err);
             if !meta.hook {
                 ctx.exec_fifo(
                     meta,
@@ -157,12 +157,12 @@ fn editor_code_actions(
         // AST nodes.  Since we don't have per-line lightbulbs, let's make the common case more
         // convenient by requesting on whole lines.
         let Some(document) = ctx.documents.get(&meta.buffile) else {
-            error!(meta.session, "Missing document for {}", &meta.buffile);
+            error!(ctx.to_editor(), "Missing document for {}", &meta.buffile);
             return;
         };
         if document.version != version {
             error!(
-                meta.session,
+                ctx.to_editor(),
                 "Stale document for {}: my ranges are for {}, document has {}",
                 &meta.buffile,
                 version,
@@ -201,8 +201,10 @@ fn editor_code_actions(
 
     for (_, cmd) in &actions {
         match cmd {
-            CodeActionOrCommand::Command(cmd) => debug!(meta.session, "Command: {:?}", cmd),
-            CodeActionOrCommand::CodeAction(action) => debug!(meta.session, "Action: {:?}", action),
+            CodeActionOrCommand::Command(cmd) => debug!(ctx.to_editor(), "Command: {:?}", cmd),
+            CodeActionOrCommand::CodeAction(action) => {
+                debug!(ctx.to_editor(), "Action: {:?}", action)
+            }
         }
     }
 
@@ -213,6 +215,7 @@ fn editor_code_actions(
             let server_settings = ctx.server(server_id);
 
             attempt_server_capability(
+                ctx,
                 (server_id, server_settings),
                 &meta,
                 CAPABILITY_CODE_ACTIONS_RESOLVE,

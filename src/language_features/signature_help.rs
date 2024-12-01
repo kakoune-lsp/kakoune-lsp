@@ -13,7 +13,7 @@ use url::Url;
 pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_SIGNATURE_HELP))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_SIGNATURE_HELP))
         .collect();
     if eligible_servers.is_empty() {
         return;
@@ -116,7 +116,7 @@ fn editor_signature_help(
     let mut contents = active_signature.label.clone();
     if let Some(range) = parameter_range {
         if range[0] >= contents.len() || range[1] >= contents.len() {
-            warn!(meta.session, "invalid range for active parameter");
+            warn!(ctx.to_editor(), "invalid range for active parameter");
         } else {
             let (left, tail) = contents.split_at(range[0]);
             let (param, right) = tail.split_at(range[1] - range[0]);

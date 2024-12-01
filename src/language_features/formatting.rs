@@ -18,7 +18,7 @@ pub fn text_document_formatting(
 ) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|server| attempt_server_capability(*server, &meta, CAPABILITY_FORMATTING))
+        .filter(|server| attempt_server_capability(ctx, *server, &meta, CAPABILITY_FORMATTING))
         .filter(|(server_id, _)| {
             meta.server
                 .as_ref()

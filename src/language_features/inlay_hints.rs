@@ -21,7 +21,7 @@ pub struct InlayHintsOptions {
 pub fn inlay_hints(meta: EditorMeta, params: InlayHintsOptions, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_INLAY_HINTS))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_INLAY_HINTS))
         .collect();
     if eligible_servers.is_empty() {
         return;

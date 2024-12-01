@@ -256,7 +256,7 @@ pub fn register_workspace_did_change_watched_files(
 ) {
     if !ctx.config.file_watch_support {
         error!(
-            ctx.session(),
+            ctx.to_editor(),
             "file watch support is disabled, ignoring spurious {} server request",
             notification::DidChangeWatchedFiles::METHOD
         );
@@ -273,7 +273,7 @@ pub fn register_workspace_did_change_watched_files(
             };
             if bare_pattern.contains('{') {
                 error!(
-                    ctx.session(),
+                    ctx.to_editor(),
                     "unsupported braces in glob pattern: '{}'", &bare_pattern
                 );
                 continue;
@@ -289,7 +289,7 @@ pub fn register_workspace_did_change_watched_files(
                 let root = match url.to_file_path() {
                     Ok(root) => root,
                     Err(_) => {
-                        error!(ctx.session(), "URL is not a file path: {}", url);
+                        error!(ctx.to_editor(), "URL is not a file path: {}", url);
                         continue;
                     }
                 };
@@ -300,7 +300,7 @@ pub fn register_workspace_did_change_watched_files(
             Ok(pattern) => pattern,
             Err(err) => {
                 error!(
-                    ctx.session(),
+                    ctx.to_editor(),
                     "failed to compile glob pattern '{}': {}", &glob_pattern, err
                 );
                 continue;

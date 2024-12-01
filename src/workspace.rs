@@ -40,7 +40,7 @@ pub fn did_change_configuration(
             #[allow(deprecated)]
             if !params.server_configuration.is_empty() {
                 Value::Object(explode_str_to_str_map(
-                    &meta.session,
+                    ctx.to_editor(),
                     &params.server_configuration,
                 ))
             } else {
@@ -327,7 +327,7 @@ pub fn apply_edit(
                         DocumentChangeOperation::Op(op) => {
                             if let Err(e) = apply_document_resource_op(op) {
                                 error!(
-                                    ctx.session(),
+                                    ctx.to_editor(),
                                     "failed to apply document change operation: {}", e
                                 );
                                 return ApplyWorkspaceEditResponse {

@@ -13,7 +13,7 @@ use url::Url;
 pub fn text_document_highlight(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(*srv, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_HIGHLIGHT))
         .collect();
     if eligible_servers.is_empty() {
         return;
@@ -99,7 +99,7 @@ fn editor_document_highlight(
         meta.version, range_specs,
     );
     if !meta.hook {
-        command = select_ranges_and(&meta.session, command, ranges, main_cursor);
+        command = select_ranges_and(ctx.to_editor(), command, ranges, main_cursor);
     }
     ctx.exec(meta, command);
 }

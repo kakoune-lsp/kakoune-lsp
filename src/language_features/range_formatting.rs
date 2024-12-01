@@ -20,7 +20,9 @@ pub fn text_document_range_formatting(
 ) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|server| attempt_server_capability(*server, &meta, CAPABILITY_RANGE_FORMATTING))
+        .filter(|server| {
+            attempt_server_capability(ctx, *server, &meta, CAPABILITY_RANGE_FORMATTING)
+        })
         .filter(|(server_id, _)| {
             meta.server
                 .as_ref()
@@ -59,7 +61,7 @@ pub fn text_document_range_formatting(
 
     let Some(document) = ctx.documents.get(&meta.buffile) else {
         warn!(
-            meta.session,
+            ctx.to_editor(),
             "No document in context for file: {}", &meta.buffile
         );
         return;
@@ -111,7 +113,7 @@ pub fn editor_range_formatting<T: TextEditish<T>>(
     let server = ctx.server(server_id);
     let Some(cmd) = ctx.documents.get(&meta.buffile).and_then(|document| {
         apply_text_edits_to_buffer(
-            &meta.session,
+            ctx.to_editor(),
             &meta.client,
             None,
             text_edits,

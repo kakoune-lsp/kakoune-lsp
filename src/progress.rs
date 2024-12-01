@@ -24,7 +24,6 @@ pub fn work_done_progress_cancel(
 }
 
 pub fn work_done_progress_create(
-    meta: EditorMeta,
     params: Params,
     ctx: &mut Context,
 ) -> Result<jsonrpc_core::Value, jsonrpc_core::Error> {
@@ -34,7 +33,7 @@ pub fn work_done_progress_create(
     match ctx.work_done_progress.entry(token) {
         hash_map::Entry::Occupied(e) => {
             warn!(
-                meta.session,
+                ctx.to_editor(),
                 "Received duplicate ProgressToken '{:?}'",
                 e.key()
             );
@@ -54,7 +53,7 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
             // other features keep working. This is fixed by LLVM commit f088af37e6b5 ([clangd]
             // Fix data type of WorkDoneProgressReport::percentage, 2021-05-10).
             warn!(
-                meta.session,
+                ctx.to_editor(),
                 "Failed to parse WorkDoneProgressParams params: {}", err
             );
             return;
@@ -96,7 +95,7 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
             match ctx.work_done_progress.get_mut(&params.token) {
                 Some(Some(_)) => {
                     warn!(
-                        meta.session,
+                        ctx.to_editor(),
                         "Received begin event for already started ProgressToken '{:?}'", token
                     )
                 }
@@ -114,7 +113,7 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
                 }
                 None => {
                     warn!(
-                        meta.session,
+                        ctx.to_editor(),
                         "Received begin event for non-existent ProgressToken '{:?}'", token
                     );
                 }
@@ -122,7 +121,10 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
         }
         ProgressParamsValue::WorkDone(WorkDoneProgress::Report(report)) => {
             if ctx.work_done_progress_report_timestamp.elapsed() < Duration::from_millis(1000) {
-                debug!(meta.session, "Progress report arrived too fast, dropping");
+                debug!(
+                    ctx.to_editor(),
+                    "Progress report arrived too fast, dropping"
+                );
                 return;
             }
             ctx.work_done_progress_report_timestamp = time::Instant::now();
@@ -144,14 +146,14 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
                 Some(None) => {
                     let token = &params.token;
                     warn!(
-                        meta.session,
+                        ctx.to_editor(),
                         "Received report event for unstarted ProgressToken '{:?}'", token
                     );
                 }
                 None => {
                     let token = &params.token;
                     warn!(
-                        meta.session,
+                        ctx.to_editor(),
                         "Received report event for non-existent ProgressToken '{:?}'", token
                     );
                 }
@@ -167,14 +169,14 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
                 Some(None) => {
                     let token = &params.token;
                     warn!(
-                        meta.session,
+                        ctx.to_editor(),
                         "Received end event for unstarted ProgressToken '{:?}'", token
                     );
                 }
                 None => {
                     let token = &params.token;
                     warn!(
-                        meta.session,
+                        ctx.to_editor(),
                         "Received end event for non-existent ProgressToken '{:?}'", token
                     );
                 }
