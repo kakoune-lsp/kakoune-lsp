@@ -714,10 +714,7 @@ fn editor_object(
             Some(kind) => kind,
             None => {
                 let err = format!("invalid symbol kind '{}'", &kind_str);
-                error!(ctx.to_editor(), "{}", err);
-                if !meta.hook {
-                    ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
-                }
+                ctx.show_error(meta, err);
                 return;
             }
         });
@@ -727,10 +724,7 @@ fn editor_object(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(ctx.to_editor(), "{}", err);
-            if !meta.hook {
-                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
-            }
+            ctx.show_error(meta, err);
             return;
         }
     };
@@ -746,10 +740,7 @@ fn editor_object(
     };
 
     if ranges.is_empty() {
-        ctx.exec(
-            meta,
-            "lsp-show-error 'lsp-object: no matching symbol found'",
-        );
+        ctx.show_error(meta, "lsp-object: no matching symbol found");
         return;
     }
 
@@ -841,14 +832,14 @@ fn editor_object(
             "{" => (sel_max, sym_start),
             "}" => (sel_min, sym_end),
             _ => {
-                ctx.exec(meta, "lsp-show-error 'lsp-object: invalid mode'");
+                ctx.show_error(meta, "lsp-object: invalid mode");
                 return;
             }
         };
         new_selections.push(KakouneRange { start, end })
     }
     if new_selections.is_empty() {
-        ctx.exec(meta, "lsp-show-error 'lsp-object: no selections remaining'");
+        ctx.show_error(meta, "lsp-object: no selections remaining");
         return;
     }
     ctx.exec(

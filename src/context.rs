@@ -1,7 +1,7 @@
-use crate::editor_transport::{send_command_to_editor, ToEditor};
+use crate::editor_transport::{self, ToEditor};
 use crate::language_server_transport::LanguageServerTransport;
 use crate::text_sync::CompiledFileSystemWatcher;
-use crate::thread_worker::Worker;
+use crate::thread_worker::{ToEditorDispatcher, Worker};
 use crate::{filetype_to_language_id_map, types::*};
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
 use lsp_types::notification::{Cancel, Notification};
@@ -13,7 +13,7 @@ use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::path::PathBuf;
-use std::{fs, time};
+use std::time;
 
 // Copy of Kakoune's timestamped buffer content.
 pub struct Document {
@@ -89,6 +89,7 @@ pub struct Context {
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub session: SessionId,
     pub to_editor: ToEditor,
+    pub to_editor_dispatcher: ToEditorDispatcher,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
     pub pending_file_watchers:
@@ -126,7 +127,8 @@ impl Context {
             request_counter: 0,
             response_waitlist: HashMap::default(),
             session,
-            to_editor,
+            to_editor: to_editor.clone(),
+            to_editor_dispatcher: ToEditorDispatcher::OtherThread(to_editor),
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
             pending_file_watchers: HashMap::default(),
@@ -396,20 +398,20 @@ impl Context {
     where
         S: Into<Cow<'static, str>>,
     {
-        let command = command.into();
-        if let Some(mut response_fifo) = response_fifo {
-            let fifo = response_fifo.take().unwrap();
-            debug!(
-                self.to_editor(),
-                "To editor `{}` via fifo '{}': {}",
-                &fifo,
-                self.session(),
-                command
-            );
-            fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
-            return;
-        }
-        send_command_to_editor(self.to_editor(), EditorResponse::new(meta, command))
+        editor_transport::exec_fifo(&self.to_editor_dispatcher, meta, response_fifo, command);
+    }
+
+    pub fn show_error(&mut self, meta: EditorMeta, message: impl AsRef<str>) {
+        self.show_error_fifo(meta, None, message);
+    }
+
+    pub fn show_error_fifo(
+        &mut self,
+        meta: EditorMeta,
+        response_fifo: Option<ResponseFifo>,
+        message: impl AsRef<str>,
+    ) {
+        editor_transport::show_error(&self.to_editor_dispatcher, meta, response_fifo, message);
     }
 
     fn next_batch_id(&mut self) -> BatchNumber {

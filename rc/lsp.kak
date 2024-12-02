@@ -1307,7 +1307,6 @@ define-command -hidden lsp-show-hover -params 4 -docstring %{
 }}
 
 define-command -hidden lsp-show-error -params 1 -docstring "Render error" %{
-    echo -debug "LSP:" %arg{1}
     info "LSP: %arg{1}"
 }
 

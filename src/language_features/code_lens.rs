@@ -165,7 +165,7 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: CodeLensOptions, 
     });
 
     if lenses.is_empty() {
-        ctx.exec(meta, "lsp-show-error 'no code lens in selection'");
+        ctx.show_error(meta, "no code lens in selection");
         return;
     }
 

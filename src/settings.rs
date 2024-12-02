@@ -1,7 +1,6 @@
 use crate::context::*;
 use crate::editor_transport::ToEditor;
 use crate::types::*;
-use crate::util::*;
 use serde_json::Value;
 
 pub fn initialization_options(
@@ -59,11 +58,7 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
         }
         Err(e) => {
             let msg = format!("failed to parse %opt{{lsp_config}}: {}", e);
-            ctx.exec(
-                meta.clone(),
-                format!("lsp-show-error {}", editor_quote(&msg)),
-            );
-            panic!("{}", msg)
+            ctx.show_error(meta.clone(), msg);
         }
     };
     if !is_using_legacy_toml(&ctx.config) {

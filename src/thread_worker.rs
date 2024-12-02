@@ -6,13 +6,29 @@ use std::thread;
 
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 
+use crate::editor_transport::send_command_to_editor;
+use crate::editor_transport::send_command_to_editor_here;
 use crate::editor_transport::ToEditor;
+use crate::EditorResponse;
 use crate::SessionId;
 
 #[derive(Clone)]
 pub enum ToEditorDispatcher {
     ThisThread(SessionId),
     OtherThread(ToEditor),
+}
+
+impl ToEditorDispatcher {
+    pub fn send(&self, response: EditorResponse) {
+        match self {
+            ToEditorDispatcher::ThisThread(session) => {
+                send_command_to_editor_here(session, response);
+            }
+            ToEditorDispatcher::OtherThread(to_editor) => {
+                send_command_to_editor(to_editor, response)
+            }
+        }
+    }
 }
 
 /// Like `std::thread::JoinHandle<()>`, but joins thread in drop automatically.
@@ -22,26 +38,17 @@ pub struct ScopedThread {
     to_editor_dispatcher: ToEditorDispatcher,
 }
 
-impl ScopedThread {
-    fn log_debug(&self, message: String) {
-        match &self.to_editor_dispatcher {
-            ToEditorDispatcher::ThisThread(session) => debug!(session:session, "{}", message),
-            ToEditorDispatcher::OtherThread(to_editor) => debug!(to_editor, "{}", message),
-        }
-    }
-}
-
 impl Drop for ScopedThread {
     fn drop(&mut self) {
         let inner = self.inner.take().unwrap();
         let name = inner.thread().name().unwrap().to_string();
-        self.log_debug(format!("Waiting for {} to finish...", name));
+        debug!(dispatcher:self.to_editor_dispatcher, "Waiting for {} to finish...", name);
         let res = inner.join();
-        self.log_debug(format!(
+        debug!(dispatcher:self.to_editor_dispatcher,
             "... {} terminated with {}",
             name,
             if res.is_ok() { "ok" } else { "err" }
-        ));
+        );
 
         // escalate panic, but avoid aborting the process
         if let Err(e) = res {

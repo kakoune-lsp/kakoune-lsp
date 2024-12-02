@@ -60,7 +60,7 @@ pub fn show_message_request_next(meta: EditorMeta, ctx: &mut Context) {
     let (id, server_id, params) = match ctx.pending_message_requests.pop_front() {
         Some(v) => v,
         None => {
-            return ctx.exec(meta, "lsp-show-error 'No pending message requests.'");
+            return ctx.show_error(meta, "No pending message requests.");
         }
     };
 

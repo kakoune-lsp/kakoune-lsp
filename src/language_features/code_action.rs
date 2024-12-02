@@ -36,14 +36,7 @@ pub fn text_document_code_action(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(ctx.to_editor(), "{}", err);
-            if !meta.hook {
-                ctx.exec_fifo(
-                    meta,
-                    response_fifo,
-                    format!("lsp-show-error '{}'", &editor_escape(&err)),
-                );
-            }
+            ctx.show_error_fifo(meta, response_fifo, err);
             return;
         }
     };
@@ -229,11 +222,7 @@ fn editor_code_actions(
             let regex = match regex::Regex::new(pattern) {
                 Ok(regex) => regex,
                 Err(error) => {
-                    let command = format!(
-                        "lsp-show-error 'invalid pattern: {}'",
-                        &editor_escape(&error.to_string())
-                    );
-                    ctx.exec_fifo(meta, response_fifo, command);
+                    ctx.show_error_fifo(meta, response_fifo, format!("invalid pattern: {}", error));
                     return;
                 }
             };
@@ -250,28 +239,22 @@ fn editor_code_actions(
         } else {
             actions
         };
-        let fail = if sync {
-            // We might be running from a hook, so let's allow silencing errors with a "try".
-            // Also, prefix with the (presumable) function name, to reduce confusion.
-            "fail lsp-code-actions:"
-        } else {
-            "lsp-show-error"
-        }
-        .to_string();
-        let command = match actions.len() {
-            0 => fail + " 'no matching action available'",
+        let error_message = match actions.len() {
+            0 => "lsp-code-actions: no matching action available",
             1 => {
                 let (server_id, cmd) = &actions[0];
                 let may_resolve = may_resolve.contains(server_id);
-                code_action_or_command_to_editor_command(cmd, sync, may_resolve)
+                let command = code_action_or_command_to_editor_command(cmd, sync, may_resolve);
+                ctx.exec_fifo(
+                    meta,
+                    response_fifo,
+                    format!("evaluate-commands -- {}", &editor_quote(&command)),
+                );
+                return;
             }
-            _ => fail + " 'multiple matching actions'",
+            _ => "lsp-code-actions: multiple matching actions",
         };
-        ctx.exec_fifo(
-            meta,
-            response_fifo,
-            format!("evaluate-commands -- {}", &editor_quote(&command)),
-        );
+        ctx.show_error_fifo(meta, response_fifo, error_message);
         return;
     }
 
@@ -321,7 +304,8 @@ fn editor_code_actions(
     #[allow(clippy::collapsible_else_if)]
     let command = if params.perform_code_action {
         if actions.is_empty() {
-            "lsp-show-error 'no actions available'".to_string()
+            ctx.show_error(meta, "no actions available");
+            return;
         } else {
             format!("lsp-perform-code-action {}\n", titles_and_commands)
         }

@@ -1,7 +1,8 @@
-use crate::thread_worker::Worker;
-use crate::types::*;
+use crate::thread_worker::{ToEditorDispatcher, Worker};
+use crate::{editor_quote, types::*};
 use crossbeam_channel::{Receiver, Sender};
 use std::borrow::Cow;
+use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -90,4 +91,56 @@ pub fn send_command_to_editor_here(session: &SessionId, response: EditorResponse
             }
         }
     }
+}
+
+pub fn exec_fifo<S>(
+    dispatcher: &ToEditorDispatcher,
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    command: S,
+) where
+    S: Into<Cow<'static, str>>,
+{
+    let command = command.into();
+    if let Some(mut response_fifo) = response_fifo {
+        let fifo = response_fifo.take().unwrap();
+        debug!(
+            dispatcher:dispatcher,
+            "To editor via fifo '{}': {}",
+            &fifo,
+            command
+        );
+        fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
+        return;
+    }
+    dispatcher.send(EditorResponse::new(meta, command));
+}
+
+pub fn show_error(
+    dispatcher: &ToEditorDispatcher,
+    meta: EditorMeta,
+    response_fifo: Option<ResponseFifo>,
+    message: impl AsRef<str>,
+) {
+    let message = message.as_ref();
+    let sync = response_fifo.is_some();
+    if meta.hook && !sync {
+        // Historically, we have not shown errors in hook contexts.
+        debug!(dispatcher:dispatcher, "{}", message);
+        return;
+    }
+    if !sync {
+        error!(dispatcher:dispatcher, "{}", message);
+    }
+    exec_fifo(
+        dispatcher,
+        meta,
+        response_fifo,
+        if sync {
+            // Allow silencing the error with 'try'.
+            format!("fail -- {}", editor_quote(message))
+        } else {
+            format!("lsp-show-error {}", editor_quote(message))
+        },
+    );
 }

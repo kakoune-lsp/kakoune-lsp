@@ -34,7 +34,7 @@ use crate::util::*;
 use clap::ArgMatches;
 use clap::{self, crate_version, Arg, ArgAction};
 use daemonize::Daemonize;
-use editor_transport::send_command_to_editor_here;
+use editor_transport::show_error;
 use itertools::Itertools;
 use libc::SIGHUP;
 use libc::SIGINT;
@@ -48,7 +48,6 @@ use sloggers::null::NullLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
-use std::borrow::Cow;
 use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
@@ -68,6 +67,7 @@ use std::sync::atomic::{
     Ordering::{AcqRel, Acquire, Relaxed},
 };
 use std::sync::Mutex;
+use thread_worker::ToEditorDispatcher;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
 static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
@@ -443,16 +443,18 @@ fn run_main() -> Result<(), ()> {
                 panic_info,
                 std::backtrace::Backtrace::capture()
             );
-            let command = format!("lsp-show-error {}", editor_quote(&message));
             let meta = LAST_CLIENT
                 .lock()
                 .unwrap()
                 .take()
                 .map(EditorMeta::for_client)
                 .unwrap_or_default();
-            let command = EditorResponse::new_without_logging(meta, Cow::Owned(command));
-            send_command_to_editor_here(&session, command);
-            error!(log:only, "{}", message);
+            show_error(
+                &ToEditorDispatcher::ThisThread(session.clone()),
+                meta,
+                None,
+                message,
+            );
             destroy_logger();
             do_cleanup();
             process::abort();
@@ -526,23 +528,24 @@ fn kakoune() -> Result<(), ()> {
     }
 }
 
-fn report_fatal_error(session: Option<&SessionId>, error_message: &str) -> () {
-    if let Some(session) = session {
-        let Ok(maybe_client) = environment_variable(Some(session), "kak_client") else {
-            return ();
-        };
-        send_command_to_editor_here(
-            session,
-            EditorResponse::new(
-                maybe_client
-                    .map(ClientId)
-                    .map(EditorMeta::for_client)
-                    .unwrap_or_default(),
-                format!("lsp-show-error {}", &editor_quote(error_message)).into(),
-            ),
-        );
-    }
-    eprintln!("{}", error_message);
+fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
+    let Some(session) = session else {
+        eprintln!("{}", message);
+        return ();
+    };
+    let Ok(maybe_client) = environment_variable(Some(session), "kak_client") else {
+        return ();
+    };
+    let meta = maybe_client
+        .map(ClientId)
+        .map(EditorMeta::for_client)
+        .unwrap_or_default();
+    show_error(
+        &ToEditorDispatcher::ThisThread(session.clone()),
+        meta,
+        None,
+        message,
+    );
     ()
 }
 

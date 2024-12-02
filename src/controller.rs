@@ -13,14 +13,14 @@ use std::{iter, mem};
 
 use crate::capabilities::{self, initialize};
 use crate::context::Context;
-use crate::editor_transport::{send_command_to_editor, ToEditor};
+use crate::editor_transport::{self, send_command_to_editor, ToEditor};
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
 use crate::progress;
 use crate::project_root::find_project_root;
 use crate::show_message::{self, MessageRequestResponse};
 use crate::text_sync::*;
-use crate::thread_worker::Worker;
+use crate::thread_worker::{ToEditorDispatcher, Worker};
 use crate::types::*;
 use crate::util::*;
 use crate::workspace::{
@@ -1009,10 +1009,7 @@ pub fn start(
                                                     editor_quote(&failure.error.message)
                                                 ),
                                             };
-                                            ctx.exec(
-                                                meta,
-                                                format!("lsp-show-error {}", editor_quote(&msg)),
-                                            );
+                                            ctx.show_error(meta, msg);
                                         }
                                     }
                                 } else {
@@ -1093,10 +1090,9 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
                     | request::CodeLensRequest::METHOD
             )
         {
-            report_error(
-                ctx.to_editor(),
-                &request.meta,
-                &format!(
+            ctx.show_error(
+                request.meta.clone(),
+                format!(
                     "language servers {} are still not initialized, parking request {}",
                     servers, &request.method
                 ),
@@ -1117,10 +1113,14 @@ fn handle_broken_editor_request(
     err: toml::de::Error,
 ) {
     let msg = format!("Failed to parse {what}: {err}");
-    error!(to_editor, "{}", msg);
     let mut meta = EditorMeta::for_client(client.clone());
     meta.hook = hook;
-    report_error(to_editor, &meta, &format!("Failed to parse {what}: {err}"));
+    editor_transport::show_error(
+        &ToEditorDispatcher::OtherThread(to_editor.clone()),
+        meta,
+        None,
+        msg,
+    );
 }
 
 /// Shut down all language servers and exit.
@@ -1184,12 +1184,8 @@ fn route_request(
         return Some(ControlFlow::Break(()));
     }
     if !meta.buffile.starts_with('/') {
-        debug!(
-            ctx.to_editor(),
-            "Unsupported scratch buffer, ignoring request from buffer '{}'", meta.buffile
-        );
         report_error_no_server_configured(
-            ctx.to_editor(),
+            ctx,
             meta,
             request_method,
             "not supported in scratch buffers",
@@ -1197,12 +1193,8 @@ fn route_request(
         return Some(ControlFlow::Continue(()));
     }
     if ctx.buffer_tombstones.contains(&meta.buffile) {
-        debug!(
-            ctx.to_editor(),
-            "Ignoring request from disabled buffer {}", &meta.buffile
-        );
         report_error_no_server_configured(
-            ctx.to_editor(),
+            ctx,
             meta,
             request_method,
             &format!(
@@ -1223,8 +1215,7 @@ fn route_request(
             .any(|server| !server.roots.is_empty())
     {
         let msg = "Error: the lsp_servers configuration does not support the roots parameter, please use root_globs or root";
-        error!(ctx.to_editor(), "{}", msg);
-        report_error(ctx.to_editor(), meta, msg);
+        ctx.show_error(mem::take(meta), msg);
         return Some(ControlFlow::Continue(()));
     }
 
@@ -1239,8 +1230,7 @@ fn route_request(
                 "language server is not configured for filetype `{}`",
                 &meta.filetype
             );
-            debug!(ctx.to_editor(), "{}", msg);
-            report_error_no_server_configured(ctx.to_editor(), meta, request_method, &msg);
+            report_error_no_server_configured(ctx, meta, request_method, &msg);
 
             return Some(ControlFlow::Continue(()));
         };
@@ -1279,8 +1269,7 @@ fn route_request(
         let language_id = &meta.language_id;
         if language_id.is_empty() {
             let msg = "the 'lsp_language_id' option is empty, cannot route request";
-            debug!(ctx.to_editor(), "{}", msg);
-            report_error_no_server_configured(ctx.to_editor(), meta, request_method, msg);
+            report_error_no_server_configured(ctx, meta, request_method, msg);
             return Some(ControlFlow::Continue(()));
         }
         let servers = server_configs(&ctx.config, meta);
@@ -1294,15 +1283,13 @@ fn route_request(
                     "".to_string()
                 }
             );
-            debug!(ctx.to_editor(), "{}", msg);
-            report_error_no_server_configured(ctx.to_editor(), meta, request_method, &msg);
+            report_error_no_server_configured(ctx, meta, request_method, &msg);
             return Some(ControlFlow::Continue(()));
         };
         for (server_name, server) in &mut meta.language_server {
             if !server.root.is_empty() && !server.root_globs.is_empty() {
                 let msg = "cannot specify both root and root_globs";
-                error!(ctx.to_editor(), "{}", msg);
-                report_error(ctx.to_editor(), meta, msg);
+                ctx.show_error(mem::take(meta), msg);
                 return Some(ControlFlow::Continue(()));
             }
             if !server.root.is_empty() {
@@ -1311,8 +1298,7 @@ fn route_request(
                         "root path for '{server_name}' is not an absolute path: {}",
                         &server.root
                     );
-                    error!(ctx.to_editor(), "{}", msg);
-                    report_error(ctx.to_editor(), meta, &msg);
+                    ctx.show_error(mem::take(meta), msg);
                     return Some(ControlFlow::Continue(()));
                 }
             } else if !server.root_globs.is_empty() {
@@ -1326,8 +1312,7 @@ fn route_request(
                 let msg = format!(
                     "missing project root path for '{server_name}', please set the root option"
                 );
-                error!(ctx.to_editor(), "{}", msg);
-                report_error(ctx.to_editor(), meta, &msg);
+                ctx.show_error(mem::take(meta), msg);
                 return Some(ControlFlow::Continue(()));
             }
         }
@@ -1396,20 +1381,15 @@ fn route_request(
             Ok(ls) => ls,
             Err(err) => {
                 ctx.server_tombstones.insert(server_command.to_string());
-                error!(
-                    ctx.to_editor(),
-                    "failed to start language server '{}', for file '{}', disabling it: {}",
-                    server_name,
-                    &meta.buffile,
-                    err,
-                );
                 if !meta.buffile.is_empty() {
                     disable_in_buffer(ctx, meta);
                 }
-                report_error(
-                    ctx.to_editor(),
-                    meta,
-                    &format!("failed to start language server: {}", err),
+                ctx.show_error(
+                    mem::take(meta),
+                    format!(
+                        "failed to start language server '{}', disabling it for this session: '{}'",
+                        server_name, err
+                    ),
                 );
                 return Some(ControlFlow::Continue(()));
             }
@@ -1437,66 +1417,45 @@ fn route_request(
 }
 
 fn report_error_no_server_configured(
-    to_editor: &ToEditor,
+    ctx: &mut Context,
     meta: &EditorMeta,
     request_method: &str,
     msg: &str,
 ) {
     if meta.sourcing {
+        debug!(ctx.to_editor(), "{}", msg);
         return;
     }
     let word_regex = meta.word_regex.as_ref();
-    let command = if let Some(multi_cmds) = match request_method {
+    let mut msg = Cow::Borrowed(msg);
+    if let Some(fallback_cmd) = match request_method {
         _ if meta.hook => None,
-        request::GotoDefinition::METHOD | request::References::METHOD => Some(formatdoc!(
-            "grep {}
-             lsp-show-error '{}. Falling back to: grep {}'",
-            editor_quote(word_regex.unwrap()),
-            editor_escape(msg),
-            editor_escape(word_regex.unwrap()),
-        )),
-        request::DocumentHighlightRequest::METHOD => Some(formatdoc!(
-            "evaluate-commands -save-regs a/^ %|
+        request::GotoDefinition::METHOD | request::References::METHOD => {
+            let word_regex = word_regex.unwrap();
+            msg = Cow::Owned(format!("{}. Falling back to: grep {}", msg, word_regex));
+            Some(format!("grep {}", editor_quote(word_regex)))
+        }
+        request::DocumentHighlightRequest::METHOD => {
+            let word_regex = word_regex.unwrap();
+            msg = Cow::Owned(format!("{msg}. Falling_back to %s{}<ret>", word_regex));
+            Some(formatdoc!(
+                "evaluate-commands -save-regs a/^ %|
                  execute-keys -save-regs '' %[\"aZ]
                  set-register / {}
                  execute-keys -save-regs '' <percent>s<ret>Z
                  execute-keys %[\"az<a-z>a]
-             |
-             lsp-show-error {}",
-            editor_quote(word_regex.unwrap()).replace('|', "||"),
-            editor_quote(&format!(
-                "{msg}. Falling_back to %s{}<ret>",
-                word_regex.unwrap()
+             |",
+                editor_quote(word_regex).replace('|', "||"),
             ))
-        )),
+        }
         _ => None,
     } {
-        format!("evaluate-commands {}", &editor_quote(&multi_cmds))
-    } else {
-        format!("lsp-show-error {}", editor_quote(msg))
-    };
-    report_error_impl(to_editor, meta, command)
-}
-
-/// Sends an error back to the editor.
-///
-/// This will cancel any blocking requests and also print an error if the
-/// request was not triggered by an editor hook.
-pub fn report_error(to_editor: &ToEditor, meta: &EditorMeta, msg: &str) {
-    report_error_impl(
-        to_editor,
-        meta,
-        format!("lsp-show-error {}", editor_quote(msg)),
-    )
-}
-
-fn report_error_impl(to_editor: &ToEditor, meta: &EditorMeta, command: String) {
-    // If the server command isn't from a hook (e.g. auto-hover),
-    // then send a prominent error to the editor.
-    if !meta.hook {
+        assert!(!meta.hook);
+        let command = format!("evaluate-commands {}", &editor_quote(&fallback_cmd));
         let response = EditorResponse::new(meta.clone(), command.into());
-        send_command_to_editor(to_editor, response);
+        send_command_to_editor(ctx.to_editor(), response);
     }
+    ctx.show_error(meta.clone(), msg);
 }
 
 pub fn dispatch_pending_editor_requests(ctx: &mut Context) {

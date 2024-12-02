@@ -1,7 +1,6 @@
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
-use crate::util::editor_escape;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
@@ -25,10 +24,7 @@ pub fn text_document_selection_range(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(ctx.to_editor(), "{}", err);
-            if !meta.hook {
-                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
-            }
+            ctx.show_error(meta, err);
             return;
         }
     };
@@ -91,10 +87,7 @@ fn editor_selection_range(
         Some(document) => document,
         None => {
             let err = format!("Missing document for {}", &meta.buffile);
-            error!(ctx.to_editor(), "{}", err);
-            if !meta.hook {
-                ctx.exec(meta, format!("lsp-show-error '{}'", &editor_escape(&err)));
-            }
+            ctx.show_error(meta, err);
             return;
         }
     };

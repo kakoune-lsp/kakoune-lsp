@@ -142,11 +142,10 @@ pub fn text_document_definition(
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DEFINITION))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
-        let cmd = format!(
-            "lsp-show-error %[no server supports {}]",
-            request::GotoDefinition::METHOD
+        ctx.show_error(
+            meta,
+            format!("no server supports {}", request::GotoDefinition::METHOD),
         );
-        ctx.exec(meta, cmd);
         return;
     }
     let req_params = eligible_servers
@@ -193,11 +192,10 @@ pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ct
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_IMPLEMENTATION))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
-        let cmd = format!(
-            "lsp-show-error %[no server supports {}]",
-            request::GotoImplementation::METHOD
+        ctx.show_error(
+            meta,
+            format!("no server supports {}", request::GotoImplementation::METHOD),
         );
-        ctx.exec(meta, cmd);
         return;
     }
     let req_params = eligible_servers
@@ -237,11 +235,10 @@ pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, c
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_TYPE_DEFINITION))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
-        let cmd = format!(
-            "lsp-show-error %[no server supports {}]",
-            request::GotoTypeDefinition::METHOD
+        ctx.show_error(
+            meta,
+            format!("no server supports {}", request::GotoTypeDefinition::METHOD),
         );
-        ctx.exec(meta, cmd);
         return;
     }
     let req_params = eligible_servers
@@ -281,11 +278,10 @@ pub fn text_document_references(meta: EditorMeta, params: PositionParams, ctx: &
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_REFERENCES))
         .collect();
     if eligible_servers.is_empty() && meta.servers.len() > 1 {
-        let cmd = format!(
-            "lsp-show-error %[no server supports {}]",
-            request::References::METHOD
+        ctx.show_error(
+            meta,
+            format!("no server supports {}", request::References::METHOD),
         );
-        ctx.exec(meta, cmd);
         return;
     }
     let req_params = eligible_servers

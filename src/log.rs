@@ -11,8 +11,8 @@ macro_rules! error {
     (session:$session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
             log_impl!(here, $session, slog::Level::Error, $fmt $(, $arg ) *)
     };
-    (log:only, $fmt:literal $(, $arg:expr )* $(,)?) => {
-        do_slog!(slog::Level::Error, $fmt $(, $arg ) *)
+    (dispatcher:$dispatcher:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
+            log_impl!(dispatcher, $dispatcher, slog::Level::Error, $fmt $(, $arg ) *)
     };
 }
 macro_rules! warn {
@@ -22,6 +22,9 @@ macro_rules! warn {
     (session:$session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
             log_impl!(here, $session, slog::Level::Warning, $fmt $(, $arg ) *)
     };
+    (dispatcher:$dispatcher:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
+            log_impl!(dispatcher, $dispatcher, slog::Level::Warning, $fmt $(, $arg ) *)
+    };
 }
 macro_rules! info {
     ($to_editor:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
@@ -30,6 +33,9 @@ macro_rules! info {
     (session:$session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
             log_impl!(here, $session, slog::Level::Info, $fmt $(, $arg ) *)
     };
+    (dispatcher:$dispatcher:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
+            log_impl!(dispatcher, $dispatcher, slog::Level::Info, $fmt $(, $arg ) *)
+    };
 }
 macro_rules! debug {
     ($to_editor:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
@@ -37,6 +43,9 @@ macro_rules! debug {
     };
     (session:$session:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
             log_impl!(here, $session, slog::Level::Debug, $fmt $(, $arg ) *)
+    };
+    (dispatcher:$dispatcher:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
+            log_impl!(dispatcher, $dispatcher, slog::Level::Debug, $fmt $(, $arg ) *)
     };
 }
 
@@ -62,6 +71,16 @@ macro_rules! log_impl {
             $level, do_slog!($level, $fmt $(, $arg ) *),
             |resp| crate::editor_transport::send_command_to_editor_here(&$session, resp),
         )
+    };
+    (dispatcher, $dispatcher:expr, $level:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
+        match &$dispatcher {
+            crate::thread_worker::ToEditorDispatcher::ThisThread(session) => {
+                log_impl!(here, session, $level, $fmt $(, $arg ) *);
+            }
+            crate::thread_worker::ToEditorDispatcher::OtherThread(to_editor) => {
+                log_impl!(to_editor, $level, $fmt $(, $arg ) *);
+            }
+        }
     };
 }
 
