@@ -145,10 +145,8 @@ pub fn resolve_and_perform_code_lens(meta: EditorMeta, params: CodeLensOptions, 
         return;
     }
 
-    let lenses = match ctx.code_lenses.get(&meta.buffile) {
-        Some(lenses) => lenses,
-        None => return,
-    };
+    let no_lenses = vec![];
+    let lenses = ctx.code_lenses.get(&meta.buffile).unwrap_or(&no_lenses);
     let mut lenses = lenses
         .iter()
         .filter(|(server_id, lens)| {
