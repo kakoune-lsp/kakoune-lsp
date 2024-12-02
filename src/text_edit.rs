@@ -807,7 +807,7 @@ mod tests {
         )];
         let result = lsp_text_edits_to_kakoune(
             &mock_to_editor(),
-            &Some("test_client".to_string()),
+            &Some(ClientId("test_client".to_string())),
             text_edits,
             &buffer,
             OffsetEncoding::Utf8,
@@ -858,7 +858,7 @@ mod tests {
         )];
         let result = lsp_text_edits_to_kakoune(
             &mock_to_editor(),
-            &Some("test_client".to_string()),
+            &Some(ClientId("test_client".to_string())),
             text_edits,
             &buffer,
             OffsetEncoding::Utf8,
