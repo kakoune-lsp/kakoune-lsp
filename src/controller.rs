@@ -1200,7 +1200,7 @@ fn route_request(
             &format!(
                 "blocked in {}, see the *debug* buffer",
                 std::env::current_dir()
-                    .map(|cwd| short_file_path(&meta.buffile, &cwd))
+                    .map(|cwd| short_file_path(&meta.buffile, cwd))
                     .unwrap_or(&meta.buffile),
             ),
         );
@@ -1293,7 +1293,7 @@ fn route_request(
                 return Some(ControlFlow::Continue(()));
             }
             if !server.root.is_empty() {
-                if !server.root.starts_with("/") {
+                if !server.root.starts_with('/') {
                     let msg = format!(
                         "root path for '{server_name}' is not an absolute path: {}",
                         &server.root

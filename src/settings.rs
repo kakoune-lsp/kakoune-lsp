@@ -68,7 +68,7 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
                 .get(&(server_name.clone(), server.root.clone()))
                 .unwrap();
             let server_config = ctx.language_servers.get_mut(server_id).unwrap();
-            server_config.settings = server.settings.clone();
+            server_config.settings.clone_from(&server.settings);
             server_config.workaround_eslint = server.workaround_eslint.unwrap_or_default();
         }
     }
