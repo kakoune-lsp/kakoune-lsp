@@ -245,7 +245,7 @@ fn apply_text_edits_to_rope<T: TextEditish<T>>(
         cursor = end_byte;
     }
 
-    for chunk in text.slice(cursor..).chunks() {
+    for chunk in text.byte_slice(cursor..).chunks() {
         output.extend_from_slice(chunk.as_bytes());
     }
     Ok(output)
@@ -619,6 +619,30 @@ mod tests {
             },
             new_text: new_text.to_string(),
         })
+    }
+
+    #[test]
+    pub fn apply_text_edits_to_rope_unicode() {
+        let text_edits = vec![
+            edit(0, 29, 0, 37, "ToEditorSender"),
+            edit(2, 36, 2, 44, "ToEditorSender"),
+        ];
+        let text = Rope::from_str(indoc!(
+            r#"use crate::editor_transport::ToEditor;
+               // §§§§
+               fn completion_menu_text(to_editor: &ToEditor, x: &CompletionItem) -> String"#
+        ));
+        let updated_text =
+            apply_text_edits_to_rope(text, text_edits, OffsetEncoding::Utf8).unwrap();
+        let updated_text = String::from_utf8_lossy(&updated_text);
+        assert_eq!(
+            updated_text,
+            indoc!(
+                r#"use crate::editor_transport::ToEditorSender;
+                   // §§§§
+                   fn completion_menu_text(to_editor: &ToEditorSender, x: &CompletionItem) -> String"#
+            )
+        );
     }
 
     #[test]
