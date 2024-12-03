@@ -150,7 +150,7 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
     let file = File::open(filename)?;
     let text = Rope::from_reader(BufReader::new(file))?;
 
-    let (temp_path, temp_file) = {
+    let (temp_path, mut temp_file) = {
         let template = format!("{}.XXXXXX", filename);
         let cstr = std::ffi::CString::new(template).unwrap();
         let ptr = cstr.into_raw();
@@ -161,70 +161,15 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
         let temp_file = unsafe { File::from_raw_fd(temp_fd) };
         (temp_path, temp_file)
     };
-    fn apply_text_edits_to_file_impl<T: TextEditish<T>>(
-        text: Rope,
-        mut temp_file: File,
-        text_edits: Vec<T>,
-        offset_encoding: OffsetEncoding,
-    ) -> Result<Vec<u8>, std::io::Error> {
-        let mut output: Vec<u8> = vec![];
-
-        let text_len_lines = text.len_lines() as u64;
-        let mut cursor = 0;
-
-        for te in text_edits {
-            let TextEdit {
-                range: Range { start, end },
-                new_text,
-            } = te.as_ref();
-
-            if start.line as u64 >= text_len_lines || end.line as u64 >= text_len_lines {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Text edit range extends past end of file.",
-                ));
-            }
-
-            let start_offset = lsp_character_to_byte_offset(
-                text.line(start.line as _),
-                start.character as _,
-                offset_encoding,
-            );
-            let end_offset = lsp_character_to_byte_offset(
-                text.line(end.line as _),
-                end.character as _,
-                offset_encoding,
-            );
-
-            if start_offset.is_none() || end_offset.is_none() {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Text edit range points past end of line.",
-                ));
-            }
-
-            let start_byte = text.line_to_byte(start.line as _) + start_offset.unwrap();
-            let end_byte = text.line_to_byte(end.line as _) + end_offset.unwrap();
-
-            for chunk in text.byte_slice(cursor..start_byte).chunks() {
-                output.extend_from_slice(chunk.as_bytes());
-            }
-
-            output.extend_from_slice(new_text.as_bytes());
-            cursor = end_byte;
-        }
-
-        for chunk in text.slice(cursor..).chunks() {
-            output.extend_from_slice(chunk.as_bytes());
-        }
-
-        temp_file.write_all(&output)?;
-
-        Ok(output)
-    }
 
     let server = ctx.server(server_id);
-    match apply_text_edits_to_file_impl(text, temp_file, text_edits, server.offset_encoding) {
+    let updated_text = apply_text_edits_to_rope(text, text_edits, server.offset_encoding).and_then(
+        |updated_text| {
+            temp_file.write_all(&updated_text)?;
+            Ok(updated_text)
+        },
+    );
+    match updated_text {
         Ok(updated_text) => {
             std::fs::rename(&temp_path, filename)?;
             unsafe {
@@ -246,6 +191,64 @@ pub fn apply_text_edits_to_file<T: TextEditish<T>>(
             Err(e)
         }
     }
+}
+
+fn apply_text_edits_to_rope<T: TextEditish<T>>(
+    text: Rope,
+    text_edits: Vec<T>,
+    offset_encoding: OffsetEncoding,
+) -> Result<Vec<u8>, std::io::Error> {
+    let mut output: Vec<u8> = vec![];
+
+    let text_len_lines = text.len_lines() as u64;
+    let mut cursor = 0;
+
+    for te in text_edits {
+        let TextEdit {
+            range: Range { start, end },
+            new_text,
+        } = te.as_ref();
+
+        if start.line as u64 >= text_len_lines || end.line as u64 >= text_len_lines {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Text edit range extends past end of file.",
+            ));
+        }
+
+        let start_offset = lsp_character_to_byte_offset(
+            text.line(start.line as _),
+            start.character as _,
+            offset_encoding,
+        );
+        let end_offset = lsp_character_to_byte_offset(
+            text.line(end.line as _),
+            end.character as _,
+            offset_encoding,
+        );
+
+        if start_offset.is_none() || end_offset.is_none() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Text edit range points past end of line.",
+            ));
+        }
+
+        let start_byte = text.line_to_byte(start.line as _) + start_offset.unwrap();
+        let end_byte = text.line_to_byte(end.line as _) + end_offset.unwrap();
+
+        for chunk in text.byte_slice(cursor..start_byte).chunks() {
+            output.extend_from_slice(chunk.as_bytes());
+        }
+
+        output.extend_from_slice(new_text.as_bytes());
+        cursor = end_byte;
+    }
+
+    for chunk in text.slice(cursor..).chunks() {
+        output.extend_from_slice(chunk.as_bytes());
+    }
+    Ok(output)
 }
 
 // Adapted from std/src/sys/unix/mod.rs.
