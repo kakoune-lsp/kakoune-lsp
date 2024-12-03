@@ -1,4 +1,4 @@
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
@@ -19,7 +19,7 @@ pub struct LanguageServerTransport {
 }
 
 pub fn start(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     server_name: ServerName,
     cmd: &str,
     args: &[String],
@@ -131,7 +131,7 @@ pub fn start(
 }
 
 fn reader_loop(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     server_name: ServerName,
     mut reader: impl BufRead,
     receiver: Receiver<Void>,
@@ -192,7 +192,7 @@ fn reader_loop(
 }
 
 fn writer_loop(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     server_name: ServerName,
     mut writer: impl Write,
     receiver: &Receiver<ServerMessage>,

@@ -1,4 +1,4 @@
-use crate::editor_transport::{self, ToEditor};
+use crate::editor_transport::{self, ToEditorSender};
 use crate::language_server_transport::LanguageServerTransport;
 use crate::text_sync::CompiledFileSystemWatcher;
 use crate::thread_worker::{ToEditorDispatcher, Worker};
@@ -88,7 +88,7 @@ pub struct Context {
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub session: SessionId,
-    pub to_editor: ToEditor,
+    pub to_editor: ToEditorSender,
     pub to_editor_dispatcher: ToEditorDispatcher,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
@@ -101,7 +101,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(session: SessionId, to_editor: ToEditor, config: Config) -> Self {
+    pub fn new(session: SessionId, to_editor: ToEditorSender, config: Config) -> Self {
         let legacy_filetypes = filetype_to_language_id_map(&config);
         #[allow(deprecated)]
         Context {
@@ -142,7 +142,7 @@ impl Context {
         &self.session
     }
 
-    pub fn to_editor(&self) -> &ToEditor {
+    pub fn to_editor(&self) -> &ToEditorSender {
         &self.to_editor
     }
 

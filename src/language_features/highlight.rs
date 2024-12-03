@@ -1,6 +1,6 @@
 use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIGHT};
 use crate::context::{Context, RequestParams};
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::position::*;
 use crate::types::{EditorMeta, KakounePosition, KakouneRange, PositionParams, ServerId};
 use crate::util::editor_quote;
@@ -106,7 +106,7 @@ fn editor_document_highlight(
 }
 
 fn select_ranges_and(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     command: String,
     ranges: Vec<KakouneRange>,
     main_cursor: KakounePosition,

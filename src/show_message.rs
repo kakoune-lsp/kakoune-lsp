@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::{
     context::Context,
-    editor_transport::ToEditor,
+    editor_transport::ToEditorSender,
     types::{EditorMeta, ServerId},
     util::editor_quote,
     LAST_CLIENT,
@@ -161,7 +161,7 @@ fn update_modeline(meta: EditorMeta, ctx: &Context) {
     );
 }
 
-fn message_type(to_editor: &ToEditor, typ: MessageType) -> Option<&'static str> {
+fn message_type(to_editor: &ToEditorSender, typ: MessageType) -> Option<&'static str> {
     Some(match typ {
         MessageType::ERROR => "lsp-show-message-error",
         MessageType::WARNING => "lsp-show-message-warning",

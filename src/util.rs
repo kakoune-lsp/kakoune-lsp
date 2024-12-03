@@ -1,4 +1,4 @@
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::types::*;
 use std::os::unix::fs::DirBuilderExt;
 use std::{collections::HashMap, path::Path};
@@ -25,7 +25,7 @@ pub fn temp_dir() -> path::PathBuf {
     path
 }
 
-pub fn mkfifo(to_editor: &ToEditor) -> String {
+pub fn mkfifo(to_editor: &ToEditorSender) -> String {
     let mut path = temp_dir();
     for attempt in 0..10 {
         path.push(format!("{:x}", rand::random::<u64>()));

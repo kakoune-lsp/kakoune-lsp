@@ -1,5 +1,5 @@
 use crate::context::*;
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
@@ -261,7 +261,7 @@ fn cvt(t: i32) -> std::io::Result<i32> {
 }
 
 pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     client: &Option<ClientId>,
     mut text_edits: Vec<T>,
     text: &Rope,
@@ -435,7 +435,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
 }
 
 pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     client: &Option<ClientId>,
     uri: Option<Url>,
     text_edits: Vec<T>,

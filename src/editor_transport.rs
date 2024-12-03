@@ -6,9 +6,9 @@ use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-pub type ToEditor = Sender<EditorResponse>;
+pub type ToEditorSender = Sender<EditorResponse>;
 
-pub fn send_command_to_editor(to_editor: &ToEditor, response: EditorResponse) {
+pub fn send_command_to_editor(to_editor: &ToEditorSender, response: EditorResponse) {
     let log = !response.suppress_logging;
     let result = to_editor.send(response);
     if log {
@@ -35,7 +35,7 @@ pub fn start(session: SessionId) -> Worker<EditorResponse, Void> {
 }
 
 #[cfg(test)]
-pub fn mock_to_editor() -> ToEditor {
+pub fn mock_to_editor() -> ToEditorSender {
     let (to_editor, _) = crossbeam_channel::unbounded::<EditorResponse>();
     to_editor
 }

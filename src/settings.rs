@@ -1,5 +1,5 @@
 use crate::context::*;
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::types::*;
 use serde_json::Value;
 
@@ -124,7 +124,7 @@ where
 }
 // Take flattened tables like "a.b=1" and produce "{"a":{"b":1}}".
 pub fn explode_str_to_str_map(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     map: &[String],
 ) -> serde_json::value::Map<String, Value> {
     let mut settings = serde_json::Map::new();

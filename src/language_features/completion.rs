@@ -1,7 +1,7 @@
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_COMPLETION;
 use crate::context::*;
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::markup::*;
 use crate::position::*;
 use crate::text_edit::apply_text_edits;
@@ -275,7 +275,7 @@ fn editor_completion(
     ctx.exec(meta, command);
 }
 
-fn completion_menu_text(to_editor: &ToEditor, x: &CompletionItem) -> String {
+fn completion_menu_text(to_editor: &ToEditorSender, x: &CompletionItem) -> String {
     // Combine the 'detail' line and the full-text documentation into
     // a single string. If both exist, separate them with a horizontal rule.
     let mut markup = String::new();

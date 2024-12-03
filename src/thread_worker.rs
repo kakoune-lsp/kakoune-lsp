@@ -8,14 +8,14 @@ use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 
 use crate::editor_transport::send_command_to_editor;
 use crate::editor_transport::send_command_to_editor_here;
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::EditorResponse;
 use crate::SessionId;
 
 #[derive(Clone)]
 pub enum ToEditorDispatcher {
     ThisThread(SessionId),
-    OtherThread(ToEditor),
+    OtherThread(ToEditorSender),
 }
 
 impl ToEditorDispatcher {
@@ -59,9 +59,9 @@ impl Drop for ScopedThread {
 
 impl ScopedThread {
     pub fn spawn(
-        to_editor: ToEditor,
+        to_editor: ToEditorSender,
         name: &'static str,
-        f: impl FnOnce(ToEditor) + Send + 'static,
+        f: impl FnOnce(ToEditorSender) + Send + 'static,
     ) -> ScopedThread {
         let to_editor_copy = to_editor.clone();
         let inner = thread::Builder::new()
@@ -105,9 +105,9 @@ pub struct Worker<I, O> {
 }
 
 impl<I, O> Worker<I, O> {
-    pub fn spawn<F>(to_editor: ToEditor, name: &'static str, buf: usize, f: F) -> Worker<I, O>
+    pub fn spawn<F>(to_editor: ToEditorSender, name: &'static str, buf: usize, f: F) -> Worker<I, O>
     where
-        F: FnOnce(ToEditor, Receiver<I>, Sender<O>) + Send + 'static,
+        F: FnOnce(ToEditorSender, Receiver<I>, Sender<O>) + Send + 'static,
         I: Send + 'static,
         O: Send + 'static,
     {

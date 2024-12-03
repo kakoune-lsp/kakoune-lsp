@@ -6,7 +6,7 @@ use std::{
 
 use crate::thread_worker::Worker;
 use crate::types::*;
-use crate::{context::*, editor_transport::ToEditor};
+use crate::{context::*, editor_transport::ToEditorSender};
 use crossbeam_channel::{Receiver, Sender};
 use jsonrpc_core::Value;
 use lsp_types::notification::*;
@@ -125,7 +125,7 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
 }
 
 pub fn spawn_file_watcher(
-    to_editor: ToEditor,
+    to_editor: ToEditorSender,
     log_path: &'static Option<PathBuf>,
     watch_requests: HashMap<(ServerId, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
 ) -> Worker<(), Vec<FileEvent>> {

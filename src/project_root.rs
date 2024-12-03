@@ -3,11 +3,11 @@ use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 
-use crate::editor_transport::ToEditor;
+use crate::editor_transport::ToEditorSender;
 use crate::types::LanguageId;
 
 pub fn find_project_root(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     language_id: &LanguageId,
     markers: &[String],
     path: &str,
@@ -27,7 +27,7 @@ pub fn find_project_root(
     }
 }
 
-fn roots_by_marker(to_editor: &ToEditor, roots: &[String], path: &str) -> String {
+fn roots_by_marker(to_editor: &ToEditorSender, roots: &[String], path: &str) -> String {
     let mut src = PathBuf::from(path);
     // For scratch buffers we get a bare filename.
     if !src.is_absolute() {
@@ -61,7 +61,7 @@ fn roots_by_marker(to_editor: &ToEditor, roots: &[String], path: &str) -> String
     src.to_str().unwrap().to_string()
 }
 
-fn gather_env_roots(to_editor: &ToEditor, language_id: &LanguageId) -> HashSet<PathBuf> {
+fn gather_env_roots(to_editor: &ToEditorSender, language_id: &LanguageId) -> HashSet<PathBuf> {
     let prefix = format!("KAK_LSP_PROJECT_ROOT_{}", language_id.to_uppercase());
     debug!(to_editor, "Searching for vars starting with {}", prefix);
     env::vars()

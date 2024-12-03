@@ -13,7 +13,7 @@ use std::{iter, mem};
 
 use crate::capabilities::{self, initialize};
 use crate::context::Context;
-use crate::editor_transport::{self, send_command_to_editor, ToEditor};
+use crate::editor_transport::{self, send_command_to_editor, ToEditorSender};
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
 use crate::progress;
@@ -45,7 +45,7 @@ use serde::Deserialize;
 use sloggers::types::Severity;
 
 struct ParserState {
-    to_editor: ToEditor,
+    to_editor: ToEditorSender,
     fifo: fs::File,
     alt_fifo: fs::File,
     poll: mio::Poll,
@@ -60,7 +60,7 @@ struct ParserState {
 }
 
 impl ParserState {
-    fn new(to_editor: ToEditor, fifo: fs::File, alt_fifo: fs::File) -> Self {
+    fn new(to_editor: ToEditorSender, fifo: fs::File, alt_fifo: fs::File) -> Self {
         let poll = mio::Poll::new().expect("failed to create poll");
         let source = fifo.as_raw_fd();
         let mut source = mio::unix::SourceFd(&source);
@@ -692,7 +692,7 @@ fn dispatch_fifo_request(
 pub fn start(
     session: SessionId,
     config: Config,
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     log_path: &'static Option<PathBuf>,
     fifo: PathBuf,
     alt_fifo: PathBuf,
@@ -1106,7 +1106,7 @@ pub fn process_editor_request(ctx: &mut Context, mut request: EditorRequest) -> 
 
 /// Tries to send an error to the client about a request that failed to parse.
 fn handle_broken_editor_request(
-    to_editor: &ToEditor,
+    to_editor: &ToEditorSender,
     client: &ClientId,
     hook: bool,
     what: &str,
