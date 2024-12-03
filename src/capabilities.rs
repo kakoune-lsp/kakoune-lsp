@@ -436,7 +436,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                     (server.preferred_offset_encoding, server.offset_encoding),
                     (Some(OffsetEncoding::Utf8), OffsetEncoding::Utf16)) {
                         warn!(
-                            to_editor,
+                            &to_editor,
                             "Requested offset encoding utf-8 is not supported by {} server, falling back to utf-16",
                             &server.name,
                         );

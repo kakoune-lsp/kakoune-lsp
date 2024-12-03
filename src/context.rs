@@ -1,7 +1,7 @@
 use crate::editor_transport::{self, ToEditorSender};
 use crate::language_server_transport::LanguageServerTransport;
 use crate::text_sync::CompiledFileSystemWatcher;
-use crate::thread_worker::{ToEditorDispatcher, Worker};
+use crate::thread_worker::Worker;
 use crate::{filetype_to_language_id_map, types::*};
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
 use lsp_types::notification::{Cancel, Notification};
@@ -57,7 +57,7 @@ pub struct ServerSettings {
 
 pub struct FileWatcher {
     pub pending_file_events: HashSet<FileEvent>,
-    pub worker: Box<Worker<(), Vec<FileEvent>>>,
+    pub worker: Box<Worker<ToEditorSender, (), Vec<FileEvent>>>,
 }
 
 pub struct Context {
@@ -89,7 +89,6 @@ pub struct Context {
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
     pub session: SessionId,
     pub to_editor: ToEditorSender,
-    pub to_editor_dispatcher: ToEditorDispatcher,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
     pub pending_file_watchers:
@@ -128,7 +127,6 @@ impl Context {
             response_waitlist: HashMap::default(),
             session,
             to_editor: to_editor.clone(),
-            to_editor_dispatcher: ToEditorDispatcher::OtherThread(to_editor),
             work_done_progress: HashMap::default(),
             work_done_progress_report_timestamp: time::Instant::now(),
             pending_file_watchers: HashMap::default(),
@@ -398,7 +396,7 @@ impl Context {
     where
         S: Into<Cow<'static, str>>,
     {
-        editor_transport::exec_fifo(&self.to_editor_dispatcher, meta, response_fifo, command);
+        editor_transport::exec_fifo(&self.to_editor, meta, response_fifo, command);
     }
 
     pub fn show_error(&mut self, meta: EditorMeta, message: impl AsRef<str>) {
@@ -411,7 +409,7 @@ impl Context {
         response_fifo: Option<ResponseFifo>,
         message: impl AsRef<str>,
     ) {
-        editor_transport::show_error(&self.to_editor_dispatcher, meta, response_fifo, message);
+        editor_transport::show_error(&self.to_editor, meta, response_fifo, message);
     }
 
     fn next_batch_id(&mut self) -> BatchNumber {

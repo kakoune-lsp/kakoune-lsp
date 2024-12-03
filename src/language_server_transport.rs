@@ -13,9 +13,9 @@ pub struct LanguageServerTransport {
     // We want to exit a writer loop first (after sending exit notification),
     // then close all pipes and wait until child process is finished.
     // That helps to ensure that reader loop is not stuck trying to read from the language server.
-    pub to_lang_server: Worker<ServerMessage, Void>,
-    pub from_lang_server: Worker<Void, ServerMessage>,
-    _errors: Worker<Void, Void>,
+    pub to_lang_server: Worker<ToEditorSender, ServerMessage, Void>,
+    pub from_lang_server: Worker<ToEditorSender, Void, ServerMessage>,
+    _errors: Worker<ToEditorSender, Void, Void>,
 }
 
 pub fn start(
@@ -81,7 +81,7 @@ pub fn start(
                         line.push(b);
                     }
                     info!(
-                        to_editor,
+                        &to_editor,
                         "Language server stderr: {}",
                         String::from_utf8_lossy(&line)
                     );
@@ -98,7 +98,7 @@ pub fn start(
             channel_capacity,
             move |to_editor, receiver, sender| {
                 if let Err(msg) = reader_loop(&to_editor, server_name, reader, receiver, &sender) {
-                    error!(to_editor, "{}", msg);
+                    error!(&to_editor, "{}", msg);
                 }
             },
         )
@@ -112,11 +112,11 @@ pub fn start(
             channel_capacity,
             move |to_editor, receiver, _| {
                 if writer_loop(&to_editor, server_name, writer, &receiver).is_err() {
-                    error!(to_editor, "Failed to write message to language server");
+                    error!(&to_editor, "Failed to write message to language server");
                 }
                 let exit_code = child.wait().unwrap();
                 debug!(
-                    to_editor,
+                    &to_editor,
                     "Language server exited with status: {}", exit_code
                 );
             },

@@ -300,7 +300,7 @@ impl Default for EditorRequest {
 pub struct EditorResponse {
     pub meta: EditorMeta,
     pub command: Cow<'static, str>,
-    // Set for the commands used to transport a log statement.
+    // Set for the commands needed to transport a log statement, to stop recursion.
     pub suppress_logging: bool,
 }
 
@@ -312,13 +312,10 @@ impl EditorResponse {
             suppress_logging: false,
         }
     }
-    pub fn new_without_logging(meta: EditorMeta, command: Cow<'static, str>) -> Self {
-        Self {
-            meta,
-            command,
-            suppress_logging: true,
-        }
-    }
+}
+
+pub trait ToEditor {
+    fn dispatch(&self, response: EditorResponse);
 }
 
 /// Kakoune session ID.

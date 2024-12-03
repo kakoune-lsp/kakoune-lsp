@@ -67,7 +67,6 @@ use std::sync::atomic::{
     Ordering::{AcqRel, Acquire, Relaxed},
 };
 use std::sync::Mutex;
-use thread_worker::ToEditorDispatcher;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
 static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
@@ -449,12 +448,7 @@ fn run_main() -> Result<(), ()> {
                 .take()
                 .map(EditorMeta::for_client)
                 .unwrap_or_default();
-            show_error(
-                &ToEditorDispatcher::ThisThread(session.clone()),
-                meta,
-                None,
-                message,
-            );
+            show_error(&session, meta, None, message);
             destroy_logger();
             do_cleanup();
             process::abort();
@@ -540,12 +534,7 @@ fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
         .map(ClientId)
         .map(EditorMeta::for_client)
         .unwrap_or_default();
-    show_error(
-        &ToEditorDispatcher::ThisThread(session.clone()),
-        meta,
-        None,
-        message,
-    );
+    show_error(session, meta, None, message);
     ()
 }
 

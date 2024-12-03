@@ -13,14 +13,14 @@ use std::{iter, mem};
 
 use crate::capabilities::{self, initialize};
 use crate::context::Context;
-use crate::editor_transport::{self, send_command_to_editor, ToEditorSender};
+use crate::editor_transport::{self, ToEditorSender};
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
 use crate::progress;
 use crate::project_root::find_project_root;
 use crate::show_message::{self, MessageRequestResponse};
 use crate::text_sync::*;
-use crate::thread_worker::{ToEditorDispatcher, Worker};
+use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::*;
 use crate::workspace::{
@@ -116,7 +116,7 @@ fn read_token(state: &mut ParserState) {
             let n = blocking_read(state);
             state.input.truncate(n);
             debug!(
-                state.to_editor,
+                &state.to_editor,
                 "From editor (raw): {{{}}}",
                 &String::from_utf8_lossy(&state.input)
             );
@@ -322,7 +322,7 @@ impl ParserState {
         let result = String::from_utf8_lossy(&self.buffer_input).to_string();
         self.buffer_input.clear();
         debug!(
-            self.to_editor,
+            &self.to_editor,
             "Buffer contents from editor: {{{}}}", &result
         );
         result
@@ -497,7 +497,7 @@ fn dispatch_fifo_request(
             } else {
                 Severity::Info
             });
-            debug!(state.to_editor, "Applied option change {}", hook_param);
+            debug!(&state.to_editor, "Applied option change {}", hook_param);
             return ControlFlow::Continue(());
         }
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
@@ -724,7 +724,7 @@ pub fn start(
                     let done = dispatch_fifo_request(&mut state, &from_editor).is_break();
                     if state.debug {
                         debug!(
-                            state.to_editor,
+                            &state.to_editor,
                             "From editor: {{{}}}",
                             &state.debug_output[1..]
                         );
@@ -1037,9 +1037,9 @@ pub fn start(
             // If there's an existing watcher, ask nicely to terminate.
             let to_editor = ctx.to_editor().clone();
             if let Some(ref fw) = ctx.file_watcher.as_mut() {
-                debug!(to_editor, "stopping stale file watcher");
+                debug!(&to_editor, "stopping stale file watcher");
                 if let Err(err) = fw.worker.sender().send(()) {
-                    error!(to_editor, "{}", err);
+                    error!(&to_editor, "{}", err);
                 }
             }
             ctx.file_watcher = Some(FileWatcher {
@@ -1115,12 +1115,7 @@ fn handle_broken_editor_request(
     let msg = format!("Failed to parse {what}: {err}");
     let mut meta = EditorMeta::for_client(client.clone());
     meta.hook = hook;
-    editor_transport::show_error(
-        &ToEditorDispatcher::OtherThread(to_editor.clone()),
-        meta,
-        None,
-        msg,
-    );
+    editor_transport::show_error(to_editor, meta, None, msg);
 }
 
 /// Shut down all language servers and exit.
@@ -1353,10 +1348,7 @@ fn route_request(
                 "evaluate-commands -buffer {} lsp-block-in-buffer",
                 editor_quote(&meta.buffile),
             );
-            send_command_to_editor(
-                ctx.to_editor(),
-                EditorResponse::new(meta.clone(), Cow::from(command)),
-            );
+            ctx.exec(meta.clone(), command);
         }
 
         // should be fine to unwrap because request was already routed which means language is configured
@@ -1452,8 +1444,7 @@ fn report_error_no_server_configured(
     } {
         assert!(!meta.hook);
         let command = format!("evaluate-commands {}", &editor_quote(&fallback_cmd));
-        let response = EditorResponse::new(meta.clone(), command.into());
-        send_command_to_editor(ctx.to_editor(), response);
+        ctx.exec(meta.clone(), command);
     }
     ctx.show_error(meta.clone(), msg);
 }

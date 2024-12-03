@@ -128,8 +128,8 @@ pub fn spawn_file_watcher(
     to_editor: ToEditorSender,
     log_path: &'static Option<PathBuf>,
     watch_requests: HashMap<(ServerId, String, Option<PathBuf>), Vec<CompiledFileSystemWatcher>>,
-) -> Worker<(), Vec<FileEvent>> {
-    debug!(to_editor, "starting file watcher");
+) -> Worker<ToEditorSender, (), Vec<FileEvent>> {
+    debug!(&to_editor, "starting file watcher");
     Worker::spawn(
         to_editor,
         "File system change watcher",
@@ -156,13 +156,13 @@ pub fn spawn_file_watcher(
                                 }
                                 if !file_changes.is_empty() {
                                     if let Err(err) = sender.send(file_changes) {
-                                        error!(to_editor, "{}", err);
+                                        error!(&to_editor, "{}", err);
                                     }
                                 }
                             }
                             Err(errors) => {
                                 for e in errors {
-                                    error!(to_editor, "{}", e)
+                                    error!(&to_editor, "{}", e)
                                 }
                             }
                         };
@@ -172,19 +172,19 @@ pub fn spawn_file_watcher(
                 let mut debouncer = match new_debouncer(Duration::from_secs(1), None, callback) {
                     Ok(debouncer) => debouncer,
                     Err(err) => {
-                        error!(to_editor, "{}", err);
+                        error!(&to_editor, "{}", err);
                         return;
                     }
                 };
 
                 let path = path.as_deref().unwrap_or_else(|| Path::new(&root_path));
                 if let Err(err) = debouncer.watcher().watch(path, RecursiveMode::Recursive) {
-                    error!(to_editor, "{:?}: {}", path, err);
+                    error!(&to_editor, "{:?}: {}", path, err);
                 }
                 debouncers.push(debouncer);
             }
             if let Err(err) = receiver.recv() {
-                error!(to_editor, "{}", err);
+                error!(&to_editor, "{}", err);
             }
         },
     )
