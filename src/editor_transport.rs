@@ -102,6 +102,7 @@ pub fn exec_fifo<S>(
     meta: EditorMeta,
     response_fifo: Option<ResponseFifo>,
     command: S,
+    suppress_logging: bool,
 ) where
     S: Into<Cow<'static, str>>,
 {
@@ -112,7 +113,9 @@ pub fn exec_fifo<S>(
         fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
         return;
     }
-    to_editor.dispatch(EditorResponse::new(meta, command));
+    let mut response = EditorResponse::new(meta, command);
+    response.suppress_logging = suppress_logging;
+    to_editor.dispatch(response);
 }
 
 pub fn show_error(
@@ -141,5 +144,6 @@ pub fn show_error(
         } else {
             format!("lsp-show-error {}", editor_quote(message))
         },
+        true,
     );
 }
