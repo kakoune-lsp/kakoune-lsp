@@ -28,7 +28,10 @@ pub fn escape_kakoune_markup(s: &str) -> String {
 }
 
 /// Transpile Markdown into Kakoune's markup syntax using faces for highlighting
-pub fn markdown_to_kakoune_markup<S: AsRef<str>>(to_editor: &ToEditorSender, markdown: S) -> String {
+pub fn markdown_to_kakoune_markup<S: AsRef<str>>(
+    to_editor: &ToEditorSender,
+    markdown: S,
+) -> String {
     let markdown = markdown.as_ref();
     let parser = Parser::new(markdown);
     let mut markup = String::with_capacity(markdown.len());
@@ -240,7 +243,10 @@ pub fn markdown_to_kakoune_markup<S: AsRef<str>>(to_editor: &ToEditorSender, mar
 }
 
 /// Transpile the contents of an `lsp_types::MarkedString` into Kakoune markup
-pub fn marked_string_to_kakoune_markup(to_editor: &ToEditorSender, contents: MarkedString) -> String {
+pub fn marked_string_to_kakoune_markup(
+    to_editor: &ToEditorSender,
+    contents: MarkedString,
+) -> String {
     match contents {
         MarkedString::String(s) => markdown_to_kakoune_markup(to_editor, s),
         MarkedString::LanguageString(s) => {
