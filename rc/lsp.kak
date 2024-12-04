@@ -1571,7 +1571,7 @@ define-command lsp-workspace-symbol-incr -docstring "Open buffer with an increme
         evaluate-commands -try-client %opt[toolsclient] %{
             lsp-show-goto-buffer *symbols* lsp-goto %{} %{}
             set-option buffer lsp_servers %reg{s}
-            set-option buffer lsp_language_id %reg{s}
+            set-option buffer lsp_language_id %reg{i}
             lsp-unblock-in-buffer
             prompt -on-change %{ try %{
                 # lsp-show-workspace-symbol triggers on-change somehow which causes inifinite loop
