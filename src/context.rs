@@ -24,6 +24,8 @@ pub struct Document {
     // Buffer content.
     // It's used to translate between LSP and Kakoune coordinates.
     pub text: ropey::Rope,
+
+    pub opened_in_servers: HashSet<ServerId>,
 }
 
 /// Groups parameters for each request.
@@ -396,7 +398,7 @@ impl Context {
     where
         S: Into<Cow<'static, str>>,
     {
-        editor_transport::exec_fifo(&self.to_editor, meta, response_fifo, command);
+        editor_transport::exec_fifo(&self.to_editor, meta, response_fifo, command, false);
     }
 
     pub fn show_error(&mut self, meta: EditorMeta, message: impl AsRef<str>) {

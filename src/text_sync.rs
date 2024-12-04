@@ -28,15 +28,20 @@ pub fn text_document_did_open(
     let document = Document {
         version: meta.version,
         text: Rope::from_str(&params.draft),
+        opened_in_servers: meta.servers.iter().copied().collect(),
     };
     ctx.documents.insert(meta.buffile.clone(), document);
 
+    text_document_did_open_assume_cached(meta, params.draft, ctx);
+}
+
+pub fn text_document_did_open_assume_cached(meta: EditorMeta, draft: String, ctx: &mut Context) {
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
             uri: Url::from_file_path(&meta.buffile).unwrap(),
             language_id: meta.language_id.clone(),
             version: meta.version,
-            text: params.draft,
+            text: draft,
         },
     };
     for &server_id in &meta.servers {
@@ -59,13 +64,12 @@ pub fn text_document_did_change(
     if old_version >= version {
         return;
     }
-    let document = Document {
-        version,
-        text: Rope::from_str(&params.draft),
-    };
 
-    // Resets metadata for buffer.
-    ctx.documents.insert(meta.buffile.clone(), document);
+    let document = ctx.documents.get_mut(&meta.buffile).unwrap();
+    document.version = version;
+    document.text = Rope::from_str(&params.draft);
+
+    // Reset metadata for buffer.
     ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
 
     let req_params = DidChangeTextDocumentParams {

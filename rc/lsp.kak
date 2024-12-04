@@ -507,6 +507,7 @@ hook -group lsp-hooks global GlobalSetOption lsp_auto_show_code_actions=false %{
 declare-option -hidden str lsp_fifo
 declare-option -hidden str lsp_alt_fifo
 declare-option -hidden -docstring 'PID file for kak-lsp server' str lsp_pid_file
+declare-option -hidden str lsp_ensure_did_open nop
 
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
@@ -527,6 +528,18 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
             sleep .010
         done
     }
+    evaluate-commands -buffer * %{
+        try %{
+            "lsp-nop-with-0%opt{lsp_unless_blocked}"
+            %opt{lsp_fail_if_disabled}
+            set-option buffer lsp_ensure_did_open %{
+                unset-option buffer lsp_ensure_did_open
+                lsp-did-change-config
+                lsp-did-open
+            }
+        }
+    }
+    evaluate-commands %opt{lsp_ensure_did_open}
 }
 
 define-command -hidden lsp-send -params 1.. %{
@@ -542,7 +555,7 @@ define-command -hidden lsp-if-running -params 1 %{
 
 define-command -hidden lsp-do-send -params 1.. %{
     %opt{lsp_fail_if_disabled} "lsp-send: run lsp-enable or lsp-enable-window first"
-    evaluate-commands -save-regs abhpst %{
+    evaluate-commands -save-regs abhpst %opt{lsp_ensure_did_open} ';' %{
         set-register p
         try %{
             evaluate-commands "nop %%file{%opt{lsp_pid_file}}"
@@ -1141,8 +1154,6 @@ define-command -hidden lsp-exit -params 0..1 -docstring %{
 define-command lsp-restart -docstring "Restart kak-lsp and language servers" %{
     lsp-exit
     lsp-start
-    lsp-did-change-config
-    lsp-did-open
     echo -markup {Information}Restarted LSP servers
 }
 
@@ -1774,7 +1785,6 @@ define-command lsp-enable -docstring "Default LSP integration" %{
         lsp-did-open
         hook -group lsp buffer BufSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
     }
-    lsp-did-change-config
 }
 
 define-command lsp-disable -docstring "Disable LSP" %{
@@ -1782,6 +1792,7 @@ define-command lsp-disable -docstring "Disable LSP" %{
         remove-hooks buffer lsp
         lsp-unblock-in-buffer
         unset-option buffer lsp_modeline_code_actions
+        unset-option buffer lsp_ensure_did_open
     }
     set-option global lsp_modeline_progress ""
     set-option global lsp_modeline_message_requests ""

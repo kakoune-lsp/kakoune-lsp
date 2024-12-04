@@ -3,6 +3,7 @@
 Fixes:
 - Fixed a regression from 18.0.0 that caused crashes when a `*-sync` request was used before `lsp-enable`.
 - Fixed a regression from 14.1.0 that caused `lsp-rename` to corrupt files containing multibyte characters.
+- Fixed a crash after a server restart when visiting files that don't exist on disk.
 
 ## 18.1.0 - 2024-11-23
 
