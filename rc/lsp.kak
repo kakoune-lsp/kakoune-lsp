@@ -603,9 +603,16 @@ define-command -hidden lsp-do-send-async %{
 define-command -hidden lsp-do-send-sync %{
     unset-option buffer lsp_do_send_maybe_sync
     evaluate-commands %sh{
+        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        pipe=${tmp}/fifo
+        if ! mkfifo ${pipe}; then
+            echo 'fail failed to create fifo'
+            exit
+        fi
+        trap "rm -f ${pipe}; rmdir ${tmp} 2>/dev/null" EXIT INT QUIT
         printf >${kak_opt_lsp_fifo} "%s '%s' " \
-            "${kak_quoted_reg_a}" "${kak_response_fifo}"
-        cat ${kak_response_fifo}
+            "${kak_quoted_reg_a}" "${pipe}"
+        cat ${pipe}
     }
 }
 

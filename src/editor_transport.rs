@@ -2,7 +2,6 @@ use crate::thread_worker::Worker;
 use crate::{editor_quote, types::*};
 use crossbeam_channel::{Receiver, Sender};
 use std::borrow::Cow;
-use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -108,9 +107,8 @@ pub fn exec_fifo<S>(
 {
     let command = command.into();
     if let Some(mut response_fifo) = response_fifo {
-        let fifo = response_fifo.take().unwrap();
-        debug!(to_editor, "To editor via fifo '{}': {}", &fifo, command);
-        fs::write(fifo, command.as_bytes()).expect("Failed to write command to fifo");
+        debug!(to_editor, "To editor via fifo: {}", command);
+        response_fifo.write(&command);
         return;
     }
     let mut response = EditorResponse::new(meta, command);

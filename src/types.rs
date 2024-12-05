@@ -1,4 +1,5 @@
 use jsonrpc_core::{Call, Output, Params};
+use libc::{ENXIO, O_NONBLOCK};
 use lsp_types::{
     CodeActionKind, DiagnosticSeverity, FormattingOptions, Position, SemanticTokenModifier,
 };
@@ -9,9 +10,11 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::fs;
-use std::io::Error;
+use std::io::{Error, Write};
 use std::ops::Deref;
+use std::os::unix::fs::OpenOptionsExt;
+use std::time::Duration;
+use std::{fs, io};
 
 pub enum Void {}
 
@@ -262,17 +265,37 @@ impl ResponseFifo {
     pub fn new(fifo: String) -> Self {
         Self(Some(fifo))
     }
-    pub fn take(&mut self) -> Option<String> {
-        self.0.take()
+    pub fn write(&mut self, command: &str) {
+        let fifo = self.0.take().unwrap();
+        let mut opts = fs::OpenOptions::new();
+        opts.write(true).custom_flags(O_NONBLOCK);
+        loop {
+            match opts.open(&fifo) {
+                Ok(mut file) => {
+                    file.write_all(command.as_bytes())
+                        .expect("Failed to write command to fifo");
+                    break;
+                }
+                Err(err) => {
+                    if err.raw_os_error() == Some(ENXIO) {
+                        std::thread::sleep(Duration::from_millis(1));
+                    } else if err.kind() == io::ErrorKind::NotFound {
+                        break;
+                    } else {
+                        panic!("Failed to open fifo '{}': {}", &fifo, err);
+                    }
+                }
+            }
+        }
     }
 }
 
 impl Drop for ResponseFifo {
     fn drop(&mut self) {
-        if let Some(fifo) = self.take() {
+        if self.0.is_some() {
             // Nothing to do, but sending command back to the editor is required to handle case
             // when editor is blocked waiting for response via fifo.
-            let _ = fs::write(fifo, b"nop");
+            self.write("nop");
         }
     }
 }
