@@ -24,8 +24,6 @@ pub struct Document {
     // Buffer content.
     // It's used to translate between LSP and Kakoune coordinates.
     pub text: ropey::Rope,
-
-    pub opened_in_servers: HashSet<ServerId>,
 }
 
 /// Groups parameters for each request.

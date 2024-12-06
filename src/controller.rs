@@ -1932,34 +1932,13 @@ fn dispatch_server_notification(
 /// most of the time in `if buffile.is_empty() || ctx.documents.contains_key(buffile)` condition.
 fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
     let buffile = &request.meta.buffile;
-    if buffile.is_empty() {
+    if buffile.is_empty() || ctx.documents.contains_key(buffile) {
         return;
-    }
+    };
     if !buffile.starts_with('/') {
         assert_eq!(&request.method, notification::Exit::METHOD);
         return;
     }
-    let document = ctx.documents.get_mut(buffile);
-    if document.is_none() && request.method == notification::DidChangeConfiguration::METHOD {
-        return;
-    }
-    let document = document.unwrap();
-    let unaware_servers: Vec<ServerId> = request
-        .meta
-        .servers
-        .iter()
-        .filter(|server_id| !document.opened_in_servers.contains(server_id))
-        .copied()
-        .collect();
-    if unaware_servers.is_empty() {
-        return;
-    }
-    document
-        .opened_in_servers
-        .extend(unaware_servers.iter().copied());
-    let mut meta = request.meta.clone();
-    meta.servers = unaware_servers;
-
     if request.method == notification::DidChangeTextDocument::METHOD {
         let params: &TextDocumentDidChangeParams = request.params.downcast_ref();
         text_document_did_open(
@@ -1971,5 +1950,17 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
         );
         return;
     }
-    text_document_did_open_assume_cached(meta, document.text.to_string(), ctx);
+    match read_document(buffile) {
+        Ok(draft) => {
+            text_document_did_open(
+                request.meta.clone(),
+                TextDocumentDidOpenParams { draft },
+                ctx,
+            );
+        }
+        Err(err) => debug!(
+            ctx.to_editor(),
+            "Failed to read file {} to simulate textDocument/didOpen: {}", buffile, err
+        ),
+    };
 }
