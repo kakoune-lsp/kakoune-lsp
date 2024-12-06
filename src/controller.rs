@@ -44,16 +44,48 @@ use lsp_types::*;
 use serde::Deserialize;
 use sloggers::types::Severity;
 
+struct Fifo {
+    file: fs::File,
+    poll: mio::Poll,
+    events: mio::Events,
+}
+
+impl Fifo {
+    fn new(file: fs::File) -> Self {
+        let source = file.as_raw_fd();
+        let mut source = mio::unix::SourceFd(&source);
+        let poll = mio::Poll::new().expect("failed to create poll");
+        poll.registry()
+            .register(&mut source, mio::Token(0), mio::Interest::READABLE)
+            .unwrap();
+        let events = mio::Events::with_capacity(1024);
+        Self { file, poll, events }
+    }
+    fn wait_until_readable(&mut self) {
+        loop {
+            if let Err(err) = self.poll.poll(&mut self.events, None) {
+                if err.kind() == io::ErrorKind::Interrupted {
+                    continue;
+                }
+                panic!("poll error: {}", err);
+            }
+            let readable = self.events.iter().any(|evt| evt.is_readable());
+            self.events.clear();
+            if readable {
+                break;
+            }
+        }
+    }
+}
+
 struct ParserState {
     to_editor: ToEditorSender,
-    fifo: fs::File,
-    alt_fifo: fs::File,
-    poll: mio::Poll,
-    poll_both: mio::Poll,
-    events: mio::Events,
+    fifo: Fifo,
+    alt_fifo: Fifo,
     input: Vec<u8>,
     input_offset: usize,
     buffer_input: Vec<u8>,
+    buffer_input_lines: usize,
     output: Vec<u8>,
     debug: bool,
     debug_output: String,
@@ -61,33 +93,14 @@ struct ParserState {
 
 impl ParserState {
     fn new(to_editor: ToEditorSender, fifo: fs::File, alt_fifo: fs::File) -> Self {
-        let poll = mio::Poll::new().expect("failed to create poll");
-        let source = fifo.as_raw_fd();
-        let mut source = mio::unix::SourceFd(&source);
-        let alt_source = alt_fifo.as_raw_fd();
-        let mut alt_source = mio::unix::SourceFd(&alt_source);
-        poll.registry()
-            .register(&mut source, mio::Token(0), mio::Interest::READABLE)
-            .unwrap();
-        let poll_both = mio::Poll::new().expect("failed to create poll");
-        poll_both
-            .registry()
-            .register(&mut source, mio::Token(0), mio::Interest::READABLE)
-            .unwrap();
-        poll_both
-            .registry()
-            .register(&mut alt_source, mio::Token(1), mio::Interest::READABLE)
-            .unwrap();
         ParserState {
             to_editor,
-            fifo,
-            alt_fifo,
-            poll,
-            poll_both,
-            events: mio::Events::with_capacity(1024),
+            fifo: Fifo::new(fifo),
+            alt_fifo: Fifo::new(alt_fifo),
             input: vec![],
             input_offset: 0,
             buffer_input: vec![],
+            buffer_input_lines: 0,
             output: vec![],
             debug: false,
             debug_output: String::new(),
@@ -153,7 +166,7 @@ fn read_token(state: &mut ParserState) {
 fn blocking_read(state: &mut ParserState) -> usize {
     state.input.clear();
     state.input.resize(4096, 0_u8);
-    let n = match state.fifo.read(&mut state.input) {
+    let n = match state.fifo.file.read(&mut state.input) {
         Ok(n) => n,
         Err(err) => {
             if err.kind() == io::ErrorKind::WouldBlock {
@@ -167,20 +180,8 @@ fn blocking_read(state: &mut ParserState) -> usize {
     if n != 0 {
         return n;
     }
-    loop {
-        if let Err(err) = state.poll.poll(&mut state.events, None) {
-            if err.kind() == io::ErrorKind::Interrupted {
-                continue;
-            }
-            panic!("poll error: {}", err);
-        }
-        let readable = state.events.iter().any(|evt| evt.is_readable());
-        state.events.clear();
-        if readable {
-            break;
-        }
-    }
-    match state.fifo.read(&mut state.input) {
+    state.fifo.wait_until_readable();
+    match state.fifo.file.read(&mut state.input) {
         Ok(n) => n,
         Err(err) => {
             panic!("read error: {}", err);
@@ -283,44 +284,36 @@ impl ParserState {
     }
 
     pub fn buffer_contents(&mut self) -> String {
-        let mut seen_stop_marker = false;
-        loop {
-            let (read_alt_fifo, read_fifo) = if seen_stop_marker {
-                (true, false)
-            } else {
-                loop {
-                    if let Err(err) = self.poll_both.poll(&mut self.events, None) {
-                        if err.kind() == io::ErrorKind::Interrupted {
-                            continue;
-                        }
-                        panic!("poll error: {}", err);
-                    }
-                    break;
+        let buf_line_count: usize = self.next();
+        let mut offset = self.buffer_input.len();
+        let count_lines = |s: &[u8]| s.iter().filter(|&&c| c == b'\n').count();
+        while self.buffer_input_lines < buf_line_count {
+            self.alt_fifo.wait_until_readable();
+            if let Err(err) = self.alt_fifo.file.read_to_end(&mut self.buffer_input) {
+                if err.kind() != io::ErrorKind::WouldBlock {
+                    panic!("error reading buffer contents: {}", err);
                 }
-                let mut readables = self.events.iter().filter(|evt| evt.is_readable());
-                (
-                    readables.clone().any(|evt| evt.token() == mio::Token(1)),
-                    readables.any(|evt| evt.token() == mio::Token(0)),
-                )
-            };
-            if read_alt_fifo {
-                if let Err(err) = self.alt_fifo.read_to_end(&mut self.buffer_input) {
-                    if err.kind() != io::ErrorKind::WouldBlock {
-                        panic!("error reading buffer contents: {}", err);
-                    }
-                }
-                if seen_stop_marker {
-                    break;
-                }
+                continue;
             }
-            if read_fifo {
-                let stop_marker = self.next::<String>();
-                assert!(stop_marker == "stop");
-                seen_stop_marker = true;
-            }
+            self.buffer_input_lines += count_lines(&self.buffer_input[offset..]);
+            offset = self.buffer_input.len();
         }
-        let result = String::from_utf8_lossy(&self.buffer_input).to_string();
-        self.buffer_input.clear();
+        let excess_newlines = self.buffer_input_lines - buf_line_count;
+        let last_newline_offset = self
+            .buffer_input
+            .iter()
+            .enumerate()
+            .rev()
+            .filter(|(_i, &c)| c == b'\n')
+            .skip(excess_newlines)
+            .map(|(i, _c)| i)
+            .next()
+            .unwrap();
+        let mut tmp = self.buffer_input.split_off(last_newline_offset + 1);
+        mem::swap(&mut tmp, &mut self.buffer_input);
+        self.buffer_input_lines -= buf_line_count;
+        assert!(self.buffer_input_lines == count_lines(&self.buffer_input));
+        let result = String::from_utf8_lossy(&tmp).to_string();
         debug!(
             &self.to_editor,
             "Buffer contents from editor: {{{}}}", &result

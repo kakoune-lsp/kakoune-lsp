@@ -689,9 +689,8 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 }
 
 define-command -hidden lsp-send-buffer -params 1 %{
-    lsp-send %arg{1}
+    lsp-send %arg{1} %val{buf_line_count}
     evaluate-commands -no-hooks %{ write -force %opt{lsp_alt_fifo} }
-    echo -to-file %opt{lsp_fifo} "'stop' "
 }
 
 define-command -hidden lsp-did-change -docstring "Notify language server about buffer change" %{
