@@ -528,7 +528,17 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
             sleep .010
         done
     }
-    evaluate-commands -buffer * lsp-ensure-did-open
+    evaluate-commands -buffer * %{
+        try %{
+            "lsp-nop-with-0%opt{lsp_unless_blocked}"
+            %opt{lsp_fail_if_disabled}
+            set-option buffer lsp_ensure_did_open %{
+                unset-option buffer lsp_ensure_did_open
+                lsp-did-change-config
+                lsp-did-open
+            }
+        }
+    }
     evaluate-commands %opt{lsp_ensure_did_open}
 }
 
@@ -1113,18 +1123,6 @@ define-command -hidden lsp-workspace-symbol-buffer -params 3 -docstring %{
 
 define-command lsp-capabilities -docstring "List available commands for current filetype" %{
     lsp-send capabilities
-}
-
-define-command -hidden lsp-ensure-did-open %{
-    try %{
-        "lsp-nop-with-0%opt{lsp_unless_blocked}"
-        %opt{lsp_fail_if_disabled}
-        set-option buffer lsp_ensure_did_open %{
-            unset-option buffer lsp_ensure_did_open
-            lsp-did-change-config
-            lsp-did-open
-        }
-    }
 }
 
 define-command -hidden lsp-did-open %{
@@ -1789,9 +1787,8 @@ define-command lsp-enable -docstring "Default LSP integration" %{
     hook -group lsp global BufClose .* lsp-did-close
     # lsp-enable is expected to not be called from autoload, so this hook should run after most
     # filetype detection hooks.
-    hook -group lsp -always global BufCreate .* %{
-        lsp-ensure-did-open
-        evaluate-commands %opt{lsp_ensure_did_open}
+    hook -group lsp global BufCreate .* %{
+        lsp-did-open
         hook -group lsp buffer BufSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
     }
 }
@@ -1814,8 +1811,8 @@ define-command lsp-enable-window -docstring "Default LSP integration in the wind
     lsp-enable-impl window
     hook -group lsp window WinClose .* lsp-did-close
     hook -group lsp window WinSetOption (?:lsp_servers|lsp_config|lsp_server_configuration)=.* lsp-did-change-config
-    lsp-ensure-did-open
-    evaluate-commands %opt{lsp_ensure_did_open}
+    lsp-did-open
+    lsp-did-change-config
 }
 
 define-command lsp-disable-window -docstring "Disable LSP in the window scope" %{
