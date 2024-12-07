@@ -479,17 +479,21 @@ fn dispatch_fifo_request(
         }),
         "kakoune/did-change-option" => {
             let hook_param = state.next::<String>();
-            let debug = match hook_param.as_str() {
-                "lsp_debug=true" => true,
-                "lsp_debug=false" => false,
-                _ => panic!("invalid request"),
+            let Some((key, value)) = hook_param.split_once('=') else {
+                panic!("invalid request");
             };
-            DEBUG.store(debug, Relaxed);
-            set_logger(if debug {
-                Severity::Debug
-            } else {
-                Severity::Info
-            });
+            match key {
+                "lsp_debug" => {
+                    let debug = bool::from_str(value).unwrap();
+                    DEBUG.store(debug, Relaxed);
+                    set_logger(if debug {
+                        Severity::Debug
+                    } else {
+                        Severity::Info
+                    });
+                }
+                _ => panic!("unknown key: {}", key),
+            }
             debug!(&state.to_editor, "Applied option change {}", hook_param);
             return ControlFlow::Continue(());
         }
