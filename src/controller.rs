@@ -4,6 +4,7 @@ use std::fs::{self};
 use std::io::{self, Read};
 use std::ops::ControlFlow;
 use std::os::fd::AsRawFd;
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -78,15 +79,92 @@ impl Fifo {
     }
 }
 
+pub trait Tokenizer {
+    fn state(&self) -> &TokenizerState;
+    fn state_mut(&mut self) -> &mut TokenizerState;
+    fn at_end(&mut self);
+
+    fn read_token(&mut self) -> String {
+        let mut escaped = false;
+        let mut quoted = false;
+        let mut offset = self.state().input_offset;
+        loop {
+            if offset == self.state().input.len() {
+                self.at_end();
+                offset = 0;
+            }
+            let done =
+                tokenizer_take_byte(self.state_mut(), offset, &mut escaped, &mut quoted).is_break();
+            offset += 1;
+            if done {
+                break;
+            }
+        }
+        self.state_mut().input_offset = offset;
+        let token = String::from_utf8_lossy(&self.state().output).to_string();
+        self.state_mut().output.clear();
+        token
+    }
+}
+
+fn tokenizer_take_byte(
+    tokenizer: &mut TokenizerState,
+    offset: usize,
+    escaped: &mut bool,
+    quoted: &mut bool,
+) -> ControlFlow<()> {
+    let c = tokenizer.input[offset];
+    if *escaped {
+        tokenizer.output.push(c);
+        *escaped = false;
+    } else if *quoted {
+        if c == b'\'' {
+            *quoted = false;
+        } else {
+            tokenizer.output.push(c);
+        }
+    } else {
+        match c {
+            b' ' => return ControlFlow::Break(()),
+            b'\'' => *quoted = true,
+            b'\\' => *escaped = true,
+            _ => {
+                panic!(
+                    "expected quote, backslash or space at offset {offset}, saw '{}'",
+                    char::from(c)
+                )
+            }
+        }
+    }
+    ControlFlow::Continue(())
+}
+
+#[derive(Default)]
+pub struct TokenizerState {
+    pub input: Vec<u8>,
+    pub input_offset: usize,
+    pub output: Vec<u8>,
+}
+
+impl Tokenizer for TokenizerState {
+    fn state(&self) -> &TokenizerState {
+        self
+    }
+    fn state_mut(&mut self) -> &mut TokenizerState {
+        self
+    }
+    fn at_end(&mut self) {
+        panic!();
+    }
+}
+
 struct ParserState {
     to_editor: ToEditorSender,
     fifo: Fifo,
     alt_fifo: Fifo,
-    input: Vec<u8>,
-    input_offset: usize,
+    tokenizer: TokenizerState,
     buffer_input: Vec<u8>,
     buffer_input_lines: usize,
-    output: Vec<u8>,
     debug: bool,
     debug_output: String,
 }
@@ -97,21 +175,35 @@ impl ParserState {
             to_editor,
             fifo: Fifo::new(fifo),
             alt_fifo: Fifo::new(alt_fifo),
-            input: vec![],
-            input_offset: 0,
+            tokenizer: Default::default(),
             buffer_input: vec![],
             buffer_input_lines: 0,
-            output: vec![],
             debug: false,
             debug_output: String::new(),
         }
     }
 }
 
+impl Tokenizer for ParserState {
+    fn state(&self) -> &TokenizerState {
+        &self.tokenizer
+    }
+    fn state_mut(&mut self) -> &mut TokenizerState {
+        &mut self.tokenizer
+    }
+    fn at_end(&mut self) {
+        let n = blocking_read(self);
+        self.tokenizer.input.truncate(n);
+        debug!(
+            &self.to_editor,
+            "From editor (raw): {{{}}}",
+            &String::from_utf8_lossy(&self.tokenizer.input)
+        );
+    }
+}
+
 fn next_string(state: &mut ParserState) -> String {
-    read_token(state);
-    let token = String::from_utf8_lossy(&state.output).to_string();
-    state.output.clear();
+    let token = state.read_token();
     if state.debug {
         state.debug_output.push_str(" {");
         state.debug_output.push_str(&token);
@@ -120,53 +212,10 @@ fn next_string(state: &mut ParserState) -> String {
     token
 }
 
-fn read_token(state: &mut ParserState) {
-    let mut escaped = false;
-    let mut quoted = false;
-    let mut offset = state.input_offset;
-    loop {
-        if offset == state.input.len() {
-            let n = blocking_read(state);
-            state.input.truncate(n);
-            debug!(
-                &state.to_editor,
-                "From editor (raw): {{{}}}",
-                &String::from_utf8_lossy(&state.input)
-            );
-            offset = 0;
-        }
-        let c = state.input[offset];
-        offset += 1;
-        if escaped {
-            state.output.push(c);
-            escaped = false;
-        } else if quoted {
-            if c == b'\'' {
-                quoted = false;
-            } else {
-                state.output.push(c);
-            }
-        } else {
-            match c {
-                b' ' => break,
-                b'\'' => quoted = true,
-                b'\\' => escaped = true,
-                _ => {
-                    panic!(
-                        "expected quote, backslash or space at offset {offset}, saw '{}'",
-                        char::from(c)
-                    )
-                }
-            }
-        }
-    }
-    state.input_offset = offset;
-}
-
 fn blocking_read(state: &mut ParserState) -> usize {
-    state.input.clear();
-    state.input.resize(4096, 0_u8);
-    let n = match state.fifo.file.read(&mut state.input) {
+    state.tokenizer.input.clear();
+    state.tokenizer.input.resize(4096, 0_u8);
+    let n = match state.fifo.file.read(&mut state.tokenizer.input) {
         Ok(n) => n,
         Err(err) => {
             if err.kind() == io::ErrorKind::WouldBlock {
@@ -181,7 +230,7 @@ fn blocking_read(state: &mut ParserState) -> usize {
         return n;
     }
     state.fifo.wait_until_readable();
-    match state.fifo.file.read(&mut state.input) {
+    match state.fifo.file.read(&mut state.tokenizer.input) {
         Ok(n) => n,
         Err(err) => {
             panic!("read error: {}", err);

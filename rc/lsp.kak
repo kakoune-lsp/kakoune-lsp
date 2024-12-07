@@ -436,6 +436,7 @@ declare-option -hidden line-specs lsp_inlay_code_lenses
 declare-option -hidden line-specs lsp_code_lenses 0 '0| '
 declare-option -hidden str lsp_project_root
 declare-option -hidden str lsp_buffile
+declare-option -hidden str lsp_crash_report_email
 
 declare-option -hidden str lsp_modeline_breadcrumbs ""
 declare-option -hidden str lsp_modeline_code_actions

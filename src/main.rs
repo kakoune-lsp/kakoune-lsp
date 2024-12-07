@@ -33,8 +33,12 @@ use crate::types::*;
 use crate::util::*;
 use clap::ArgMatches;
 use clap::{self, crate_version, Arg, ArgAction};
+use controller::Tokenizer;
+use controller::TokenizerState;
 use daemonize::Daemonize;
+use editor_transport::exec_fifo;
 use editor_transport::show_error;
+use indoc::formatdoc;
 use itertools::Itertools;
 use libc::SIGHUP;
 use libc::SIGINT;
@@ -43,6 +47,7 @@ use libc::SIGQUIT;
 use libc::SIGTERM;
 use libc::STDOUT_FILENO;
 use log::DEBUG;
+use sentry::integrations::panic::PanicIntegration;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::null::NullLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
@@ -54,10 +59,12 @@ use std::ffi::CString;
 use std::fs;
 use std::io;
 use std::io::stdout;
+use std::io::Read;
 use std::io::Write;
 use std::mem;
 use std::os::unix::ffi::OsStrExt;
 use std::panic;
+use std::panic::PanicInfo;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process;
@@ -429,6 +436,10 @@ fn run_main() -> Result<(), ()> {
     let _restore_hook = ScopeEnd::new(move || panic::set_hook(old_hook));
     {
         let session = session.clone();
+        let sentry_guard = Mutex::new(Some(sentry::init(("https://4150385475481d83c026ddff07957dcf@o4508427288313856.ingest.de.sentry.io/4508427290607696", sentry::ClientOptions {
+                  release: sentry::release_name!(),
+                  ..Default::default()
+                }))));
         panic::set_hook(Box::new(move |panic_info| {
             static PANICKING: AtomicBool = AtomicBool::new(false);
             if PANICKING
@@ -438,7 +449,8 @@ fn run_main() -> Result<(), ()> {
                 process::abort();
             }
             let message = formatdoc!(
-                "kak-lsp crashed, please report a bug. See the *debug* buffer for more info.
+                "kak-lsp crashed, please report an issue or send this crash report.
+                 See the *debug* buffer for more info.
 
                  {}
                  {}",
@@ -451,9 +463,16 @@ fn run_main() -> Result<(), ()> {
                 .take()
                 .map(EditorMeta::for_client)
                 .unwrap_or_default();
-            show_error(&session, meta, None, message);
-            destroy_logger();
+            show_error(&session, meta.clone(), None, message);
             do_cleanup();
+            report_crash(
+                &session,
+                sentry_guard.lock().unwrap().take().unwrap(),
+                meta,
+                panic_info,
+            );
+
+            destroy_logger();
             process::abort();
         }));
     }
@@ -539,6 +558,93 @@ fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
         .unwrap_or_default();
     show_error(session, meta, None, message);
     ()
+}
+
+pub fn report_crash(
+    session: &SessionId,
+    _sentry_guard: sentry::ClientInitGuard,
+    meta: EditorMeta,
+    panic_info: &PanicInfo,
+) {
+    let fifo = mkfifo(session);
+    let command = formatdoc!(
+        r#"evaluate-commands %[
+               define-command -override lsp-dont-report %[
+                   echo -markup '{{Information}}Did not send crash report'
+                   echo -to-file {fifo}
+               ]
+               prompt \
+                   'Send crash report? [yes/no]: ' \
+                   -on-abort lsp-dont-report \
+               %[
+                   try %[
+                       evaluate-commands %sh[ [ "$kak_text" = yes ] && echo fail ]
+                       lsp-dont-report
+                   ] catch %[
+                       prompt 'optional email address, name or username: ' \
+                           -on-abort lsp-dont-report \
+                       %[
+                           set-option buffer lsp_crash_report_email %val[text]
+                           prompt 'optional other info such as steps to reproduce: ' \
+                               -on-abort lsp-dont-report %[
+                               echo -to-file {fifo} -quoting shell \
+                                   %opt[lsp_crash_report_email] %val[text]
+                           ]
+                       ]
+                   ]
+               ]
+           ]"#,
+    );
+    exec_fifo(session, meta.clone(), None, command, false);
+    let mut details = vec![];
+    fs::File::open(fifo)
+        .unwrap()
+        .read_to_end(&mut details)
+        .unwrap();
+    if details.is_empty() {
+        return;
+    }
+    let mut tokenizer = TokenizerState {
+        input: details,
+        ..Default::default()
+    };
+    tokenizer.input.push(b' ');
+    let email = tokenizer.read_token();
+    let message = tokenizer.read_token();
+    let event_id = sentry::with_integration(|integration: &PanicIntegration, hub| {
+        let mut event = integration.event_from_panic_info(panic_info);
+        let event_id = event.event_id;
+        exec_fifo(
+            session,
+            meta.clone(),
+            None,
+            format!(
+                "echo -markup '{{Information}}Sending crash report with ID {}'",
+                event_id
+            ),
+            false,
+        );
+        event.message = Some(message);
+        event.user = Some(sentry::User {
+            email: Some(email),
+            ..Default::default()
+        });
+        hub.capture_event(event);
+        if let Some(client) = hub.client() {
+            client.flush(None);
+        }
+        event_id
+    });
+    exec_fifo(
+        session,
+        meta,
+        None,
+        format!(
+            "echo -markup '{{Information}}Sent crash report with ID {}'",
+            event_id
+        ),
+        false,
+    );
 }
 
 fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Result<Config, ()> {
