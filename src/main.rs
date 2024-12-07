@@ -437,8 +437,11 @@ fn run_main() -> Result<(), ()> {
             {
                 process::abort();
             }
-            let message = format!(
-                "kak-lsp crashed, please report a bug. Find more details in the *debug* buffer.\n{}\n{}",
+            let message = formatdoc!(
+                "kak-lsp crashed, please report a bug. See the *debug* buffer for more info.
+
+                 {}
+                 {}",
                 panic_info,
                 std::backtrace::Backtrace::capture()
             );
