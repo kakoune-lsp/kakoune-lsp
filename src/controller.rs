@@ -2003,17 +2003,17 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
         );
         return;
     }
-    match read_document(buffile) {
-        Ok(draft) => {
-            text_document_did_open(
-                request.meta.clone(),
-                TextDocumentDidOpenParams { draft },
-                ctx,
-            );
-        }
-        Err(err) => debug!(
-            ctx.to_editor(),
-            "Failed to read file {} to simulate textDocument/didOpen: {}", buffile, err
-        ),
-    };
+    let draft = read_document(buffile)
+        .map_err(|err| {
+            debug!(
+                ctx.to_editor(),
+                "Failed to read file {} to simulate textDocument/didOpen: {}", buffile, err
+            )
+        })
+        .unwrap_or_default();
+    text_document_did_open(
+        request.meta.clone(),
+        TextDocumentDidOpenParams { draft },
+        ctx,
+    );
 }
