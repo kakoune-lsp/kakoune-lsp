@@ -69,6 +69,7 @@ hook -group lsp-filetype-css global BufSetOption filetype=(?:css|less|scss) %{
         less.format.enable = true
         less.validate = true
     }
+    # set-option buffer lsp_servers %opt{lsp_server_biome}
 }
 
 hook -group lsp-filetype-d global BufSetOption filetype=(?:d|di) %{
@@ -149,6 +150,11 @@ hook -group lsp-filetype-go global BufSetOption filetype=go %{
     }
 }
 
+hook -group lsp-filetype-graphql global BufSetOption filetype=graphql %{
+    set-option buffer lsp_servers %opt{lsp_server_biome}
+
+}
+
 hook -group lsp-filetype-haskell global BufSetOption filetype=haskell %{
     set-option buffer lsp_servers %{
         [haskell-language-server]
@@ -222,11 +228,7 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     #     enable = true
     #     lint = true
     # }
-    # set-option buffer lsp_servers %{
-    #     [biome]
-    #     root_globs = ["biome.json", "package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
-    #     args = ["lsp-proxy"]
-    # }
+    # set-option buffer lsp_servers %opt{lsp_server_biome}
     # set-option buffer lsp_servers %{
     #     [eslint-language-server]
     #     root_globs = [".eslintrc", ".eslintrc.json"]
@@ -628,6 +630,13 @@ hook -group lsp-filetype-zig global BufSetOption filetype=zig %{
         root_globs = ["build.zig"]
     }
 }
+
+declare-option -hidden str lsp_server_biome %{
+    [biome]
+    root_globs = ["biome.json", "package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+    args = ["lsp-proxy"]
+}
+
 
 }
 
