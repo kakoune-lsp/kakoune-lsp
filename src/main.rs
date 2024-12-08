@@ -53,6 +53,7 @@ use sloggers::null::NullLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
+use std::backtrace::Backtrace;
 use std::cell::OnceCell;
 use std::env;
 use std::ffi::CString;
@@ -448,6 +449,7 @@ fn run_main() -> Result<(), ()> {
             {
                 process::abort();
             }
+            let backtrace = Backtrace::capture();
             let message = formatdoc!(
                 "kak-lsp crashed, please report an issue or send this crash report.
                  See the *debug* buffer for more info.
@@ -455,7 +457,7 @@ fn run_main() -> Result<(), ()> {
                  {}
                  {}",
                 panic_info,
-                std::backtrace::Backtrace::capture()
+                backtrace
             );
             let meta = LAST_CLIENT
                 .lock()
@@ -470,6 +472,7 @@ fn run_main() -> Result<(), ()> {
                 sentry_guard.lock().unwrap().take().unwrap(),
                 meta,
                 panic_info,
+                backtrace,
             );
 
             destroy_logger();
@@ -565,6 +568,7 @@ pub fn report_crash(
     _sentry_guard: sentry::ClientInitGuard,
     meta: EditorMeta,
     panic_info: &PanicInfo,
+    backtrace: Backtrace,
 ) {
     let fifo = mkfifo(session);
     let command = formatdoc!(
@@ -624,7 +628,7 @@ pub fn report_crash(
             ),
             false,
         );
-        event.message = Some(message);
+        event.message = Some(format!("{}\n\n{}\n{}", message, panic_info, backtrace));
         event.user = Some(sentry::User {
             email: Some(email),
             ..Default::default()
