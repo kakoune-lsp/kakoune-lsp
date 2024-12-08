@@ -578,7 +578,7 @@ pub fn report_crash(
                    echo -to-file {fifo}
                ]
                prompt \
-                   'Send crash report? [yes/no]: ' \
+                   'kak-lsp crashed. Send crash report? [yes/no]: ' \
                    -on-abort lsp-dont-report \
                %[
                    try %[
