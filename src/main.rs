@@ -74,6 +74,7 @@ use std::sync::atomic::{
     AtomicBool,
     Ordering::{AcqRel, Acquire, Relaxed},
 };
+use std::sync::Arc;
 use std::sync::Mutex;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
@@ -437,10 +438,6 @@ fn run_main() -> Result<(), ()> {
     let _restore_hook = ScopeEnd::new(move || panic::set_hook(old_hook));
     {
         let session = session.clone();
-        let sentry_guard = Mutex::new(Some(sentry::init(("https://4150385475481d83c026ddff07957dcf@o4508427288313856.ingest.de.sentry.io/4508427290607696", sentry::ClientOptions {
-                  release: sentry::release_name!(),
-                  ..Default::default()
-                }))));
         panic::set_hook(Box::new(move |panic_info| {
             static PANICKING: AtomicBool = AtomicBool::new(false);
             if PANICKING
@@ -467,13 +464,7 @@ fn run_main() -> Result<(), ()> {
                 .unwrap_or_default();
             show_error(&session, meta.clone(), None, message);
             do_cleanup();
-            report_crash(
-                &session,
-                sentry_guard.lock().unwrap().take().unwrap(),
-                meta,
-                panic_info,
-                backtrace,
-            );
+            report_crash(&session, meta, panic_info, backtrace);
 
             destroy_logger();
             process::abort();
@@ -565,7 +556,6 @@ fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
 
 pub fn report_crash(
     session: &SessionId,
-    _sentry_guard: sentry::ClientInitGuard,
     meta: EditorMeta,
     panic_info: &PanicInfo,
     backtrace: Backtrace,
@@ -615,29 +605,39 @@ pub fn report_crash(
     tokenizer.input.push(b' ');
     let email = tokenizer.read_token();
     let message = tokenizer.read_token();
-    let event_id = sentry::with_integration(|integration: &PanicIntegration, hub| {
-        let mut event = integration.event_from_panic_info(panic_info);
-        let event_id = event.event_id;
-        exec_fifo(
-            session,
-            meta.clone(),
-            None,
-            format!(
-                "echo -markup '{{Information}}Sending crash report with ID {}'",
-                event_id
-            ),
-            false,
-        );
-        event.message = Some(format!("{}\n\n{}\n{}", message, panic_info, backtrace));
-        event.user = Some(sentry::User {
-            email: Some(email),
-            ..Default::default()
-        });
+    let _sentry = sentry::init(("https://4150385475481d83c026ddff07957dcf@o4508427288313856.ingest.de.sentry.io/4508427290607696", sentry::ClientOptions {
+          release: sentry::release_name!(),
+          default_integrations: false,
+          integrations: vec![
+                Arc::new(sentry::integrations::backtrace::AttachStacktraceIntegration),
+                Arc::new(sentry::integrations::debug_images::DebugImagesIntegration::default()),
+                Arc::new(sentry::integrations::contexts::ContextIntegration::default()),
+                Arc::new(sentry::integrations::backtrace::ProcessStacktraceIntegration),
+            ],
+          ..Default::default()
+        }));
+    let mut event = PanicIntegration::new().event_from_panic_info(panic_info);
+    let event_id = event.event_id;
+    exec_fifo(
+        session,
+        meta.clone(),
+        None,
+        format!(
+            "echo -markup '{{Information}}Sending crash report with ID {}'",
+            event_id
+        ),
+        false,
+    );
+    event.message = Some(format!("{}\n\n{}\n{}", message, panic_info, backtrace));
+    event.user = Some(sentry::User {
+        email: Some(email),
+        ..Default::default()
+    });
+    sentry::Hub::with_active(|hub| {
         hub.capture_event(event);
         if let Some(client) = hub.client() {
             client.flush(None);
         }
-        event_id
     });
     exec_fifo(
         session,
