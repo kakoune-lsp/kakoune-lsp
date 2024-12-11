@@ -17,9 +17,9 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v1.3.0
+    - uses: Swatinem/rust-cache@v2.7.3
 
     - name: Build kakoune-lsp
       run: cargo test --no-run --locked --release
@@ -43,15 +43,15 @@ jobs:
           # Oldest supported release
           - 'v2022.10.31'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v1.3.0
+    - uses: Swatinem/rust-cache@v2.7.3
 
     - name: Build kakoune-lsp
       run: cargo build --locked --release
 
     - name: Fetch Kakoune
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: 'mawww/kakoune'
         ref: ${{ matrix.kakoune_version }}
@@ -78,7 +78,7 @@ jobs:
 
     - name: Cache Kakoune
       id: cache-kakoune
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         key: ${{ runner.os }}-kakoune-${{ steps.kakoune-commit-id.outputs.id }}
         path: |
