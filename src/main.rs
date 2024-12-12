@@ -448,7 +448,8 @@ fn run_main() -> Result<(), ()> {
             }
             let backtrace = Backtrace::capture();
             let message = formatdoc!(
-                "kak-lsp crashed, please report an issue or send this crash report.
+                "kak-lsp crashed; disabling hooks for this buffer.
+                 Please report an issue or send this crash report.
                  See the *debug* buffer for more info.
 
                  {}
@@ -563,6 +564,7 @@ pub fn report_crash(
     let fifo = mkfifo(session);
     let command = formatdoc!(
         r#"evaluate-commands %[
+               lsp-block-in-buffer
                define-command -override lsp-dont-report %[
                    echo -markup '{{Information}}Did not send crash report'
                    echo -to-file {fifo}
