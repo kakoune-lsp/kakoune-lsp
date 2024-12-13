@@ -416,6 +416,9 @@ fn dispatch_fifo_request(
         Ok(st) => st,
         Err(err) => return parse_error("%opt{lsp_semantic_tokens}", err),
     };
+    if !client.is_empty() {
+        *LAST_CLIENT.lock().unwrap() = Some(client.clone());
+    }
     #[allow(deprecated)]
     let mut meta = EditorMeta {
         session,
@@ -1603,9 +1606,6 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
     let meta = request.meta;
     let response_fifo = request.response_fifo;
     let params = request.params;
-    if let Some(client) = &meta.client {
-        *LAST_CLIENT.lock().unwrap() = Some(client.clone());
-    }
     match method {
         notification::DidOpenTextDocument::METHOD => {
             text_document_did_open(meta, params.unbox(), ctx);
