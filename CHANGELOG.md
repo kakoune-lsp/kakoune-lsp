@@ -1,6 +1,7 @@
 ## Unreleased
 
 Fixes:
+- Fixed a regression from 18.1.0 that caused crashes with some legacy configurations.
 - Fixed a regression from 18.0.0 that caused crashes when a `*-sync` request was used before `lsp-enable`.
 - Fixed a regression from 18.0.0 that caused wrong buffer contents to be sent due to a race condition.
 - Fixed a regression from 14.1.0 that caused `lsp-rename` to corrupt files containing multibyte characters.

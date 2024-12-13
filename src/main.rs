@@ -681,6 +681,12 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Result<Con
                         ),
                         language.clone(),
                     );
+                    for filetype in &language.filetypes {
+                        if filetype != language_id {
+                            cfg.language_ids
+                                .insert(filetype.clone(), language_id.clone());
+                        }
+                    }
                 }
             }
             Ok(cfg)
