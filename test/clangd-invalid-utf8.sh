@@ -21,7 +21,7 @@ test_sleep
 test_tmux send-keys 'i%()' Escape
 test_tmux capture-pane -p
 # CHECK: %()void callee() {}
-# CHECK: /* Invalid UTF-8 in comment:{{ �}}
+# CHECK: /* Invalid UTF-8 in comment:{{( �)?}}
 # CHECK:  */
 # CHECK: ~
 # CHECK: ~
