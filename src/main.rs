@@ -602,8 +602,8 @@ pub fn report_crash(
     let mut tokenizer = Tokenizer::default();
     *tokenizer.input.lock() = details;
     tokenizer.input.lock().push(b' ');
-    let email = tokenizer.read_token(|_, _| panic!());
-    let message = tokenizer.read_token(|_, _| panic!());
+    let email = tokenizer.read_token(|_, _| panic!()).unwrap();
+    let message = tokenizer.read_token(|_, _| panic!()).unwrap();
     let _sentry = sentry::init(("https://4150385475481d83c026ddff07957dcf@o4508427288313856.ingest.de.sentry.io/4508427290607696", sentry::ClientOptions {
           release: sentry::release_name!(),
           default_integrations: false,

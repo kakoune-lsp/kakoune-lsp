@@ -2,9 +2,9 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self};
 use std::io::{self, Read};
+use std::mem;
 use std::ops::ControlFlow;
 use std::os::fd::AsRawFd;
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -12,7 +12,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::Duration;
-use std::{iter, mem};
 
 use crate::capabilities::{self, initialize};
 use crate::context::Context;
@@ -76,8 +75,8 @@ impl Tokenizer {
     }
     pub fn read_token<'a, 'b: 'a>(
         &'b mut self,
-        mut at_end: impl FnMut(MutexGuard<'a, Vec<u8>>, &Condvar) -> MutexGuard<'a, Vec<u8>>,
-    ) -> String {
+        mut at_end: impl FnMut(MutexGuard<'a, Vec<u8>>, &Condvar) -> Option<MutexGuard<'a, Vec<u8>>>,
+    ) -> Option<String> {
         let mut input = self.input.lock();
         let mut escaped = false;
         let mut quoted = false;
@@ -85,7 +84,7 @@ impl Tokenizer {
         loop {
             if offset == input.len() {
                 input.clear();
-                input = (at_end)(input, &self.input.notifier);
+                input = (at_end)(input, &self.input.notifier)?;
                 offset = 0;
             }
             let c = input[offset];
@@ -99,7 +98,7 @@ impl Tokenizer {
         self.input_offset = offset;
         let token = String::from_utf8_lossy(&self.output).to_string();
         self.output.clear();
-        token
+        Some(token)
     }
 }
 
@@ -136,6 +135,7 @@ fn tokenizer_take_byte(
 }
 
 struct ParserState {
+    force_exit: Arc<AtomicBool>,
     to_editor: ToEditorSender,
     tokenizer: Tokenizer,
     text_buffer: SharedBuffer,
@@ -145,11 +145,13 @@ struct ParserState {
 
 impl ParserState {
     fn new(
+        force_exit: Arc<AtomicBool>,
         to_editor: ToEditorSender,
         command_buffer: SharedBuffer,
         text_buffer: SharedBuffer,
     ) -> Self {
         ParserState {
+            force_exit,
             to_editor,
             tokenizer: Tokenizer::new(command_buffer),
             text_buffer,
@@ -159,21 +161,29 @@ impl ParserState {
     }
 }
 
-fn at_end<'a>(buffer: MutexGuard<'a, Vec<u8>>, notifier: &Condvar) -> MutexGuard<'a, Vec<u8>> {
+fn at_end<'a>(
+    force_exit: &AtomicBool,
+    buffer: MutexGuard<'a, Vec<u8>>,
+    notifier: &Condvar,
+) -> Option<MutexGuard<'a, Vec<u8>>> {
     let offset = buffer.len();
-    notifier
-        .wait_while(buffer, |buffer| buffer.len() == offset)
-        .unwrap()
+    let buffer = notifier
+        .wait_while(buffer, |buffer| {
+            !force_exit.load(Relaxed) && buffer.len() == offset
+        })
+        .unwrap();
+    (!force_exit.load(Relaxed)).then_some(buffer)
 }
 
-fn next_string(state: &mut ParserState) -> String {
-    let token = state.tokenizer.read_token(at_end);
+fn next_string(state: &mut ParserState) -> Option<String> {
+    let (tokenizer, force_exit) = (&mut state.tokenizer, &state.force_exit);
+    let token = tokenizer.read_token(|buffer, notifier| at_end(force_exit, buffer, notifier))?;
     if state.debug {
         state.debug_output.push_str(" {");
         state.debug_output.push_str(&token);
         state.debug_output.push('}');
     }
-    token
+    Some(token)
 }
 
 trait FromString: Sized {
@@ -227,57 +237,71 @@ impl UseFromStr for u32 {}
 impl UseFromStr for isize {}
 impl UseFromStr for usize {}
 
-trait Deserializable {
-    fn deserialize(state: &mut ParserState) -> Self;
+trait Deserializable: Sized {
+    fn deserialize(state: &mut ParserState) -> Option<Self>;
 }
 impl<T: FromString> Deserializable for T
 where
     <T as FromString>::Err: std::fmt::Debug,
 {
-    fn deserialize(state: &mut ParserState) -> Self {
-        T::from_string(next_string(state)).unwrap()
+    fn deserialize(state: &mut ParserState) -> Option<Self> {
+        Some(T::from_string(next_string(state)?).unwrap())
     }
 }
 impl Deserializable for KakounePosition {
-    fn deserialize(state: &mut ParserState) -> Self {
-        KakounePosition {
-            line: state.next(),
-            column: state.next(),
-        }
+    fn deserialize(state: &mut ParserState) -> Option<Self> {
+        Some(KakounePosition {
+            line: state.next()?,
+            column: state.next()?,
+        })
     }
 }
 impl Deserializable for FormattingOptions {
-    fn deserialize(state: &mut ParserState) -> Self {
-        FormattingOptions {
-            tab_size: state.next(),
-            insert_spaces: state.next(),
+    fn deserialize(state: &mut ParserState) -> Option<Self> {
+        Some(FormattingOptions {
+            tab_size: state.next()?,
+            insert_spaces: state.next()?,
             properties: HashMap::new(),
             trim_trailing_whitespace: None,
             insert_final_newline: None,
             trim_final_newlines: None,
-        }
+        })
     }
 }
 
 impl ParserState {
-    pub fn next<T: Deserializable>(&mut self) -> T {
+    pub fn next<T: Deserializable>(&mut self) -> Option<T> {
         T::deserialize(self)
     }
 
-    pub fn next_vec<T: Deserializable>(&mut self, n: usize) -> Vec<T> {
-        iter::from_fn(|| Some(T::deserialize(self)))
-            .take(n)
-            .collect()
+    pub fn next_vec<T: Deserializable>(&mut self, n: usize) -> Option<Vec<T>> {
+        let mut result = vec![];
+        for _i in 0..n {
+            result.push(T::deserialize(self)?);
+        }
+        Some(result)
     }
 
-    pub fn text_of_buffer(&mut self) -> String {
-        let buf_line_count: usize = self.next();
+    pub fn next_map(&mut self) -> Option<Vec<String>> {
+        let mut result = vec![];
+        loop {
+            let s = self.next()?;
+            if s == "map-end" {
+                break;
+            }
+            result.push(s);
+        }
+        Some(result)
+    }
+
+    pub fn text_of_buffer(&mut self) -> Option<String> {
+        let buf_line_count: usize = self.next()?;
         let mut text_buffer = self.text_buffer.lock();
         let count_lines = |s: &[u8]| s.iter().filter(|&&c| c == b'\n').count();
         let mut available_lines = count_lines(&text_buffer);
         let mut offset = text_buffer.len();
         while available_lines < buf_line_count {
-            text_buffer = at_end(text_buffer, &self.text_buffer.notifier);
+            text_buffer = at_end(&self.force_exit, text_buffer, &self.text_buffer.notifier)?;
             available_lines += count_lines(&text_buffer[offset..]);
             offset = text_buffer.len();
         }
@@ -298,35 +322,31 @@ impl ParserState {
             &self.to_editor,
             "Buffer contents from editor: {{{}}}", &result
         );
-        result
+        Some(result)
     }
 }
 
+// Returns none on normal or forced exit.
 fn dispatch_fifo_request(
     state: &mut ParserState,
     from_editor: &Sender<EditorRequest>,
-) -> ControlFlow<()> {
-    let session = SessionId(state.next());
-    if session.as_str() == "$exit" {
-        return ControlFlow::Break(());
-    }
-    let client = ClientId(state.next());
-    let hook = state.next();
-    let sourcing = state.next();
-    let buffile = state.next();
-    let version = state.next();
-    let filetype = state.next();
-    let language_id = state.next();
-    let lsp_servers: String = state.next();
-    let lsp_semantic_tokens: String = state.next();
-    let lsp_config: String = state.next();
-    let lsp_server_initialization_options: Vec<String> = iter::from_fn(|| state.next())
-        .take_while(|s| s != "map-end")
-        .collect();
+) -> Option<()> {
+    let session = SessionId(state.next()?);
+    let client = ClientId(state.next()?);
+    let hook = state.next()?;
+    let sourcing = state.next()?;
+    let buffile = state.next()?;
+    let version = state.next()?;
+    let filetype = state.next()?;
+    let language_id = state.next()?;
+    let lsp_servers: String = state.next()?;
+    let lsp_semantic_tokens: String = state.next()?;
+    let lsp_config: String = state.next()?;
+    let lsp_server_initialization_options: Vec<String> = state.next_map()?;
 
     let parse_error = |what, err| {
         handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
-        ControlFlow::Continue(())
+        Some(())
     };
 
     let language_server: toml::Value = match toml::from_str(&lsp_servers) {
@@ -371,97 +391,100 @@ fn dispatch_fifo_request(
 
     let mut response_fifo = None;
 
-    let mut sync_trailer = |state: &mut ParserState, is_sync: bool| {
+    let mut sync_trailer = |state: &mut ParserState, is_sync: bool| -> Option<()> {
         if is_sync {
-            response_fifo = Some(ResponseFifo::new(state.next()));
+            response_fifo = Some(ResponseFifo::new(state.next()?));
         }
+        Some(())
     };
 
-    let method: String = state.next();
+    let method: String = state.next()?;
     let params = EditorParams(match method.as_str() {
         "$ccls/call" => Box::new(EditorCallParams {
-            position: state.next(),
-            callee: state.next(),
+            position: state.next()?,
+            callee: state.next()?,
         }),
         "$ccls/inheritance" => Box::new(EditorInheritanceParams {
-            position: state.next(),
-            levels: state.next(),
-            derived: state.next(),
+            position: state.next()?,
+            levels: state.next()?,
+            derived: state.next()?,
         }),
         "$ccls/member" => Box::new(EditorMemberParams {
-            position: state.next(),
-            kind: state.next(),
+            position: state.next()?,
+            kind: state.next()?,
         }),
         "$ccls/navigate" => Box::new(EditorNavigateParams {
-            position: state.next(),
-            direction: state.next(),
+            position: state.next()?,
+            direction: state.next()?,
         }),
         "$ccls/vars" => Box::new(PositionParams {
-            position: state.next(),
+            position: state.next()?,
         }),
         "apply-workspace-edit" => {
-            let is_sync = state.next::<String>() == "is-sync";
-            let params = Box::new(EditorApplyEdit { edit: state.next() });
-            sync_trailer(state, is_sync);
+            let is_sync = state.next::<String>()? == "is-sync";
+            let params = Box::new(EditorApplyEdit {
+                edit: state.next()?,
+            });
+            sync_trailer(state, is_sync)?;
             params
         }
         "capabilities" => Box::new(()),
         "codeAction/resolve" => Box::new(CodeActionResolveParams {
-            code_action: state.next(),
+            code_action: state.next()?,
         }),
         "completionItem/resolve" => {
             let params = Box::new(CompletionItemResolveParams {
-                completion_item_timestamp: state.next(),
-                completion_item_index: state.next(),
-                pager_active: state.next(),
+                completion_item_timestamp: state.next()?,
+                completion_item_index: state.next()?,
+                pager_active: state.next()?,
             });
             if params.completion_item_index == -1 {
-                return ControlFlow::Continue(());
+                return Some(());
             }
             params
         }
         "eclipse.jdt.ls/organizeImports" => Box::new(()),
         "kakoune/breadcrumbs" => Box::new(BreadcrumbsParams {
-            position_line: state.next(),
+            position_line: state.next()?,
         }),
         "kakoune/exit" => Box::new(()),
         "kakoune/goto-document-symbol" => Box::new(GotoSymbolParams {
-            goto_symbol: state.next(),
+            goto_symbol: state.next()?,
         }),
         "kakoune/next-or-previous-symbol" => {
-            let num_symbol_kinds = state.next();
+            let num_symbol_kinds = state.next()?;
             Box::new(NextOrPrevSymbolParams {
-                position: state.next(),
-                search_next: match state.next::<String>().as_str() {
+                position: state.next()?,
+                search_next: match state.next::<String>()?.as_str() {
                     "next" => true,
                     "previous" => false,
                     _ => panic!("invalid request"),
                 },
-                hover: match state.next::<String>().as_str() {
+                hover: match state.next::<String>()?.as_str() {
                     "hover" => true,
                     "goto" => false,
                     _ => panic!("invalid request"),
                 },
-                symbol_kinds: state.next_vec(num_symbol_kinds),
+                symbol_kinds: state.next_vec(num_symbol_kinds)?,
             })
         }
         "kakoune/object" => Box::new(ObjectParams {
-            count: state.next(),
-            mode: state.next(),
+            count: state.next()?,
+            mode: state.next()?,
             selections_desc: {
-                let selection_count = state.next();
-                state.next_vec(selection_count)
+                let selection_count = state.next()?;
+                state.next_vec(selection_count)?
             },
             symbol_kinds: {
-                let num_symbol_kinds = state.next();
-                state.next_vec(num_symbol_kinds)
+                let num_symbol_kinds = state.next()?;
+                state.next_vec(num_symbol_kinds)?
             },
         }),
         "kakoune/textDocument/codeLens" => Box::new(CodeLensOptions {
-            selection_desc: state.next(),
+            selection_desc: state.next()?,
         }),
         "kakoune/did-change-option" => {
-            let hook_param = state.next::<String>();
+            let hook_param = state.next::<String>()?;
             let Some((key, value)) = hook_param.split_once('=') else {
                 panic!("invalid request");
             };
@@ -478,160 +501,161 @@ fn dispatch_fifo_request(
                 _ => panic!("unknown key: {}", key),
             }
             debug!(&state.to_editor, "Applied option change {}", hook_param);
-            return ControlFlow::Continue(());
+            return Some(());
         }
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
-            position: state.next(),
+            position: state.next()?,
         }),
         "textDocument/build" => Box::new(()),
         "textDocument/codeAction" => {
-            let selection_desc = state.next();
-            let num_filters = state.next();
-            let perform_code_action = state.next();
-            let is_sync = state.next::<String>() == "is-sync";
+            let selection_desc = state.next()?;
+            let num_filters = state.next()?;
+            let perform_code_action = state.next()?;
+            let is_sync = state.next::<String>()? == "is-sync";
             let params = Box::new(CodeActionsParams {
                 selection_desc,
                 perform_code_action,
                 auto_single: false,
-                filters: match state.next::<String>().as_str() {
-                    "only" => (num_filters != 0)
-                        .then(|| CodeActionFilter::ByKind(state.next_vec(num_filters))),
-                    "matching" => Some(CodeActionFilter::ByRegex(state.next())),
+                filters: match state.next::<String>()?.as_str() {
+                    "only" => {
+                        if num_filters != 0 {
+                            Some(CodeActionFilter::ByKind(state.next_vec(num_filters)?))
+                        } else {
+                            None
+                        }
+                    }
+                    "matching" => Some(CodeActionFilter::ByRegex(state.next()?)),
                     _ => panic!("invalid request"),
                 },
             });
-            sync_trailer(state, is_sync);
+            sync_trailer(state, is_sync)?;
             params
         }
         "textDocument/codeLens" => Box::new(()),
         "textDocument/completion" => Box::new(TextDocumentCompletionParams {
-            position: state.next(),
+            position: state.next()?,
             completion: EditorCompletion {
-                offset: state.next(),
+                offset: state.next()?,
             },
         }),
         "textDocument/definition" => {
-            meta.word_regex = Some(state.next());
+            meta.word_regex = Some(state.next()?);
             Box::new(PositionParams {
-                position: state.next(),
+                position: state.next()?,
             })
         }
         "textDocument/declaration"
         | "textDocument/implementation"
         | "textDocument/typeDefinition" => Box::new(PositionParams {
-            position: state.next(),
+            position: state.next()?,
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.text_of_buffer(),
+            draft: state.text_of_buffer()?,
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.text_of_buffer(),
+            draft: state.text_of_buffer()?,
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
-            meta.word_regex = Some(state.next());
+            meta.word_regex = Some(state.next()?);
             Box::new(PositionParams {
-                position: state.next(),
+                position: state.next()?,
             })
         }
         "textDocument/formatting" => {
-            let params = Box::new(<FormattingOptions as Deserializable>::deserialize(state));
-            let is_sync = state.next::<String>() == "is-sync";
-            if let Some(server_override) = state.next() {
+            let params = Box::new(<FormattingOptions as Deserializable>::deserialize(state)?);
+            let is_sync = state.next::<String>()? == "is-sync";
+            if let Some(server_override) = state.next()? {
                 meta.server = Some(server_override);
             }
-            sync_trailer(state, is_sync);
+            sync_trailer(state, is_sync)?;
             params
         }
         "textDocument/forwardSearch" => Box::new(PositionParams {
-            position: state.next(),
+            position: state.next()?,
         }),
         "textDocument/hover" => Box::new(EditorHoverParams {
-            selection_desc: state.next(),
-            tabstop: state.next(),
-            hover_client: state.next::<Option<String>>().map(ClientId),
+            selection_desc: state.next()?,
+            tabstop: state.next()?,
+            hover_client: state.next::<Option<String>>()?.map(ClientId),
         }),
         "textDocument/inlayHint" => Box::new(InlayHintsOptions {
-            buf_line_count: state.next(),
+            buf_line_count: state.next()?,
         }),
         "textDocument/prepareCallHierarchy" => Box::new(CallHierarchyParams {
-            position: state.next(),
-            incoming_or_outgoing: state.next(),
+            position: state.next()?,
+            incoming_or_outgoing: state.next()?,
         }),
         "textDocument/rangeFormatting" => {
             let params = Box::new(RangeFormattingParams {
-                formatting_options: state.next(),
+                formatting_options: state.next()?,
                 ranges: {
-                    let selection_count: usize = state.next();
-                    iter::from_fn(|| state.next())
-                        .take(selection_count)
-                        .collect()
+                    let selection_count: usize = state.next()?;
+                    state.next_vec(selection_count)?
                 },
             });
-            let is_sync = state.next::<String>() == "is-sync";
-            if let Some(server_override) = state.next() {
+            let is_sync = state.next::<String>()? == "is-sync";
+            if let Some(server_override) = state.next()? {
                 meta.server = Some(server_override);
             }
-            sync_trailer(state, is_sync);
+            sync_trailer(state, is_sync)?;
             params
         }
         "textDocument/references" => {
-            meta.word_regex = Some(state.next());
+            meta.word_regex = Some(state.next()?);
             Box::new(PositionParams {
-                position: state.next(),
+                position: state.next()?,
             })
         }
         "textDocument/rename" => Box::new(TextDocumentRenameParams {
-            position: state.next(),
-            new_name: state.next(),
+            position: state.next()?,
+            new_name: state.next()?,
         }),
         "textDocument/selectionRange" => Box::new(SelectionRangePositionParams {
-            position: state.next(),
+            position: state.next()?,
             selections_desc: {
-                let selection_count = state.next();
-                state.next_vec(selection_count)
+                let selection_count = state.next()?;
+                state.next_vec(selection_count)?
             },
         }),
         "textDocument/signatureHelp" => Box::new(PositionParams {
-            position: state.next(),
+            position: state.next()?,
         }),
         "textDocument/semanticTokens/full" => Box::new(()),
         "textDocument/switchSourceHeader" => Box::new(()),
         "window/showMessageRequest/showNext" => Box::new(()),
         "window/showMessageRequest/respond" => Box::new(MessageRequestResponse {
-            message_request_id: serde_json::from_str(&state.next::<String>()).unwrap(),
+            message_request_id: serde_json::from_str(&state.next::<String>()?).unwrap(),
             item: state
-                .next::<Option<String>>()
+                .next::<Option<String>>()?
                 .map(|s| toml::from_str(&s).unwrap()),
         }),
         "window/workDoneProgress/cancel" => Box::new(WorkDoneProgressCancelParams {
-            token: state.next(),
+            token: state.next()?,
         }),
         "workspace/didChangeConfiguration" =>
         {
             #[allow(deprecated)]
             Box::new(EditorDidChangeConfigurationParams {
-                config: state.next(),
-                server_configuration: iter::from_fn(|| state.next())
-                    .take_while(|s| s != "map-end")
-                    .collect(),
+                config: state.next()?,
+                server_configuration: state.next_map()?,
             })
         }
         "workspace/executeCommand" => {
-            let is_sync = state.next::<String>() == "is-sync";
+            let is_sync = state.next::<String>()? == "is-sync";
             let params = Box::new(EditorExecuteCommand {
-                command: state.next(),
-                arguments: state.next(),
+                command: state.next()?,
+                arguments: state.next()?,
             });
-            sync_trailer(state, is_sync);
+            sync_trailer(state, is_sync)?;
             params
         }
         "workspace/symbol" => {
-            meta.buffile = state.next();
+            meta.buffile = state.next()?;
             meta.filetype.clear();
-            meta.version = state.next();
+            meta.version = state.next()?;
             let params = Box::new(WorkspaceSymbolParams {
                 partial_result_params: PartialResultParams {
                     partial_result_token: None,
@@ -639,10 +663,10 @@ fn dispatch_fifo_request(
                 work_done_progress_params: WorkDoneProgressParams {
                     work_done_token: None,
                 },
-                query: state.next(),
+                query: state.next()?,
             });
             if params.query.is_empty() {
-                return ControlFlow::Continue(());
+                return Some(());
             }
             params
         }
@@ -651,9 +675,9 @@ fn dispatch_fifo_request(
         }
     });
     let flow = if method == "kakoune/exit" {
-        ControlFlow::Break(())
+        None
     } else {
-        ControlFlow::Continue(())
+        Some(())
     };
     from_editor
         .send(EditorRequest {
@@ -711,6 +735,8 @@ pub fn start(
     let mut poll = mio::Poll::new().expect("failed to create poll");
     let fifo_reader_waker = mio::Waker::new(poll.registry(), mio::Token(0)).unwrap();
     static FIFO_READER_DONE: AtomicBool = AtomicBool::new(false);
+    // Synchronized by the buffer mutexes.
+    let force_exit: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let _fifo_reader = {
         let command_buffer = command_buffer.clone();
         let text_buffer = text_buffer.clone();
@@ -773,16 +799,22 @@ pub fn start(
         )
     };
     let fifo_worker = {
+        let force_exit = force_exit.clone();
+        let command_buffer = command_buffer.clone();
+        let text_buffer = text_buffer.clone();
         Worker::spawn(
             to_editor.clone(),
             "Command parser",
             1024, // arbitrary
             move |to_editor, _receiver: Receiver<()>, from_editor: Sender<EditorRequest>| {
-                let mut state = ParserState::new(to_editor, command_buffer, text_buffer);
+                let mut state =
+                    ParserState::new(force_exit, to_editor, command_buffer, text_buffer);
                 loop {
                     state.debug = DEBUG.load(Relaxed);
-                    let done = dispatch_fifo_request(&mut state, &from_editor).is_break();
-                    if state.debug {
+                    let done = dispatch_fifo_request(&mut state, &from_editor).is_none();
+                    if state.debug
+                        && !(state.force_exit.load(Relaxed) && state.debug_output.is_empty())
+                    {
                         debug!(
                             &state.to_editor,
                             "From editor: {{{}}}",
@@ -848,10 +880,14 @@ pub fn start(
         };
         let timeout_op = sel.recv(&timeout_channel);
 
-        let force_exit = |ctx: &mut Context| {
-            if let Err(err) = fs::write(fifo.clone(), "'$exit' ") {
-                error!(ctx.to_editor(), "Error writing to fifo: {}", err);
+        let trigger_force_exit = || {
+            {
+                let _command_buffer = command_buffer.lock();
+                let _text_buffer = text_buffer.lock();
+                force_exit.store(true, Relaxed);
             }
+            command_buffer.notifier.notify_one();
+            text_buffer.notifier.notify_one();
         };
 
         let op = sel.select();
@@ -862,7 +898,7 @@ pub fn start(
                     "Exiting session after {} seconds of inactivity", timeout
                 );
                 op.recv(&timeout_channel).unwrap();
-                force_exit(ctx);
+                trigger_force_exit();
                 break 'event_loop;
             }
             idx if idx == from_editor_op => {
@@ -884,7 +920,7 @@ pub fn start(
 
                 if let Err(err) = msg {
                     warn!(ctx.to_editor(), "received error from file watcher: {err}");
-                    force_exit(ctx);
+                    trigger_force_exit();
                     break 'event_loop;
                 }
                 let mut file_events = msg.unwrap();
@@ -924,7 +960,7 @@ pub fn start(
 
                 if let Err(err) = msg {
                     warn!(ctx.to_editor(), "received error from server: {err}");
-                    force_exit(ctx);
+                    trigger_force_exit();
                     break 'event_loop;
                 }
                 let msg = msg.unwrap();
