@@ -23,7 +23,7 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 
 ===== Package managers
 
-* https://pkgs.alpinelinux.org/package/edge/testing/x86_64/kakoune-lsp[Alpine Linux (edge)]: `apk add kakoune-lsp`
+* https://pkgs.alpinelinux.org/package/edge/community/x86_64/kakoune-lsp[Alpine Linux (edge)]: `apk add kakoune-lsp`
 * https://archlinux.org/packages/extra/x86_64/kakoune-lsp[Arch Linux]: `pacman -S kakoune-lsp` or https://aur.archlinux.org/packages/kakoune-lsp-git/[AUR/kakoune-lsp-git]
 * https://cgit.freebsd.org/ports/tree/editors/kakoune-lsp[FreeBSD] `pkg add kakoune-lsp`
 * https://copr.fedorainfracloud.org/coprs/atim/kakoune[Fedora Copr]: `sudo dnf copr enable atim/kakoune -y && sudo dnf install kakoune-lsp`
@@ -35,11 +35,11 @@ This is a https://microsoft.github.io/language-server-protocol/[Language Server 
 
 [source,sh]
 ----
-[ $(uname -sm) = 'Darwin arm64' ] &&
+[ "$(uname -sm)" = 'Darwin arm64' ] &&
     curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.1.0/kakoune-lsp-v18.1.0-aarch64-apple-darwin.tar.gz
-[ $(uname -sm) = 'Darwin x86_64' ] &&
+[ "$(uname -sm)" = 'Darwin x86_64' ] &&
     curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.1.0/kakoune-lsp-v18.1.0-x86_64-apple-darwin.tar.gz
-[ $(uname) = Linux ] &&
+[ "$(uname)" = Linux ] &&
     curl -OL https://github.com/kakoune-lsp/kakoune-lsp/releases/download/v18.1.0/kakoune-lsp-v18.1.0-x86_64-unknown-linux-musl.tar.gz
 tar xzvf kakoune-lsp-v18.1.0-*.tar.gz
 # replace `~/.local/bin/` with something on your `$PATH`
