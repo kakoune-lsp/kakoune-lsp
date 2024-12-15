@@ -34,7 +34,6 @@ use crate::util::*;
 use clap::ArgMatches;
 use clap::{self, crate_version, Arg, ArgAction};
 use controller::Tokenizer;
-use controller::TokenizerState;
 use daemonize::Daemonize;
 use editor_transport::exec_fifo;
 use editor_transport::show_error;
@@ -600,13 +599,11 @@ pub fn report_crash(
     if details.is_empty() {
         return;
     }
-    let mut tokenizer = TokenizerState {
-        input: details,
-        ..Default::default()
-    };
-    tokenizer.input.push(b' ');
-    let email = tokenizer.read_token();
-    let message = tokenizer.read_token();
+    let mut tokenizer = Tokenizer::default();
+    *tokenizer.input.lock() = details;
+    tokenizer.input.lock().push(b' ');
+    let email = tokenizer.read_token(|_, _| panic!());
+    let message = tokenizer.read_token(|_, _| panic!());
     let _sentry = sentry::init(("https://4150385475481d83c026ddff07957dcf@o4508427288313856.ingest.de.sentry.io/4508427290607696", sentry::ClientOptions {
           release: sentry::release_name!(),
           default_integrations: false,

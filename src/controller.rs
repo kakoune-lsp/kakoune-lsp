@@ -8,7 +8,9 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::Duration;
 use std::{iter, mem};
 
@@ -45,83 +47,77 @@ use lsp_types::*;
 use serde::Deserialize;
 use sloggers::types::Severity;
 
-struct Fifo {
-    file: fs::File,
-    poll: mio::Poll,
-    events: mio::Events,
+#[derive(Default)]
+pub struct SharedBufferData {
+    pub buffer: Mutex<Vec<u8>>,
+    notifier: Condvar,
+}
+impl SharedBufferData {
+    pub fn lock(&self) -> MutexGuard<'_, Vec<u8>> {
+        self.buffer.lock().unwrap()
+    }
 }
 
-impl Fifo {
-    fn new(file: fs::File) -> Self {
-        let source = file.as_raw_fd();
-        let mut source = mio::unix::SourceFd(&source);
-        let poll = mio::Poll::new().expect("failed to create poll");
-        poll.registry()
-            .register(&mut source, mio::Token(0), mio::Interest::READABLE)
-            .unwrap();
-        let events = mio::Events::with_capacity(1024);
-        Self { file, poll, events }
-    }
-    fn wait_until_readable(&mut self) {
-        loop {
-            if let Err(err) = self.poll.poll(&mut self.events, None) {
-                if err.kind() == io::ErrorKind::Interrupted {
-                    continue;
-                }
-                panic!("poll error: {}", err);
-            }
-            let readable = self.events.iter().any(|evt| evt.is_readable());
-            self.events.clear();
-            if readable {
-                break;
-            }
+type SharedBuffer = Arc<SharedBufferData>;
+
+#[derive(Default)]
+pub struct Tokenizer {
+    pub input: SharedBuffer,
+    pub input_offset: usize,
+    pub output: Vec<u8>,
+}
+
+impl Tokenizer {
+    pub fn new(input: SharedBuffer) -> Self {
+        Self {
+            input,
+            ..Default::default()
         }
     }
-}
-
-pub trait Tokenizer {
-    fn state(&self) -> &TokenizerState;
-    fn state_mut(&mut self) -> &mut TokenizerState;
-    fn at_end(&mut self);
-
-    fn read_token(&mut self) -> String {
+    pub fn read_token<'a, 'b: 'a>(
+        &'b mut self,
+        mut at_end: impl FnMut(MutexGuard<'a, Vec<u8>>, &Condvar) -> MutexGuard<'a, Vec<u8>>,
+    ) -> String {
+        let mut input = self.input.lock();
         let mut escaped = false;
         let mut quoted = false;
-        let mut offset = self.state().input_offset;
+        let mut offset = self.input_offset;
         loop {
-            if offset == self.state().input.len() {
-                self.at_end();
+            if offset == input.len() {
+                input.clear();
+                input = (at_end)(input, &self.input.notifier);
                 offset = 0;
             }
-            let done =
-                tokenizer_take_byte(self.state_mut(), offset, &mut escaped, &mut quoted).is_break();
+            let c = input[offset];
             offset += 1;
-            if done {
+            if tokenizer_take_byte(&mut self.output, offset - 1, c, &mut escaped, &mut quoted)
+                .is_break()
+            {
                 break;
             }
         }
-        self.state_mut().input_offset = offset;
-        let token = String::from_utf8_lossy(&self.state().output).to_string();
-        self.state_mut().output.clear();
+        self.input_offset = offset;
+        let token = String::from_utf8_lossy(&self.output).to_string();
+        self.output.clear();
         token
     }
 }
 
 fn tokenizer_take_byte(
-    tokenizer: &mut TokenizerState,
+    output: &mut Vec<u8>,
     offset: usize,
+    c: u8,
     escaped: &mut bool,
     quoted: &mut bool,
 ) -> ControlFlow<()> {
-    let c = tokenizer.input[offset];
     if *escaped {
-        tokenizer.output.push(c);
+        output.push(c);
         *escaped = false;
     } else if *quoted {
         if c == b'\'' {
             *quoted = false;
         } else {
-            tokenizer.output.push(c);
+            output.push(c);
         }
     } else {
         match c {
@@ -139,103 +135,45 @@ fn tokenizer_take_byte(
     ControlFlow::Continue(())
 }
 
-#[derive(Default)]
-pub struct TokenizerState {
-    pub input: Vec<u8>,
-    pub input_offset: usize,
-    pub output: Vec<u8>,
-}
-
-impl Tokenizer for TokenizerState {
-    fn state(&self) -> &TokenizerState {
-        self
-    }
-    fn state_mut(&mut self) -> &mut TokenizerState {
-        self
-    }
-    fn at_end(&mut self) {
-        panic!();
-    }
-}
-
 struct ParserState {
     to_editor: ToEditorSender,
-    fifo: Fifo,
-    alt_fifo: Fifo,
-    tokenizer: TokenizerState,
-    buffer_input: Vec<u8>,
-    buffer_input_lines: usize,
+    tokenizer: Tokenizer,
+    text_buffer: SharedBuffer,
     debug: bool,
     debug_output: String,
 }
 
 impl ParserState {
-    fn new(to_editor: ToEditorSender, fifo: fs::File, alt_fifo: fs::File) -> Self {
+    fn new(
+        to_editor: ToEditorSender,
+        command_buffer: SharedBuffer,
+        text_buffer: SharedBuffer,
+    ) -> Self {
         ParserState {
             to_editor,
-            fifo: Fifo::new(fifo),
-            alt_fifo: Fifo::new(alt_fifo),
-            tokenizer: Default::default(),
-            buffer_input: vec![],
-            buffer_input_lines: 0,
+            tokenizer: Tokenizer::new(command_buffer),
+            text_buffer,
             debug: false,
             debug_output: String::new(),
         }
     }
 }
 
-impl Tokenizer for ParserState {
-    fn state(&self) -> &TokenizerState {
-        &self.tokenizer
-    }
-    fn state_mut(&mut self) -> &mut TokenizerState {
-        &mut self.tokenizer
-    }
-    fn at_end(&mut self) {
-        let n = blocking_read(self);
-        self.tokenizer.input.truncate(n);
-        debug!(
-            &self.to_editor,
-            "From editor (raw): {{{}}}",
-            &String::from_utf8_lossy(&self.tokenizer.input)
-        );
-    }
+fn at_end<'a>(buffer: MutexGuard<'a, Vec<u8>>, notifier: &Condvar) -> MutexGuard<'a, Vec<u8>> {
+    let offset = buffer.len();
+    notifier
+        .wait_while(buffer, |buffer| buffer.len() == offset)
+        .unwrap()
 }
 
 fn next_string(state: &mut ParserState) -> String {
-    let token = state.read_token();
+    let token = state.tokenizer.read_token(at_end);
     if state.debug {
         state.debug_output.push_str(" {");
         state.debug_output.push_str(&token);
         state.debug_output.push('}');
     }
     token
-}
-
-fn blocking_read(state: &mut ParserState) -> usize {
-    state.tokenizer.input.clear();
-    state.tokenizer.input.resize(4096, 0_u8);
-    let n = match state.fifo.file.read(&mut state.tokenizer.input) {
-        Ok(n) => n,
-        Err(err) => {
-            if err.kind() == io::ErrorKind::WouldBlock {
-                0
-            } else {
-                panic!("read error: {}", err);
-            }
-        }
-    };
-
-    if n != 0 {
-        return n;
-    }
-    state.fifo.wait_until_readable();
-    match state.fifo.file.read(&mut state.tokenizer.input) {
-        Ok(n) => n,
-        Err(err) => {
-            panic!("read error: {}", err);
-        }
-    }
 }
 
 trait FromString: Sized {
@@ -332,24 +270,19 @@ impl ParserState {
             .collect()
     }
 
-    pub fn buffer_contents(&mut self) -> String {
+    pub fn text_of_buffer(&mut self) -> String {
         let buf_line_count: usize = self.next();
-        let mut offset = self.buffer_input.len();
+        let mut text_buffer = self.text_buffer.lock();
         let count_lines = |s: &[u8]| s.iter().filter(|&&c| c == b'\n').count();
-        while self.buffer_input_lines < buf_line_count {
-            self.alt_fifo.wait_until_readable();
-            if let Err(err) = self.alt_fifo.file.read_to_end(&mut self.buffer_input) {
-                if err.kind() != io::ErrorKind::WouldBlock {
-                    panic!("error reading buffer contents: {}", err);
-                }
-                continue;
-            }
-            self.buffer_input_lines += count_lines(&self.buffer_input[offset..]);
-            offset = self.buffer_input.len();
+        let mut available_lines = count_lines(&text_buffer);
+        let mut offset = text_buffer.len();
+        while available_lines < buf_line_count {
+            text_buffer = at_end(text_buffer, &self.text_buffer.notifier);
+            available_lines += count_lines(&text_buffer[offset..]);
+            offset = text_buffer.len();
         }
-        let excess_newlines = self.buffer_input_lines - buf_line_count;
-        let last_newline_offset = self
-            .buffer_input
+        let excess_newlines = available_lines - buf_line_count;
+        let last_newline_offset = text_buffer
             .iter()
             .enumerate()
             .rev()
@@ -358,10 +291,8 @@ impl ParserState {
             .map(|(i, _c)| i)
             .next()
             .unwrap();
-        let mut tmp = self.buffer_input.split_off(last_newline_offset + 1);
-        mem::swap(&mut tmp, &mut self.buffer_input);
-        self.buffer_input_lines -= buf_line_count;
-        assert!(self.buffer_input_lines == count_lines(&self.buffer_input));
+        let mut tmp = text_buffer.split_off(last_newline_offset + 1);
+        mem::swap(&mut tmp, &mut text_buffer);
         let result = String::from_utf8_lossy(&tmp).to_string();
         debug!(
             &self.to_editor,
@@ -592,11 +523,11 @@ fn dispatch_fifo_request(
         }),
         "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
-            draft: state.buffer_contents(),
+            draft: state.text_of_buffer(),
         }),
         "textDocument/didClose" => Box::new(()),
         "textDocument/didOpen" => Box::new(TextDocumentDidOpenParams {
-            draft: state.buffer_contents(),
+            draft: state.text_of_buffer(),
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
@@ -735,6 +666,24 @@ fn dispatch_fifo_request(
     flow
 }
 
+fn read_to_end(to_editor: &ToEditorSender, file: &mut fs::File, buffer: &SharedBuffer) {
+    {
+        let mut buffer = buffer.lock();
+        let offset = buffer.len();
+        if let Err(err) = file.read_to_end(&mut buffer) {
+            if err.kind() != io::ErrorKind::WouldBlock {
+                panic!("read error: {}", err);
+            }
+        }
+        debug!(
+            to_editor,
+            "From editor (raw): {{{}}}",
+            &String::from_utf8_lossy(&buffer[offset..])
+        );
+    }
+    buffer.notifier.notify_one();
+}
+
 /// Start the main event loop.
 ///
 /// This function starts editor transport.
@@ -757,17 +706,79 @@ pub fn start(
 
     let timeout = ctx.config.server.timeout;
 
-    let fifo_worker = {
+    let command_buffer = SharedBuffer::default();
+    let text_buffer = SharedBuffer::default();
+    let mut poll = mio::Poll::new().expect("failed to create poll");
+    let fifo_reader_waker = mio::Waker::new(poll.registry(), mio::Token(0)).unwrap();
+    static FIFO_READER_DONE: AtomicBool = AtomicBool::new(false);
+    let _fifo_reader = {
+        let command_buffer = command_buffer.clone();
+        let text_buffer = text_buffer.clone();
         let mut opts = fs::OpenOptions::new();
         opts.read(true).custom_flags(O_NONBLOCK);
-        let fifo = opts.open(fifo.clone()).unwrap();
-        let alt_fifo = opts.open(alt_fifo.clone()).unwrap();
+        let mut fifo = opts.open(fifo.clone()).unwrap();
+        let mut alt_fifo = opts.open(alt_fifo.clone()).unwrap();
         Worker::spawn(
             to_editor.clone(),
-            "Messages from editor",
+            "Command reader",
+            1024, // arbitrary
+            move |to_editor, _: Receiver<()>, _: Sender<()>| {
+                let mut events = mio::Events::with_capacity(1024);
+                {
+                    let register = |file: &fs::File, token: mio::Token| {
+                        let source = file.as_raw_fd();
+                        let mut source = mio::unix::SourceFd(&source);
+                        poll.registry()
+                            .register(&mut source, token, mio::Interest::READABLE)
+                            .unwrap();
+                    };
+                    register(&fifo, mio::Token(1));
+                    register(&alt_fifo, mio::Token(2));
+                }
+                loop {
+                    if let Err(err) = poll.poll(&mut events, None) {
+                        if err.kind() == io::ErrorKind::Interrupted {
+                            continue;
+                        }
+                        panic!("poll error: {}", err);
+                    }
+                    let mut readable1 = false;
+                    let mut readable2 = false;
+                    for event in &events {
+                        if !event.is_readable() {
+                            continue;
+                        }
+                        if event.token() == mio::Token(0) {
+                            FIFO_READER_DONE.store(true, Relaxed);
+                        }
+                        if event.token() == mio::Token(1) {
+                            readable1 = true;
+                        }
+                        if event.token() == mio::Token(2) {
+                            readable2 = true;
+                        }
+                    }
+                    events.clear();
+                    if readable1 {
+                        read_to_end(&to_editor, &mut fifo, &command_buffer);
+                    }
+                    if readable2 {
+                        read_to_end(&to_editor, &mut alt_fifo, &text_buffer);
+                    }
+                    if FIFO_READER_DONE.load(Relaxed) {
+                        break;
+                    }
+                }
+            },
+        )
+    };
+    let fifo_worker = {
+        Worker::spawn(
+            to_editor.clone(),
+            "Command parser",
             1024, // arbitrary
             move |to_editor, _receiver: Receiver<()>, from_editor: Sender<EditorRequest>| {
-                let mut state = ParserState::new(to_editor, fifo, alt_fifo);
+                let mut state = ParserState::new(to_editor, command_buffer, text_buffer);
                 loop {
                     state.debug = DEBUG.load(Relaxed);
                     let done = dispatch_fifo_request(&mut state, &from_editor).is_break();
@@ -782,6 +793,10 @@ pub fn start(
                     if done {
                         break;
                     }
+                }
+                while !FIFO_READER_DONE.load(Relaxed) {
+                    fifo_reader_waker.wake().unwrap();
+                    std::thread::sleep(Duration::from_millis(1));
                 }
             },
         )
@@ -834,7 +849,7 @@ pub fn start(
         let timeout_op = sel.recv(&timeout_channel);
 
         let force_exit = |ctx: &mut Context| {
-            if let Err(err) = fs::write(fifo.clone(), "'$exit'") {
+            if let Err(err) = fs::write(fifo.clone(), "'$exit' ") {
                 error!(ctx.to_editor(), "Error writing to fifo: {}", err);
             }
         };
