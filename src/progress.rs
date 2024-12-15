@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::types::EditorMeta;
 use crate::util::editor_quote;
-use crate::wcwidth;
+use crate::{wcwidth, NotToEditor};
 use indoc::formatdoc;
 use jsonrpc_core::Params;
 use lazy_static::lazy_static;
@@ -122,7 +122,7 @@ pub fn dollar_progress(meta: EditorMeta, params: Params, ctx: &mut Context) {
         ProgressParamsValue::WorkDone(WorkDoneProgress::Report(report)) => {
             if ctx.work_done_progress_report_timestamp.elapsed() < Duration::from_millis(1000) {
                 debug!(
-                    ctx.to_editor(),
+                    &NotToEditor {},
                     "Progress report arrived too fast, dropping"
                 );
                 return;

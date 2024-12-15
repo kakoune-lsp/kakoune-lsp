@@ -341,6 +341,11 @@ pub trait ToEditor {
     fn dispatch(&self, response: EditorResponse);
 }
 
+pub struct NotToEditor {}
+impl ToEditor for NotToEditor {
+    fn dispatch(&self, _response: EditorResponse) {}
+}
+
 /// Kakoune session ID.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SessionId(pub String);
