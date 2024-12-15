@@ -35,7 +35,7 @@ use clap::ArgMatches;
 use clap::{self, crate_version, Arg, ArgAction};
 use controller::Tokenizer;
 use daemonize::Daemonize;
-use editor_transport::exec_fifo;
+use editor_transport::exec;
 use editor_transport::show_error;
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -590,7 +590,7 @@ pub fn report_crash(
                ]
            ]"#,
     );
-    exec_fifo(session, meta.clone(), None, command, false);
+    exec(session, meta.clone(), command, false);
     let mut details = vec![];
     fs::File::open(fifo)
         .unwrap()
@@ -617,10 +617,9 @@ pub fn report_crash(
         }));
     let mut event = PanicIntegration::new().event_from_panic_info(panic_info);
     let event_id = event.event_id;
-    exec_fifo(
+    exec(
         session,
         meta.clone(),
-        None,
         format!(
             "echo -markup '{{Information}}Sending crash report with ID {}'",
             event_id
@@ -638,10 +637,9 @@ pub fn report_crash(
             client.flush(None);
         }
     });
-    exec_fifo(
+    exec(
         session,
         meta,
-        None,
         format!(
             "echo -markup '{{Information}}Sent crash report with ID {}'",
             event_id

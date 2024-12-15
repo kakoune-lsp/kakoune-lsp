@@ -96,6 +96,13 @@ impl ToEditor for SessionId {
     }
 }
 
+pub fn exec<S>(to_editor: &impl ToEditor, meta: EditorMeta, command: S, suppress_logging: bool)
+where
+    S: Into<Cow<'static, str>>,
+{
+    exec_fifo(to_editor, meta, None, command, suppress_logging);
+}
+
 pub fn exec_fifo<S>(
     to_editor: &impl ToEditor,
     meta: EditorMeta,
