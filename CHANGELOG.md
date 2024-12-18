@@ -1,4 +1,4 @@
-## Unreleased
+## 18.1.1 - 2024-12-18
 
 Fixes:
 - Fixed a regression from 18.1.0 that caused crashes with some legacy configurations.
