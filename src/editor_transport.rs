@@ -96,6 +96,7 @@ impl ToEditor for SessionId {
     }
 }
 
+#[allow(dead_code)]
 pub fn exec<S>(to_editor: &impl ToEditor, meta: EditorMeta, command: S, suppress_logging: bool)
 where
     S: Into<Cow<'static, str>>,

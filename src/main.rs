@@ -33,9 +33,7 @@ use crate::types::*;
 use crate::util::*;
 use clap::ArgMatches;
 use clap::{self, crate_version, Arg, ArgAction};
-use controller::Tokenizer;
 use daemonize::Daemonize;
-use editor_transport::exec;
 use editor_transport::show_error;
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -46,7 +44,6 @@ use libc::SIGQUIT;
 use libc::SIGTERM;
 use libc::STDOUT_FILENO;
 use log::DEBUG;
-use sentry::integrations::panic::PanicIntegration;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::null::NullLoggerBuilder;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
@@ -59,12 +56,10 @@ use std::ffi::CString;
 use std::fs;
 use std::io;
 use std::io::stdout;
-use std::io::Read;
 use std::io::Write;
 use std::mem;
 use std::os::unix::ffi::OsStrExt;
 use std::panic;
-use std::panic::PanicInfo;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process;
@@ -73,8 +68,20 @@ use std::sync::atomic::{
     AtomicBool,
     Ordering::{AcqRel, Acquire, Relaxed},
 };
-use std::sync::Arc;
 use std::sync::Mutex;
+
+#[cfg(feature = "crash-reporting")]
+use controller::Tokenizer;
+#[cfg(feature = "crash-reporting")]
+use editor_transport::exec;
+#[cfg(feature = "crash-reporting")]
+use sentry::integrations::panic::PanicIntegration;
+#[cfg(feature = "crash-reporting")]
+use std::io::Read;
+#[cfg(feature = "crash-reporting")]
+use std::panic::PanicInfo;
+#[cfg(feature = "crash-reporting")]
+use std::sync::Arc;
 
 static CLEANUP: Mutex<OnceCell<Box<dyn FnOnce() + Send>>> = Mutex::new(OnceCell::new());
 static LOG_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
@@ -464,6 +471,7 @@ fn run_main() -> Result<(), ()> {
                 .unwrap_or_default();
             show_error(&session, meta.clone(), None, message);
             do_cleanup();
+            #[cfg(feature = "crash-reporting")]
             report_crash(&session, meta, panic_info, backtrace);
 
             destroy_logger();
@@ -554,6 +562,7 @@ fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
     ()
 }
 
+#[cfg(feature = "crash-reporting")]
 pub fn report_crash(
     session: &SessionId,
     meta: EditorMeta,

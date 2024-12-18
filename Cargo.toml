@@ -29,7 +29,7 @@ pulldown-cmark = "0.9.2"
 rand = "0.8.4"
 regex = "1.10.5"
 ropey = "1.6.1"
-sentry = "0.35.0"
+sentry = { version = "0.35.0", optional = true }
 serde = "1.0.203"
 serde_derive = "1.0.203"
 serde_json = "1.0.118"
@@ -45,3 +45,5 @@ whoami = "1.5.1"
 [profile.release]
 lto = true
 
+[features]
+crash-reporting = ["sentry"]
