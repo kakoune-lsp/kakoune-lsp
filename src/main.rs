@@ -79,6 +79,7 @@ use sentry::integrations::panic::PanicIntegration;
 #[cfg(feature = "crash-reporting")]
 use std::io::Read;
 #[cfg(feature = "crash-reporting")]
+#[allow(deprecated)]
 use std::panic::PanicInfo;
 #[cfg(feature = "crash-reporting")]
 use std::sync::Arc;
@@ -563,6 +564,7 @@ fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
 }
 
 #[cfg(feature = "crash-reporting")]
+#[allow(deprecated)]
 pub fn report_crash(
     session: &SessionId,
     meta: EditorMeta,
