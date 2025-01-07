@@ -1,5 +1,8 @@
 ## Unreleased
 
+Fixes:
+- Fixed a regression from 18.1.1 causing the wrong language ID to be sent for JSX/TSX files.
+
 ## 18.1.1 - 2024-12-18
 
 Fixes:
