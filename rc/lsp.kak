@@ -1642,7 +1642,9 @@ define-command -hidden lsp-check-auto-hover -params 1 %{
 
 define-command lsp-auto-hover-enable -docstring "enable auto-requesting hover info box for current position" %{
     remove-hooks global lsp-auto-hover
-    hook -group lsp-auto-hover global NormalIdle .* %{ lsp-check-auto-hover lsp-hover }
+    hook -group lsp-auto-hover global NormalIdle .* %{
+        lsp-check-auto-hover %{ try lsp-hover }
+    }
 }
 
 define-command lsp-auto-hover-disable -docstring "Disable auto-requesting hover info for current position" %{
@@ -1655,7 +1657,13 @@ define-command lsp-auto-hover-buffer-enable \
 This will continuously update the '*hover*' buffer, keeping it visible.
 Additionally, the buffer will be activated in the client referred to by the 'docsclient' option." %{
     remove-hooks global lsp-auto-hover-buffer
-    hook -group lsp-auto-hover-buffer global NormalIdle .* %{ lsp-check-auto-hover %{lsp-hover-buffer %opt{docsclient}} }
+    hook -group lsp-auto-hover-buffer global NormalIdle .* %{
+        lsp-check-auto-hover %{
+            try %{
+                lsp-hover-buffer %opt{docsclient}
+            }
+        }
+    }
 }
 
 define-command lsp-auto-hover-buffer-disable -docstring "Disable auto-requesting hover info in docsclient for current position" %{
@@ -1684,7 +1692,7 @@ define-command lsp-auto-hover-insert-mode-disable -docstring "Disable auto-reque
 }
 
 define-command lsp-auto-signature-help-enable -docstring "Enable auto-requesting signature help in insert mode" %{
-    hook -group lsp-auto-signature-help global InsertIdle .* lsp-signature-help
+    hook -group lsp-auto-signature-help global InsertIdle .* %{ try lsp-signature-help }
 }
 
 define-command lsp-auto-signature-help-disable -docstring "Disable auto-requesting signature help in insert mode" %{
@@ -1693,9 +1701,9 @@ define-command lsp-auto-signature-help-disable -docstring "Disable auto-requesti
 
 define-command lsp-inlay-hints-enable -params 1 -docstring "lsp-inlay-hints-enable <scope>: enable inlay hints for <scope>" %{
     add-highlighter "%arg{1}/lsp_inlay_hints" replace-ranges lsp_inlay_hints
-    hook -group lsp-inlay-hints %arg{1} BufReload .* lsp-inlay-hints
-    hook -group lsp-inlay-hints %arg{1} NormalIdle .* lsp-inlay-hints
-    hook -group lsp-inlay-hints %arg{1} InsertIdle .* lsp-inlay-hints
+    hook -group lsp-inlay-hints %arg{1} BufReload .* %{ try lsp-inlay-hints }
+    hook -group lsp-inlay-hints %arg{1} NormalIdle .* %{ try lsp-inlay-hints }
+    hook -group lsp-inlay-hints %arg{1} InsertIdle .* %{ try lsp-inlay-hints }
 } -shell-script-candidates %{ printf '%s\n' buffer global window }
 
 define-command lsp-inlay-hints-disable -params 1 -docstring "lsp-inlay-hints-disable <scope>: disable inlay hints for <scope>"  %{
@@ -1789,6 +1797,7 @@ define-command lsp-disable -docstring "Disable LSP" %{
         remove-hooks buffer lsp
         lsp-unblock-in-buffer
         unset-option buffer lsp_modeline_code_actions
+        unset-option buffer lsp_inlay_hints
     }
     set-option global lsp_modeline_progress ""
     set-option global lsp_modeline_message_requests ""
@@ -1861,9 +1870,6 @@ define-command -hidden lsp-disable-impl -params 1 %{
     try %{ set-option -remove %arg{1} completers option=lsp_completions }
     remove-hooks %arg{1} lsp
     remove-hooks %arg{1} lsp-breadcrumbs
-    remove-hooks global lsp-auto-hover
-    remove-hooks global lsp-auto-hover-insert-mode
-    remove-hooks global lsp-auto-signature-help
     lsp-exit
 }
 

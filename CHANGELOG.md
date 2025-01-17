@@ -2,6 +2,8 @@
 
 Fixes:
 - Fixed a regression from 18.1.1 causing the wrong language ID to be sent for JSX/TSX files.
+- Silence errors in `*debug*` buffer when `lsp-disable` is used with optional hooks such as inlay hints.
+- `lsp-disable; lsp-enable` no longer stomps auto hover hooks set by the user.
 
 ## 18.1.1 - 2024-12-18
 
