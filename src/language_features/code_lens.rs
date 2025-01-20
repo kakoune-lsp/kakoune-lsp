@@ -71,7 +71,7 @@ fn editor_code_lens(
         }
     };
     let version = document.version;
-    let line_specs = lenses
+    let inlay_code_lenses = lenses
         .iter()
         .map(|(server_id, lens)| {
             let server = ctx.server(*server_id);
@@ -97,7 +97,7 @@ fn editor_code_lens(
     let line_flags = gather_line_flags(ctx, buffile).0;
     let command = formatdoc!(
          "evaluate-commands \"set-option buffer lsp_diagnostic_lines {version} {line_flags} '0|%opt[lsp_diagnostic_line_error_sign]'\"
-          set-option buffer lsp_inlay_code_lenses {version} {line_specs}",
+          set-option buffer lsp_inlay_code_lenses {version} {inlay_code_lenses}",
     );
     let command = format!(
         "evaluate-commands -buffer {} %§{}§",
