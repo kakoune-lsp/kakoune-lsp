@@ -1,7 +1,7 @@
 [package]
 name = "kak-lsp"
 description = "Kakoune Language Server Protocol Client"
-version = "18.1.2"
+version = "18.1.2-snapshot"
 authors = ["Ruslan Prokopchuk <fer.obbee@gmail.com>", "Johannes Altmanninger <aclopte@gmail.com>"]
 edition = "2018"
 license = "Unlicense/MIT"
