@@ -83,7 +83,7 @@ declare-option -docstring %{
 }
 
 # Faces used by inline diagnostics.
-set-face global DiagnosticError red,,+c
+set-face global DiagnosticError red
 set-face global DiagnosticHint default
 set-face global DiagnosticInfo default
 set-face global DiagnosticWarning yellow
