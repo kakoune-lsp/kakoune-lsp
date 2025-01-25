@@ -470,6 +470,7 @@ pub const CAPABILITY_SEMANTIC_TOKENS: &str = "lsp-semantic-tokens";
 pub const CAPABILITY_SIGNATURE_HELP: &str = "lsp-signature-help";
 pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
 pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
+pub const CAPABILITY_DOCUMENT_LINKS: &str = "lsp-document-links";
 
 pub fn attempt_server_capability(
     ctx: &Context,
@@ -589,6 +590,7 @@ pub fn server_has_capability(server: &ServerSettings, feature: &'static str) -> 
             Some(OneOf::Right(_)) => true,
             None => false,
         },
+        CAPABILITY_DOCUMENT_LINKS => server_capabilities.document_link_provider.is_some(),
         _ => panic!("BUG: missing case"),
     }
 }
@@ -642,6 +644,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
             .or_default()
             .push(server_name);
         probe_feature(entry, &mut features, CAPABILITY_INLAY_HINTS);
+        probe_feature(entry, &mut features, CAPABILITY_DOCUMENT_LINKS);
 
         // NOTE controller should park request for capabilities until they are available thus it should
         // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)

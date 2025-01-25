@@ -105,6 +105,8 @@ set-face global ReferenceBind +u@Reference
 # Face for inlay hints.
 set-face global InlayHint cyan+d
 set-face global InlayCodeLens cyan+d
+# face for document links
+set-face global LspDocumentLink +u
 
 # Options for tuning LSP behaviour.
 
@@ -264,6 +266,14 @@ define-command -hidden lsp-perform-code-action -params 1.. -docstring "Called on
 
 define-command -hidden lsp-perform-code-lens -params 1.. -docstring "Called on :lsp-code-lens" %{
     lsp-menu %arg{@}
+}
+
+define-command -hidden lsp-follow-document-link -params 1.. -docstring "Called on :lsp-document-link" %{
+    lsp-menu %arg{@}
+}
+
+define-command -hidden lsp-open-url -params 1 -docstring "Open a url" %{
+    fail Cannot open url %arg{1}
 }
 
 # stdlib backports
@@ -434,6 +444,7 @@ declare-option -hidden range-specs lsp_semantic_tokens_ranges
 declare-option -hidden range-specs lsp_inlay_hints
 declare-option -hidden line-specs lsp_inlay_code_lenses
 declare-option -hidden line-specs lsp_code_lenses 0 '0| '
+declare-option -hidden range-specs lsp_document_links
 declare-option -hidden str lsp_project_root
 declare-option -hidden str lsp_buffile
 declare-option -hidden str lsp_crash_report_email
@@ -978,6 +989,17 @@ define-command -hidden lsp-code-lens-request %{
     }
 }
 
+define-command lsp-document-link -docstring "follow a document link from the current selection" %{
+    lsp-send kakoune/textDocument/documentLink %val{selection_desc}
+}
+
+define-command -hidden lsp-document-link-request %{
+    declare-option -hidden int lsp_document_link_timestamp -1
+    lsp-if-changed-since lsp_document_link_timestamp %opt{lsp_document_link_timestamp} %{
+        lsp-send textDocument/documentLink
+    }
+}
+
 define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command" %{
     lsp-execute-command-request is-async %arg{@}
 }
@@ -1117,6 +1139,7 @@ define-command -hidden lsp-did-open %{
     lsp-unless-blocked evaluate-commands %{
         lsp-send-buffer textDocument/didOpen
         lsp-code-lens-request
+        lsp-document-link-request
     }
 }
 
@@ -1828,6 +1851,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
     add-highlighter "%arg{1}/lsp_references" ranges lsp_references
     add-highlighter "%arg{1}/lsp_semantic_tokens_ranges" ranges lsp_semantic_tokens_ranges
     add-highlighter "%arg{1}/lsp_snippets_placeholders" ranges lsp_snippets_placeholders
+    add-highlighter "%arg{1}/lsp_document_links" ranges lsp_document_links
     lsp-inline-diagnostics-enable %arg{1}
     lsp-diagnostic-lines-enable %arg{1}
 
@@ -1847,6 +1871,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
         lsp-code-lens-request
         lsp-auto-show-code-actions
         lsp-auto-highlight-references
+        lsp-document-link-request
     }
     hook -group lsp %arg{1} NormalKey (<a-i>|<a-a>|\[|\]|\{|\}|<a-\[>|<a-\]>|<a-\{>|<a-\}>) %{
         set-option window lsp_object_mode %val{hook_param}
