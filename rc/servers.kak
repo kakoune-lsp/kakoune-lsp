@@ -365,6 +365,7 @@ hook -group lsp-filetype-lua global BufSetOption filetype=lua %{
     set-option buffer lsp_servers %{
         [lua-language-server]
         root_globs = [".git", ".hg"]
+        single_instance = false
         settings_section = "Lua"
         [lua-language-server.settings.Lua]
         # See https://github.com/sumneko/vscode-lua/blob/master/setting/schema.json
@@ -505,6 +506,7 @@ hook -group lsp-filetype-rust global BufSetOption filetype=rust %{
     set-option buffer lsp_servers %{
         [rust-analyzer]
         root_globs = ["Cargo.toml"]
+        single_instance = true
         command = "sh"
         args = [
             "-c",

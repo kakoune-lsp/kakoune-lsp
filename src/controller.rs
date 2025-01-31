@@ -1250,7 +1250,10 @@ pub fn can_serve(
     });
     requested_server_name == &candidate.name
         && candidate.capabilities.is_some()
-        && (candidate.roots.contains(requested_root_path) || workspace_folder_support)
+        && (candidate.roots.contains(requested_root_path)
+            || candidate
+                .single_instance
+                .unwrap_or(workspace_folder_support))
 }
 
 fn route_request(
@@ -1488,9 +1491,11 @@ fn route_request(
         };
 
         let offset_encoding = server_config.offset_encoding;
+        let single_instance = server_config.single_instance;
         let server_settings = ServerSettings {
             name: server_name.clone(),
             roots: vec![root.clone()],
+            single_instance,
             offset_encoding: offset_encoding.unwrap_or_default(),
             transport: server_transport,
             preferred_offset_encoding: offset_encoding,

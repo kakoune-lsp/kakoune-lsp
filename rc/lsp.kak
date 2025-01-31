@@ -22,6 +22,9 @@ Each language server table needs to define exactly one of
 
 Additionally, optional configuration options can be added:
 - args             = arguments to pass to the language server process at startup
+- single_instance  = bool indicating whether a single language server instance is to be
+                     used for files with different roots.  Defaults to true iff workspaceFolders
+                     is supported.
 - settings         = table of arbitrary server-specific settings
 - settings_section = name of a sub-table of above settings; that sub-table will be actively
                      sent on initialization and settings changes. The language server can

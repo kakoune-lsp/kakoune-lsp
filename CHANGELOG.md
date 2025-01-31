@@ -1,5 +1,14 @@
 ## Unreleased
 
+Fixes:
+- Prior versions would reuse a single language server instance
+  across files with different project roots if the server supports
+  `workspaceFolders`. This caused problems when using `lua-language-server`
+  on multiple projects with different server-specific configuration. The
+  `lsp_servers` option has learned a new config option `single_instance`,
+  to explicitly control whether the given server is reused across project
+  roots, overriding the detection based on `workspaceFolders`.
+
 ## 18.1.2 - 2025-01-21
 
 Fixes:

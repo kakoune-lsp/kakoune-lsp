@@ -47,6 +47,7 @@ pub struct OutstandingRequests {
 pub struct ServerSettings {
     pub name: String,
     pub roots: Vec<RootPath>,
+    pub single_instance: Option<bool>,
     pub offset_encoding: OffsetEncoding,
     pub preferred_offset_encoding: Option<OffsetEncoding>,
     pub transport: LanguageServerTransport,

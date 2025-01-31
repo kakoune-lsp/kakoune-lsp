@@ -78,6 +78,7 @@ pub struct LanguageServerConfig {
     pub roots: Vec<String>,
     #[serde(default)]
     pub root_globs: Vec<String>,
+    pub single_instance: Option<bool>,
     pub command: Option<String>,
     #[serde(default)]
     pub args: Vec<String>,
