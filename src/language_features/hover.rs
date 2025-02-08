@@ -125,7 +125,7 @@ pub fn editor_hover(
 
                     format!(
                         "• {}{{{face}}}{}{{{FACE_INFO_DEFAULT}}}",
-                        &if results.len() > 1 {
+                        &if meta.servers.len() > 1 {
                             format!("[{}] ", ctx.server(*server_id).name)
                         } else {
                             "".to_string()
