@@ -246,6 +246,61 @@ pub fn gather_line_flags(ctx: &Context, buffile: &str) -> (String, u32, u32, u32
     )
 }
 
+// Currently renders everything but range, severity, tags and related information
+pub fn diagnostic_text(
+    to_editor: &impl ToEditor,
+    d: &Diagnostic,
+    server_name: Option<&str>,
+    for_hover: bool,
+) -> String {
+    let is_multiline = for_hover || d.code_description.is_some() || d.message.contains('\n');
+    let mut text = String::new();
+    let severity = match d.severity {
+        Some(DiagnosticSeverity::ERROR) => "error",
+        Some(DiagnosticSeverity::HINT) => "hint",
+        Some(DiagnosticSeverity::INFORMATION) => "info",
+        Some(DiagnosticSeverity::WARNING) | None => "warning",
+        Some(_) => {
+            warn!(to_editor, "Unexpected DiagnosticSeverity: {:?}", d.severity);
+            "warning"
+        }
+    };
+    text.push('[');
+    text.push_str(severity);
+    text.push(']');
+    if let Some(server_name) = &server_name {
+        text.push('[');
+        text.push_str(server_name);
+        text.push(']');
+    }
+    if let Some(source) = &d.source {
+        text.push('[');
+        text.push_str(source);
+        text.push(']');
+    }
+    if let Some(code) = &d.code {
+        text.push('[');
+        match code {
+            NumberOrString::Number(code) => write!(&mut text, "{}", code).unwrap(),
+            NumberOrString::String(code) => text.push_str(code),
+        };
+        text.push(']');
+    }
+    if is_multiline {
+        text.push('\n');
+    } else if !text.is_empty() {
+        text.push(' ');
+    }
+    text.push_str(d.message.trim());
+    // Typically a long URL, so give it a separate line.
+    if let Some(code_description) = &d.code_description {
+        text.push('\n');
+        text.push_str("Description: ");
+        text.push_str(code_description.href.as_str());
+    }
+    text
+}
+
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
     let content = ctx
         .diagnostics
@@ -266,33 +321,24 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             return "".to_string();
                         }
                     };
-                    format!(
-                        "{}:{}:{}: {}{}: {}{}",
+                    let mut entry = format!(
+                        "{}:{}:{}: {}{}",
                         short_file_path(filename, ctx.main_root(&meta)),
                         p.line,
                         p.column,
-                        &if diagnostics.len() > 1 {
-                            format!("[{}] ", &server.name)
-                        } else {
-                            "".to_string()
-                        },
-                        match x.severity {
-                            Some(DiagnosticSeverity::ERROR) => "error",
-                            Some(DiagnosticSeverity::HINT) => "hint",
-                            Some(DiagnosticSeverity::INFORMATION) => "info",
-                            Some(DiagnosticSeverity::WARNING) | None => "warning",
-                            Some(_) => {
-                                warn!(
-                                    ctx.to_editor(),
-                                    "Unexpected DiagnosticSeverity: {:?}", x.severity
-                                );
-                                "warning"
-                            }
-                        },
-                        x.message,
+                        diagnostic_text(
+                            ctx.to_editor(),
+                            x,
+                            (diagnostics.len() > 1).then_some(&server.name),
+                            false,
+                        ),
                         format_related_information(x, server, diagnostics.len() > 1, &meta, ctx)
                             .unwrap_or_default()
-                    )
+                    );
+                    if entry.contains('\n') {
+                        entry.push('\n');
+                    }
+                    entry
                 })
                 .collect::<Vec<_>>()
         })

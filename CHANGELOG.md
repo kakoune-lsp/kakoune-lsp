@@ -9,6 +9,9 @@ Fixes:
   to explicitly control whether the given server is reused across project
   roots, overriding the detection based on `workspaceFolders`.
 
+Additions:
+- Add diagnostic code, description, source in `lsp-diagnostics` and `lsp-hover`.
+
 ## 18.1.2 - 2025-01-21
 
 Fixes:

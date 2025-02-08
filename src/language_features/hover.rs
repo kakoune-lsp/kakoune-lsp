@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_HOVER;
 use crate::context::*;
+use crate::diagnostics::diagnostic_text;
 use crate::diagnostics::format_related_information;
 use crate::markup::*;
 use crate::mkfifo;
@@ -92,21 +93,22 @@ pub fn editor_hover(
                 .map(|(server_id, x)| {
                     let server = ctx.server(*server_id);
                     // Indent line breaks to the same level as the bullet point
-                    let message = (x.message.trim().to_string()
-                        + &format_related_information(x, server, xs.len() > 1, &meta, ctx)
+                    let mut message =
+                        (diagnostic_text(
+                            ctx.to_editor(),
+                            x,
+                            (meta.servers.len() > 1).then_some(&server.name),
+                            true,
+                        ) + &format_related_information(x, server, xs.len() > 1, &meta, ctx)
                             .map(|s| "\n  ".to_string() + &s)
                             .unwrap_or_default())
-                        .replace('\n', "\n  ");
+                            .replace('\n', "\n  ");
+                    if message.contains('\n') {
+                        message.push('\n');
+                    }
                     if for_hover_buffer {
                         // We are typically creating Markdown, so use a standard Markdown enumerator.
-                        return format!(
-                            "* {}{message}",
-                            &if meta.servers.len() > 1 {
-                                format!("[{}] ", server.name)
-                            } else {
-                                "".to_string()
-                            }
-                        );
+                        return format!("* {message}");
                     }
 
                     let face = x
@@ -122,14 +124,8 @@ pub fn editor_hover(
                             }
                         })
                         .unwrap_or(FACE_INFO_DEFAULT);
-
                     format!(
-                        "• {}{{{face}}}{}{{{FACE_INFO_DEFAULT}}}",
-                        &if meta.servers.len() > 1 {
-                            format!("[{}] ", ctx.server(*server_id).name)
-                        } else {
-                            "".to_string()
-                        },
+                        "• {{{face}}}{}{{{FACE_INFO_DEFAULT}}}",
                         escape_kakoune_markup(&message),
                     )
                 })
