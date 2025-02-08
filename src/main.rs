@@ -492,7 +492,9 @@ fn run_main() -> Result<(), ()> {
         fifo,
         alt_fifo,
     );
-    info!(to_editor, "kak-lsp server exiting");
+    info!(to_editor, "kak-lsp server exiting (PID={})", unsafe {
+        libc::getpid()
+    });
     Ok(())
 }
 
