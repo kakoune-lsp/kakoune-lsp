@@ -197,7 +197,7 @@ fn event_file_changes(
     event: notify::Event,
 ) {
     for path in &event.paths {
-        if log_path.as_ref().map_or(false, |log_path| path == log_path) {
+        if log_path.as_ref() == Some(path) {
             continue;
         }
         for watch_request in watch_requests {

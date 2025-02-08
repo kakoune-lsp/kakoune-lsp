@@ -273,10 +273,11 @@ fn run_main() -> Result<(), ()> {
     if let Some(existing_path) = existing_path {
         let was_externally_started = externally_started_file(&session_path).exists();
         if !was_externally_started {
-            return Err(fatal_error(format!(
+            fatal_error(format!(
                 "kak-lsp session file already exists at '{}'",
                 existing_path.display()
-            )));
+            ));
+            return Err(());
         }
         if !externally_started {
             eprintln!("Attaching to externally-started kak-lsp server");
@@ -297,32 +298,31 @@ fn run_main() -> Result<(), ()> {
         externally_started_file: None,
         session_directory: TemporaryDirectory::new(session_path.clone()),
     };
-    if let Err(err) = fs::create_dir_all(session_path.clone()) {
-        return Err(fatal_error(format!(
+    fs::create_dir_all(session_path.clone()).map_err(|err| {
+        fatal_error(format!(
             "failed to create session directory '{}': {}",
             session_path.display(),
             err
-        )));
-    }
+        ));
+        ()
+    })?;
 
     session_directory.symlink = Some(TemporaryFile::new(session_symlink_path.clone()));
 
-    if let Err(err) = std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()) {
-        return Err(fatal_error(format!(
+    std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()).map_err(|err| {
+        fatal_error(format!(
             "failed to create session directory symlink '{}': {}",
             session_symlink_path.display(),
             err,
-        )));
-    }
+        ));
+        ()
+    })?;
     if externally_started {
         let file = externally_started_file(&session_path);
-        if let Err(err) = fs::File::create(file.clone()) {
-            return Err(fatal_error(format!(
-                "failed to create '{}': {}",
-                file.display(),
-                err
-            )));
-        }
+        fs::File::create(file.clone()).map_err(|err| {
+            fatal_error(format!("failed to create '{}': {}", file.display(), err));
+            ()
+        })?;
         session_directory.externally_started_file = Some(TemporaryFile::new(file));
     }
     let mut create_fifo = |offset: usize, name: &str| {
@@ -333,11 +333,12 @@ fn run_main() -> Result<(), ()> {
         session_directory.fifos[offset] = Some(tmp);
         if unsafe { libc::mkfifo(fifo_cstr.as_ptr(), 0o600) } != 0 {
             let err = std::io::Error::last_os_error();
-            return Err(fatal_error(format!(
+            fatal_error(format!(
                 "failed to create fifo '{}': {}",
                 fifo.display(),
                 err
-            )));
+            ));
+            return Err(());
         }
         Ok(fifo)
     };
@@ -410,28 +411,31 @@ fn run_main() -> Result<(), ()> {
     }
 
     if matches.get_flag("daemonize") {
-        if let Err(e) = Daemonize::new()
+        Daemonize::new()
             .working_directory(std::env::current_dir().unwrap())
             .start()
-        {
-            return Err(fatal_error(format!("Failed to daemonize process: {:?}", e)));
-        }
+            .map_err(|err| {
+                fatal_error(format!("Failed to daemonize process: {:?}", err));
+                ()
+            })?;
     }
 
-    if let Err(err) = fs::write(pid_file_tmp.clone(), process::id().to_string().as_bytes()) {
-        return Err(fatal_error(format!(
+    fs::write(pid_file_tmp.clone(), process::id().to_string().as_bytes()).map_err(|err| {
+        fatal_error(format!(
             "failed to write pid file '{}': {}",
             pid_file_tmp.display(),
             err
-        )));
-    }
-    if let Err(err) = fs::rename(pid_file_tmp.clone(), pid_file.clone()) {
-        return Err(fatal_error(format!(
+        ));
+        ()
+    })?;
+    fs::rename(pid_file_tmp.clone(), pid_file.clone()).map_err(|err| {
+        fatal_error(format!(
             "failed to rename pid file '{}': {}",
             pid_file.display(),
             err
-        )));
-    }
+        ));
+        ()
+    })?;
 
     let editor_transport = editor_transport::start(session.clone());
     let to_editor = editor_transport.sender();
@@ -507,7 +511,8 @@ fn environment_variable(session: Option<&SessionId>, name: &str) -> Result<Optio
                 "environment variable '{name}' value is not valid UTF-8: {}",
                 String::from_utf8_lossy(bytes.as_bytes())
             ),
-        )
+        );
+        ()
     })
 }
 
@@ -547,20 +552,19 @@ fn kakoune() -> Result<(), ()> {
     }
 }
 
-fn report_fatal_error(session: Option<&SessionId>, message: &str) -> () {
+fn report_fatal_error(session: Option<&SessionId>, message: &str) {
     let Some(session) = session else {
         eprintln!("{}", message);
-        return ();
+        return;
     };
     let Ok(maybe_client) = environment_variable(Some(session), "kak_client") else {
-        return ();
+        return;
     };
     let meta = maybe_client
         .map(ClientId)
         .map(EditorMeta::for_client)
         .unwrap_or_default();
     show_error(session, meta, None, message);
-    ()
 }
 
 #[cfg(feature = "crash-reporting")]
@@ -705,7 +709,8 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Result<Con
                     config_path.display(),
                     err
                 ),
-            )
+            );
+            ()
         })
 }
 
