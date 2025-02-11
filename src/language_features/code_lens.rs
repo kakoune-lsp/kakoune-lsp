@@ -19,7 +19,7 @@ use lsp_types::*;
 pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|(_, server)| server_has_capability(server, CAPABILITY_CODE_LENS))
+        .filter(|(_, server)| server_has_capability(ctx.to_editor(), server, CAPABILITY_CODE_LENS))
         .collect();
     if eligible_servers.is_empty() {
         return;

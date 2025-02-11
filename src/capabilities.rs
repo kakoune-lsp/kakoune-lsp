@@ -471,6 +471,9 @@ pub const CAPABILITY_SIGNATURE_HELP: &str = "lsp-signature-help";
 pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
 pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
 
+pub const CAPABILITY_TEXT_DOCUMENT_BUILD: &str = "texlab-build";
+pub const CAPABILITY_TEXT_DOCUMENT_FORWARD_SEARCH: &str = "texlab-forward-search";
+
 pub fn attempt_server_capability(
     ctx: &Context,
     server: (ServerId, &ServerSettings),
@@ -478,7 +481,7 @@ pub fn attempt_server_capability(
     feature: &'static str,
 ) -> bool {
     let (_server_id, server_settings) = server;
-    if server_has_capability(server_settings, feature) {
+    if server_has_capability(ctx.to_editor(), server_settings, feature) {
         return true;
     }
 
@@ -494,10 +497,23 @@ pub fn attempt_server_capability(
     false
 }
 
-pub fn server_has_capability(server: &ServerSettings, feature: &'static str) -> bool {
+pub fn server_has_capability(
+    to_editor: &impl ToEditor,
+    server: &ServerSettings,
+    feature: &'static str,
+) -> bool {
     let server_capabilities = match &server.capabilities {
         Some(caps) => caps,
         None => return false,
+    };
+
+    let experimental = || {
+        let x = server_capabilities.experimental.as_ref()?;
+        let x = x.as_object();
+        if x.is_none() {
+            error!(to_editor, "experimental capabilties is not an object");
+        }
+        x
     };
 
     match feature {
@@ -589,6 +605,16 @@ pub fn server_has_capability(server: &ServerSettings, feature: &'static str) -> 
             Some(OneOf::Right(_)) => true,
             None => false,
         },
+        CAPABILITY_TEXT_DOCUMENT_BUILD => experimental().is_some_and(|experimental| {
+            experimental
+                .get("textDocumentBuild")
+                .is_some_and(|v| v.as_bool().is_some_and(|v| v))
+        }),
+        CAPABILITY_TEXT_DOCUMENT_FORWARD_SEARCH => experimental().is_some_and(|experimental| {
+            experimental
+                .get("textDocumentForwardSearch")
+                .is_some_and(|v| v.as_bool().is_some_and(|v| v))
+        }),
         _ => panic!("BUG: missing case"),
     }
 }
@@ -597,12 +623,13 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
     let mut features: BTreeMap<String, Vec<&ServerName>> = BTreeMap::new();
 
     fn probe_feature<'a>(
+        to_editor: &impl ToEditor,
         server: (ServerId, &'a ServerSettings),
         features: &mut BTreeMap<String, Vec<&'a ServerName>>,
         feature: &'static str,
     ) {
         let (_server_id, server_settings) = server;
-        if server_has_capability(server_settings, feature) {
+        if server_has_capability(to_editor, server_settings, feature) {
             features
                 .entry(feature.to_string())
                 .or_default()
@@ -610,38 +637,49 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         }
     }
 
+    let to_editor = ctx.to_editor();
     for entry in ctx.servers(&meta) {
         let (_server_id, server_settings) = entry;
         let server_name = &server_settings.name;
 
-        probe_feature(entry, &mut features, CAPABILITY_SELECTION_RANGE);
-        probe_feature(entry, &mut features, CAPABILITY_HOVER);
-        probe_feature(entry, &mut features, CAPABILITY_COMPLETION);
-        probe_feature(entry, &mut features, CAPABILITY_SIGNATURE_HELP);
-        probe_feature(entry, &mut features, CAPABILITY_DEFINITION);
-        probe_feature(entry, &mut features, CAPABILITY_TYPE_DEFINITION);
-        probe_feature(entry, &mut features, CAPABILITY_IMPLEMENTATION);
-        probe_feature(entry, &mut features, CAPABILITY_REFERENCES);
-        probe_feature(entry, &mut features, CAPABILITY_DOCUMENT_HIGHLIGHT);
-        if server_has_capability(server_settings, CAPABILITY_DOCUMENT_SYMBOL) {
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_SELECTION_RANGE);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_HOVER);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_COMPLETION);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_SIGNATURE_HELP);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_DEFINITION);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_TYPE_DEFINITION);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_IMPLEMENTATION);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_REFERENCES);
+        probe_feature(
+            to_editor,
+            entry,
+            &mut features,
+            CAPABILITY_DOCUMENT_HIGHLIGHT,
+        );
+        if server_has_capability(to_editor, server_settings, CAPABILITY_DOCUMENT_SYMBOL) {
             features
                 .entry("lsp-document-symbol, lsp-object, lsp-goto-document-symbol".to_string())
                 .or_default()
                 .push(server_name);
         }
-        probe_feature(entry, &mut features, CAPABILITY_WORKSPACE_SYMBOL);
-        probe_feature(entry, &mut features, CAPABILITY_FORMATTING);
-        probe_feature(entry, &mut features, CAPABILITY_RANGE_FORMATTING);
-        probe_feature(entry, &mut features, CAPABILITY_RENAME);
-        probe_feature(entry, &mut features, CAPABILITY_CODE_ACTIONS);
-        probe_feature(entry, &mut features, CAPABILITY_CODE_ACTIONS_RESOLVE);
-        probe_feature(entry, &mut features, CAPABILITY_CODE_LENS);
-        probe_feature(entry, &mut features, CAPABILITY_CALL_HIERARCHY);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_WORKSPACE_SYMBOL);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_FORMATTING);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_RANGE_FORMATTING);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_RENAME);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_CODE_ACTIONS);
+        probe_feature(
+            to_editor,
+            entry,
+            &mut features,
+            CAPABILITY_CODE_ACTIONS_RESOLVE,
+        );
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_CODE_LENS);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_CALL_HIERARCHY);
         features
             .entry("lsp-diagnostics".to_string())
             .or_default()
             .push(server_name);
-        probe_feature(entry, &mut features, CAPABILITY_INLAY_HINTS);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_INLAY_HINTS);
 
         // NOTE controller should park request for capabilities until they are available thus it should
         // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)

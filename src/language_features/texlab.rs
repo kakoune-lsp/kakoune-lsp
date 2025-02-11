@@ -1,3 +1,7 @@
+use crate::capabilities::{
+    attempt_server_capability, CAPABILITY_TEXT_DOCUMENT_BUILD,
+    CAPABILITY_TEXT_DOCUMENT_FORWARD_SEARCH,
+};
 use crate::context::{Context, RequestParams};
 use crate::position::get_lsp_position;
 use crate::types::EditorMeta;
@@ -39,8 +43,26 @@ impl fmt::Display for ForwardSearchResult {
 }
 
 pub fn forward_search(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
-    let req_params = ctx
+    let mut eligible_servers: Vec<_> = ctx
         .servers(&meta)
+        .filter(|srv| {
+            attempt_server_capability(ctx, *srv, &meta, CAPABILITY_TEXT_DOCUMENT_FORWARD_SEARCH)
+        })
+        .collect();
+    // compat hack
+    if eligible_servers.is_empty() {
+        eligible_servers = ctx.servers(&meta).collect();
+    }
+    if eligible_servers.is_empty() && meta.servers.len() > 1 {
+        ctx.show_error(
+            meta,
+            format!("no server supports {}", ForwardSearch::METHOD),
+        );
+        return;
+    }
+
+    let req_params = eligible_servers
+        .into_iter()
         .map(|(server_id, server_settings)| {
             (
                 server_id,
@@ -111,14 +133,34 @@ impl fmt::Display for BuildResult {
 }
 
 pub fn build(meta: EditorMeta, ctx: &mut Context) {
-    let req_params = vec![BuildTextDocumentParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
-        },
-    }];
+    let mut eligible_servers: Vec<_> = ctx
+        .servers(&meta)
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, &CAPABILITY_TEXT_DOCUMENT_BUILD))
+        .collect();
+    // compat hack
+    if eligible_servers.is_empty() {
+        eligible_servers = ctx.servers(&meta).collect();
+    }
+    if eligible_servers.is_empty() && meta.servers.len() > 1 {
+        ctx.show_error(meta, format!("no server supports {}", Build::METHOD));
+        return;
+    }
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_id, _server_settings)| {
+            (
+                server_id,
+                vec![BuildTextDocumentParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                }],
+            )
+        })
+        .collect();
     ctx.call::<Build, _>(
         meta,
-        RequestParams::All(req_params),
+        RequestParams::Each(req_params),
         move |ctx, meta, results| {
             if let Some((_, response)) = results.first() {
                 build_response(meta, response, ctx)
