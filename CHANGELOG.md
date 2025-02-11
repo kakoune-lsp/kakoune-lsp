@@ -1,6 +1,7 @@
 ## Unreleased
 
 Fixes:
+- Use `dart language-server` instead of dart analysis server.
 - Prior versions would reuse a single language server instance
   across files with different project roots if the server supports
   `workspaceFolders`. This caused problems when using `lua-language-server`

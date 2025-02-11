@@ -83,9 +83,8 @@ hook -group lsp-filetype-dart global BufSetOption filetype=dart %{
     set-option buffer lsp_servers %{
         [dart-lsp]
         root_globs = ["pubspec.yaml", ".git", ".hg"]
-        # start shell to find path to dart analysis server source
-        command = "sh"
-        args = ["-c", "dart \"$(dirname \"$(command -v dart)\")\"/snapshots/analysis_server.dart.snapshot --lsp"]
+        command = "dart"
+        args = ["language-server"]
     }
 }
 
