@@ -443,9 +443,17 @@ pub fn apply_text_edits_to_buffer<T: TextEditish<T>>(
     offset_encoding: OffsetEncoding,
     write_to_disk: bool,
 ) -> Option<String> {
+    // TODO local scope
     let mut apply_edits = formatdoc!(
         "{}
-         lsp-did-change",
+         set-option buffer lsp_fail_if_disabled nop
+         try %[
+             lsp-did-change
+             unset-option buffer lsp_fail_if_disabled
+         ] catch %[
+             unset-option buffer lsp_fail_if_disabled
+             fail -- %val[error]
+         ]",
         lsp_text_edits_to_kakoune(to_editor, client, text_edits, text, offset_encoding)?
     );
 

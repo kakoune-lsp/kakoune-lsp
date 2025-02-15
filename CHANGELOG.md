@@ -2,6 +2,7 @@
 
 Fixes:
 - Use `dart language-server` instead of dart analysis server.
+- Fix error when `lsp-rename` is used with `lsp-enable-window`.
 - Prior versions would reuse a single language server instance
   across files with different project roots if the server supports
   `workspaceFolders`. This caused problems when using `lua-language-server`
