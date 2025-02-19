@@ -131,6 +131,16 @@ hook -group lsp-filetype-erlang global BufSetOption filetype=erlang %{
     }
 }
 
+hook -group lsp-filetype-fish global BufSetOption filetype=fish %{
+    set-option buffer lsp_servers %{
+        [fish-lsp]
+        filetypes = ["fish"]
+        root_globs = ["*.fish", "config.fish", ".git", ".hg"]
+        command = "fish-lsp"
+        args = ["start"]
+    }
+}
+
 hook -group lsp-filetype-go global BufSetOption filetype=go %{
     set-option buffer lsp_servers %{
         [gopls]
