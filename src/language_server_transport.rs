@@ -58,6 +58,7 @@ pub fn start(
 
     let stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
     let errors = {
+        let server_name = server_name.clone();
         Worker::spawn(
             to_editor.clone(),
             "Language server errors",
@@ -82,7 +83,7 @@ pub fn start(
                     }
                     info!(
                         &to_editor,
-                        "Language server stderr: {}",
+                        "Language server {server_name} stderr: {}",
                         String::from_utf8_lossy(&line)
                     );
                 }
@@ -111,13 +112,13 @@ pub fn start(
             "Messages to language server",
             channel_capacity,
             move |to_editor, receiver, _| {
-                if writer_loop(&to_editor, server_name, writer, &receiver).is_err() {
+                if writer_loop(&to_editor, &server_name, writer, &receiver).is_err() {
                     error!(&to_editor, "Failed to write message to language server");
                 }
                 let exit_code = child.wait().unwrap();
                 debug!(
                     &to_editor,
-                    "Language server exited with status: {}", exit_code
+                    "Language server {server_name} exited with status: {}", exit_code
                 );
             },
         )
@@ -193,7 +194,7 @@ fn reader_loop(
 
 fn writer_loop(
     to_editor: &ToEditorSender,
-    server_name: ServerName,
+    server_name: &ServerName,
     mut writer: impl Write,
     receiver: &Receiver<ServerMessage>,
 ) -> io::Result<()> {
