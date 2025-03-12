@@ -673,16 +673,28 @@ fn find_identifier_in_file(
 }
 
 pub fn object(meta: EditorMeta, params: ObjectParams, ctx: &mut Context) {
-    let req_params = DocumentSymbolParams {
-        text_document: TextDocumentIdentifier {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
-        },
-        partial_result_params: Default::default(),
-        work_done_progress_params: Default::default(),
-    };
+    let eligible_servers: Vec<_> = ctx
+        .servers(&meta)
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
+        .collect();
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_id, _)| {
+            (
+                server_id,
+                vec![DocumentSymbolParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    },
+                    partial_result_params: Default::default(),
+                    work_done_progress_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
     ctx.call::<DocumentSymbolRequest, _>(
         meta,
-        RequestParams::All(vec![req_params]),
+        RequestParams::Each(req_params),
         move |ctx: &mut Context, meta, results| {
             let result = match results.into_iter().find(|(_, v)| v.is_some()) {
                 Some(result) => result,

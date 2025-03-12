@@ -4,6 +4,7 @@ Fixes:
 - Use `dart language-server` instead of dart analysis server.
 - Use `rust-analyzer` from path instead of `$(rustup which rust-analyzer)`.
 - Fix error when `lsp-rename` is used with `lsp-enable-window`.
+- Fix `lsp-object` when multiple language servers are active but some don't support `textDocument/documentSymbol`.
 - Prior versions would reuse a single language server instance
   across files with different project roots if the server supports
   `workspaceFolders`. This caused problems when using `lua-language-server`
