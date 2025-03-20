@@ -1,4 +1,4 @@
-## Unreleased
+## 18.1.3 - 2025-03-20
 
 Fixes:
 - Use `dart language-server` instead of dart analysis server.
