@@ -166,8 +166,14 @@ impl Context {
         meta: &'a EditorMeta,
         server_name: &ServerName,
     ) -> Option<&'a LanguageServerConfig> {
+        #[allow(deprecated)]
+        let language_id = if self.config.language.is_empty() {
+            &"".to_string() // unused
+        } else {
+            &self.legacy_filetypes.get(&meta.filetype)?.0
+        };
         server_configs(&self.config, meta)
-            .get(server_name_for_lookup(&self.config, &meta.language_id, server_name).as_ref())
+            .get(server_name_for_lookup(&self.config, language_id, server_name).as_ref())
     }
 
     pub fn call<
