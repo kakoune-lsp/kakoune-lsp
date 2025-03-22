@@ -1215,17 +1215,11 @@ fn breadcrumbs_calc<'a, T: Symbol<T>>(
     filename: &str,
     acc: &mut Vec<String>,
 ) -> Option<&'a T> {
-    for symbol in symbols {
+    let symbol = symbols.iter().find(|symbol| {
         let symbol_range = get_kakoune_range(server, filename, &symbol.range(), ctx).unwrap();
         let symbol_lines = symbol_range.start.line..=symbol_range.end.line;
-        let is_inside = symbol_lines.contains(&params.position_line);
-        if is_inside {
-            acc.push(symbol.name().to_owned());
-            return Some(
-                breadcrumbs_calc(symbol.children(), params, ctx, server, filename, acc)
-                    .unwrap_or(symbol),
-            );
-        }
-    }
-    None
+        symbol_lines.contains(&params.position_line)
+    })?;
+    acc.push(symbol.name().to_owned());
+    Some(breadcrumbs_calc(symbol.children(), params, ctx, server, filename, acc).unwrap_or(symbol))
 }
