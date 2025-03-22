@@ -1030,29 +1030,21 @@ fn symbol_menu<'a, T: Symbol<T>>(
         let range =
             get_kakoune_range_with_fallback(server, filename, &symbol.selection_range(), ctx);
         qualified_name.push(symbol.name());
-        let name = qualified_name.join(" > ");
-        let kind = symbol.kind();
-        choices.push((name, kind, edit_at_range(filename, range, false)));
+        let qualified_name = qualified_name.join(" > ");
+        choices.push((qualified_name, edit_at_range(filename, range, false)));
         true
     };
     for symbol in symbols {
         symbols_walk(&mut add_symbol, symbol);
     }
-    let mut occurrences: HashMap<String, i32> = HashMap::new();
-    for (name, _, _) in &choices {
-        *occurrences.entry(name.clone()).or_default() += 1;
-    }
     choices
         .into_iter()
-        .map(|(mut name, kind, goto_command)| {
-            match occurrences.get(&name) {
-                Some(n) if *n > 1 => {
-                    write!(&mut name, " ({:?})", kind).unwrap();
-                }
-                _ => (),
-            }
+        .map(|(qualified_name, goto_command)| {
             let goto_command = editor_quote(&goto_command);
-            format!("{} {goto_command} {goto_command}", editor_quote(&name))
+            format!(
+                "{} {goto_command} {goto_command}",
+                editor_quote(&qualified_name),
+            )
         })
         .join(" ")
 }
