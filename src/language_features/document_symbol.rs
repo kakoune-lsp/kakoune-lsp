@@ -234,9 +234,9 @@ fn symbol_kind_prefix<T: Symbol<T>>(
         .get(format!("{:?}", symbol.kind()).as_str())
         .map(|mapped_kind| {
             if mapped_kind.is_empty() {
-                symbol.name().to_string()
+                "".to_string()
             } else {
-                format!("{} {}", mapped_kind, symbol.name())
+                format!("{} ", mapped_kind)
             }
         })
 }
@@ -282,8 +282,10 @@ pub fn format_symbol<T: Symbol<T>>(
                 format!("{}{}", prefixing_hierarchy_symbols, last_hierarchy_symbol)
             };
 
-            let symbol_designator = symbol_kind_prefix(symbol, symbol_kind_mapping)
-                .unwrap_or(format!("{} ({:?})", symbol.name(), symbol.kind()));
+            let symbol_designator = symbol_kind_prefix(symbol, symbol_kind_mapping).map_or(
+                format!("{} ({:?})", symbol.name(), symbol.kind()),
+                |prefix| format!("{prefix} {}", symbol.name()),
+            );
             let description = format!("{}{}", hierarchy, symbol_designator);
             let mut filename_path = PathBuf::default();
             let filename = symbol_filename(meta, symbol, &mut filename_path);
@@ -1171,27 +1173,31 @@ fn editor_breadcrumbs<T: Symbol<T>>(
     let server = ctx.server(server_id);
     let mut filename_path = PathBuf::default();
     let filename = symbol_filename(&meta, &symbols[0], &mut filename_path).to_string();
-    let mut symbol_names = Vec::default();
+    let mut surrounding_symbols = Vec::default();
     let mut breadcrumbs = "".to_string();
-    if let Some(kind_prefix) =
-        breadcrumbs_calc(&symbols, &params, ctx, server, &filename, &mut symbol_names).and_then(
-            |symbol| {
-                symbol_kind_prefix(
-                    symbol,
-                    meta.language_server
-                        .get(&server.name)
-                        .map(|language_server_config| &language_server_config.symbol_kinds),
-                )
-            },
-        )
-    {
-        breadcrumbs += &kind_prefix;
-    }
-    for (i, symbol_name) in symbol_names.iter().enumerate() {
+    compute_surrounding_symbols(
+        &mut surrounding_symbols,
+        &symbols,
+        params.position_line,
+        ctx,
+        server,
+        &filename,
+    );
+    for (i, symbol) in surrounding_symbols.iter().enumerate() {
         if i != 0 {
             breadcrumbs += " > ";
         }
-        breadcrumbs += symbol_name;
+        if i + 1 == surrounding_symbols.len() {
+            if let Some(kind_prefix) = symbol_kind_prefix(
+                *symbol,
+                meta.language_server
+                    .get(&server.name)
+                    .map(|language_server_config| &language_server_config.symbol_kinds),
+            ) {
+                breadcrumbs += &kind_prefix;
+            }
+        }
+        breadcrumbs += symbol.name();
     }
     breadcrumbs += " ";
     let command = format!(
@@ -1207,19 +1213,21 @@ fn editor_breadcrumbs<T: Symbol<T>>(
     ctx.exec(meta, command);
 }
 
-fn breadcrumbs_calc<'a, T: Symbol<T>>(
-    symbols: &'a [T],
-    params: &BreadcrumbsParams,
+fn compute_surrounding_symbols<'a, T: Symbol<T>>(
+    symbol_stack: &mut Vec<&'a T>,
+    nested_symbols: &'a [T],
+    line: u32,
     ctx: &Context,
     server: &ServerSettings,
     filename: &str,
-    acc: &mut Vec<String>,
-) -> Option<&'a T> {
-    let symbol = symbols.iter().find(|symbol| {
+) {
+    let Some(symbol) = nested_symbols.iter().find(|symbol| {
         let symbol_range = get_kakoune_range(server, filename, &symbol.range(), ctx).unwrap();
         let symbol_lines = symbol_range.start.line..=symbol_range.end.line;
-        symbol_lines.contains(&params.position_line)
-    })?;
-    acc.push(symbol.name().to_owned());
-    Some(breadcrumbs_calc(symbol.children(), params, ctx, server, filename, acc).unwrap_or(symbol))
+        symbol_lines.contains(&line)
+    }) else {
+        return;
+    };
+    symbol_stack.push(symbol);
+    compute_surrounding_symbols(symbol_stack, symbol.children(), line, ctx, server, filename)
 }
