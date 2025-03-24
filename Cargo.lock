@@ -321,6 +321,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "deranged"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c9e6a11ca8224451684bc0d7d5a7adbf8f2fd6887261a1cfc3c0432f9d4068e"
+
+[[package]]
 name = "diffs"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -901,6 +907,7 @@ dependencies = [
  "clap",
  "crossbeam-channel",
  "daemonize",
+ "deranged 0.4.0",
  "diffs",
  "dirs",
  "enum_primitive",
@@ -1972,7 +1979,7 @@ version = "0.3.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
- "deranged",
+ "deranged 0.3.11",
  "itoa",
  "num-conv",
  "powerfmt",
