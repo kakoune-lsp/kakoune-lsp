@@ -4,6 +4,7 @@ pub mod clangd;
 pub mod code_action;
 pub mod code_lens;
 pub mod completion;
+pub mod copilot;
 pub mod cquery;
 pub mod document_symbol;
 pub mod eclipse_jdt_ls;

@@ -445,7 +445,8 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                 ctx.notify::<Initialized>(server_id, InitializedParams {});
             }
         }
-        controller::dispatch_pending_editor_requests(ctx)
+        controller::dispatch_pending_editor_requests(ctx);
+        crate::language_features::copilot::sign_in(_meta, ctx);
     });
 }
 
@@ -454,6 +455,7 @@ pub const CAPABILITY_CODE_ACTIONS: &str = "lsp-code-actions";
 pub const CAPABILITY_CODE_ACTIONS_RESOLVE: &str = "lsp-code-actions-resolve";
 pub const CAPABILITY_CODE_LENS: &str = "lsp-code-lens";
 pub const CAPABILITY_COMPLETION: &str = "lsp-completion (hooked on InsertIdle)";
+pub const CAPABILITY_INLINE_COMPLETION: &str = "inline completion";
 pub const CAPABILITY_DEFINITION: &str = "lsp-definition (mapped to `gd` by default)";
 pub const CAPABILITY_DOCUMENT_HIGHLIGHT: &str = "lsp-highlight-references";
 pub const CAPABILITY_DOCUMENT_SYMBOL: &str = "lsp-document-symbol";
@@ -536,6 +538,7 @@ pub fn server_has_capability(
             None => false,
         },
         CAPABILITY_COMPLETION => server_capabilities.completion_provider.is_some(),
+        CAPABILITY_INLINE_COMPLETION => server_capabilities.inline_completion_provider.is_some(),
         CAPABILITY_SIGNATURE_HELP => server_capabilities.signature_help_provider.is_some(),
         CAPABILITY_DEFINITION => match server_capabilities.definition_provider {
             Some(OneOf::Left(ok)) => ok,
