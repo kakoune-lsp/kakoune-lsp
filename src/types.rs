@@ -94,6 +94,7 @@ pub struct LanguageServerConfig {
     // This does nothing, but is kept so we can still parse old configs.
     #[allow(dead_code)]
     workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
+    pub workaround_copilot: Option<bool>,
     pub workaround_eslint: Option<bool>,
 }
 
@@ -389,7 +390,7 @@ pub type ServerName = String;
 pub type RootPath = String;
 pub type ServerId = usize;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct EditorCompletion {
     pub offset: u32,
 }
@@ -404,7 +405,7 @@ pub struct TextDocumentDidChangeParams {
     pub draft: String,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TextDocumentCompletionParams {
     pub position: KakounePosition,
     pub completion: EditorCompletion,

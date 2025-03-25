@@ -1,5 +1,6 @@
 use crate::capabilities::attempt_server_capability;
 use crate::capabilities::CAPABILITY_COMPLETION;
+use crate::capabilities::CAPABILITY_INLINE_COMPLETION;
 use crate::context::*;
 use crate::editor_transport::ToEditorSender;
 use crate::markup::*;
@@ -53,10 +54,51 @@ pub fn text_document_completion(
             )
         })
         .collect();
-    ctx.call::<Completion, _>(
+    {
+        let meta = meta.clone();
+        let params = params.clone();
+        ctx.call::<Completion, _>(
+            meta,
+            RequestParams::Each(req_params),
+            |ctx: &mut Context, meta, results| editor_completion(meta, params, results, ctx),
+        );
+    }
+
+    let eligible_servers: Vec<_> = ctx
+        .servers(&meta)
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_INLINE_COMPLETION))
+        .collect();
+    let req_params = eligible_servers
+        .into_iter()
+        .map(|(server_id, server_settings)| {
+            (
+                server_id,
+                vec![InlineCompletionParams {
+                    text_document_position: TextDocumentPositionParams {
+                        text_document: TextDocumentIdentifier {
+                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        },
+                        position: get_lsp_position(
+                            server_settings,
+                            &meta.buffile,
+                            &params.position,
+                            ctx,
+                        )
+                        .unwrap(),
+                    },
+                    context: InlineCompletionContext {
+                        trigger_kind: InlineCompletionTriggerKind::Automatic,
+                        selected_completion_info: None,
+                    },
+                    work_done_progress_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
+    ctx.call::<InlineCompletionRequest, _>(
         meta,
         RequestParams::Each(req_params),
-        |ctx: &mut Context, meta, results| editor_completion(meta, params, results, ctx),
+        |ctx: &mut Context, meta, results| editor_inline_completion(meta, params, results, ctx),
     );
 }
 
@@ -272,6 +314,39 @@ fn editor_completion(
     );
     let command = format!("evaluate-commands -- {}", editor_quote(&command));
 
+    ctx.exec(meta, command);
+}
+
+fn editor_inline_completion(
+    meta: EditorMeta,
+    _params: TextDocumentCompletionParams,
+    results: Vec<(ServerId, Option<InlineCompletionResponse>)>,
+    ctx: &mut Context,
+) {
+    let items: Vec<(ServerId, InlineCompletionItem)> = results
+        .into_iter()
+        .flat_map(|(server_id, items)| {
+            let items = match items {
+                Some(InlineCompletionResponse::Array(items)) => items,
+                Some(InlineCompletionResponse::List(list)) => list.items,
+                None => vec![],
+            };
+            items.into_iter().map(move |v| (server_id, v))
+        })
+        .collect();
+
+    let Some((_server_id, item)) = items.first() else {
+        return;
+    };
+
+    let command = formatdoc!(
+        "echo -markup -- {{Information}}Copilot: {}
+         set-option window lsp_inline_completion {}
+        ",
+        editor_quote(&escape_kakoune_markup(&item.insert_text)),
+        editor_quote(&item.insert_text),
+    );
+    let command = format!("evaluate-commands {}", editor_quote(&command));
     ctx.exec(meta, command);
 }
 

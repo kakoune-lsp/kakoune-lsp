@@ -669,6 +669,40 @@ declare-option -hidden str lsp_server_biome %{
     args = ["lsp-proxy"]
 }
 
+declare-option -hidden str lsp_server_copilot "
+	[copilot-language-server]
+    root_globs = ['.git', '.hg']
+	args = ['--stdio']
+	settings_section = '_'
+	workaround_copilot = true
+	[copilot-language-server.settings._]
+	editorInfo = { name = 'Kakoune', version = '%val{version}' }
+	editorPluginInfo = { name = 'kakoune-lsp', version = '%sh{kak-lsp --version}' }
+"
+
+define-command my-copilot -docstring %{
+    toggle Copilot in the current buffer
+} %{
+    evaluate-commands %sh{
+        message=
+        if printf %s "${kak_opt_lsp_servers}" | grep -q copilot-language-server; then
+            new=$(printf %s "${kak_opt_lsp_servers}" | awk '
+                /copilot-language-server/,/editorPluginInfo/ { next }
+                { print }
+            ')
+            message=Disabled
+        else
+            newline=$(printf '\n.'); newline=${newline%.}
+            new=$(printf %s "${kak_opt_lsp_servers}${newline}${kak_opt_lsp_server_copilot}")
+            message=Enabled
+        fi
+        printf "set-option buffer lsp_servers '%s'\n" "$(printf %s "$new" | sed "s/'/''/g")"
+        if [ "$message" = Enabled ]; then
+            echo lsp-did-open # Workaround
+        fi
+        printf 'echo -markup {Information} %s Copilot in current buffer\n' "$message"
+    }
+}
 
 }
 

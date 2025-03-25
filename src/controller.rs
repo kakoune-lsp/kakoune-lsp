@@ -463,6 +463,7 @@ fn dispatch_fifo_request(
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
             position: state.next()?,
         }),
+        "signIn" | "signOut" => Box::new(()),
         "textDocument/build" => Box::new(()),
         "textDocument/codeAction" => {
             let selection_desc = state.next()?;
@@ -1522,6 +1523,7 @@ fn route_request(
             preferred_offset_encoding: offset_encoding,
             capabilities: None,
             settings: None,
+            workaround_copilot: server_config.workaround_copilot.unwrap_or_default(),
             workaround_eslint: server_config.workaround_eslint.unwrap_or_default(),
         };
         ctx.language_servers.insert(server_id, server_settings);
@@ -1850,6 +1852,14 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         // clangd
         clangd::SwitchSourceHeaderRequest::METHOD => {
             clangd::switch_source_header(meta, ctx);
+        }
+
+        // copilot-language-server
+        copilot::SignIn::METHOD => {
+            copilot::sign_in(meta, ctx);
+        }
+        copilot::SignOut::METHOD => {
+            copilot::sign_out(meta, ctx);
         }
 
         // eclipse.jdt.ls

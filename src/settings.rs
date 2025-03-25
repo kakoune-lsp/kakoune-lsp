@@ -93,6 +93,7 @@ pub fn record_dynamic_config(meta: &EditorMeta, ctx: &mut Context, config: &str)
                 .unwrap();
             let server_config = ctx.language_servers.get_mut(server_id).unwrap();
             server_config.settings.clone_from(&server.settings);
+            server_config.workaround_copilot = server.workaround_copilot.unwrap_or_default();
             server_config.workaround_eslint = server.workaround_eslint.unwrap_or_default();
         }
     }

@@ -429,6 +429,7 @@ declare-option -docstring "Number of warnings" int lsp_diagnostic_warning_count 
 # Internal variables.
 
 declare-option -hidden completions lsp_completions
+declare-option -hidden str lsp_inline_completion
 declare-option -hidden int lsp_completions_timestamp -1
 declare-option -hidden int lsp_completions_selected_item
 declare-option -hidden range-specs lsp_inline_diagnostics
@@ -1226,6 +1227,22 @@ define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inla
     }
 }
 
+define-command lsp-accept-inline-completion -docstring %{
+    Accept any inline completion (as displayed in the status line)
+} %{
+    evaluate-commands -save-regs 'a"' %{
+        set-register a nop
+        try %{
+            evaluate-commands "lsp-nop-with-0%opt{lsp_inline_completion}"
+            set-register a fail
+        }
+        %reg{a}
+        set-register dquote %opt{lsp_inline_completion}
+        execute-keys <esc>xR
+        execute-keys -with-hooks a<ret><left>
+    }
+}
+
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{
@@ -1253,6 +1270,16 @@ define-command ccls-member -params 1 -docstring "ccls-member <vars|types|functio
 
 define-command clangd-switch-source-header -docstring "clangd-switch-source-header: Switch source/header." %{
     lsp-send textDocument/switchSourceHeader
+}
+
+# copilot-language-server
+
+define-command copilot-language-server-sign-in %{
+    lsp-send signIn
+}
+
+define-command copilot-language-server-sign-out %{
+    lsp-send signOut
 }
 
 # eclipse.jdt.ls Extension
@@ -1847,6 +1874,7 @@ define-command -hidden lsp-enable-impl -params 1 %{
     hook -group lsp %arg{1} ModeChange pop:insert:.* %{
         set-option window lsp_snippets_placeholders
         set-option window lsp_snippets_placeholder_groups
+        unset-option window lsp_inline_completion
     }
     # A non-empty hook parameter means some completion was inserted.
     hook -group lsp %arg{1} InsertCompletionHide .+ lsp-completion-accepted

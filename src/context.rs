@@ -53,6 +53,7 @@ pub struct ServerSettings {
     pub transport: LanguageServerTransport,
     pub capabilities: Option<ServerCapabilities>,
     pub settings: Option<Value>,
+    pub workaround_copilot: bool,
     pub workaround_eslint: bool,
 }
 
