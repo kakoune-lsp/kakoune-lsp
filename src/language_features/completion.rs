@@ -14,7 +14,7 @@ use lsp_types::request::*;
 use lsp_types::*;
 use regex::Regex;
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::TryFrom;
 use unicode_width::UnicodeWidthStr;
 use url::Url;
 
@@ -321,7 +321,7 @@ pub fn completion_item_resolve(
         return;
     }
 
-    if completion_item_index >= ctx.completion_items.len().try_into().unwrap() {
+    if completion_item_index >= isize::try_from(ctx.completion_items.len()).unwrap() {
         error!(
             ctx.to_editor(),
             "ignoring request to resolve completion item of invalid index {completion_item_index}"

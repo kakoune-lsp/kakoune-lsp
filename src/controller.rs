@@ -1007,7 +1007,7 @@ pub fn start(
                                     {
                                         if let Some(batch_seq) = ctx.batch_sizes.remove(&batch_id) {
                                             vals.push((server_id, success.result));
-                                            let batch_size = batch_seq.values().sum();
+                                            let batch_size: usize = batch_seq.values().sum();
 
                                             if vals.len() >= batch_size {
                                                 callback(ctx, meta, vals);
@@ -1076,7 +1076,8 @@ pub fn start(
 
                                                 // Scenario: this failing server is holding back the response handling
                                                 // for all other servers, which already responded successfully.
-                                                if vals.len() >= batch_seq.values().sum() {
+                                                let batch_size: usize = batch_seq.values().sum();
+                                                if vals.len() >= batch_size {
                                                     callback(ctx, meta, vals);
                                                     if ctx.is_exiting {
                                                         break 'event_loop;
