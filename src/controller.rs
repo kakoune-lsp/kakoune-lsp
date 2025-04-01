@@ -348,6 +348,10 @@ fn dispatch_fifo_request(
         handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
         Some(())
     };
+    let semantic_error = |what, err| {
+        handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
+        Some(())
+    };
 
     let language_server: toml::Value = match toml::from_str(&lsp_servers) {
         Ok(ls) => ls,
@@ -358,6 +362,18 @@ fn dispatch_fifo_request(
             Ok(ls) => ls,
             Err(err) => return parse_error("%opt{lsp_servers}", err),
         };
+    for server in language_server.values() {
+        if server
+            .workspace_did_change_configuration_subsection
+            .is_some()
+            && server.settings_section.is_none()
+        {
+            return semantic_error(
+                "%opt{lsp_servers}",
+                "'workspace_did_change_configuration_subsection' requires 'settings_section'",
+            );
+        }
+    }
     let semantic_tokens: toml::Value =
         match toml::from_str(&format!("faces = {}", lsp_semantic_tokens.trim_start())) {
             Ok(st) => st,
@@ -1211,7 +1227,7 @@ fn handle_broken_editor_request(
     client: &ClientId,
     hook: bool,
     what: &str,
-    err: toml::de::Error,
+    err: impl std::fmt::Display,
 ) {
     let msg = format!("Failed to parse {what}: {err}");
     let mut meta = EditorMeta::for_client(client.clone());

@@ -85,6 +85,7 @@ pub struct LanguageServerConfig {
     #[serde(default)]
     pub envs: HashMap<String, String>,
     pub settings_section: Option<String>,
+    pub workspace_did_change_configuration_subsection: Option<String>,
     pub settings: Option<Value>,
     pub offset_encoding: Option<OffsetEncoding>,
     #[serde(default)]

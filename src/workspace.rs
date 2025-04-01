@@ -36,19 +36,20 @@ pub fn did_change_configuration(
             .language_server
             .get(server_name)
             .and_then(|lang| lang.settings.as_ref());
-        let settings = configured_section(&meta, ctx, server_id, settings).unwrap_or_else(|| {
-            #[allow(deprecated)]
-            if !params.server_configuration.is_empty() {
-                Value::Object(explode_str_to_str_map(
-                    ctx.to_editor(),
-                    &params.server_configuration,
-                ))
-            } else {
-                let server = ctx.server_config(&meta, server_name).unwrap();
-                configured_section(&meta, ctx, server_id, server.settings.as_ref())
-                    .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
-            }
-        });
+        let settings =
+            configured_section(&meta, ctx, true, server_id, settings).unwrap_or_else(|| {
+                #[allow(deprecated)]
+                if !params.server_configuration.is_empty() {
+                    Value::Object(explode_str_to_str_map(
+                        ctx.to_editor(),
+                        &params.server_configuration,
+                    ))
+                } else {
+                    let server = ctx.server_config(&meta, server_name).unwrap();
+                    configured_section(&meta, ctx, true, server_id, server.settings.as_ref())
+                        .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
+                }
+            });
 
         let req_params = DidChangeConfigurationParams { settings };
         ctx.notify::<DidChangeConfiguration>(server_id, req_params);

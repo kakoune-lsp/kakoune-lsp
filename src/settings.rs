@@ -16,7 +16,7 @@ pub fn initialization_options(
             .language_server
             .get(server_name)
             .and_then(|v| v.settings.as_ref());
-        let settings = configured_section(meta, ctx, server_id, settings);
+        let settings = configured_section(meta, ctx, false, server_id, settings);
         if settings.is_some() {
             sections.push(settings);
             continue;
@@ -30,7 +30,8 @@ pub fn initialization_options(
 
         let server_name = &ctx.server(server_id).name;
         let server_config = ctx.server_config(meta, server_name).unwrap();
-        let settings = configured_section(meta, ctx, server_id, server_config.settings.as_ref());
+        let settings =
+            configured_section(meta, ctx, false, server_id, server_config.settings.as_ref());
         sections.push(settings);
     }
     sections
@@ -39,14 +40,37 @@ pub fn initialization_options(
 pub fn configured_section(
     meta: &EditorMeta,
     ctx: &Context,
+    for_did_change_configuration: bool,
     server_id: ServerId,
     settings: Option<&Value>,
 ) -> Option<Value> {
     let server_name = &ctx.server(server_id).name;
     settings.and_then(|settings| {
         ctx.server_config(meta, server_name)
-            .and_then(|cfg| cfg.settings_section.as_ref())
-            .and_then(|section| settings.get(section).cloned())
+            .and_then(|cfg| {
+                cfg.settings_section.as_ref().map(|section| {
+                    (
+                        section,
+                        if for_did_change_configuration {
+                            cfg.workspace_did_change_configuration_subsection.as_ref()
+                        } else {
+                            None
+                        },
+                    )
+                })
+            })
+            .and_then(|(section, subsection)| {
+                settings
+                    .get(section)
+                    .and_then(|section| {
+                        if let Some(subsection) = subsection {
+                            section.get(subsection)
+                        } else {
+                            Some(section)
+                        }
+                    })
+                    .cloned()
+            })
     })
 }
 

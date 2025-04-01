@@ -29,6 +29,9 @@ Additionally, optional configuration options can be added:
 - settings_section = name of a sub-table of above settings; that sub-table will be actively
                      sent on initialization and settings changes. The language server can
                      request other keys via 'workspace/configuration'.
+- workspace_did_change_configuration_subsection - name of a sub-table within the settings section
+                     to send in 'workspace/didChangeConfiguration' (instead of sending the
+                     whole settings section like we do in 'initializationOptions')
 - experimental     = table of arbitrary server-specific experimental features to enable during
                      initialization.
 - symbol_kinds     = table where keys are LSP symbol kind names (like 'Function') and values
