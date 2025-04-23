@@ -371,12 +371,26 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
                 return true;
             }
             let line = text.line(range.start.line as _);
-            let start_byte =
+            let Some(start_byte) =
                 lsp_character_to_byte_offset(line, range.start.character as _, offset_encoding)
-                    .unwrap();
-            let end_byte =
+            else {
+                error!(
+                    to_editor,
+                    "Failed to resolve edit start position {}",
+                    lsp_position_to_kakoune(&range.start, text, offset_encoding)
+                );
+                return false;
+            };
+            let Some(end_byte) =
                 lsp_character_to_byte_offset(line, range.end.character as _, offset_encoding)
-                    .unwrap();
+            else {
+                error!(
+                    to_editor,
+                    "Failed to resolve edit end position {}",
+                    lsp_position_to_kakoune(&range.end, text, offset_encoding)
+                );
+                return false;
+            };
             let bytes = line.bytes_at(start_byte);
             let contents = bytes.take(end_byte - start_byte).collect::<Vec<u8>>();
             let redundant = new_text.as_bytes() == contents;
