@@ -208,6 +208,24 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
     }
 }
 
+hook -group lsp-filetype-vue global BufSetOption filetype=(?:vue) %{
+    set-option buffer lsp_servers %{
+        [typescript-language-server]
+        root_globs = ["package.json", "tsconfig.json", "jsconfig.json", ".git", ".hg"]
+        args = ["--stdio"]
+        settings_section = "_"
+        [typescript-language-server.settings._]
+        plugins = [{ name = "@vue/typescript-plugin", location = "vue-language-server", languages = ["vue"] }]
+    }
+    # set-option buffer lsp_servers %{
+    #     [tailwindcss-language-server]
+    #     root_globs = ["tailwind.*"]
+    #     args = ["--stdio"]
+    #     [tailwindcss-language-server.settings.tailwindCSS]
+    #     editor = {}
+    # }
+}
+
 hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|typescript) %{
     set-option buffer lsp_servers %{
         [typescript-language-server]
