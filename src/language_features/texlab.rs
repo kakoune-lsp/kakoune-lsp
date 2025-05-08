@@ -135,7 +135,7 @@ impl fmt::Display for BuildResult {
 pub fn build(meta: EditorMeta, ctx: &mut Context) {
     let mut eligible_servers: Vec<_> = ctx
         .servers(&meta)
-        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, &CAPABILITY_TEXT_DOCUMENT_BUILD))
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_TEXT_DOCUMENT_BUILD))
         .collect();
     // compat hack
     if eligible_servers.is_empty() {
