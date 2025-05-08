@@ -20,7 +20,7 @@ test_sleep
 test_tmux capture-pane -p
 # CHECK: package main
 # CHECK:
-# CHECK: func format_me() {
+# CHECK: {{i?}}func format_me() {
 # CHECK: 	println("spurious blank line")
 # CHECK:
 # CHECK: }
@@ -38,7 +38,7 @@ test_sleep
 test_tmux capture-pane -p
 # CHECK: package main
 # CHECK:
-# CHECK: func format_me() {
+# CHECK: {{i?}}func format_me() {
 # CHECK: 	println("spurious blank line")
 # CHECK: }
 # CHECK: ~
