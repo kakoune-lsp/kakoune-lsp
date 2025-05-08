@@ -335,75 +335,14 @@ fn dispatch_fifo_request(
     let client = ClientId(state.next()?);
     let hook = state.next()?;
     let sourcing = state.next()?;
-    let buffile = state.next()?;
-    let version = state.next()?;
-    let filetype = state.next()?;
+    let mut buffile = state.next()?;
+    let mut version = state.next()?;
+    let mut filetype: String = state.next()?;
     let language_id = state.next()?;
     let lsp_servers: String = state.next()?;
     let lsp_semantic_tokens: String = state.next()?;
     let lsp_config: String = state.next()?;
     let lsp_server_initialization_options: Vec<String> = state.next_map()?;
-
-    let parse_error = |what, err| {
-        handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
-        Some(())
-    };
-    let semantic_error = |what, err| {
-        handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
-        Some(())
-    };
-
-    let language_server: toml::Value = match toml::from_str(&lsp_servers) {
-        Ok(ls) => ls,
-        Err(err) => return parse_error("%opt{lsp_servers}", err),
-    };
-    let language_server =
-        match HashMap::<ServerName, LanguageServerConfig>::deserialize(language_server) {
-            Ok(ls) => ls,
-            Err(err) => return parse_error("%opt{lsp_servers}", err),
-        };
-    for server in language_server.values() {
-        if server
-            .workspace_did_change_configuration_subsection
-            .is_some()
-            && server.settings_section.is_none()
-        {
-            return semantic_error(
-                "%opt{lsp_servers}",
-                "'workspace_did_change_configuration_subsection' requires 'settings_section'",
-            );
-        }
-    }
-    let semantic_tokens: toml::Value =
-        match toml::from_str(&format!("faces = {}", lsp_semantic_tokens.trim_start())) {
-            Ok(st) => st,
-            Err(err) => return parse_error("%opt{lsp_semantic_tokens}", err),
-        };
-    let semantic_tokens = match SemanticTokenConfig::deserialize(semantic_tokens) {
-        Ok(st) => st,
-        Err(err) => return parse_error("%opt{lsp_semantic_tokens}", err),
-    };
-    if !client.is_empty() {
-        *LAST_CLIENT.lock().unwrap() = Some(client.clone());
-    }
-    #[allow(deprecated)]
-    let mut meta = EditorMeta {
-        session,
-        client: (!client.is_empty()).then_some(client),
-        buffile,
-        language_id,
-        filetype,
-        version,
-        hook,
-        sourcing,
-        language_server,
-        semantic_tokens,
-        server: None,
-        word_regex: None,
-        servers: Default::default(),
-        legacy_dynamic_config: lsp_config,
-        legacy_server_initialization_options: lsp_server_initialization_options,
-    };
 
     let mut response_fifo = None;
 
@@ -415,6 +354,8 @@ fn dispatch_fifo_request(
     };
 
     let method: String = state.next()?;
+    let mut word_regex = None;
+    let mut server = None;
     let params = EditorParams(match method.as_str() {
         "$ccls/call" => Box::new(EditorCallParams {
             position: state.next()?,
@@ -555,7 +496,7 @@ fn dispatch_fifo_request(
             },
         }),
         "textDocument/definition" => {
-            meta.word_regex = Some(state.next()?);
+            word_regex = Some(state.next()?);
             Box::new(PositionParams {
                 position: state.next()?,
             })
@@ -575,7 +516,7 @@ fn dispatch_fifo_request(
         }),
         "textDocument/didSave" => Box::new(()),
         "textDocument/documentHighlight" => {
-            meta.word_regex = Some(state.next()?);
+            word_regex = Some(state.next()?);
             Box::new(PositionParams {
                 position: state.next()?,
             })
@@ -584,7 +525,7 @@ fn dispatch_fifo_request(
             let params = Box::new(<FormattingOptions as Deserializable>::deserialize(state)?);
             let is_sync = state.next::<String>()? == "is-sync";
             if let Some(server_override) = state.next()? {
-                meta.server = Some(server_override);
+                server = Some(server_override);
             }
             sync_trailer(state, is_sync)?;
             params
@@ -614,13 +555,13 @@ fn dispatch_fifo_request(
             });
             let is_sync = state.next::<String>()? == "is-sync";
             if let Some(server_override) = state.next()? {
-                meta.server = Some(server_override);
+                server = Some(server_override);
             }
             sync_trailer(state, is_sync)?;
             params
         }
         "textDocument/references" => {
-            meta.word_regex = Some(state.next()?);
+            word_regex = Some(state.next()?);
             Box::new(PositionParams {
                 position: state.next()?,
             })
@@ -669,9 +610,9 @@ fn dispatch_fifo_request(
             params
         }
         "workspace/symbol" => {
-            meta.buffile = state.next()?;
-            meta.filetype.clear();
-            meta.version = state.next()?;
+            buffile = state.next()?;
+            filetype.clear();
+            version = state.next()?;
             let params = Box::new(WorkspaceSymbolParams {
                 partial_result_params: PartialResultParams {
                     partial_result_token: None,
@@ -690,6 +631,68 @@ fn dispatch_fifo_request(
             panic!("unexpected method {}", method);
         }
     });
+
+    let parse_error = |what, err| {
+        handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
+        Some(())
+    };
+    let semantic_error = |what, err| {
+        handle_broken_editor_request(&state.to_editor, &client, hook, what, err);
+        Some(())
+    };
+
+    let language_server: toml::Value = match toml::from_str(&lsp_servers) {
+        Ok(ls) => ls,
+        Err(err) => return parse_error("%opt{lsp_servers}", err),
+    };
+    let language_server =
+        match HashMap::<ServerName, LanguageServerConfig>::deserialize(language_server) {
+            Ok(ls) => ls,
+            Err(err) => return parse_error("%opt{lsp_servers}", err),
+        };
+    for server in language_server.values() {
+        if server
+            .workspace_did_change_configuration_subsection
+            .is_some()
+            && server.settings_section.is_none()
+        {
+            return semantic_error(
+                "%opt{lsp_servers}",
+                "'workspace_did_change_configuration_subsection' requires 'settings_section'",
+            );
+        }
+    }
+    let semantic_tokens: toml::Value =
+        match toml::from_str(&format!("faces = {}", lsp_semantic_tokens.trim_start())) {
+            Ok(st) => st,
+            Err(err) => return parse_error("%opt{lsp_semantic_tokens}", err),
+        };
+    let semantic_tokens = match SemanticTokenConfig::deserialize(semantic_tokens) {
+        Ok(st) => st,
+        Err(err) => return parse_error("%opt{lsp_semantic_tokens}", err),
+    };
+    if !client.is_empty() {
+        *LAST_CLIENT.lock().unwrap() = Some(client.clone());
+    }
+    #[allow(deprecated)]
+    let meta = EditorMeta {
+        session,
+        client: (!client.is_empty()).then_some(client),
+        buffile,
+        language_id,
+        filetype,
+        version,
+        hook,
+        sourcing,
+        language_server,
+        semantic_tokens,
+        server,
+        word_regex,
+        servers: Default::default(),
+        legacy_dynamic_config: lsp_config,
+        legacy_server_initialization_options: lsp_server_initialization_options,
+    };
+
     let flow = if method == "kakoune/exit" {
         None
     } else {
