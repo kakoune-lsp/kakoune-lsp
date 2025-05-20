@@ -2251,8 +2251,8 @@ define-command -hidden lsp-document-symbol-jump -docstring %{
 define-command -hidden lsp-diagnostics-jump %{
     evaluate-commands -save-regs abcd %{
         evaluate-commands -draft -save-regs / %{
-            set-register / ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+\n?[^\n]*))
-            execute-keys <semicolon>xJs<ret>
+            set-register / ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::\h*([^\n]+))
+            execute-keys <semicolon>xs<ret>
             set-register a "%reg{1}"
             set-register b "%reg{2}"
             set-register c "%reg{3}"

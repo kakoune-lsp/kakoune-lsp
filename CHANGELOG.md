@@ -4,6 +4,9 @@ Additions:
 - For some languages like Rust, symbol kinds as shown by `lsp-document-symbol` or `lsp-workspace-symbol-incr` are now translated to the native keywords (e.g. from `Function` to `fn`).
   This is achieved via a configuration knob `[<server>.symbol_kinds]` in the `lsp_servers` option.
 - Breadcrumbs in the modeline now show the symbol kind if `[<server>.symbol_kinds]` is configured.
+- The `*diagnostics*` buffer created by `lsp-diagnostics` now shows one
+  diagnostic item per line, even when the diagnostic text has multiple lines.
+  Use `lsp-hover{,-buffer}` for multiline versions.
 
 ## 18.1.3 - 2025-03-20
 

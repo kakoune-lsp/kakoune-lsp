@@ -253,7 +253,7 @@ pub fn diagnostic_text(
     server_name: Option<&str>,
     for_hover: bool,
 ) -> String {
-    let is_multiline = for_hover || d.code_description.is_some() || d.message.contains('\n');
+    let is_multiline = for_hover;
     let mut text = String::new();
     let severity = match d.severity {
         Some(DiagnosticSeverity::ERROR) => "error",
@@ -292,13 +292,17 @@ pub fn diagnostic_text(
         text.push(' ');
     }
     text.push_str(d.message.trim());
-    // Typically a long URL, so give it a separate line.
+    // Typically a long URL, so put it last and possibly on a separate line.
     if let Some(code_description) = &d.code_description {
-        text.push('\n');
+        text.push_str(if is_multiline { "\n" } else { " -- " });
         text.push_str("Description: ");
         text.push_str(code_description.href.as_str());
     }
-    text
+    if !is_multiline {
+        text.replace("\n", "␊")
+    } else {
+        text
+    }
 }
 
 pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
