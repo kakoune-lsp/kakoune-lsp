@@ -1890,7 +1890,7 @@ hook -always global KakEnd .* %{
 }
 try %{
     hook -group lsp-session-renamed global SessionRenamed .* %{
-        try %{
+        lsp-if-running %{
             lsp-exit
             echo -debug -- LSP: INFO kak-lsp exiting because session was renamed
         }
