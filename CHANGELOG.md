@@ -1,4 +1,4 @@
-## Unreleased
+## 18.2.0 - 2025-06-03
 
 Additions:
 - For some languages like Rust, symbol kinds as shown by `lsp-document-symbol` or `lsp-workspace-symbol-incr` are now translated to the native keywords (e.g. from `Function` to `fn`).
