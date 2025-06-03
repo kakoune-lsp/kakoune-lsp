@@ -7,6 +7,10 @@ Additions:
 - The `*diagnostics*` buffer created by `lsp-diagnostics` now shows one
   diagnostic item per line, even when the diagnostic text has multiple lines.
   Use `lsp-hover{,-buffer}` for multiline versions.
+- Tweak the default configuration for `jdtls` to support their flavor of `workspace/didChangeConfiguration`.
+
+Fixes:
+- Fix crashes when receiving invalid 'lsp_servers' options or invalid text ranges from the language server.
 
 ## 18.1.3 - 2025-03-20
 
