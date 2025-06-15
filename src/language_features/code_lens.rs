@@ -178,12 +178,13 @@ fn perform_code_lens(meta: EditorMeta, lenses: &[(ServerId, CodeLens)], ctx: &Co
         lenses
             .iter()
             .filter(|(_, lens)| lens.command.is_some())
-            .map(|(_, lens)| {
+            .map(|(server_id, lens)| {
                 let command = lens.command.as_ref().unwrap();
+                let server_name = &ctx.server(*server_id).name;
                 format!(
                     "{} {}",
                     &editor_quote(&command.title),
-                    &editor_quote(&execute_command_editor_command(command, false)),
+                    &editor_quote(&execute_command_editor_command(server_name, command, false)),
                 )
             })
             .join(" "),

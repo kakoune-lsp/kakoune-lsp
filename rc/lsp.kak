@@ -985,15 +985,16 @@ define-command -hidden lsp-code-lens-request %{
     }
 }
 
-define-command lsp-execute-command -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command" %{
+define-command lsp-execute-command -params 2..3 -docstring "lsp-execute-command <command> <args> [<server_name>]: execute a server-specific command" %{
     lsp-execute-command-request is-async %arg{@}
 }
 
-define-command -hidden lsp-execute-command-sync -params 2 -docstring "lsp-execute-command <command> <args>: execute a server-specific command, blocking Kakoune session until done" %{
+define-command -hidden lsp-execute-command-sync -params 2..3 -docstring "lsp-execute-command <command> <args> [<server_name>]: execute a server-specific command, blocking Kakoune session until done" %{
     lsp-synchronously lsp-execute-command-request is-sync %arg{@}
 }
-define-command -hidden lsp-execute-command-request -params 3 %{
-    lsp-send workspace/executeCommand %arg{1} %arg{2} %arg{3} # sync command arguments
+define-command -hidden lsp-execute-command-request -params 3..4 %{
+    # sync command arguments server_name
+    lsp-send workspace/executeCommand %arg{1} %arg{2} %arg{3} %arg{4}
 }
 
 define-command lsp-references -docstring "Open buffer with symbol references" %{

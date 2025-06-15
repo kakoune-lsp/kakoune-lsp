@@ -605,6 +605,7 @@ fn dispatch_fifo_request(
             let params = Box::new(EditorExecuteCommand {
                 command: state.next()?,
                 arguments: state.next()?,
+                server_name: state.next()?,
             });
             sync_trailer(state, is_sync)?;
             params

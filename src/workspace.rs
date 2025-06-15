@@ -1,4 +1,5 @@
 use crate::context::*;
+use crate::controller::can_serve;
 use crate::language_features::{document_symbol, rust_analyzer};
 use crate::settings::*;
 use crate::text_edit::apply_text_edits_try_deferred;
@@ -195,6 +196,7 @@ fn editor_workspace_symbol(
 pub struct EditorExecuteCommand {
     pub command: String,
     pub arguments: String,
+    pub server_name: Option<ServerName>,
 }
 
 pub fn execute_command(
@@ -221,13 +223,28 @@ pub fn execute_command(
             rust_analyzer::run_single(meta, response_fifo, req_params, ctx);
         }
         _ => {
-            ctx.call::<ExecuteCommand, _>(
-                meta,
-                RequestParams::All(vec![req_params]),
-                move |_: &mut Context, _, _| {
-                    let _response_fifo = response_fifo;
-                },
-            );
+            let params = if let Some(server_name) = params.server_name.as_ref() {
+                let Some((server_id, _)) = ctx.servers(&meta).find(|(server_id, _)| {
+                    can_serve(
+                        ctx,
+                        *server_id,
+                        &server_name,
+                        &ctx.server_config(&meta, &server_name).unwrap().root,
+                    )
+                }) else {
+                    error!(
+                        ctx.to_editor(),
+                        "cannot find server for with name: {}", server_name
+                    );
+                    return;
+                };
+                RequestParams::Each(vec![(server_id, vec![req_params])].into_iter().collect())
+            } else {
+                RequestParams::All(vec![req_params])
+            };
+            ctx.call::<ExecuteCommand, _>(meta, params, move |_: &mut Context, _, _| {
+                let _response_fifo = response_fifo;
+            });
         }
     }
 }

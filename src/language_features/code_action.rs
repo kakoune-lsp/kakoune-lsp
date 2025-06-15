@@ -244,7 +244,9 @@ fn editor_code_actions(
             1 => {
                 let (server_id, cmd) = &actions[0];
                 let may_resolve = may_resolve.contains(server_id);
-                let command = code_action_or_command_to_editor_command(cmd, sync, may_resolve);
+                let server_name = &ctx.server(*server_id).name;
+                let command =
+                    code_action_or_command_to_editor_command(server_name, cmd, sync, may_resolve);
                 ctx.exec_fifo(
                     meta,
                     response_fifo,
@@ -296,7 +298,9 @@ fn editor_code_actions(
                     title = head
                 }
                 let may_resolve = may_resolve.contains(server_id);
-                let select_cmd = code_action_or_command_to_editor_command(c, false, may_resolve);
+                let server_name = &ctx.server(*server_id).name;
+                let select_cmd =
+                    code_action_or_command_to_editor_command(server_name, c, false, may_resolve);
                 format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
             })
             .join(" ");
@@ -331,21 +335,31 @@ fn editor_code_actions(
 }
 
 fn code_action_or_command_to_editor_command(
+    server_name: &ServerName,
     action: &CodeActionOrCommand,
     sync: bool,
     may_resolve: bool,
 ) -> String {
     match action {
-        CodeActionOrCommand::Command(command) => execute_command_editor_command(command, sync),
+        CodeActionOrCommand::Command(command) => {
+            execute_command_editor_command(server_name, command, sync)
+        }
         CodeActionOrCommand::CodeAction(action) => {
-            code_action_to_editor_command(action, sync, may_resolve)
+            code_action_to_editor_command(server_name, action, sync, may_resolve)
         }
     }
 }
 
-fn code_action_to_editor_command(action: &CodeAction, sync: bool, may_resolve: bool) -> String {
+fn code_action_to_editor_command(
+    server_name: &ServerName,
+    action: &CodeAction,
+    sync: bool,
+    may_resolve: bool,
+) -> String {
     let command = match &action.command {
-        Some(command) => "\n".to_string() + &execute_command_editor_command(command, sync),
+        Some(command) => {
+            "\n".to_string() + &execute_command_editor_command(server_name, command, sync)
+        }
         None => "".to_string(),
     };
     match &action.edit {
@@ -374,7 +388,11 @@ pub fn apply_workspace_edit_editor_command(edit: &WorkspaceEdit, sync: bool) -> 
     )
 }
 
-pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
+pub fn execute_command_editor_command(
+    server_name: &ServerName,
+    command: &Command,
+    sync: bool,
+) -> String {
     let cmd = editor_quote(&command.command);
     let args = command
         .arguments
@@ -382,14 +400,12 @@ pub fn execute_command_editor_command(command: &Command, sync: bool) -> String {
         .map(|args| serde_json::to_string(args).unwrap());
     let args = editor_quote(args.as_deref().unwrap_or_default());
     format!(
-        "{} {} {}",
+        "{} {cmd} {args} {server_name}",
         if sync {
             "lsp-execute-command-sync"
         } else {
             "lsp-execute-command"
         },
-        cmd,
-        args
     )
 }
 
@@ -404,8 +420,9 @@ pub fn text_document_code_action_resolve(
         meta,
         RequestParams::All(vec![req_params]),
         move |ctx: &mut Context, meta, results| {
-            if let Some((_, result)) = results.first() {
-                let cmd = code_action_to_editor_command(result, false, false);
+            if let Some((server_id, result)) = results.first() {
+                let server_name = &ctx.server(*server_id).name;
+                let cmd = code_action_to_editor_command(server_name, result, false, false);
                 ctx.exec(meta, format!("evaluate-commands -- {}", editor_quote(&cmd)))
             }
         },
