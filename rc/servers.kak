@@ -377,6 +377,8 @@ hook -group lsp-filetype-latex global BufSetOption filetype=latex %{
                 '
             """,
         ]
+        # [ltex-ls]
+        # root_globs = [".git", ".hg"]
     }
 }
 
