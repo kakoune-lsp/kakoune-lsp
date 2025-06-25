@@ -1473,29 +1473,59 @@ define-command -hidden lsp-handle-progress -params 6 -docstring %{
 
 ### Other commands ###
 
-define-command lsp-diagnostic-object -docstring 'lsp-diagnostic-object [--include-warnings]: go to adjacent diagnostic from object mode' -params 0..1 %<
+define-command lsp-diagnostic-object -docstring %{lsp-diagnostic-object [<diagnostic-kind>...]: go to adjacent diagnostic from object mode
+
+Considers only diagnostics specified as arguments.
+Valid arguments are 'error', 'warning', 'info', 'hint'.
+If no arguments are specified, 'error' is implied.
+} -params .. %<
     evaluate-commands %sh<
         case "$kak_opt_lsp_object_mode" in
             ( [ | { | '<a-[>' | '<a-{>' ) previous=--previous ;;
             (*) previous= ;;
         esac
-        echo lsp-find-error $previous $1
+        if [ $# -eq 0 ]; then
+            echo "lsp-find-error $previous error warning info hint"
+        else
+            echo "lsp-find-error $previous %arg{@}"
+        fi
     >
->
+> -shell-script-candidates %{
+    printf %s\\n error warning info hint
+}
 
-define-command lsp-find-error -params 0..2 -docstring "lsp-find-error [--previous] [--include-warnings]
-Jump to the next or previous diagnostic error" %{
+define-command lsp-find-error -params .. -docstring "lsp-find-error [--previous] [<diagnostic-kind>...]:
+Jump to the next or previous diagnostic.
+
+Considers only diagnostics specified as arguments.
+Valid arguments are 'error', 'warning', 'info', 'hint'.
+If no arguments are specified, 'error' is implied.
+" %{
     evaluate-commands %sh{
-        previous=false
-        if [ "$1" = "--previous" ]; then
-            previous=true
-            shift
+        diagnostic_faces=
+        types=
+        add_face() {
+            types="$types $1"
+            diagnostic_faces="$diagnostic_faces $2"
+        }
+        if [ $# -eq 0 ]; then
+            add_face error DiagnosticError
         fi
-        includeWarnings=false
-        if [ "$1" = "--include-warnings" ]; then
-            includeWarnings=true
-        fi
-        #expand quoting, stores option in $@
+        for arg; do
+            case "$arg" in
+                (--previous) previous=true; continue ;;
+                (error) add_face error DiagnosticError ;;
+                (warning | --include-warnings) add_face warning DiagnosticWarning ;;
+                (info) add_face info DiagnosticInfo ;;
+                (hint) add_face hint DiagnosticHint ;;
+                (*)
+                    printf "fail 'lsp-find-error: invalid argument $(printf %s "$arg" | sed "s/'/''/g")'"
+                    exit
+                    ;;
+            esac
+        done
+        types=${types#" "}
+        # expand quoting, stores option in $@
         eval set -- "${kak_quoted_opt_lsp_inline_diagnostics}"
 
         less_than() {
@@ -1539,47 +1569,51 @@ Jump to the next or previous diagnostic error" %{
         selection=""
         prev_no_overlap=true
         for e in "$@"; do
-            if [ -z "${e##*DiagnosticError*}" ] || {
-                $includeWarnings && [ -z "${e##*DiagnosticWarning*}" ]
-            } then # e is an error or warning
-                range=${e%|*}
-                start=${range%,*}
-                end=${range#*,}
-                start_line=${start%.*}
-                start_column=${start#*.}
-                end_line=${end%.*}
-                end_column=${end#*.}
+            found=false
+            for face in $diagnostic_faces; do
+                if [ -z "${e##*"$face"}" ]; then
+                    found=true
+                    break
+                fi
+            done
+            $found || continue
+            range=${e%|*}
+            start=${range%,*}
+            end=${range#*,}
+            start_line=${start%.*}
+            start_column=${start#*.}
+            end_line=${end%.*}
+            end_column=${end#*.}
 
-                current="$range"
-                if [ -z "$first" ]; then
-                    first="$current"
-                fi
-                intersection_start=$(max $selection_start $start_line $start_column)
-                intersection_end=$(min $selection_end $end_line $end_column)
-                no_overlap=$(less_than $intersection_end $intersection_start && echo true || echo false)
-                range_is_after_selection=$(less_than $selection_start $end_line $end_column && echo true || echo false)
-                if "$range_is_after_selection" && {
-                    $previous && $prev_no_overlap || $no_overlap
-                } then
-                    #after the cursor
-                    if $previous; then
-                        selection="$prev"
-                    else
-                        selection="$current"
-                    fi
-                    if [ ! -z "$selection" ]; then
-                        # if a selection is found
-                        break
-                    fi
+            current="$range"
+            if [ -z "$first" ]; then
+                first="$current"
+            fi
+            intersection_start=$(max $selection_start $start_line $start_column)
+            intersection_end=$(min $selection_end $end_line $end_column)
+            no_overlap=$(less_than $intersection_end $intersection_start && echo true || echo false)
+            range_is_after_selection=$(less_than $selection_start $end_line $end_column && echo true || echo false)
+            if "$range_is_after_selection" && {
+                $previous && $prev_no_overlap || $no_overlap
+            } then
+                #after the cursor
+                if $previous; then
+                    selection="$prev"
                 else
-                    prev="$current"
-                    prev_no_overlap=$no_overlap
+                    selection="$current"
                 fi
+                if [ ! -z "$selection" ]; then
+                    # if a selection is found
+                    break
+                fi
+            else
+                prev="$current"
+                prev_no_overlap=$no_overlap
             fi
         done
         if [ -z "$first" ]; then
             # if nothing found
-            echo "echo -markup '{Error}No errors found'"
+            echo "echo -markup '{Error}No diagnostics found of types: $types'"
             exit
         fi
         if [ -z "$selection" ]; then #if nothing found past the cursor
@@ -1593,6 +1627,8 @@ Jump to the next or previous diagnostic error" %{
         end="${selection#*,}"
         printf 'select %s\n' "${end},${start}"
     }
+} -shell-script-candidates %{
+    printf %s\\n --previous error warning info hint
 }
 
 define-command lsp-workspace-symbol -params 1 -docstring "lsp-workspace-symbol <query>: open buffer with matching project-wide symbols" %{

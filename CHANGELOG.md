@@ -24,6 +24,7 @@ Additions:
 - `lsp-document-symbol` moves the cursor in the `*goto*` buffer to the symbol that corresponds to the main cursor position.
 - `lsp-diagnostics` moves the cursor in the `*diagnostics*` buffer to the diagnostic nearest to the main cursor.
 - `lsp-hover` now shows diagnostics before hover info (#819).
+- `lsp-diagnostic-object` can now look for `info` and `hint` level diagnostics (#844).
 
 Fixes:
 - Actually use cmake-language-server for `cmake` type files.
