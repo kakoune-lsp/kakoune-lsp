@@ -33,7 +33,7 @@ hook -group lsp-filetype-clojure global BufSetOption filetype=clojure %{
     }
 }
 
-hook -group lsp-filetype-cmake global BufSetOption filetype=make %{
+hook -group lsp-filetype-cmake global BufSetOption filetype=cmake %{
     set-option buffer lsp_servers %{
         [cmake-language-server]
         root_globs = ["CMakeLists.txt", ".git", ".hg"]
