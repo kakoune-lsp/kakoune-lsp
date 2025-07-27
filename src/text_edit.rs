@@ -354,10 +354,12 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
         .into_iter()
         .filter(|text_edit| {
             // Drop redundant text edits because Kakoune treats them differently. Here's how
+            // (Note that we no longer use the actual Z/z commands), but compute equivalent
+            // selections ourselves.)
             //
             // 0. Assume we have two adjacent selections "foo" "bar".
-            // 1. Use "Z" to save the two selection .
-            // 2. Use "<space><esc>,<esc>" to select "foo"
+            // 1. Use "Z" to save the two selection.
+            // 2. Use ",<esc>" to select "foo"
             // 3. Type "|echo foo<ret>"
             // 4. Run "z" to restore the two selections. Observe that "foo" is still selected.
             //
@@ -399,51 +401,28 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
         .map(|text_edit| lsp_text_edit_to_kakoune(&text_edit, text, offset_encoding))
         .collect::<Vec<_>>();
 
-    let selections_desc = edits
+    let apply_edits = edits
         .iter()
-        .map(|edit| format!("{}", edit.range))
-        .dedup()
-        .join(" ");
-
-    let edit_keys = edits
-        .iter()
-        .enumerate()
+        .rev()
         .map(
-            |(
-                i,
-                KakouneTextEdit {
-                    new_text, command, ..
-                },
-            )| {
+            |KakouneTextEdit {
+                 range,
+                 new_text,
+                 command,
+             }| {
+                use KakouneTextEditCommand::{InsertBefore, Replace};
                 let command = match command {
-                    KakouneTextEditCommand::InsertBefore => 'i',
-                    KakouneTextEditCommand::Replace => 'c',
+                    InsertBefore => 'i',
+                    Replace => 'c',
                 };
-                let command = formatdoc!(
-                    "z{}<space><esc>,<esc>{}{}<esc>",
-                    if i > 0 {
-                        format!("{})", i)
-                    } else {
-                        String::new()
-                    },
-                    command,
-                    editor_escape_double_quotes(&escape_keys(new_text)),
-                );
-                command
+                formatdoc!(
+                    "select {range}
+                     execute-keys \"{command}{}<esc>\"",
+                    editor_escape_double_quotes(&escape_keys(new_text))
+                )
             },
         )
-        .join("");
-    let mut apply_edits = format!("execute-keys \"{}\"", edit_keys);
-
-    if !selections_desc.is_empty() {
-        apply_edits = formatdoc!(
-            "select {}
-             execute-keys -save-regs \"\" Z
-             {}",
-            selections_desc,
-            apply_edits
-        );
-    }
+        .join("\n");
 
     Some(apply_edits)
 }
@@ -686,9 +665,10 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 1.5,1.12 1.15,1.21
-               execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>cstd<esc>z1)<space><esc>,<esc>cffi::{CStr, CString}<esc>""#
+            r#"select 1.5,1.12
+               execute-keys "cstd<esc>"
+               select 1.10,1.16
+               execute-keys "cffi::{CStr, CString}<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -706,9 +686,10 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 1.2,1.2 1.3,1.3
-               execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>iinserted<esc>z1)<space><esc>,<esc>creplaced<esc>""#
+            r#"select 1.2,1.2
+               execute-keys "iinserted<esc>"
+               select 1.11,1.11
+               execute-keys "creplaced<esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -743,9 +724,349 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 1.5,1.9 1.11,1.13 2.9,2.14
-               execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>cif<esc>z1)<space><esc>,<esc>clet Test::Foo = foo<esc>z2)<space><esc>,<esc>cprintln<esc>""#
+            r#"select 1.5,1.9
+               execute-keys "cif<esc>"
+               select 1.8,1.10
+               execute-keys "clet Test::Foo = foo<esc>"
+               select 2.9,2.14
+               execute-keys "cprintln<esc>""#
+        )
+        .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn lsp_text_edits_to_kakoune_issue_848() {
+        let text_edits = vec![
+            edit(1, 10, 1, 10, " "),
+            edit(1, 11, 2, 0, "\n  "),
+            edit(2, 10, 3, 0, "\n  "),
+            edit(3, 10, 4, 0, "\n  "),
+            edit(4, 10, 5, 0, "\n  "),
+            edit(5, 10, 6, 0, "\n  "),
+        ];
+        let buffer = Rope::from_str(indoc!(
+            "#include <cstdio>
+             int main(){
+             // comment
+             // comment
+             // comment
+             // comment
+             return 0;
+             }"
+        ));
+        let result = lsp_text_edits_to_kakoune(
+            &mock_to_editor(),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
+        let expected = indoc!(
+            r#"select 2.11,2.11
+               execute-keys "i <esc>"
+               select 2.13,2.1000000
+               execute-keys "c
+                 <esc>"
+               select 3.13,3.1000000
+               execute-keys "c
+                 <esc>"
+               select 4.13,4.1000000
+               execute-keys "c
+                 <esc>"
+               select 5.13,5.1000000
+               execute-keys "c
+                 <esc>"
+               select 6.13,6.1000000
+               execute-keys "c
+                 <esc>""#
+        )
+        .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn lsp_text_edits_to_kakoune_join_lines() {
+        let text_edits = vec![
+            edit(1, 42, 2, 4, " "),
+            edit(2, 13, 2, 13, "PROGRAM_NAME, "),
+            edit(2, 38, 2, 53, "}"),
+            edit(2, 54, 3, 4, " "),
+            edit(3, 10, 3, 10, "EnvStack, Environment, "),
+            edit(3, 18, 3, 42, "}"),
+            edit(3, 43, 4, 4, " flog::NoFlog, "),
+            edit(4, 25, 5, 4, " "),
+            edit(6, 8, 6, 8, "CharEvent, InputEventQueue, InputEventQueuer, KeyEvent, QueryResponseEvent, TerminalQuery, "),
+            edit(6, 30, 8, 5, "\n    }"),
+            edit(8, 6, 9, 4, " "),
+            edit(9, 10, 9, 10, "Key, "),
+            edit(9, 24, 9, 30, "}"),
+            edit(9, 31, 10, 4, " "),
+            edit(10, 16, 11, 4, " "),
+            edit(11, 25, 12, 4, " "),
+            edit(12, 27, 13, 4, " "),
+            edit(13, 34, 14, 4, " "),
+            edit(14, 72, 15, 4, " "),
+            edit(15, 32, 16, 4, " "),
+            edit(16, 25, 17, 4, " "),
+            edit(17, 12, 18, 4, " "),
+            edit(18, 38, 19, 4, " "),
+            edit(20, 8, 20, 8, "TtyHandoff, "),
+            edit(20, 93, 22, 5, "\n    }"),
+            edit(22, 6, 23, 4, " "),
+            edit(23, 22, 24, 4, " "),
+            edit(24, 14, 24, 14, "ArgType, WGetopter, WOption, "),
+            edit(24, 18, 25, 1, "}\n}"),
+        ];
+        let buffer = Rope::from_str(indoc!(
+            "use crate::{
+                 builtins::shared::BUILTIN_ERR_UNKNOWN,
+                 common::{shell_modes, str2wcstring, PROGRAM_NAME},
+                 env::{env_init, EnvStack, Environment},
+                 future_feature_flags,
+                 input_common::{
+                     match_key_event_to_key, CharEvent, InputEventQueue, InputEventQueuer, KeyEvent,
+                     QueryResponseEvent, TerminalQuery,
+                 },
+                 key::{char_to_symbol, Key},
+                 nix::isatty,
+                 panic::panic_handler,
+                 print_help::print_help,
+                 proc::set_interactive_session,
+                 reader::{check_exit_loop_maybe_warning, initial_query, reader_init},
+                 signal::signal_set_handlers,
+                 terminal::Capability,
+                 threads,
+                 topic_monitor::topic_monitor_init,
+                 tty_handoff::{
+                     get_kitty_keyboard_capability, initialize_tty_metadata, set_kitty_keyboard_capability,
+                     TtyHandoff,
+                 },
+                 wchar::prelude::*,
+                 wgetopt::{wopt, ArgType, WGetopter, WOption},
+             };"
+        ));
+        let result = lsp_text_edits_to_kakoune(
+            &mock_to_editor(),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
+        let expected = indoc!(
+            r#"select 2.43,3.4
+               execute-keys "c <esc>"
+               select 2.53,2.53
+               execute-keys "iPROGRAM_NAME, <esc>"
+               select 2.92,2.106
+               execute-keys "c}<esc>"
+               select 2.94,3.4
+               execute-keys "c <esc>"
+               select 2.101,2.101
+               execute-keys "iEnvStack, Environment, <esc>"
+               select 2.132,2.155
+               execute-keys "c}<esc>"
+               select 2.134,3.4
+               execute-keys "c flog::NoFlog, <esc>"
+               select 2.170,3.4
+               execute-keys "c <esc>"
+               select 3.9,3.9
+               execute-keys "iCharEvent, InputEventQueue, InputEventQueuer, KeyEvent, QueryResponseEvent, TerminalQuery, <esc>"
+               select 3.122,5.5
+               execute-keys "c
+                   }<esc>"
+               select 4.7,5.4
+               execute-keys "c <esc>"
+               select 4.14,4.14
+               execute-keys "iKey, <esc>"
+               select 4.33,4.38
+               execute-keys "c}<esc>"
+               select 4.35,5.4
+               execute-keys "c <esc>"
+               select 4.48,5.4
+               execute-keys "c <esc>"
+               select 4.70,5.4
+               execute-keys "c <esc>"
+               select 4.94,5.4
+               execute-keys "c <esc>"
+               select 4.125,5.4
+               execute-keys "c <esc>"
+               select 4.194,5.4
+               execute-keys "c <esc>"
+               select 4.223,5.4
+               execute-keys "c <esc>"
+               select 4.245,5.4
+               execute-keys "c <esc>"
+               select 4.254,5.4
+               execute-keys "c <esc>"
+               select 4.289,5.4
+               execute-keys "c <esc>"
+               select 5.9,5.9
+               execute-keys "iTtyHandoff, <esc>"
+               select 5.106,7.5
+               execute-keys "c
+                   }<esc>"
+               select 6.7,7.4
+               execute-keys "c <esc>"
+               select 6.26,7.4
+               execute-keys "c <esc>"
+               select 6.37,6.37
+               execute-keys "iArgType, WGetopter, WOption, <esc>"
+               select 6.70,7.1
+               execute-keys "c}
+               }<esc>""#
+        )
+        .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn lsp_text_edits_to_kakoune_remove_imports() {
+        let text_edits = vec![
+            edit(17, 26, 17, 53, "PROGRAM_NAME}"),
+            edit(18, 4, 18, 7, "input_common"),
+            edit(18, 10, 18, 18, "\n        match_key_event_to_key"),
+            edit(18, 20, 18, 28, "CharEvent"),
+            edit(18, 30, 18, 41, "ImplicitEvent, InputEventQueue, InputEventQueuer,\n        KeyEvent,\n    "),
+            edit(19, 4, 19, 24, "key::{char_to_symbol, Key}"),
+            edit(20, 4, 23, 5, "nix::isatty"),
+            edit(24, 4, 24, 30, "print_help::print_help"),
+            edit(25, 4, 25, 15, "reader::{\n        check_exit_loop_maybe_warning, reader_sighup, set_shell_modes,\n    }"),
+            edit(26, 4, 26, 9, "tty_handoff"),
+            edit(26, 11, 26, 24, "TtyHandoff"),
+            edit(27, 4, 27, 14, "wchar"),
+            edit(27, 16, 27, 26, "prelude::*"),
+            edit(28, 4, 28, 33, "wgetopt::{wopt, ArgType, WGetopter, WOption}"),
+            edit(28, 34, 37, 1, "\n}"),
+        ];
+        let buffer = Rope::from_str(indoc!(
+            r#"//! A small utility to print information related to pressing keys. This is similar to using tools
+               //! like `xxd` and `od -tx1z` but provides more information such as the time delay between each
+               //! character. It also allows pressing and interpreting keys that are normally special such as
+               //! [ctrl-c] (interrupt the program) or [ctrl-d] (EOF to signal the program should exit).
+               //! And unlike those other tools this one disables ICRNL mode so it can distinguish between
+               //! carriage-return (\cM) and newline (\cJ).
+               //!
+               //! Type "exit" or "quit" to terminate the program.
+
+               use std::{ops::ControlFlow, os::unix::prelude::OsStrExt};
+
+               use libc::{STDIN_FILENO, VEOF, VINTR};
+
+               #[allow(unused_imports)]
+               use crate::future::IsSomeAnd;
+               use crate::{
+                   builtins::shared::BUILTIN_ERR_UNKNOWN,
+                   common::{shell_modes, str2wcstring, PROGRAM_NAME},
+                   env::{env_init, EnvStack, Environment},
+                   future_feature_flags,
+                   input_common::{
+                       match_key_event_to_key, CharEvent, ImplicitEvent, InputEventQueue, InputEventQueuer,
+                       KeyEvent, QueryResultEvent,
+                   },
+                   key::{char_to_symbol, Key},
+                   nix::isatty,
+                   panic::panic_handler,
+                   print_help::print_help,
+                   proc::set_interactive_session,
+                   reader::{
+                       check_exit_loop_maybe_warning, reader_init, reader_sighup, set_shell_modes, terminal_init,
+                   },
+                   threads,
+                   topic_monitor::topic_monitor_init,
+                   tty_handoff::TtyHandoff,
+                   wchar::prelude::*,
+                   wgetopt::{wopt, ArgType, WGetopter, WOption},
+               };
+
+               use super::prelude::*;
+
+               /// Return true if the recent sequence of characters indicates the user wants to exit the program.
+               fn should_exit(
+                   streams: &mut IoStreams,
+                   recent_keys: &mut Vec<KeyEvent>,
+                   key_evt: KeyEvent,
+               ) -> bool {
+                   false
+               }"#
+        ));
+        let result = lsp_text_edits_to_kakoune(
+            &mock_to_editor(),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
+        let expected = indoc!(
+            r#"select 18.27,18.53
+               execute-keys "cPROGRAM_NAME}<esc>"
+               select 19.5,19.7
+               execute-keys "cinput_common<esc>"
+               select 19.20,19.27
+               execute-keys "c
+                       match_key_event_to_key<esc>"
+               select 20.43,20.50
+               execute-keys "cCharEvent<esc>"
+               select 20.54,20.64
+               execute-keys "cImplicitEvent, InputEventQueue, InputEventQueuer,
+                       KeyEvent,
+                   <esc>"
+               select 23.5,23.24
+               execute-keys "ckey::{char_to_symbol, Key}<esc>"
+               select 24.5,27.5
+               execute-keys "cnix::isatty<esc>"
+               select 25.5,25.30
+               execute-keys "cprint_help::print_help<esc>"
+               select 26.5,26.15
+               execute-keys "creader::{
+                       check_exit_loop_maybe_warning, reader_sighup, set_shell_modes,
+                   }<esc>"
+               select 29.5,29.9
+               execute-keys "ctty_handoff<esc>"
+               select 29.18,29.30
+               execute-keys "cTtyHandoff<esc>"
+               select 30.5,30.14
+               execute-keys "cwchar<esc>"
+               select 30.12,30.21
+               execute-keys "cprelude::*<esc>"
+               select 31.5,31.33
+               execute-keys "cwgetopt::{wopt, ArgType, WGetopter, WOption}<esc>"
+               select 31.50,40.1
+               execute-keys "c
+               }<esc>""#
+        )
+        .to_string();
+        assert_eq!(result, Some(expected));
+    }
+
+    #[test]
+    pub fn lsp_text_edits_to_kakoune_gopls_code_actions() {
+        let text_edits = vec![
+            edit(4, 0, 4, 1, ""),
+            edit(4, 10, 4, 11, ""),
+            edit(4, 13, 4, 13, " "),
+        ];
+        let buffer = Rope::from_str(indoc!(
+            r#"package main
+
+               import "os"
+
+               	func main (){}"#
+        ));
+        let result = lsp_text_edits_to_kakoune(
+            &mock_to_editor(),
+            &None,
+            text_edits,
+            &buffer,
+            OffsetEncoding::Utf8,
+        );
+        let expected = indoc!(
+            r#"select 5.1,5.1
+               execute-keys "c<esc>"
+               select 5.10,5.10
+               execute-keys "c<esc>"
+               select 5.12,5.12
+               execute-keys "i <esc>""#
         )
         .to_string();
         assert_eq!(result, Some(expected));
@@ -816,17 +1137,35 @@ mod tests {
         );
 
         let expected = indoc!(
-            r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
-               execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>cstd::{path::Path, process::Stdio}<esc>z1)<space><esc>,<esc>c
+            r#"select 1.5,1.19
+               execute-keys "cstd::{path::Path, process::Stdio}<esc>"
+               select 2.1,2.24
+               execute-keys "c
                fn main() {
                    let matches = App::new(""kak-lsp"").get_matches();
 
                    if matches.is_present(""kakoune"") {}
-               }<esc>z2)<space><esc>,<esc>ckakoune<esc>z3)<space><esc>,<esc>cscript:<esc>z4)<space><esc>,<esc>i&str <esc>z5)<space><esc>,<esc>cinclude_str!(""../rc/lsp.kak"")<esc>z6)<space><esc>,<esc>c
-                   let<esc>z7)<space><esc>,<esc>cargs<esc>z8)<space><esc>,<esc>c= env::args().skip(1);<esc>z9)<space><esc>,<esc>c
+               }<esc>"
+               select 9.4,9.7
+               execute-keys "ckakoune<esc>"
+               select 10.9,10.15
+               execute-keys "cscript:<esc>"
+               select 10.17,10.17
+               execute-keys "i&str <esc>"
+               select 10.24,10.56
+               execute-keys "cinclude_str!(""../rc/lsp.kak"")<esc>"
+               select 10.54,12.6
+               execute-keys "c
+                   let<esc>"
+               select 11.8,11.36
+               execute-keys "cargs<esc>"
+               select 11.13,11.14
+               execute-keys "c= env::args().skip(1);<esc>"
+               select 12.2,17.1000000
+               execute-keys "c
                <esc>""#
-        ).to_string();
+        )
+        .to_string();
         assert_eq!(result, Some(expected));
     }
 
@@ -863,8 +1202,7 @@ mod tests {
         );
         let expected = indoc!(
             r#"select 2.1,3.1000000
-               execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>c
+               execute-keys "c
                <lt>body>
                        asdf
                <esc>""#
@@ -920,8 +1258,7 @@ mod tests {
         */
         let expected = indoc!(
             r#"select 2.1,2.1000000
-               execute-keys -save-regs "" Z
-               execute-keys "z<space><esc>,<esc>c        asdf
+               execute-keys "c        asdf
                <esc>""#
         )
         .to_string();
