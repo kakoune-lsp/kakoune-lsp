@@ -443,6 +443,13 @@ hook -group lsp-filetype-ocaml global BufSetOption filetype=ocaml %{
     }
 }
 
+hook -group lsp-filetype-odin global BufSetOption filetype=odin %{
+    set-option buffer lsp_servers %{
+        [ols]
+        root_globs = ["ols.json", ".git"]
+    }
+}
+
 hook -group lsp-filetype-php global BufSetOption filetype=php %{
     set-option buffer lsp_servers %{
         [intelephense]
