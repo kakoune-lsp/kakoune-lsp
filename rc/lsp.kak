@@ -21,6 +21,8 @@ Each language server table needs to define exactly one of
                directory of the buffer's file.
 
 Additionally, optional configuration options can be added:
+- command          = override the command used to launch the language server. By default
+                     the language server's name is used.
 - args             = arguments to pass to the language server process at startup
 - single_instance  = bool indicating whether a single language server instance is to be
                      used for files with different roots.  Defaults to true iff workspaceFolders
