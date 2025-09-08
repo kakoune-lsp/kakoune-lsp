@@ -161,7 +161,7 @@ pub fn get_file_contents(filename: &str, ctx: &Context) -> Option<Rope> {
 /// If the line number is out-of-bounds, this will return the
 /// last line. This is useful because the language server might
 /// use a large value to convey "end of file".
-pub fn get_line(line_number: usize, text: &Rope) -> RopeSlice {
+pub fn get_line(line_number: usize, text: &Rope) -> RopeSlice<'_> {
     text.line(min(line_number, text.len_lines() - 1))
 }
 

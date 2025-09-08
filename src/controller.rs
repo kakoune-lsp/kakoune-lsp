@@ -1579,7 +1579,7 @@ pub fn dispatch_pending_editor_requests(ctx: &mut Context) {
     let mut requests = mem::take(&mut ctx.pending_requests);
 
     for msg in requests.drain(..) {
-        dispatch_editor_request(msg, ctx);
+        let _ = dispatch_editor_request(msg, ctx);
     }
 }
 
