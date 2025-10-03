@@ -37,9 +37,9 @@ fn roots_by_marker(to_editor: &ToEditorSender, roots: &[String], path: &str) -> 
         src.pop();
     }
 
-    for root in roots {
-        let mut pwd = src.clone();
-        loop {
+    let mut pwd = src.clone();
+    loop {
+        for root in roots {
             // unwrap should be safe here because we walk up path previously converted from str
             let matches = glob(pwd.join(root).to_str().unwrap());
             if let Ok(mut m) = matches {
@@ -53,9 +53,9 @@ fn roots_by_marker(to_editor: &ToEditorSender, roots: &[String], path: &str) -> 
                     return root_dir;
                 }
             }
-            if !pwd.pop() {
-                break;
-            }
+        }
+        if !pwd.pop() {
+            break;
         }
     }
     src.to_str().unwrap().to_string()
