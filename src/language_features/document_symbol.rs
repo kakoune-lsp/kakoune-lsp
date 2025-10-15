@@ -893,7 +893,11 @@ fn editor_object(
             "select {}",
             new_selections
                 .into_iter()
-                .map(|range| format!("{}", range))
+                .map(|range| format!(
+                    "{}",
+                    // N.B. this can be forward or backward (determined above).
+                    ForwardKakouneRange(range)
+                ))
                 .join(" ")
         ),
     );

@@ -401,7 +401,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
 
     let selections_desc = edits
         .iter()
-        .map(|edit| format!("{}", edit.range))
+        .map(|edit| format!("{}", ForwardKakouneRange(edit.range)))
         .dedup()
         .join(" ");
 

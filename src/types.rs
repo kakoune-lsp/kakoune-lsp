@@ -566,9 +566,19 @@ impl Display for KakounePosition {
     }
 }
 
-impl Display for KakouneRange {
+pub struct ForwardKakouneRange(pub KakouneRange);
+
+impl Display for ForwardKakouneRange {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{},{}", self.start, self.end)
+        write!(f, "{},{}", self.0.start, self.0.end)
+    }
+}
+
+pub struct BackwardKakouneRange(pub KakouneRange);
+
+impl Display for BackwardKakouneRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{},{}", self.0.end, self.0.start)
     }
 }
 

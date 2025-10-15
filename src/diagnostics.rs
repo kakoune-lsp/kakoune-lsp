@@ -45,7 +45,11 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
             let server = ctx.server(*server_id);
             format!(
                 "{}|{}",
-                lsp_range_to_kakoune(&x.range, &document.text, server.offset_encoding),
+                ForwardKakouneRange(lsp_range_to_kakoune(
+                    &x.range,
+                    &document.text,
+                    server.offset_encoding
+                )),
                 match x.severity {
                     Some(DiagnosticSeverity::ERROR) => "DiagnosticError",
                     Some(DiagnosticSeverity::HINT) => "DiagnosticHint",
@@ -70,7 +74,11 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
                 if x.tags.as_ref().is_some_and(|tags| tags.contains(&tag)) {
                     Some(format!(
                         "{}|{}",
-                        lsp_range_to_kakoune(&x.range, &document.text, server.offset_encoding),
+                        ForwardKakouneRange(lsp_range_to_kakoune(
+                            &x.range,
+                            &document.text,
+                            server.offset_encoding
+                        )),
                         tag_face
                     ))
                 } else {

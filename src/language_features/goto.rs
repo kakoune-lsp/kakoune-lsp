@@ -4,7 +4,7 @@ use crate::capabilities::{
 };
 use crate::context::{Context, RequestParams};
 use crate::position::*;
-use crate::types::{EditorMeta, KakouneRange, PositionParams, ServerId};
+use crate::types::{BackwardKakouneRange, EditorMeta, KakouneRange, PositionParams, ServerId};
 use crate::util::{editor_quote, short_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -70,7 +70,7 @@ pub fn edit_at_range(buffile: &str, range: KakouneRange, in_normal_mode: bool) -
          select {}
          execute-keys {normal}<c-s>{normal}vv",
         editor_quote(buffile),
-        range,
+        BackwardKakouneRange(range),
     )
 }
 

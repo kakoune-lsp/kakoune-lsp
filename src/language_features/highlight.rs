@@ -2,7 +2,10 @@ use crate::capabilities::{attempt_server_capability, CAPABILITY_DOCUMENT_HIGHLIG
 use crate::context::{Context, RequestParams};
 use crate::editor_transport::ToEditorSender;
 use crate::position::*;
-use crate::types::{EditorMeta, KakounePosition, KakouneRange, PositionParams, ServerId};
+use crate::types::{
+    BackwardKakouneRange, EditorMeta, ForwardKakouneRange, KakounePosition, KakouneRange,
+    PositionParams, ServerId,
+};
 use crate::util::editor_quote;
 use itertools::Itertools;
 use lsp_types::{
@@ -84,7 +87,7 @@ fn editor_document_highlight(
                 ranges.push(range);
                 format!(
                     "{}|{}",
-                    range,
+                    ForwardKakouneRange(range),
                     if highlight.kind == Some(DocumentHighlightKind::WRITE) {
                         "ReferenceBind"
                     } else {
@@ -125,9 +128,12 @@ fn select_ranges_and(
         return command;
     }
     let command = format!(
-        "select {} {}\n{}",
-        main_selection_range,
-        ranges.iter().map(|range| format!("{}", range)).join(" "),
+        "select {}\n{}",
+        Some(main_selection_range)
+            .into_iter()
+            .chain(ranges.iter())
+            .map(|range| format!("{}", BackwardKakouneRange(*range)))
+            .join(" "),
         command
     );
     format!("evaluate-commands {}", editor_quote(&command))

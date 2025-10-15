@@ -2,7 +2,7 @@ use crate::capabilities::{attempt_server_capability, CAPABILITY_SEMANTIC_TOKENS}
 use crate::context::{Context, RequestParams};
 use crate::position::lsp_range_to_kakoune;
 use crate::semantic_tokens_config;
-use crate::types::{EditorMeta, ServerId};
+use crate::types::{EditorMeta, ForwardKakouneRange, ServerId};
 use crate::util::editor_quote;
 use lsp_types::request::SemanticTokensFullRequest;
 use lsp_types::{
@@ -138,7 +138,9 @@ pub fn tokens_response(
                         .count()
                 });
 
-                best.map(|token_config| format!("{}|{}", range, token_config.face))
+                best.map(|token_config| {
+                    format!("{}|{}", ForwardKakouneRange(range), token_config.face)
+                })
             },
         )
         .collect::<Vec<String>>()

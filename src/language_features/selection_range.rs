@@ -134,7 +134,7 @@ fn editor_selection_range(
                 "'{}'",
                 &sel_ranges
                     .iter()
-                    .filter_map(|s| s.map(|s| s.to_string()))
+                    .filter_map(|s| s.map(|s| ForwardKakouneRange(s).to_string()))
                     .join(" ")
             )
         })

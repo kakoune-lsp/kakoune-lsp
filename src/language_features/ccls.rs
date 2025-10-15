@@ -480,7 +480,11 @@ pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &
                     } else {
                         Option::Some(format!(
                             "{}|{}",
-                            lsp_range_to_kakoune(r, &document.text, offset_encoding),
+                            ForwardKakouneRange(lsp_range_to_kakoune(
+                                r,
+                                &document.text,
+                                offset_encoding
+                            )),
                             face
                         ))
                     }
