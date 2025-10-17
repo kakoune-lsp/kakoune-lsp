@@ -1255,6 +1255,12 @@ define-command clangd-switch-source-header -docstring "clangd-switch-source-head
     lsp-send textDocument/switchSourceHeader
 }
 
+# lean Extensions
+
+define-command lean-get-goal -params 1 -docstring "lean-get-goal <buffer_name>: writes the goal at the main cursor position to the specified buffer." %{
+    lsp-send $/lean/plainGoal %val{cursor_line} %val{cursor_column} %arg{1}
+}
+
 # eclipse.jdt.ls Extension
 #
 define-command ejdtls-organize-imports -docstring "ejdtls-organize-imports: Organize imports." %{

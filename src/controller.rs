@@ -38,6 +38,7 @@ use indoc::formatdoc;
 use inlay_hints::InlayHintsOptions;
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
+use lean::EditorPlainGoalParams;
 use libc::O_NONBLOCK;
 use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
@@ -376,6 +377,10 @@ fn dispatch_fifo_request(
         }),
         "$ccls/vars" => Box::new(PositionParams {
             position: state.next()?,
+        }),
+        "$/lean/plainGoal" => Box::new(EditorPlainGoalParams {
+            position: state.next()?,
+            buffer: state.next()?,
         }),
         "apply-workspace-edit" => {
             let is_sync = state.next::<String>()? == "is-sync";
@@ -1845,6 +1850,11 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         }
         ccls::MemberRequest::METHOD => {
             ccls::member(meta, params.unbox(), ctx);
+        }
+
+        // lean
+        lean::PlainGoalRequest::METHOD => {
+            lean::plain_goal(meta, params.unbox(), ctx);
         }
 
         // clangd

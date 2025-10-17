@@ -210,9 +210,8 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
 
 hook -group lsp-filetype-lean global BufSetOption filetype=lean %{
     set-option buffer lsp_servers %{
-        [lean-lsp]
+        [lake]
         root_globs = ["lakefile.toml", ".git", ".hg"]
-        command = "lake"
         args = ["serve"]
     }
 }
