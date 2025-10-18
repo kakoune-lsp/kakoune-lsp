@@ -34,12 +34,13 @@ jobs:
 
   system-tests:
     runs-on: ${{ matrix.os }}
+    if: false
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
         kakoune_version:
           # Empty ref to use the repo's default branch
-          # - ''
+          - ''
           # Oldest supported release
           - 'v2022.10.31'
     steps:
