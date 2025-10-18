@@ -64,10 +64,12 @@ pub fn plain_goal(meta: EditorMeta, params: EditorPlainGoalParams, ctx: &mut Con
                 .filter_map(|(_, goals)| goals.map(|goals| goals.rendered))
                 .collect::<String>();
             let command = formatdoc!(
-                "edit -scratch {}
-                 set-option buffer filetype lean-goals
-                 set-register a {}
-                 execute-keys -draft '%c<c-r>a<esc>'
+                "evaluate-commands -save-regs a %<
+                     edit -scratch -- {}
+                     set-option buffer filetype lean-goals
+                     set-register a {}
+                     execute-keys -draft '%c<c-r>a<esc>gg'
+                 >
                 ",
                 editor_quote(&params.buffer),
                 editor_quote(&rendered)
