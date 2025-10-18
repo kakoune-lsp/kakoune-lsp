@@ -59,8 +59,8 @@ pub fn plain_goal(meta: EditorMeta, params: EditorPlainGoalParams, ctx: &mut Con
         RequestParams::Each(req_params),
         move |ctx: &mut Context, _meta, results| {
             let rendered = results
-                .iter()
-                .filter_map(|(_, goals)| goals.as_ref().map(|goals| goals.rendered.clone()))
+                .into_iter()
+                .filter_map(|(_, goals)| goals.map(|goals| goals.rendered))
                 .collect::<String>();
             let command = format!(
                 "
