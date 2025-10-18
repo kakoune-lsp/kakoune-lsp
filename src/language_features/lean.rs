@@ -2,6 +2,7 @@ use crate::context::*;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
+use indoc::formatdoc;
 use lsp_types::request::Request;
 use lsp_types::*;
 
@@ -62,14 +63,14 @@ pub fn plain_goal(meta: EditorMeta, params: EditorPlainGoalParams, ctx: &mut Con
                 .into_iter()
                 .filter_map(|(_, goals)| goals.map(|goals| goals.rendered))
                 .collect::<String>();
-            let command = format!(
-                "
-                edit -scratch {}
-                set-option buffer filetype lean-goals
-                set-register a {}
-                execute-keys -draft '%c<c-r>a<esc>'",
-                editor_quote(params.buffer.as_str()),
-                editor_quote(rendered.as_str())
+            let command = formatdoc!(
+                "edit -scratch {}
+                 set-option buffer filetype lean-goals
+                 set-register a {}
+                 execute-keys -draft '%c<c-r>a<esc>'
+                ",
+                editor_quote(&params.buffer),
+                editor_quote(&rendered)
             );
             ctx.exec(EditorMeta::default(), command)
         },
