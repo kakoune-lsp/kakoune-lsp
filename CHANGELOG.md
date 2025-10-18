@@ -1,5 +1,9 @@
 ## Unreleased
 
+Additions:
+- Default configuration for `lean`.
+- Support for fetching Lean goals with `$/lean/plainGoal`
+
 ## 18.2.0 - 2025-06-03
 
 Additions:
