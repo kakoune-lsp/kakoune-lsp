@@ -16,6 +16,7 @@ use std::time::Duration;
 use crate::capabilities::{self, initialize};
 use crate::context::Context;
 use crate::editor_transport::{self, ToEditorSender};
+use crate::language_features::lean::{PlainGoalRequest, PlainGoalResponse, PlainTermGoalRequest, PlainTermGoalResponse};
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
 use crate::progress;
@@ -38,7 +39,7 @@ use indoc::formatdoc;
 use inlay_hints::InlayHintsOptions;
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
-use lean::{EditorPlainGoalParams, EditorPlainTermGoalParams};
+use lean::EditorPlainGoalParams;
 use libc::O_NONBLOCK;
 use lsp_types::error_codes::CONTENT_MODIFIED;
 use lsp_types::notification::Notification;
@@ -382,7 +383,7 @@ fn dispatch_fifo_request(
             position: state.next()?,
             buffer: state.next()?,
         }),
-        "$/lean/plainTermGoal" => Box::new(EditorPlainTermGoalParams {
+        "$/lean/plainTermGoal" => Box::new(EditorPlainGoalParams {
             position: state.next()?,
             buffer: state.next()?
         }),
@@ -1858,10 +1859,10 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
 
         // lean
         lean::PlainGoalRequest::METHOD => {
-            lean::plain_goal(meta, params.unbox(), ctx);
+            lean::plain_goal_impl::< PlainGoalRequest, PlainGoalResponse>(meta, params.unbox(), ctx);
         }
         lean::PlainTermGoalRequest::METHOD => {
-            lean::plain_term_goal(meta, params.unbox(), ctx);
+            lean::plain_goal_impl::<PlainTermGoalRequest, PlainTermGoalResponse>(meta, params.unbox(), ctx);
         }
 
         // clangd
