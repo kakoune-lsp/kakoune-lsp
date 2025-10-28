@@ -209,11 +209,21 @@ hook -group lsp-filetype-html global BufSetOption filetype=html %{
 }
 
 hook -group lsp-filetype-lean global BufSetOption filetype=lean %{
-    set-option buffer lsp_servers %{
+    # The lean lsp server ignores the rootUri set in the LSP initialization
+    # options. Instead, we must ensure that the cwd is in the workspace root.
+    set-option buffer lsp_servers "
         [lake]
-        root_globs = ["lakefile.toml", ".git", ".hg"]
-        args = ["serve"]
-    }
+        root_globs = ['lakefile.lean', 'lakefile.toml', '.git', '.hg']
+        command = 'sh'
+        args = [
+            '-c',
+            '''
+              kak_buffile=%val{buffile}
+              %opt{lsp_find_root} lakefile.lean lakefile.toml .git .hg >/dev/null
+              exec lake serve
+            '''
+        ]
+    "
 }
 
 hook -group lsp-filetype-vue global BufSetOption filetype=(?:vue) %{
