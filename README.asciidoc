@@ -245,6 +245,7 @@ hook -group lsp-filetype-clangd global BufSetOption filetype=(?:c|cpp) %{
 }
 ----
 
+See the docstring (or look in link:rc/lsp.kak[]) for the settings that can be set.
 See link:rc/servers.kak[] for the default set of servers and some commented-out alternatives.
 
 To use different servers, add the appropriate hooks to your `kakrc` after the `eval %sh{kak-lsp}` line,
