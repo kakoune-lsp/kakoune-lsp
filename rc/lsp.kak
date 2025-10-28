@@ -1578,7 +1578,9 @@ Jump to the next or previous diagnostic error" %{
                 selection="$first"
             fi
         fi
-        printf 'select %s\n' "$selection"
+        start="${selection%,*}"
+        end="${selection#*,}"
+        printf 'select %s\n' "${end},${start}"
     }
 }
 

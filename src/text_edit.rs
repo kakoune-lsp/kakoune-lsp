@@ -686,7 +686,7 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 1.5,1.12 1.15,1.21
+            r#"select 1.12,1.5 1.21,1.15
                execute-keys -save-regs "" Z
                execute-keys "z<space><esc>,<esc>cstd<esc>z1)<space><esc>,<esc>cffi::{CStr, CString}<esc>""#
         )
@@ -743,7 +743,7 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 1.5,1.9 1.11,1.13 2.9,2.14
+            r#"select 1.9,1.5 1.13,1.11 2.14,2.9
                execute-keys -save-regs "" Z
                execute-keys "z<space><esc>,<esc>cif<esc>z1)<space><esc>,<esc>clet Test::Foo = foo<esc>z2)<space><esc>,<esc>cprintln<esc>""#
         )
@@ -816,7 +816,7 @@ mod tests {
         );
 
         let expected = indoc!(
-            r#"select 1.5,1.19 2.1,2.24 4.4,4.7 5.9,5.15 5.17,5.17 5.19,5.51 5.53,7.6 7.8,7.36 7.38,7.39 8.2,13.1000000
+            r#"select 1.19,1.5 2.24,2.1 4.7,4.4 5.15,5.9 5.17,5.17 5.51,5.19 7.6,5.53 7.36,7.8 7.39,7.38 13.1000000,8.2
                execute-keys -save-regs "" Z
                execute-keys "z<space><esc>,<esc>cstd::{path::Path, process::Stdio}<esc>z1)<space><esc>,<esc>c
                fn main() {
@@ -862,7 +862,7 @@ mod tests {
             OffsetEncoding::Utf8,
         );
         let expected = indoc!(
-            r#"select 2.1,3.1000000
+            r#"select 3.1000000,2.1
                execute-keys -save-regs "" Z
                execute-keys "z<space><esc>,<esc>c
                <lt>body>
@@ -919,7 +919,7 @@ mod tests {
               <esc>z1)<space><esc>,<esc>c<lt>/body><esc>"
         */
         let expected = indoc!(
-            r#"select 2.1,2.1000000
+            r#"select 2.1000000,2.1
                execute-keys -save-regs "" Z
                execute-keys "z<space><esc>,<esc>c        asdf
                <esc>""#

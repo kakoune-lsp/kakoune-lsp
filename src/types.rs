@@ -568,7 +568,7 @@ impl Display for KakounePosition {
 
 impl Display for KakouneRange {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{},{}", self.start, self.end)
+        write!(f, "{},{}", self.end, self.start)
     }
 }
 

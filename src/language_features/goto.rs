@@ -27,7 +27,7 @@ pub fn goto(
         .filter_map(|(server_id, v)| match v {
             None => None,
             Some(response) => {
-                if seen.iter().any(|r| *r == response) {
+                if seen.contains(&response) {
                     return None;
                 }
                 seen.push(response.clone());
