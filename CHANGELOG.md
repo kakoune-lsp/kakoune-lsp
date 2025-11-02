@@ -3,6 +3,7 @@
 Additions:
 - Default configuration for `lean`.
 - Support for fetching Lean goals with `$/lean/plainGoal`
+- Support applying textEdits specified by inlayHints (e.g. explicitly inserting type hints when using `basedpyright`)
 
 ## 18.2.0 - 2025-06-03
 
