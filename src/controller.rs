@@ -38,7 +38,7 @@ use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, Editor
 use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
 use indoc::formatdoc;
-use inlay_hints::InlayHintsOptions;
+use inlay_hints::{InlayHintApplyParams, InlayHintsOptions};
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lean::EditorPlainGoalParams;
@@ -424,6 +424,20 @@ fn dispatch_fifo_request(
         "kakoune/exit" => Box::new(()),
         "kakoune/goto-document-symbol" => Box::new(GotoSymbolParams {
             goto_symbol: state.next()?,
+        }),
+        "kakoune/inlay-hint-apply-nearest" => Box::new(InlayHintApplyParams {
+            selections_desc: {
+                let selection_count = state.next()?;
+                state.next_vec(selection_count)?
+            },
+            kind: inlay_hints::InlayHintApplyKind::Nearest,
+        }),
+        "kakoune/inlay-hint-apply-selected" => Box::new(InlayHintApplyParams {
+            selections_desc: {
+                let selection_count = state.next()?;
+                state.next_vec(selection_count)?
+            },
+            kind: inlay_hints::InlayHintApplyKind::Selected,
         }),
         "kakoune/next-or-previous-symbol" => {
             let num_symbol_kinds = state.next()?;
@@ -1806,6 +1820,12 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
             }
             let params: CompletionParameters = params.unbox();
             let _ = std::fs::write(params.response_fifo, commands.as_bytes());
+        }
+        "kakoune/inlay-hint-apply-nearest" => {
+            inlay_hints::inlay_hint_apply(meta, params.unbox(), ctx);
+        }
+        "kakoune/inlay-hint-apply-selected" => {
+            inlay_hints::inlay_hint_apply(meta, params.unbox(), ctx);
         }
         "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params.unbox(), ctx);

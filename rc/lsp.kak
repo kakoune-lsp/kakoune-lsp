@@ -1232,6 +1232,14 @@ define-command -hidden lsp-inlay-hints -docstring "lsp-inlay-hints: request inla
     }
 }
 
+define-command lsp-inlay-hint-apply-nearest -docstring "Apply the textedit for the inlay hint nearest the cursor, for each selection" %{
+    lsp-send kakoune/inlay-hint-apply-nearest %val{selection_count} %val{selections_desc}
+}
+
+define-command lsp-inlay-hint-apply-selected -docstring "Apply the textedit for the inlay hints overlapping with the selections" %{
+    lsp-send kakoune/inlay-hint-apply-selected %val{selection_count} %val{selections_desc}
+}
+
 # CCLS Extension
 
 define-command ccls-navigate -docstring "Navigate C/C++/ObjectiveC file" -params 1 %{

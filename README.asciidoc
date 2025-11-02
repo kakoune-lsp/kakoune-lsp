@@ -356,6 +356,16 @@ lsp-inlay-hints-enable global
 
 You can change the hints' face with `set-face global InlayHint <face>`.
 
+Some language servers support "applying" inlay hints: inserting them as text into your document.
+For example, when using `basedpyright` to write Python,
+inlay hints which represent type hints can be explicitly inserted into your code.
+
+We provide two commands for applying inlay hints:
+`lsp-inlay-hint-apply-nearest` and `lsp-inlay-hint-apply-selected`.
+They both operate _per selection_.
+`nearest` applies whichever hint is closest to the cursor, *on the same line*.
+`selected` applies *all* hints that fall inside the selection.
+
 === Semantic Tokens
 
 kakoune-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:

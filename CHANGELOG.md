@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- `lsp-inlay-hint-apply-*` commands to apply inlay hints' text edits, such as type-insertion (#864)
+
 ## 19.0.1 - 2025-12-10
 
 Fixes:
