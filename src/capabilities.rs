@@ -696,9 +696,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         if server_has_capability(to_editor, server_settings, CAPABILITY_DIAGNOSTIC) {
             if let Some(ref caps) = server_settings.capabilities {
                 let supports_workspace = match &caps.diagnostic_provider {
-                    Some(DiagnosticServerCapabilities::Options(opts)) => {
-                        opts.workspace_diagnostics
-                    }
+                    Some(DiagnosticServerCapabilities::Options(opts)) => opts.workspace_diagnostics,
                     Some(DiagnosticServerCapabilities::RegistrationOptions(opts)) => {
                         opts.diagnostic_options.workspace_diagnostics
                     }

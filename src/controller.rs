@@ -518,7 +518,9 @@ fn dispatch_fifo_request(
         | "textDocument/typeDefinition" => Box::new(PositionParams {
             position: state.next()?,
         }),
-        "textDocument/diagnostics" | "workspace/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
+        "textDocument/diagnostics" | "workspace/diagnostics" | "textDocument/documentSymbol" => {
+            Box::new(())
+        }
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
             draft: state.text_of_buffer()?,
         }),

@@ -672,30 +672,26 @@ fn update_diagnostics_display(
 // It's essentially the same as lsp-diagnostics but the name makes the intent clearer
 pub fn editor_workspace_diagnostics(meta: EditorMeta, ctx: &mut Context) {
     // First try to request workspace diagnostics from servers that support it
-    let has_workspace_support = ctx
-        .servers(&meta)
-        .any(|(_, server)| {
-            if !crate::capabilities::server_has_capability(
-                ctx.to_editor(),
-                server,
-                crate::capabilities::CAPABILITY_DIAGNOSTIC,
-            ) {
-                return false;
-            }
+    let has_workspace_support = ctx.servers(&meta).any(|(_, server)| {
+        if !crate::capabilities::server_has_capability(
+            ctx.to_editor(),
+            server,
+            crate::capabilities::CAPABILITY_DIAGNOSTIC,
+        ) {
+            return false;
+        }
 
-            match &server.capabilities {
-                Some(caps) => match &caps.diagnostic_provider {
-                    Some(DiagnosticServerCapabilities::Options(opts)) => {
-                        opts.workspace_diagnostics
-                    }
-                    Some(DiagnosticServerCapabilities::RegistrationOptions(opts)) => {
-                        opts.diagnostic_options.workspace_diagnostics
-                    }
-                    None => false,
-                },
+        match &server.capabilities {
+            Some(caps) => match &caps.diagnostic_provider {
+                Some(DiagnosticServerCapabilities::Options(opts)) => opts.workspace_diagnostics,
+                Some(DiagnosticServerCapabilities::RegistrationOptions(opts)) => {
+                    opts.diagnostic_options.workspace_diagnostics
+                }
                 None => false,
-            }
-        });
+            },
+            None => false,
+        }
+    });
 
     if has_workspace_support {
         // If server supports it, request from server and display when ready
@@ -721,9 +717,7 @@ fn workspace_diagnostic_impl(meta: EditorMeta, ctx: &mut Context, show_in_buffer
             // Check if server supports workspace diagnostics
             let supports_workspace = match &server.capabilities {
                 Some(caps) => match &caps.diagnostic_provider {
-                    Some(DiagnosticServerCapabilities::Options(opts)) => {
-                        opts.workspace_diagnostics
-                    }
+                    Some(DiagnosticServerCapabilities::Options(opts)) => opts.workspace_diagnostics,
                     Some(DiagnosticServerCapabilities::RegistrationOptions(opts)) => {
                         opts.diagnostic_options.workspace_diagnostics
                     }
@@ -844,7 +838,13 @@ fn handle_workspace_diagnostic_response(
                         if let Some(document) = ctx.documents.get(&uri_str) {
                             let version = document.version;
                             let diagnostics = &ctx.diagnostics[&uri_str];
-                            update_diagnostics_display(&uri_str, version, diagnostics, ctx, &doc_meta);
+                            update_diagnostics_display(
+                                &uri_str,
+                                version,
+                                diagnostics,
+                                ctx,
+                                &doc_meta,
+                            );
                         }
                     }
                     WorkspaceDocumentDiagnosticReport::Unchanged(unchanged) => {
