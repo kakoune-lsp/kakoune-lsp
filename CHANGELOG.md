@@ -7,6 +7,7 @@ Additions:
 
 Fixes:
 - Actually use cmake-language-server for `cmake` type files.
+- Fixed Python root resolution (removed `requirements.txt`, added `poetry.lock`) (#857).
 
 ## 18.2.0 - 2025-06-03
 

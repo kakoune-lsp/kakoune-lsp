@@ -490,7 +490,7 @@ hook -group lsp-filetype-purescript global BufSetOption filetype=purescript %{
 hook -group lsp-filetype-python global BufSetOption filetype=python %{
     set-option buffer lsp_servers %{
         [pylsp]
-        root_globs = ["requirements.txt", "setup.py", "pyproject.toml", ".git", ".hg"]
+        root_globs = ["pyproject.toml", "setup.py", "poetry.lock", ".git", ".hg"]
         settings_section = "_"
         [pylsp.settings._]
         # See https://github.com/python-lsp/python-lsp-server#configuration
@@ -499,13 +499,13 @@ hook -group lsp-filetype-python global BufSetOption filetype=python %{
     }
     # set-option buffer lsp_servers %{
     #     [pyright-langserver]
-    #     root_globs = ["requirements.txt", "setup.py", "pyproject.toml", "pyrightconfig.json", ".git", ".hg"]
+    #     root_globs = ["pyproject.toml", "setup.py", "poetry.lock", "pyrightconfig.json", ".git", ".hg"]
     #     args = ["--stdio"]
     # }
     # set-option -add buffer lsp_servers %{
     #     [ruff]
     #     args = ["server", "--quiet"]
-    #     root_globs = ["requirements.txt", "setup.py", "pyproject.toml", ".git", ".hg"]
+    #     root_globs = ["pyproject.toml", "setup.py", "poetry.lock", ".git", ".hg"]
     #     settings_section = "_"
     #     [ruff.settings._.globalSettings]
     #     organizeImports = true
