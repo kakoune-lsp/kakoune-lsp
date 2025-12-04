@@ -355,6 +355,8 @@ lsp-inlay-hints-enable global
 
 You can change the hints' face with `set-face global InlayHint <face>`.
 
+Some LSPs support inserting the inlay hints as text into your document. This can be useful when using `basedpyright` to write Python code, since it can make your type hints explicit. To do this, put the primary cursor next to the hint, and run `lsp-inlay-hint-apply-textedit`.
+
 === Semantic Tokens
 
 kakoune-lsp supports the semanticTokens feature for semantic highlighting. If the language server supports it, you can enable it with:

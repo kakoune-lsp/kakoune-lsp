@@ -38,7 +38,7 @@ use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, Editor
 use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
 use indoc::formatdoc;
-use inlay_hints::InlayHintsOptions;
+use inlay_hints::{InlayHintApplyParams, InlayHintsOptions};
 use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lean::EditorPlainGoalParams;
@@ -416,9 +416,32 @@ fn dispatch_fifo_request(
         "kakoune/breadcrumbs" => Box::new(BreadcrumbsParams {
             position_line: state.next()?,
         }),
+        "kakoune/did-change-option" => {
+            let hook_param = state.next::<String>()?;
+            let Some((key, value)) = hook_param.split_once('=') else {
+                panic!("invalid request");
+            };
+            match key {
+                "lsp_debug" => {
+                    let debug = bool::from_str(value).unwrap();
+                    DEBUG.store(debug, Relaxed);
+                    set_logger(if debug {
+                        Severity::Debug
+                    } else {
+                        Severity::Info
+                    });
+                }
+                _ => panic!("unknown key: {}", key),
+            }
+            debug!(&state.to_editor, "Applied option change {}", hook_param);
+            return Some(());
+        }
         "kakoune/exit" => Box::new(()),
         "kakoune/goto-document-symbol" => Box::new(GotoSymbolParams {
             goto_symbol: state.next()?,
+        }),
+        "kakoune/inlay-hint-apply-textedit" => Box::new(InlayHintApplyParams {
+            selection_desc: state.next()?,
         }),
         "kakoune/next-or-previous-symbol" => {
             let num_symbol_kinds = state.next()?;
@@ -452,26 +475,6 @@ fn dispatch_fifo_request(
         "kakoune/textDocument/codeLens" => Box::new(CodeLensOptions {
             selection_desc: state.next()?,
         }),
-        "kakoune/did-change-option" => {
-            let hook_param = state.next::<String>()?;
-            let Some((key, value)) = hook_param.split_once('=') else {
-                panic!("invalid request");
-            };
-            match key {
-                "lsp_debug" => {
-                    let debug = bool::from_str(value).unwrap();
-                    DEBUG.store(debug, Relaxed);
-                    set_logger(if debug {
-                        Severity::Debug
-                    } else {
-                        Severity::Info
-                    });
-                }
-                _ => panic!("unknown key: {}", key),
-            }
-            debug!(&state.to_editor, "Applied option change {}", hook_param);
-            return Some(());
-        }
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
             position: state.next()?,
         }),
@@ -1781,14 +1784,17 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         "kakoune/breadcrumbs" => {
             document_symbol::breadcrumbs(meta, params.unbox(), ctx);
         }
+        "kakoune/goto-document-symbol" => {
+            document_symbol::document_symbol_menu(meta, params.unbox(), ctx);
+        }
+        "kakoune/inlay-hint-apply-textedit" => {
+            inlay_hints::apply_inlay_hint(meta, params.unbox(), ctx);
+        }
         "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params.unbox(), ctx);
         }
         "kakoune/object" => {
             document_symbol::object(meta, params.unbox(), ctx);
-        }
-        "kakoune/goto-document-symbol" => {
-            document_symbol::document_symbol_menu(meta, params.unbox(), ctx);
         }
         "kakoune/textDocument/codeLens" => {
             code_lens::resolve_and_perform_code_lens(meta, params.unbox(), ctx);

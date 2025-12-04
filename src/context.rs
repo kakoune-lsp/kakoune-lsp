@@ -79,6 +79,7 @@ pub struct Context {
     pub diagnostics: HashMap<String, Vec<(ServerId, Diagnostic)>>,
     pub documents: HashMap<String, Document>,
     pub dynamic_config: DynamicConfig,
+    pub inlay_hints: HashMap<String, Vec<(ServerId, InlayHint)>>,
     pub language_servers: BTreeMap<ServerId, ServerSettings>,
     pub route_cache: HashMap<(ServerName, RootPath), ServerId>,
     pub outstanding_requests:
@@ -118,6 +119,7 @@ impl Context {
             diagnostics: Default::default(),
             documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
+            inlay_hints: Default::default(),
             language_servers: BTreeMap::new(),
             route_cache: HashMap::new(),
             outstanding_requests: HashMap::default(),
