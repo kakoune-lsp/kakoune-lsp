@@ -114,7 +114,9 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                             inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
                                 refresh_support: Some(true),
                             }),
-                            diagnostic: None,
+                            diagnostic: Some(DiagnosticWorkspaceClientCapabilities {
+                                refresh_support: Some(true),
+                            }),
                         }),
                         text_document: Some(TextDocumentClientCapabilities {
                             synchronization: Some(TextDocumentSyncClientCapabilities {
@@ -331,7 +333,10 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                                 dynamic_registration: Some(false),
                                 resolve_support: None,
                             }),
-                            diagnostic: None,
+                            diagnostic: Some(DiagnosticClientCapabilities {
+                                dynamic_registration: Some(false),
+                                related_document_support: Some(false),
+                            }),
                             inline_completion: None,
                         }),
                         window: Some(WindowClientCapabilities {
@@ -470,6 +475,7 @@ pub const CAPABILITY_SEMANTIC_TOKENS: &str = "lsp-semantic-tokens";
 pub const CAPABILITY_SIGNATURE_HELP: &str = "lsp-signature-help";
 pub const CAPABILITY_TYPE_DEFINITION: &str = "lsp-type-definition";
 pub const CAPABILITY_WORKSPACE_SYMBOL: &str = "lsp-workspace-symbol";
+pub const CAPABILITY_DIAGNOSTIC: &str = "lsp-pull-diagnostics";
 
 pub const CAPABILITY_TEXT_DOCUMENT_BUILD: &str = "texlab-build";
 pub const CAPABILITY_TEXT_DOCUMENT_FORWARD_SEARCH: &str = "texlab-forward-search";
@@ -605,6 +611,11 @@ pub fn server_has_capability(
             Some(OneOf::Right(_)) => true,
             None => false,
         },
+        CAPABILITY_DIAGNOSTIC => match server_capabilities.diagnostic_provider {
+            Some(DiagnosticServerCapabilities::Options(_)) => true,
+            Some(DiagnosticServerCapabilities::RegistrationOptions(_)) => true,
+            None => false,
+        },
         CAPABILITY_TEXT_DOCUMENT_BUILD => experimental().is_some_and(|experimental| {
             experimental
                 .get("textDocumentBuild")
@@ -679,6 +690,27 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
             .entry("lsp-diagnostics".to_string())
             .or_default()
             .push(server_name);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_DIAGNOSTIC);
+
+        // Check for workspace diagnostics support
+        if server_has_capability(to_editor, server_settings, CAPABILITY_DIAGNOSTIC) {
+            if let Some(ref caps) = server_settings.capabilities {
+                let supports_workspace = match &caps.diagnostic_provider {
+                    Some(DiagnosticServerCapabilities::Options(opts)) => opts.workspace_diagnostics,
+                    Some(DiagnosticServerCapabilities::RegistrationOptions(opts)) => {
+                        opts.diagnostic_options.workspace_diagnostics
+                    }
+                    None => false,
+                };
+
+                if supports_workspace {
+                    features
+                        .entry("lsp-workspace-diagnostics".to_string())
+                        .or_default()
+                        .push(server_name);
+                }
+            }
+        }
         probe_feature(to_editor, entry, &mut features, CAPABILITY_INLAY_HINTS);
 
         // NOTE controller should park request for capabilities until they are available thus it should
