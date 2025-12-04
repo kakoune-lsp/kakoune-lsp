@@ -1379,7 +1379,7 @@ define-command -hidden lsp-update-workspace-symbol -params 2 -docstring "Update 
 
 define-command -hidden lsp-show-workspace-symbol -params 2 -docstring "Render workspace symbols" %{
     evaluate-commands %sh{
-        if [ "${kak_buffile}" = "*symbols*" ];
+        if [ "${kak_bufname}" = "*symbols*" ];
         then echo 'lsp-update-workspace-symbol %arg{1} %arg{2}';
         else echo 'lsp-show-goto-buffer *symbols* lsp-goto %arg{1} %arg{2}';
         fi
