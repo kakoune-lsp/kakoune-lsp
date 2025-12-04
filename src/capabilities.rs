@@ -457,7 +457,7 @@ pub const CAPABILITY_COMPLETION: &str = "lsp-completion (hooked on InsertIdle)";
 pub const CAPABILITY_DEFINITION: &str = "lsp-definition (mapped to `gd` by default)";
 pub const CAPABILITY_DOCUMENT_HIGHLIGHT: &str = "lsp-highlight-references";
 pub const CAPABILITY_DOCUMENT_SYMBOL: &str = "lsp-document-symbol";
-pub const CAPABILITY_EXECUTE_COMMANDS: &str = "lsp-execute-commands";
+pub const CAPABILITY_EXECUTE_COMMAND: &str = "lsp-execute-command";
 pub const CAPABILITY_FORMATTING: &str = "lsp-formatting";
 pub const CAPABILITY_HOVER: &str = "lsp-hover";
 pub const CAPABILITY_IMPLEMENTATION: &str = "lsp-implementation";
@@ -594,7 +594,7 @@ pub fn server_has_capability(
             None => false,
         },
         CAPABILITY_SEMANTIC_TOKENS => server_capabilities.semantic_tokens_provider.is_some(),
-        CAPABILITY_EXECUTE_COMMANDS => server_capabilities.execute_command_provider.is_some(),
+        CAPABILITY_EXECUTE_COMMAND => server_capabilities.execute_command_provider.is_some(),
         CAPABILITY_TYPE_DEFINITION => match server_capabilities.type_definition_provider {
             Some(TypeDefinitionProviderCapability::Simple(ok)) => ok,
             Some(_) => true,
@@ -688,7 +688,8 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
         if let Some(ref provider) = server_capabilities.execute_command_provider {
             features
                 .entry(format!(
-                    "lsp-execute-command: commands: [{}]",
+                    "{}: commands: [{}]",
+                    CAPABILITY_EXECUTE_COMMAND,
                     provider.commands.iter().join(", ")
                 ))
                 .or_default()
