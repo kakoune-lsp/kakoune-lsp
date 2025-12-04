@@ -330,6 +330,8 @@ impl ParserState {
     }
 }
 
+const COMPLETE_EXECUTE_COMMAND: &str = "kakoune/complete/workspace/executeCommand";
+
 // Returns none on normal or forced exit.
 fn dispatch_fifo_request(
     state: &mut ParserState,
@@ -415,6 +417,9 @@ fn dispatch_fifo_request(
         "eclipse.jdt.ls/organizeImports" => Box::new(()),
         "kakoune/breadcrumbs" => Box::new(BreadcrumbsParams {
             position_line: state.next()?,
+        }),
+        COMPLETE_EXECUTE_COMMAND => Box::new(CompletionParameters {
+            response_fifo: state.next()?,
         }),
         "kakoune/exit" => Box::new(()),
         "kakoune/goto-document-symbol" => Box::new(GotoSymbolParams {
@@ -1780,6 +1785,23 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         }
         "kakoune/breadcrumbs" => {
             document_symbol::breadcrumbs(meta, params.unbox(), ctx);
+        }
+        COMPLETE_EXECUTE_COMMAND => {
+            let mut commands = String::new();
+            for (_server_id, server_settings) in ctx.servers(&meta) {
+                let Some(server_capabilities) = &server_settings.capabilities else {
+                    continue;
+                };
+                let Some(ref provider) = server_capabilities.execute_command_provider else {
+                    continue;
+                };
+                for command in provider.commands.iter() {
+                    commands += command;
+                    commands.push('\n');
+                }
+            }
+            let params: CompletionParameters = params.unbox();
+            let _ = std::fs::write(params.response_fifo, commands.as_bytes());
         }
         "kakoune/next-or-previous-symbol" => {
             document_symbol::next_or_prev_symbol(meta, params.unbox(), ctx);

@@ -989,6 +989,17 @@ define-command -hidden lsp-code-lens-request %{
 
 define-command lsp-execute-command -params 2..3 -docstring "lsp-execute-command <command> <args> [<server_name>]: execute a server-specific command" %{
     lsp-execute-command-request is-async %arg{@}
+} -shell-script-candidates %{
+    tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+    pipe=${tmp}/fifo
+    if ! mkfifo ${pipe}; then
+        exit
+    fi
+    trap "rm -f ${pipe}; rmdir ${tmp} 2>/dev/null" EXIT INT QUIT
+    echo "evaluate-commands -verbatim -buffer ${kak_bufname}" \
+        "lsp-send kakoune/complete/workspace/executeCommand ${pipe}" |
+        kak -p ${kak_session}
+    cat ${pipe}
 }
 
 define-command -hidden lsp-execute-command-sync -params 2..3 -docstring "lsp-execute-command <command> <args> [<server_name>]: execute a server-specific command, blocking Kakoune session until done" %{

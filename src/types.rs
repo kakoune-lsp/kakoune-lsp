@@ -478,6 +478,11 @@ pub struct BreadcrumbsParams {
     pub position_line: u32,
 }
 
+#[derive(Clone, Default, Debug)]
+pub struct CompletionParameters {
+    pub response_fifo: String,
+}
+
 #[derive(Clone, Debug)]
 pub struct GotoSymbolParams {
     pub goto_symbol: Option<String>,

@@ -3,7 +3,8 @@
 Additions:
 - Default configuration for Odin and Lean.
 - `lsp-definition` (and `lsp-type-definition` etc.), `lsp-highlight-references`, `lsp-goto-document-symbol` now place the cursor at the beginning of the target selection instead of at the end (#859).
-- Support for fetching Lean goals with `$/lean/plainGoal`
+- Support for fetching Lean goals with `$/lean/plainGoal`.
+- Command prompt completion for `lsp-execute-command`.
 
 Fixes:
 - Actually use cmake-language-server for `cmake` type files.
