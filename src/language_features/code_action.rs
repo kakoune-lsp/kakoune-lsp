@@ -247,11 +247,7 @@ fn editor_code_actions(
                 let server_name = &ctx.server(*server_id).name;
                 let command =
                     code_action_or_command_to_editor_command(server_name, cmd, sync, may_resolve);
-                ctx.exec_fifo(
-                    meta,
-                    response_fifo,
-                    format!("evaluate-commands -- {}", &editor_quote(&command)),
-                );
+                ctx.exec_fifo(meta, response_fifo, command);
                 return;
             }
             _ => "lsp-code-actions: multiple matching actions",
@@ -328,7 +324,7 @@ fn editor_code_actions(
                 *CODE_ACTION_INDICATOR,
                 titles_and_commands
             );
-            format!("evaluate-commands -- {}", editor_quote(&commands))
+            commands
         }
     };
     ctx.exec(meta, command);
@@ -423,7 +419,7 @@ pub fn text_document_code_action_resolve(
             if let Some((server_id, result)) = results.first() {
                 let server_name = &ctx.server(*server_id).name;
                 let cmd = code_action_to_editor_command(server_name, result, false, false);
-                ctx.exec(meta, format!("evaluate-commands -- {}", editor_quote(&cmd)))
+                ctx.exec(meta, cmd)
             }
         },
     );
