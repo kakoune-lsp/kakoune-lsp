@@ -2335,7 +2335,7 @@ hook global -once KakBegin .* %{
                 }
             }
         }
-        complete-command jump-next buffer
+        try %{ complete-command jump-next buffer }
         define-command -hidden jump-select-next %{
             # First jump to end of buffer so that if jump_current_line == 0
             # 0g<a-l> will be a no-op and we'll jump to the first result.
@@ -2358,7 +2358,7 @@ hook global -once KakBegin .* %{
                 }
             }
         }
-        complete-command jump-previous buffer
+        try %{ complete-command jump-previous buffer }
         define-command -hidden jump-select-previous %{
             # See comment in jump-select-next
             execute-keys ge %opt{jump_current_line}g<a-h> <a-/>^[^:\n]+:\d+:<ret>
