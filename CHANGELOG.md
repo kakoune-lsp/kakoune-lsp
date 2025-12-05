@@ -7,6 +7,13 @@ Breaking changes:
   ```kakrc
   set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
   ```
+- Goto bindings (`gd`, `gr` and `gy`) are no longer mapped by default. Add them back with
+
+  ```kakrc
+  map global goto d <esc>:lsp-definition<ret> -docstring 'LSP definition'
+  map global goto r <esc>:lsp-references<ret> -docstring 'LSP references'
+  map global goto y <esc>:lsp-type-definition<ret> -docstring 'LSP type definition'
+  ```
 
 Additions:
 - Default configuration for Odin and Lean.

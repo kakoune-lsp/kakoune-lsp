@@ -35,8 +35,11 @@ cat > .config/kak/kakrc << 'EOF'
 evaluate-commands %sh{kak-lsp}
 
 set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
-
+map global goto d <esc>:lsp-definition<ret> -docstring 'LSP definition'
+map global goto r <esc>:lsp-references<ret> -docstring 'LSP references'
+map global goto y <esc>:lsp-type-definition<ret> -docstring 'LSP type definition'
 map global user l %{: enter-user-mode lsp<ret>}
+
 set-option global lsp_debug true
 hook global -once WinDisplay .* lsp-enable
 

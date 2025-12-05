@@ -1797,10 +1797,6 @@ map global lsp-selection-range k '<esc>: lsp-selection-range-select up<ret>'    
 map global lsp-selection-range b '<esc>: lsp-selection-range-select bottom<ret>' -docstring 'select innermost node'
 map global lsp-selection-range t '<esc>: lsp-selection-range-select top<ret>'    -docstring 'select outermost node'
 
-map global goto d '<esc>:lsp-definition<ret>' -docstring 'definition'
-map global goto r '<esc>:lsp-references<ret>' -docstring 'references'
-map global goto y '<esc>:lsp-type-definition<ret>' -docstring 'type definition'
-
 ### Default integration ###
 
 define-command lsp-enable -docstring "Default LSP integration" %{
