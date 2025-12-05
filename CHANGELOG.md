@@ -5,6 +5,7 @@ Additions:
 - `lsp-definition` (and `lsp-type-definition` etc.), `lsp-highlight-references`, `lsp-goto-document-symbol` now place the cursor at the beginning of the target selection instead of at the end (#859).
 - Support for fetching Lean goals with `$/lean/plainGoal`.
 - Command prompt completion for `lsp-execute-command`.
+- `lsp-document-symbol` moves the cursor in the `*goto*` buffer to the symbol that corresponds to the main cursor position.
 
 Fixes:
 - Actually use cmake-language-server for `cmake` type files.

@@ -21,7 +21,7 @@ use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use url::Url;
 
-pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
+pub fn text_document_document_symbol(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
         .servers(&meta)
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_DOCUMENT_SYMBOL))
@@ -41,6 +41,7 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
             )
         })
         .collect();
+    let main_cursor = params.position;
     ctx.call::<DocumentSymbolRequest, _>(
         meta,
         RequestParams::Each(req_params),
@@ -51,7 +52,7 @@ pub fn text_document_document_symbol(meta: EditorMeta, ctx: &mut Context) {
                 None => (meta.servers[0], None),
             };
 
-            editor_document_symbol(meta, result, ctx)
+            editor_document_symbol(meta, main_cursor, result, ctx)
         },
     );
 }
@@ -167,26 +168,29 @@ impl Symbol<DocumentSymbol> for DocumentSymbol {
 
 fn editor_document_symbol(
     meta: EditorMeta,
+    main_cursor: KakounePosition,
     result: (ServerId, Option<DocumentSymbolResponse>),
     ctx: &mut Context,
 ) {
     let (server_id, result) = result;
+    let Some(result) = result else {
+        return;
+    };
     let server = ctx.server(server_id);
-    let content = match result {
-        Some(DocumentSymbolResponse::Flat(result)) => {
-            if result.is_empty() {
-                return;
+    let (content, goto_file_line) = {
+        match result {
+            DocumentSymbolResponse::Flat(result) => {
+                if result.is_empty() {
+                    return;
+                }
+                format_symbol(result, Some(main_cursor), &meta, server, ctx)
             }
-            format_symbol(result, true, &meta, server, ctx)
-        }
-        Some(DocumentSymbolResponse::Nested(result)) => {
-            if result.is_empty() {
-                return;
+            DocumentSymbolResponse::Nested(result) => {
+                if result.is_empty() {
+                    return;
+                }
+                format_symbol(result, Some(main_cursor), &meta, server, ctx)
             }
-            format_symbol(result, true, &meta, server, ctx)
-        }
-        None => {
-            return;
         }
     };
     let bufname = meta
@@ -196,10 +200,11 @@ fn editor_document_symbol(
         .and_then(|p| p.strip_prefix('/'))
         .unwrap_or(&meta.buffile);
     let command = format!(
-        "lsp-show-document-symbol {} {} {}",
+        "lsp-show-document-symbol {} {} {} {}",
         editor_quote(&server.roots[0]),
         editor_quote(&meta.buffile),
         editor_quote(&(bufname.to_owned() + "\n" + &content)),
+        goto_file_line + 1,
     );
     ctx.exec(meta, command);
 }
@@ -245,11 +250,16 @@ fn symbol_kind_prefix<T: Symbol<T>>(
 /// Paths are converted into relative to project root.
 pub fn format_symbol<T: Symbol<T>>(
     items: Vec<T>,
-    single_file: bool,
+    single_file_main_cursor: Option<KakounePosition>,
     meta: &EditorMeta,
     server: &ServerSettings,
     ctx: &Context,
-) -> String {
+) -> (String, usize) {
+    struct MainCursor<'a> {
+        source_file: KakounePosition,
+        goto_file_line: &'a mut Option<usize>,
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn format_symbol_at_depth<T: Symbol<T>>(
         output: &mut Vec<(String, String)>,
@@ -257,7 +267,7 @@ pub fn format_symbol<T: Symbol<T>>(
         meta: &EditorMeta,
         server: &ServerSettings,
         ctx: &Context,
-        single_file: bool,
+        single_file_main_cursor: &mut Option<MainCursor<'_>>,
         prefix: &mut Vec<bool>,
         symbol_kind_mapping: Option<&HashMap<String, String>>,
     ) {
@@ -298,7 +308,7 @@ pub fn format_symbol<T: Symbol<T>>(
             output.push((
                 format!(
                     "{}:{}:{}:",
-                    if single_file {
+                    if single_file_main_cursor.is_some() {
                         "%"
                     } else {
                         short_file_path(filename, &server.roots[0])
@@ -308,6 +318,11 @@ pub fn format_symbol<T: Symbol<T>>(
                 ),
                 description,
             ));
+            if let Some(main_cursor) = single_file_main_cursor {
+                if position <= main_cursor.source_file {
+                    *main_cursor.goto_file_line = Some(output.len());
+                }
+            }
 
             let children = symbol.children();
             prefix.push(is_last);
@@ -317,13 +332,19 @@ pub fn format_symbol<T: Symbol<T>>(
                 meta,
                 server,
                 ctx,
-                single_file,
+                single_file_main_cursor,
                 prefix,
                 symbol_kind_mapping,
             );
             prefix.pop();
         }
     }
+
+    let mut goto_file_line = None;
+    let mut single_file_main_cursor = single_file_main_cursor.map(|main_cursor| MainCursor {
+        source_file: main_cursor,
+        goto_file_line: &mut goto_file_line,
+    });
     let mut columns = vec![];
     format_symbol_at_depth(
         &mut columns,
@@ -331,15 +352,15 @@ pub fn format_symbol<T: Symbol<T>>(
         meta,
         server,
         ctx,
-        single_file,
+        &mut single_file_main_cursor,
         &mut vec![],
         meta.language_server
             .get(&server.name)
             .map(|language_server_config| &language_server_config.symbol_kinds),
     );
-    if single_file {
+    let goto_buffer_data = if single_file_main_cursor.is_some() {
         // Align symbol names (first column is %:line:col).
-        let Some(width) = columns
+        if let Some(width) = columns
             .iter()
             .map(|(position, _)| {
                 assert!(position.chars().all(|c| c.is_ascii_graphic()));
@@ -347,21 +368,23 @@ pub fn format_symbol<T: Symbol<T>>(
                 position.len()
             })
             .max()
-        else {
-            return "".to_string();
-        };
-        columns
-            .into_iter()
-            .map(|(position, description)| {
-                format!("{position:width$} {description}\n", width = width)
-            })
-            .join("")
+        {
+            columns
+                .into_iter()
+                .map(|(position, description)| {
+                    format!("{position:width$} {description}\n", width = width)
+                })
+                .join("")
+        } else {
+            "".to_string()
+        }
     } else {
         columns
             .into_iter()
             .map(|(position, description)| format!("{position} {description}\n"))
             .join("")
-    }
+    };
+    (goto_buffer_data, goto_file_line.unwrap_or_default())
 }
 
 fn symbol_kind_from_string(value: &str) -> Option<SymbolKind> {

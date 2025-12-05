@@ -167,18 +167,18 @@ fn editor_workspace_symbol(
 ) {
     let (server_id, result) = result;
     let server = ctx.server(server_id);
-    let content = match result {
+    let (content, _) = match result {
         Some(WorkspaceSymbolResponse::Flat(result)) => {
             if result.is_empty() {
                 return;
             }
-            document_symbol::format_symbol(result, false, &meta, server, ctx)
+            document_symbol::format_symbol(result, None, &meta, server, ctx)
         }
         Some(WorkspaceSymbolResponse::Nested(result)) => {
             if result.is_empty() {
                 return;
             }
-            document_symbol::format_symbol(result, false, &meta, server, ctx)
+            document_symbol::format_symbol(result, None, &meta, server, ctx)
         }
         None => {
             return;

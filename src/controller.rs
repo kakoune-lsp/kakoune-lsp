@@ -523,7 +523,10 @@ fn dispatch_fifo_request(
         | "textDocument/typeDefinition" => Box::new(PositionParams {
             position: state.next()?,
         }),
-        "textDocument/diagnostics" | "textDocument/documentSymbol" => Box::new(()),
+        "textDocument/diagnostics" => Box::new(()),
+        "textDocument/documentSymbol" => Box::new(PositionParams {
+            position: state.next()?,
+        }),
         "textDocument/didChange" => Box::new(TextDocumentDidChangeParams {
             draft: state.text_of_buffer()?,
         }),
@@ -1781,7 +1784,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
             highlight::text_document_highlight(meta, params.unbox(), ctx);
         }
         request::DocumentSymbolRequest::METHOD => {
-            document_symbol::text_document_document_symbol(meta, ctx);
+            document_symbol::text_document_document_symbol(meta, params.unbox(), ctx);
         }
         "kakoune/breadcrumbs" => {
             document_symbol::breadcrumbs(meta, params.unbox(), ctx);
