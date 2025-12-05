@@ -1227,16 +1227,13 @@ fn editor_breadcrumbs<T: Symbol<T>>(
         breadcrumbs += symbol.name();
     }
     breadcrumbs += " ";
-    let command = format!(
-        "buffer {}; try 'set-option window lsp_modeline_breadcrumbs {}'",
+    let command = formatdoc!(
+        "buffer {}
+         try 'set-option window lsp_modeline_breadcrumbs {}'",
         editor_quote(&meta.buffile),
         editor_escape(&editor_quote(&breadcrumbs))
     );
-    let command = format!(
-        "evaluate-commands -draft -client {} -- {}",
-        meta.client.as_ref().unwrap(),
-        editor_quote(&command)
-    );
+    let command = format!("evaluate-commands -draft -- {}", editor_quote(&command));
     ctx.exec(meta, command);
 }
 

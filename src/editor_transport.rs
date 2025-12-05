@@ -48,10 +48,18 @@ impl ToEditor for SessionId {
         let client = response.meta.client.as_ref();
         let command = match client.filter(|&s| !s.is_empty()) {
             Some(client) => {
-                let command = format!(
-                    "evaluate-commands -client {} -verbatim -- {}",
-                    client, response.command
-                );
+                let command = if response.command.contains([';', '\n']) {
+                    format!(
+                        "evaluate-commands -client {} -- {}",
+                        client,
+                        editor_quote(&response.command)
+                    )
+                } else {
+                    format!(
+                        "evaluate-commands -client {} -verbatim -- {}",
+                        client, &response.command
+                    )
+                };
                 Cow::from(command)
             }
             None => response.command,

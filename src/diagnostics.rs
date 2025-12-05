@@ -372,7 +372,6 @@ pub fn editor_diagnostics(meta: EditorMeta, params: PositionParams, ctx: &mut Co
         editor_quote(&content),
         goto_buffer_line.unwrap_or(1)
     );
-    let command = format!("evaluate-commands {}", editor_quote(&command));
     ctx.exec(meta, command);
 }
 

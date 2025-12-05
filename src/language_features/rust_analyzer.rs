@@ -105,13 +105,10 @@ pub fn apply_source_change(
             apply_text_edits_try_deferred(&mut command, server_id, &meta, uri, change, ctx);
         }
     }
-    let (
-        Some(client),
-        Some(TextDocumentPositionParams {
-            text_document: TextDocumentIdentifier { uri },
-            position,
-        }),
-    ) = (&meta.client, &cursor_position)
+    let Some(TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier { uri },
+        position,
+    }) = &cursor_position
     else {
         if !command.is_empty() {
             ctx.exec_fifo(meta, response_fifo, command);
@@ -130,16 +127,11 @@ pub fn apply_source_change(
             column: position.character + 1,
         },
     };
-    let goto_command = format!(
-        "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
+    let command = format!(
+        "{command}; evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {} {} {}",
         editor_quote(buffile),
         position.line,
         position.column - 1
-    );
-    let command = format!(
-        "{command}; evaluate-commands -client {} -verbatim -- {}",
-        editor_quote(client),
-        goto_command
     );
     ctx.exec_fifo(meta, response_fifo, command);
 }

@@ -1591,8 +1591,7 @@ fn report_error_no_server_configured(
         _ => None,
     } {
         assert!(!meta.hook);
-        let command = format!("evaluate-commands {}", &editor_quote(&fallback_cmd));
-        ctx.exec(meta.clone(), command);
+        ctx.exec(meta.clone(), fallback_cmd);
     }
     ctx.show_error(meta.clone(), msg);
 }
