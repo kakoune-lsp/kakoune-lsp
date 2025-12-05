@@ -7,7 +7,8 @@ Breaking changes:
   ```kakrc
   set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
   ```
-- Goto bindings (`gd`, `gr` and `gy`) are no longer mapped by default. Add them back with
+
+- The goto-mode mappings (`gd`, `gr` and `gy`) are no longer added by default. We recommend you add them back with
 
   ```kakrc
   map global goto d <esc>:lsp-definition<ret> -docstring 'LSP definition'
