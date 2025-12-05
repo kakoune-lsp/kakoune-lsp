@@ -277,6 +277,16 @@ fn editor_code_actions(
             _ => 7,
         }
     });
+    let mut server_name_prefix = actions
+        .iter()
+        .map(|(server_id, _)| {
+            let server_name = &ctx.server(*server_id).name;
+            (server_id, format!("[{server_name}] "))
+        })
+        .collect::<HashMap<_, _>>();
+    if server_name_prefix.len() == 1 {
+        server_name_prefix.values_mut().next().unwrap().clear();
+    };
     let titles_and_commands = if params.auto_single {
         "-auto-single "
     } else {
@@ -297,7 +307,12 @@ fn editor_code_actions(
                 let server_name = &ctx.server(*server_id).name;
                 let select_cmd =
                     code_action_or_command_to_editor_command(server_name, c, false, may_resolve);
-                format!("{} {}", editor_quote(title), editor_quote(&select_cmd))
+                format!(
+                    "'{}{}' {}",
+                    editor_escape(server_name_prefix.get(server_id).unwrap()),
+                    editor_escape(title),
+                    editor_quote(&select_cmd)
+                )
             })
             .join(" ");
 

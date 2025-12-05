@@ -25,6 +25,7 @@ Additions:
 - `lsp-diagnostics` moves the cursor in the `*diagnostics*` buffer to the diagnostic nearest to the main cursor.
 - `lsp-hover` now shows diagnostics before hover info (#819).
 - `lsp-diagnostic-object` can now look for `info` and `hint` level diagnostics (#844).
+- When multiple servers provide code actions, `lsp-code-actions` will now prefix code action titles with `[$server_name] `, to make it easy to filter.
 
 Fixes:
 - Actually use cmake-language-server for `cmake` type files.
