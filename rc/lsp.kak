@@ -187,50 +187,40 @@ info=$lsp_info \
     diagnostics=$lsp_diagnostics \
     code_lenses=$lsp_code_lenses \
     awk 'BEGIN {
-        max_info_lines = ENVIRON["kak_opt_lsp_hover_max_lines"]
-
-        # If lsp_hover_max_info_lines is a sentinel value (e.g. -1) then it is
-        # likely the user has not set the value themselves, use the value of the
-        # new lsp_hover_max_info_lines.
-        if (max_info_lines < 0)
-            max_info_lines = ENVIRON["kak_opt_lsp_hover_max_info_lines"]
-
-        info_lines = split(ENVIRON["info"], info_line, /\n/)
-
-        info_truncated = 0
-
-        # Will the info lines need to be truncated
-        if (is_truncated(max_info_lines, info_lines)) {
-            # Only output max_info_lines amount of info lines
-            info_lines = max_info_lines
-            info_truncated = 1
-        }
-
-        if (info_lines) {
-            print_at_least_one_line(info_line, info_lines)
-        }
-
         diagnostics = ENVIRON["diagnostics"]
-
         diagnostics_truncated = 0
-
         if (diagnostics) {
             print "{+b@InfoDefault}Diagnostics{InfoDefault} (shortcut e):"
-
             max_diagnostic_lines = ENVIRON["kak_opt_lsp_hover_max_diagnostic_lines"]
-
             diagnostic_lines = split(diagnostics, diagnostic_line, /\n/)
-
             # Will the diagnostic lines need to be truncated
             if (is_truncated(max_diagnostic_lines, diagnostic_lines)) {
                 # Only output max_diagnostic_lines amount of diagnostic lines
                 diagnostic_lines = max_diagnostic_lines
                 diagnostics_truncated = 1
             }
-
             if (diagnostic_lines) {
                 print_at_least_one_line(diagnostic_line, diagnostic_lines)
             }
+        }
+
+        max_info_lines = ENVIRON["kak_opt_lsp_hover_max_lines"]
+        # If lsp_hover_max_info_lines is a sentinel value (e.g. -1) then it is
+        # likely the user has not set the value themselves, use the value of the
+        # new lsp_hover_max_info_lines.
+        if (max_info_lines < 0)
+            max_info_lines = ENVIRON["kak_opt_lsp_hover_max_info_lines"]
+        info_lines = split(ENVIRON["info"], info_line, /\n/)
+        info_truncated = 0
+        # Will the info lines need to be truncated
+        if (is_truncated(max_info_lines, info_lines)) {
+            # Only output max_info_lines amount of info lines
+            info_lines = max_info_lines
+            info_truncated = 1
+        }
+        if (info_lines) {
+            printf "{+b@InfoDefault}Hover{InfoDefault}: "
+            print_at_least_one_line(info_line, info_lines)
         }
 
         if (info_truncated == 1 || diagnostics_truncated == 1)

@@ -14,6 +14,7 @@ Additions:
 - Support for fetching Lean goals with `$/lean/plainGoal`.
 - Command prompt completion for `lsp-execute-command`.
 - `lsp-document-symbol` moves the cursor in the `*goto*` buffer to the symbol that corresponds to the main cursor position.
+- `lsp-hover` now shows diagnostics before hover info (#819).
 
 Fixes:
 - Actually use cmake-language-server for `cmake` type files.
