@@ -996,7 +996,8 @@ define-command lsp-execute-command -params 2..3 -docstring "lsp-execute-command 
         exit
     fi
     trap "rm -f ${pipe}; rmdir ${tmp} 2>/dev/null" EXIT INT QUIT
-    echo "evaluate-commands -verbatim -buffer ${kak_bufname}" \
+    echo "evaluate-commands -verbatim -buffer '$(
+            printf %s "${kak_bufname}" | sed "s/'/''/g")'" \
         "lsp-send kakoune/complete/workspace/executeCommand ${pipe}" |
         kak -p ${kak_session}
     cat ${pipe}
