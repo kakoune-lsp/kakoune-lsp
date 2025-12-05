@@ -1901,8 +1901,8 @@ define-command -hidden lsp-disable-impl -params 1 %{
     remove-highlighter "%arg{1}/lsp_references"
     remove-highlighter "%arg{1}/lsp_semantic_tokens_ranges"
     remove-highlighter "%arg{1}/lsp_snippets_placeholders"
-    lsp-inline-diagnostics-disable %arg{1}
-    lsp-diagnostic-lines-disable %arg{1}
+    try %{ lsp-inline-diagnostics-disable %arg{1} }
+    try %{ lsp-diagnostic-lines-disable %arg{1} }
     try %{ set-option -remove %arg{1} completers option=lsp_completions }
     remove-hooks %arg{1} lsp
     remove-hooks %arg{1} lsp-breadcrumbs
