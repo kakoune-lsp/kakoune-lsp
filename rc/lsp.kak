@@ -1027,9 +1027,10 @@ define-command lsp-rename-prompt -docstring "Rename symbol under the main cursor
     evaluate-commands -save-regs ^s %{
         execute-keys -save-regs "" Z
         try %{
-            execute-keys <space><esc>,<esc><a-i>w
+            execute-keys <space><esc>,<esc><semicolon> \
+                "<a-a>c[\w%opt{lsp_extra_word_chars}]*,[\w%opt{lsp_extra_word_chars}]*<ret>"
             # include a leading single-quote for Rust lifetime specifiers
-            execute-keys <a-semicolon>Hs'?\w+<ret><a-semicolon>
+            execute-keys "<a-semicolon>Hs'?[\w%opt{lsp_extra_word_chars}]*<ret><a-semicolon>"
         } catch %{
             fail "lsp-rename-prompt: no identifier at cursor"
         }
