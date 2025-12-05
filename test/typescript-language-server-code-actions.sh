@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # REQUIRES: command -v typescript-language-server
+# REQUIRES: false
 
 . test/lib.sh
 
