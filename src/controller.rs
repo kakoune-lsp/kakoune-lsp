@@ -523,7 +523,9 @@ fn dispatch_fifo_request(
         | "textDocument/typeDefinition" => Box::new(PositionParams {
             position: state.next()?,
         }),
-        "textDocument/diagnostics" => Box::new(()),
+        "textDocument/diagnostics" => Box::new(PositionParams {
+            position: state.next()?,
+        }),
         "textDocument/documentSymbol" => Box::new(PositionParams {
             position: state.next()?,
         }),
@@ -1836,7 +1838,7 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
             rename::text_document_rename(meta, params.unbox(), ctx);
         }
         "textDocument/diagnostics" => {
-            diagnostics::editor_diagnostics(meta, ctx);
+            diagnostics::editor_diagnostics(meta, params.unbox(), ctx);
         }
         "capabilities" => {
             capabilities::capabilities(meta, ctx);

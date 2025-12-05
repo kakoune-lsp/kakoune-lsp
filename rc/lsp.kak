@@ -1093,7 +1093,7 @@ define-command lsp-signature-help -docstring "Request signature help for the mai
 }
 
 define-command lsp-diagnostics -docstring "Open buffer with project-wide diagnostics for current filetype" %{
-    lsp-send textDocument/diagnostics
+    lsp-send textDocument/diagnostics %val{cursor_line} %val{cursor_column}
 }
 
 define-command lsp-document-symbol -docstring "Open buffer with document symbols" %{
@@ -1353,14 +1353,20 @@ define-command -hidden lsp-show-goto-choices -params 2 -docstring "Render goto c
     lsp-show-goto-buffer *goto* lsp-goto %arg{@}
 }
 
+define-command -hidden lsp-initial-goto-position -params 1 %{
+    evaluate-commands -try-client %opt[toolsclient] %{
+        set-option buffer jump_current_line %arg{1}
+        execute-keys %arg{1} g
+    }
+}
+
 define-command -hidden lsp-show-document-symbol -params 4 -docstring "Render document symbols" %{
     lsp-show-goto-buffer *goto* lsp-document-symbol %arg{1} %arg{3}
     evaluate-commands -try-client %opt[toolsclient] %{
         set-option -add buffer path %arg{1} # for gf on the file name
         set-option buffer lsp_buffile %arg{2}
-        set-option buffer jump_current_line %arg{4}
-        execute-keys %arg{4} g
     }
+    lsp-initial-goto-position %arg{4}
 }
 
 define-command -hidden lsp-show-incoming-calls -params 2 -docstring "Render callers" %{

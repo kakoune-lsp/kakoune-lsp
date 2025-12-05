@@ -3,6 +3,7 @@ use crate::markup::escape_kakoune_markup;
 use crate::position::*;
 use crate::types::*;
 use crate::util::*;
+use indoc::formatdoc;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
 use jsonrpc_core::Params;
@@ -313,7 +314,9 @@ pub fn diagnostic_text(
     }
 }
 
-pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
+pub fn editor_diagnostics(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
+    let mut goto_buffer_line = None;
+    let mut line = 1;
     let content = ctx
         .diagnostics
         .iter()
@@ -326,6 +329,7 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                     let p = match get_kakoune_position(server, filename, &x.range.start, ctx) {
                         Some(position) => position,
                         None => {
+                            line += 1;
                             warn!(
                                 ctx.to_editor(),
                                 "Cannot get position from file {}", filename
@@ -333,6 +337,11 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                             return "".to_string();
                         }
                     };
+                    if filename == &meta.buffile
+                        && (goto_buffer_line.is_none() || p <= params.position)
+                    {
+                        goto_buffer_line = Some(line);
+                    }
                     let mut entry = format!(
                         "{}:{}:{}: {}{}",
                         short_file_path(filename, ctx.main_root(&meta)),
@@ -350,16 +359,20 @@ pub fn editor_diagnostics(meta: EditorMeta, ctx: &mut Context) {
                     if entry.contains('\n') {
                         entry.push('\n');
                     }
+                    line += 1 + entry.chars().filter(|&c| c == '\n').count();
                     entry
                 })
                 .collect::<Vec<_>>()
         })
         .join("\n");
-    let command = format!(
-        "lsp-show-goto-buffer *diagnostics* lsp-diagnostics {} {}",
+    let command = formatdoc!(
+        "lsp-show-goto-buffer *diagnostics* lsp-diagnostics {} {}
+         lsp-initial-goto-position {}",
         editor_quote(ctx.main_root(&meta)),
         editor_quote(&content),
+        goto_buffer_line.unwrap_or(1)
     );
+    let command = format!("evaluate-commands {}", editor_quote(&command));
     ctx.exec(meta, command);
 }
 
