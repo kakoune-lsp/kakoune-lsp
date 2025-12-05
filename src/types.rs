@@ -588,20 +588,15 @@ impl Display for BackwardKakouneRange {
 }
 
 /// Represents how language server interprets LSP's `Position.character`
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub enum OffsetEncoding {
     /// UTF-8 code units aka bytes
     #[serde(rename = "utf-8")]
     Utf8,
     /// UTF-16 code units
     #[serde(rename = "utf-16")]
+    #[default]
     Utf16,
-}
-
-impl Default for OffsetEncoding {
-    fn default() -> Self {
-        Self::Utf16
-    }
 }
 
 // An intermediate representation of the diagnostics on a line, for use with inlay diagnostics

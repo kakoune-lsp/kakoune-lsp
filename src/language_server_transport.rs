@@ -159,33 +159,32 @@ fn reader_loop(
             }
             let parts: Vec<&str> = header.split(": ").collect();
             if parts.len() != 2 {
-                return Err(Error::new(ErrorKind::Other, "Failed to parse header"));
+                return Err(Error::other("Failed to parse header"));
             }
             headers.insert(parts[0].to_string(), parts[1].to_string());
         }
         let content_len = headers
             .get("Content-Length")
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Failed to get Content-Length header"))?
+            .ok_or_else(|| Error::other("Failed to get Content-Length header"))?
             .parse()
-            .map_err(|_| Error::new(ErrorKind::Other, "Failed to parse Content-Length header"))?;
+            .map_err(|_| Error::other("Failed to parse Content-Length header"))?;
         let mut content = vec![0; content_len];
         reader.read_exact(&mut content)?;
         let msg = String::from_utf8(content)
-            .map_err(|_| Error::new(ErrorKind::Other, "Failed to read content as UTF-8 string"))?;
+            .map_err(|_| Error::other("Failed to read content as UTF-8 string"))?;
         debug!(to_editor, "From server {server_name}: {msg}");
         let output: serde_json::Result<Output> = serde_json::from_str(&msg);
         match output {
             Ok(output) => {
                 if sender.send(ServerMessage::Response(output)).is_err() {
-                    return Err(Error::new(ErrorKind::Other, "Failed to send response"));
+                    return Err(Error::other("Failed to send response"));
                 }
             }
             Err(_) => {
-                let msg: Call = serde_json::from_str(&msg).map_err(|_| {
-                    Error::new(ErrorKind::Other, "Failed to parse language server message")
-                })?;
+                let msg: Call = serde_json::from_str(&msg)
+                    .map_err(|_| Error::other("Failed to parse language server message"))?;
                 if sender.send(ServerMessage::Request(msg)).is_err() {
-                    return Err(Error::new(ErrorKind::Other, "Failed to send response"));
+                    return Err(Error::other("Failed to send response"));
                 }
             }
         }

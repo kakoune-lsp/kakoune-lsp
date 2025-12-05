@@ -228,8 +228,8 @@ pub fn execute_command(
                     can_serve(
                         ctx,
                         *server_id,
-                        &server_name,
-                        &ctx.server_config(&meta, &server_name).unwrap().root,
+                        server_name,
+                        &ctx.server_config(&meta, server_name).unwrap().root,
                     )
                 }) else {
                     error!(

@@ -102,9 +102,7 @@ fn run_main() -> Result<(), ()> {
         .version(crate_version!())
         .author("Ruslan Prokopchuk <fer.obbee@gmail.com>")
         .about("Kakoune Language Server Protocol Client")
-        .after_help(concat!(
-            "Unless --session is given, print commands to plug into a Kakoune session",
-        ))
+        .after_help("Unless --session is given, print commands to plug into a Kakoune session")
         .arg(
             Arg::new("kakoune")
                 .hide(true)

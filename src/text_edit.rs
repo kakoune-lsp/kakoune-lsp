@@ -210,8 +210,7 @@ fn apply_text_edits_to_rope<T: TextEditish<T>>(
         } = te.as_ref();
 
         if start.line as u64 >= text_len_lines || end.line as u64 >= text_len_lines {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            return Err(std::io::Error::other(
                 "Text edit range extends past end of file.",
             ));
         }
@@ -228,8 +227,7 @@ fn apply_text_edits_to_rope<T: TextEditish<T>>(
         );
 
         if start_offset.is_none() || end_offset.is_none() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            return Err(std::io::Error::other(
                 "Text edit range points past end of line.",
             ));
         }
