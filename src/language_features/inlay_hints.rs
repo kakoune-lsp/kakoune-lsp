@@ -113,9 +113,9 @@ pub fn inlay_hints_response(
     let version = meta.version;
     let command = format!("set-option buffer lsp_inlay_hints {version} {ranges}");
     let command = format!(
-        "evaluate-commands -buffer {} -- {}",
+        "evaluate-commands -buffer {} -verbatim -- {}",
         editor_quote(&meta.buffile),
-        editor_quote(&command)
+        &command
     );
     ctx.exec(meta, command)
 }
