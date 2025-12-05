@@ -29,7 +29,7 @@ macro_rules! log_impl {
     ($to_editor:expr, $level:expr, $fmt:literal $(, $arg:expr )* $(,)?) => {
         {
             let message = format!($fmt $(, $arg ) *);
-            slog_scope::with_logger(|logger| slog::slog_log!(logger, $level, "", "{}", message));
+            slog_scope::with_logger(|logger| slog::log!(logger, $level, "", "{}", message));
             crate::log::do_log($to_editor, $level, message);
         }
     };
