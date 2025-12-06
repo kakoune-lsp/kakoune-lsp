@@ -93,14 +93,7 @@ binary x86_64-unknown-linux-musl
 
 	  def caveats
 	    <<~EOS
-	      For the default config, put
-
-	        eval %sh{kak-lsp}
-	        lsp-enable
-
-	      into your kakrc.
-
-	      To customize the behavior, see https://github.com/kakoune-lsp/kakoune-lsp/blob/v#{version}/README.asciidoc
+	      For usage instructions, see https://github.com/kakoune-lsp/kakoune-lsp/blob/v#{version}/README.asciidoc
 	    EOS
 	  end
 
