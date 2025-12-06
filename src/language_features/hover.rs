@@ -68,9 +68,10 @@ pub fn editor_hover(
     ctx: &mut Context,
 ) {
     let doc = &ctx.documents[&meta.buffile];
-    let lsp_ranges: HashMap<_, _> = results
+    let lsp_ranges: HashMap<_, _> = meta
+        .servers
         .iter()
-        .map(|(server_id, _)| {
+        .map(|server_id| {
             let offset_encoding = ctx.server(*server_id).offset_encoding;
             (
                 server_id,

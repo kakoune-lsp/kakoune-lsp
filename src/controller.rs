@@ -650,6 +650,7 @@ fn dispatch_fifo_request(
             }
             params
         }
+        "workspace/diagnostics" => Box::new(()),
         method => {
             panic!("unexpected method {}", method);
         }
@@ -1839,6 +1840,9 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         "textDocument/diagnostics" => {
             diagnostics::editor_diagnostics(meta, params.unbox(), ctx);
         }
+        "workspace/diagnostics" => {
+            diagnostics::editor_workspace_diagnostics(meta, ctx);
+        }
         "capabilities" => {
             capabilities::capabilities(meta, ctx);
         }
@@ -2051,6 +2055,9 @@ fn dispatch_server_notification(
         notification::PublishDiagnostics::METHOD => {
             diagnostics::publish_diagnostics(server_id, params, ctx);
         }
+        "workspace/diagnostic/refresh" => {
+            diagnostics::workspace_diagnostic_refresh(server_id, params, ctx);
+        }
         "$cquery/publishSemanticHighlighting" => {
             cquery::publish_semantic_highlighting(server_id, params, ctx);
         }
@@ -2091,6 +2098,10 @@ fn dispatch_server_notification(
         }
         "telemetry/event" => {
             debug!(ctx.to_editor(), "{:?}", params);
+        }
+        "eslint/status" => {
+            // ESLint sends status notifications, we can safely ignore them
+            debug!(ctx.to_editor(), "ESLint status: {:?}", params);
         }
         _ => {
             warn!(ctx.to_editor(), "Unsupported method: {}", method);

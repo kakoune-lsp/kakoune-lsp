@@ -1097,6 +1097,10 @@ define-command lsp-diagnostics -docstring "Open buffer with project-wide diagnos
     lsp-send textDocument/diagnostics %val{cursor_line} %val{cursor_column}
 }
 
+define-command lsp-workspace-diagnostics -docstring "Open buffer with workspace-wide diagnostics from all files" %{
+    lsp-send workspace/diagnostics
+}
+
 define-command lsp-document-symbol -docstring "Open buffer with document symbols" %{
     lsp-send textDocument/documentSymbol %val{cursor_line} %val{cursor_column}
 }

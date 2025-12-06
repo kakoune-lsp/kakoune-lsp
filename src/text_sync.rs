@@ -42,6 +42,9 @@ pub fn text_document_did_open(
     for &server_id in &meta.servers {
         ctx.notify::<DidOpenTextDocument>(server_id, params.clone());
     }
+
+    // Request pull diagnostics if supported
+    crate::diagnostics::text_document_diagnostic(meta.clone(), ctx);
 }
 
 pub fn text_document_did_change(
@@ -66,7 +69,6 @@ pub fn text_document_did_change(
 
     // Resets metadata for buffer.
     ctx.documents.insert(meta.buffile.clone(), document);
-    ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
 
     let req_params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
@@ -82,6 +84,9 @@ pub fn text_document_did_change(
     for &server_id in &meta.servers {
         ctx.notify::<DidChangeTextDocument>(server_id, req_params.clone());
     }
+
+    // Request pull diagnostics if supported (debounced by Kakoune's InsertIdle/NormalIdle)
+    crate::diagnostics::text_document_diagnostic(meta, ctx);
 }
 
 pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
@@ -122,6 +127,9 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
         };
         ctx.notify::<DidSaveTextDocument>(server_id, params);
     }
+
+    // Request pull diagnostics if supported
+    crate::diagnostics::text_document_diagnostic(meta, ctx);
 }
 
 pub fn spawn_file_watcher(
