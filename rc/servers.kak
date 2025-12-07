@@ -131,6 +131,16 @@ hook -group lsp-filetype-erlang global BufSetOption filetype=erlang %{
     }
 }
 
+hook -group lsp-filetype-fsharp global BufSetOption filetype=fsharp %{
+	set-option buffer lsp_servers %{
+		[fsautocomplete]
+		root_globs = [".git", ".hg", ".sln", ".fsproj"]
+		settings_section = "_"
+		[fsautocomplete.settings._]
+		AutomaticWorkspaceInit = true
+	}
+}
+
 hook -group lsp-filetype-go global BufSetOption filetype=go %{
     set-option buffer lsp_servers %{
         [gopls]
