@@ -1,4 +1,4 @@
-## Unreleased
+## 19.0.0 - 2025-12-08
 
 Breaking changes:
 - Loading the plugin (`eval %sh{kak-lsp}`) no longer adds to your `modelinefmt` option.
