@@ -1503,6 +1503,7 @@ Valid arguments are 'error', 'warning', 'info', 'hint'.
 If no arguments are specified, 'error' is implied.
 " %{
     evaluate-commands %sh{
+	    previous=false
         diagnostic_faces=
         types=
         add_face() {
