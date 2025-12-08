@@ -2,7 +2,8 @@
 
 Breaking changes:
 - Loading the plugin (`eval %sh{kak-lsp}`) no longer adds to your `modelinefmt` option.
-  We recommend adding this to your config, which restores the old behavior:
+  We recommend adding the following to your config, which restores the old behavior,
+  notably adding function names (breadcrumbs) in the modeline:
 
   ```kakrc
   set-option global modelinefmt "%opt{lsp_modeline} %opt{modelinefmt}"
@@ -17,7 +18,7 @@ Breaking changes:
   ```
 
 Additions:
-- Default configuration for Odin and Lean.
+- Default configuration for FSharp, Odin and Lean.
 - `lsp-definition` (and `lsp-type-definition` etc.), `lsp-highlight-references`, `lsp-goto-document-symbol` now place the cursor at the beginning of the target selection instead of at the end (#859).
 - Support for fetching Lean goals with `$/lean/plainGoal`.
 - Command prompt completion for `lsp-execute-command`.
