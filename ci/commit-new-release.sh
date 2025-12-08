@@ -100,7 +100,7 @@ binary x86_64-unknown-linux-musl
 	end
 EOF
 	git commit -am "v$new"
-	git push
+	git push origin HEAD:master
 )
 
 git push origin HEAD:master
