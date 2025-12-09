@@ -219,7 +219,9 @@ info=$lsp_info \
             info_truncated = 1
         }
         if (info_lines) {
-            printf "{+b@InfoDefault}Hover{InfoDefault}: "
+            if (diagnostics) {
+                printf "{+b@InfoDefault}Hover{InfoDefault}: "
+            }
             print_at_least_one_line(info_line, info_lines)
         }
 
