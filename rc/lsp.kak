@@ -1503,7 +1503,6 @@ Valid arguments are 'error', 'warning', 'info', 'hint'.
 If no arguments are specified, 'error' is implied.
 " %{
     evaluate-commands %sh{
-	    previous=false
         diagnostic_faces=
         types=
         add_face() {
@@ -1513,6 +1512,7 @@ If no arguments are specified, 'error' is implied.
         if [ $# -eq 0 ]; then
             add_face error DiagnosticError
         fi
+        previous=false
         for arg; do
             case "$arg" in
                 (--previous) previous=true; continue ;;
