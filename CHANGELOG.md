@@ -1,4 +1,4 @@
-## Unreleased
+## 19.0.1 - 2025-12-10
 
 Fixes:
 - (regression from 19.0.0) fix `lsp-find-error` always assuming `--previous`.
