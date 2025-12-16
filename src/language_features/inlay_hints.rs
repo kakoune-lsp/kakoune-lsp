@@ -159,20 +159,15 @@ pub fn inlay_hint_apply(meta: EditorMeta, params: InlayHintApplyParams, ctx: &mu
 
             // all hints for this buffile, with their server_id and position
             // the kak position is later used by the Nearest apply kind
-            let all_hints =
-                ctx.inlay_hints
-                    .get(&meta.buffile)
-                    .unwrap()
-                    .iter()
-                    .map(|(server_id, hint)| {
-                        let server = ctx.server(*server_id);
-                        let kak_pos = lsp_position_to_kakoune(
-                            &hint.position,
-                            &document.text,
-                            server.offset_encoding,
-                        );
-                        (*server_id, hint, kak_pos)
-                    });
+            let Some(all_hints) = ctx.inlay_hints.get(&meta.buffile) else {
+                return;
+            };
+            let all_hints = all_hints.iter().map(|(server_id, hint)| {
+                let server = ctx.server(*server_id);
+                let kak_pos =
+                    lsp_position_to_kakoune(&hint.position, &document.text, server.offset_encoding);
+                (*server_id, hint, kak_pos)
+            });
 
             // an iterator of the inlay hints we select to apply
             let hints_to_apply: Box<dyn Iterator<Item = (ServerId, &InlayHint)> + '_> =
