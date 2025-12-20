@@ -13,6 +13,7 @@ use std::fmt::Display;
 use std::io::{Error, Write};
 use std::ops::Deref;
 use std::os::unix::fs::OpenOptionsExt;
+use std::path::PathBuf;
 use std::time::Duration;
 use std::{fs, io};
 
@@ -365,6 +366,19 @@ impl Display for SessionId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct CommandFifos {
+    pub command_fifo: PathBuf,
+    pub response_fifo: PathBuf,
+}
+
+/// Kakoune session ID.
+#[derive(Clone, Debug, Default)]
+pub struct SessionHandle {
+    pub session: SessionId,
+    pub command_fifos: Option<PathBuf>,
 }
 
 /// Kakoune client ID.

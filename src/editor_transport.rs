@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 
 pub type ToEditorSender = Sender<EditorResponse>;
 
-pub fn start(session: SessionId) -> Worker<SessionId, EditorResponse, Void> {
+pub fn start(session: SessionHandle) -> Worker<SessionHandle, EditorResponse, Void> {
     // NOTE 1024 is arbitrary
     let channel_capacity = 1024;
 
@@ -15,7 +15,7 @@ pub fn start(session: SessionId) -> Worker<SessionId, EditorResponse, Void> {
         session,
         "Messages to editor",
         channel_capacity,
-        move |session: SessionId, receiver: Receiver<EditorResponse>, _| {
+        move |session: SessionHandle, receiver: Receiver<EditorResponse>, _| {
             for response in receiver {
                 session.dispatch(response);
             }
@@ -41,7 +41,7 @@ impl ToEditor for ToEditorSender {
     }
 }
 
-impl ToEditor for SessionId {
+impl ToEditor for SessionHandle {
     fn dispatch(&self, response: EditorResponse) {
         let log = !response.suppress_logging;
 
@@ -65,11 +65,11 @@ impl ToEditor for SessionId {
             None => response.command,
         };
         if log {
-            debug!(self, "To editor `{}`: {}", self, command);
+            debug!(self, "To editor `{}`: {}", self.session, command);
         }
 
         match Command::new("kak")
-            .args(["-p", self])
+            .args(["-p", &self.session])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
