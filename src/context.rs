@@ -89,7 +89,7 @@ pub struct Context {
     pub pending_message_requests: VecDeque<(Id, ServerId, ShowMessageRequestParams)>,
     pub request_counter: u64,
     pub response_waitlist: HashMap<Id, (EditorMeta, &'static str, BatchNumber, bool)>,
-    pub session: SessionId,
+    pub session: SessionHandle,
     pub to_editor: ToEditorSender,
     pub work_done_progress: HashMap<NumberOrString, Option<WorkDoneProgressBegin>>,
     pub work_done_progress_report_timestamp: time::Instant,
@@ -102,7 +102,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(session: SessionId, to_editor: ToEditorSender, config: Config) -> Self {
+    pub fn new(session: SessionHandle, to_editor: ToEditorSender, config: Config) -> Self {
         let legacy_filetypes = filetype_to_language_id_map(&config);
         #[allow(deprecated)]
         Context {
@@ -139,7 +139,7 @@ impl Context {
         }
     }
 
-    pub fn session(&self) -> &SessionId {
+    pub fn session(&self) -> &SessionHandle {
         &self.session
     }
 

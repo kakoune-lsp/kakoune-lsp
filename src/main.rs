@@ -236,8 +236,18 @@ fn run_main() -> Result<(), ()> {
         );
         return Err(());
     };
+
     let session = SessionId(session);
+
+    let env_var = |name| environment_variable(None, name);
+
+    let session = SessionHandle {
+        session,
+        command_fifo: None,
+    };
+
     let env_var = |name| environment_variable(Some(&session), name);
+
     let fatal_error = |message: String| report_fatal_error(Some(&session), &message);
 
     let plugin_path = env_var("XDG_RUNTIME_DIR")?
@@ -253,10 +263,10 @@ fn run_main() -> Result<(), ()> {
             path
         });
     let mut session_path = plugin_path.clone();
-    session_path.push(session.as_str());
+    session_path.push(session.session.as_str());
 
     let mut session_symlink_path = plugin_path;
-    session_symlink_path.push(format!("{}.ref", session));
+    session_symlink_path.push(format!("{}.ref", session.session));
 
     let existing_path = [&session_path, &session_symlink_path]
         .iter()
@@ -307,14 +317,16 @@ fn run_main() -> Result<(), ()> {
 
     session_directory.symlink = Some(TemporaryFile::new(session_symlink_path.clone()));
 
-    std::os::unix::fs::symlink(session.as_str(), session_symlink_path.clone()).map_err(|err| {
-        fatal_error(format!(
-            "failed to create session directory symlink '{}': {}",
-            session_symlink_path.display(),
-            err,
-        ));
-        ()
-    })?;
+    std::os::unix::fs::symlink(session.session.as_str(), session_symlink_path.clone()).map_err(
+        |err| {
+            fatal_error(format!(
+                "failed to create session directory symlink '{}': {}",
+                session_symlink_path.display(),
+                err,
+            ));
+            ()
+        },
+    )?;
     if externally_started {
         let file = externally_started_file(&session_path);
         fs::File::create(file.clone()).map_err(|err| {
@@ -496,7 +508,7 @@ fn run_main() -> Result<(), ()> {
     Ok(())
 }
 
-fn environment_variable(session: Option<&SessionId>, name: &str) -> Result<Option<String>, ()> {
+fn environment_variable(session: Option<&SessionHandle>, name: &str) -> Result<Option<String>, ()> {
     match env::var(name) {
         Ok(value) => Ok(Some(value)),
         Err(err) => match err {
@@ -552,7 +564,7 @@ fn kakoune() -> Result<(), ()> {
     }
 }
 
-fn report_fatal_error(session: Option<&SessionId>, message: &str) {
+fn report_fatal_error(session: Option<&SessionHandle>, message: &str) {
     let Some(session) = session else {
         eprintln!("{}", message);
         return;
@@ -570,7 +582,7 @@ fn report_fatal_error(session: Option<&SessionId>, message: &str) {
 #[cfg(feature = "crash-reporting")]
 #[allow(deprecated)]
 pub fn report_crash(
-    session: &SessionId,
+    session: &SessionHandle,
     meta: EditorMeta,
     panic_info: &PanicInfo,
     backtrace: Backtrace,
@@ -663,7 +675,7 @@ pub fn report_crash(
     );
 }
 
-fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Result<Config, ()> {
+fn parse_legacy_config(config_path: &PathBuf, session: &SessionHandle) -> Result<Config, ()> {
     let raw_config = fs::read_to_string(config_path).expect("Failed to read config");
     #[allow(deprecated)]
     toml::from_str(&raw_config)

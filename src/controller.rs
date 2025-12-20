@@ -768,7 +768,7 @@ fn read_to_end(to_editor: &ToEditorSender, file: &mut fs::File, buffer: &SharedB
 ///
 /// This function starts editor transport.
 pub fn start(
-    session: SessionId,
+    session: SessionHandle,
     config: Config,
     to_editor: &ToEditorSender,
     log_path: &'static Option<PathBuf>,
@@ -1322,19 +1322,19 @@ fn route_request(
         debug!(
             ctx.to_editor(),
             "Editor session `{}` closed, shutting down language servers",
-            ctx.session()
+            ctx.session().session
         );
         return Some(ControlFlow::Break(()));
     }
     if request_method == notification::Exit::METHOD {
         return None;
     }
-    if !meta.session.is_empty() && &meta.session != ctx.session() {
+    if !meta.session.is_empty() && &meta.session != &ctx.session().session {
         info!(
             ctx.to_editor(),
             "Request session ID '{}' does not match original session '{}', shutting down",
             meta.session,
-            ctx.session(),
+            ctx.session().session,
         );
         return Some(ControlFlow::Break(()));
     }
