@@ -68,6 +68,27 @@ impl ToEditor for SessionHandle {
             debug!(self, "To editor `{}`: {}", self.session, command);
         }
 
+        // TODO
+        if !response.suppress_logging {
+            if let Some(command_fifo) = &self.command_fifo {
+                if let Err(err) = std::fs::File::options()
+                    .append(true)
+                    .open(command_fifo)
+                    .and_then(|mut file| file.write_all(command.as_bytes()))
+                {
+                    if log {
+                        error!(
+                            self,
+                            "Failed to write to command fifo '{}': {}",
+                            command_fifo.display(),
+                            err
+                        );
+                    }
+                }
+                return;
+            }
+        }
+
         match Command::new("kak")
             .args(["-p", &self.session])
             .stdin(Stdio::piped())

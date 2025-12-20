@@ -243,7 +243,7 @@ fn run_main() -> Result<(), ()> {
 
     let session = SessionHandle {
         session,
-        command_fifo: None,
+        command_fifo: env_var("kak_command_fifo")?.map(PathBuf::from),
     };
 
     let env_var = |name| environment_variable(Some(&session), name);
