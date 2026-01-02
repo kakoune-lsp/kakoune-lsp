@@ -124,10 +124,9 @@ hook -group lsp-filetype-elvish global BufSetOption filetype=elvish %{
 
 hook -group lsp-filetype-erlang global BufSetOption filetype=erlang %{
     set-option buffer lsp_servers %{
-        [erlang_ls]
+        [elp]
         root_globs = ["rebar.config", "erlang.mk", ".git", ".hg"]
-        # See https://github.com/erlang-ls/erlang_ls.git for more information and
-        # how to configure. This default config should work in most cases though.
+        args = [ "server" ]
     }
 }
 
