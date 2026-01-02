@@ -1,5 +1,8 @@
 ## Unreleased
 
+Breaking changes:
+- Replace `erlang_ls` with `erlang-language-platform` in default config.
+
 Additions:
 - `lsp-inlay-hint-apply-*` commands to apply inlay hints' text edits, such as type-insertion (#864)
 
