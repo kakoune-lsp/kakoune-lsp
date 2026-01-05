@@ -71,7 +71,7 @@ binary x86_64-unknown-linux-musl
 	class KakouneLsp < Formula
 	  desc "Kakoune Language Server Protocol Client"
 	  homepage "https://github.com/kakoune-lsp/kakoune-lsp/"
-	  version "18.2.0"
+	  version "$new"
 
 	  if Hardware::CPU.arm?
 	    url "${aarch64_apple_darwin_url}"
