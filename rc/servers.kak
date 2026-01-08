@@ -491,6 +491,14 @@ hook -group lsp-filetype-php global BufSetOption filetype=php %{
     }
 }
 
+hook -group lsp-filetype-prisma global BufSetOption filetype=prisma %{
+    set-option buffer lsp_servers %{
+      [prisma-language-server]
+      root_globs = [".git", ".hg", "prisma"]
+      args = ["--stdio"]
+    }
+}
+
 hook -group lsp-filetype-protobuf global BufSetOption filetype=protobuf %{
     set-option buffer lsp_servers %{
         [pls] # https://github.com/lasorda/protobuf-language-server
