@@ -205,14 +205,26 @@ pub fn execute_command(
     params: EditorExecuteCommand,
     ctx: &mut Context,
 ) {
+    let arguments = if params.arguments.is_empty() || params.arguments.trim().is_empty() {
+        vec![]
+    } else {
+        match serde_json::from_str::<Vec<serde_json::Value>>(&params.arguments) {
+            Ok(args) => args,
+            Err(e) => {
+                error!(
+                    ctx.to_editor(),
+                    "Failed to parse arguments for command {}: {} \
+                     (arguments must be a JSON array, e.g. lsp-execute-command cmd '[\"arg\"]')",
+                    params.command,
+                    e
+                );
+                return;
+            }
+        }
+    };
     let req_params = ExecuteCommandParams {
         command: params.command,
-        // arguments is quoted to avoid parsing issues
-        arguments: if params.arguments.is_empty() {
-            vec![]
-        } else {
-            serde_json::from_str(&params.arguments).unwrap()
-        },
+        arguments,
         work_done_progress_params: Default::default(),
     };
     match &*req_params.command {
