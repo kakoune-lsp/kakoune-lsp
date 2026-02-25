@@ -434,7 +434,7 @@ hook -group lsp-filetype-markdown global BufSetOption filetype=markdown %{
     # }
     # set-option buffer lsp_servers %{
     #     [markdown-oxide]
-    #     root_globs = ["logseq"]
+    #     root_globs = [".moxide.toml", ".obsidian", "logseq"]
     # }
 }
 
