@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use crate::capabilities::send_completion_trigger_characters;
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::{context::*, editor_transport::ToEditorSender};
@@ -42,6 +43,7 @@ pub fn text_document_did_open(
     for &server_id in &meta.servers {
         ctx.notify::<DidOpenTextDocument>(server_id, params.clone());
     }
+    send_completion_trigger_characters(&meta, ctx);
 }
 
 pub fn text_document_did_change(

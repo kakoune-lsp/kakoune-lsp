@@ -10,6 +10,7 @@ use lsp_types::notification::*;
 use lsp_types::request::*;
 use lsp_types::*;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::process;
@@ -175,7 +176,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                                         CompletionItemKind::TYPE_PARAMETER,
                                     ]),
                                 }),
-                                context_support: Some(false),
+                                context_support: Some(true),
                                 insert_text_mode: None,
                                 completion_list: None,
                             }),
@@ -408,7 +409,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
         })
         .collect();
 
-    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params), move |ctx, _meta, results| {
+    ctx.call::<Initialize, _>(meta, RequestParams::Each(req_params), move |ctx, meta, results| {
         let results: HashMap<_,_> = results.into_iter().collect();
 
         let to_editor = ctx.to_editor().clone();
@@ -445,8 +446,45 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                 ctx.notify::<Initialized>(server_id, InitializedParams {});
             }
         }
+        send_completion_trigger_characters(&meta, ctx);
         controller::dispatch_pending_editor_requests(ctx)
     });
+}
+
+pub fn send_completion_trigger_characters(meta: &EditorMeta, ctx: &Context) {
+    let mut trigger_chars = BTreeSet::new();
+    for &server_id in &meta.servers {
+        let server = ctx.server(server_id);
+        if let Some(caps) = &server.capabilities {
+            if let Some(provider) = &caps.completion_provider {
+                if let Some(chars) = &provider.trigger_characters {
+                    for ch in chars {
+                        if ch.chars().count() == 1 {
+                            trigger_chars.insert(ch.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let escaped: String = trigger_chars
+        .iter()
+        .map(|ch| match ch.as_str() {
+            "-" => "\\-".to_string(),
+            "<" => "<lt>".to_string(),
+            "[" => "\\[".to_string(),
+            "\\" => "\\\\".to_string(),
+            "]" => "\\]".to_string(),
+            "^" => "\\^".to_string(),
+            other => other.to_string(),
+        })
+        .collect();
+    let command = format!(
+        "evaluate-commands -buffer {} -verbatim -- set-option buffer lsp_completion_trigger_regex {}",
+        editor_quote(&meta.buffile),
+        editor_quote(&escaped),
+    );
+    ctx.exec(meta.clone(), command);
 }
 
 pub const CAPABILITY_CALL_HIERARCHY: &str = "lsp-incoming-calls, lsp-outgoing-calls";
