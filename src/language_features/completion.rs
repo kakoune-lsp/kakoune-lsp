@@ -254,10 +254,11 @@ fn editor_completion(
                     editor_quote(&snippet)
                 );
 
-                completion_entry(&insert_text, &on_select, &entry)
+                // Use filterText when available for Kakoune filtering, falling back
+                // to the processed insert text.
+                let candidate_text = x.filter_text.as_deref().unwrap_or(&insert_text);
+                completion_entry(candidate_text, &on_select, &entry)
             } else {
-                // Due to implementation reasons, we currently do not support filter text
-                // with snippets.
                 let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
                 let (insert_text, on_select) = if specified_filter_text != eventual_insert_text {
                     // Simulate filter-text support by giving the filter-text to Kakoune
