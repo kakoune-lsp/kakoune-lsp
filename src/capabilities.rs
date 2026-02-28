@@ -3,6 +3,7 @@ use crate::controller;
 use crate::settings::initialization_options;
 use crate::settings::record_dynamic_config;
 use crate::types::*;
+use crate::util::file_path_to_uri;
 use crate::util::*;
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -13,7 +14,6 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::process;
-use url::Url;
 
 pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
     #[allow(deprecated)]
@@ -64,6 +64,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                 server_id,
                 vec![InitializeParams {
                     capabilities: ClientCapabilities {
+                        notebook_document: None,
                         workspace: Some(WorkspaceClientCapabilities {
                             apply_edit: Some(true),
                             workspace_edit: Some(WorkspaceEditClientCapabilities {
@@ -388,11 +389,11 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                     },
                     initialization_options: initialization_options[idx].clone(),
                     process_id: Some(process::id()),
-                    root_uri: Some(Url::from_file_path(&roots[0]).unwrap()),
+                    root_uri: Some(file_path_to_uri(&roots[0])),
                     root_path: Some(roots[0].clone()),
                     trace: Some(TraceValue::Off),
                     workspace_folders: Some(vec![WorkspaceFolder {
-                        uri: Url::from_file_path(&roots[0]).unwrap(),
+                        uri: file_path_to_uri(&roots[0]),
                         name: roots[0].clone(),
                     }]),
                     client_info: Some(ClientInfo {

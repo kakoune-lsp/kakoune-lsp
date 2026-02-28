@@ -4,13 +4,13 @@ use crate::position::lsp_range_to_kakoune;
 use crate::semantic_tokens_config;
 use crate::types::{EditorMeta, ForwardKakouneRange, ServerId};
 use crate::util::editor_quote;
+use crate::util::file_path_to_uri;
 use lsp_types::request::SemanticTokensFullRequest;
 use lsp_types::{
     Position, Range, SemanticToken, SemanticTokenModifier, SemanticTokensOptions,
     SemanticTokensParams, SemanticTokensRegistrationOptions, SemanticTokensResult,
     SemanticTokensServerCapabilities::*, TextDocumentIdentifier,
 };
-use url::Url;
 
 pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
@@ -32,7 +32,7 @@ pub fn tokens_request(meta: EditorMeta, ctx: &mut Context) {
                 vec![SemanticTokensParams {
                     partial_result_params: Default::default(),
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     work_done_progress_params: Default::default(),
                 }],

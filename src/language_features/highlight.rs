@@ -7,12 +7,12 @@ use crate::types::{
     PositionParams, ServerId,
 };
 use crate::util::editor_quote;
+use crate::util::file_path_to_uri;
 use itertools::Itertools;
 use lsp_types::{
     request::DocumentHighlightRequest, DocumentHighlight, DocumentHighlightKind,
     DocumentHighlightParams, TextDocumentIdentifier, TextDocumentPositionParams,
 };
-use url::Url;
 
 pub fn text_document_highlight(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
@@ -34,7 +34,7 @@ pub fn text_document_highlight(meta: EditorMeta, params: PositionParams, ctx: &m
                 vec![DocumentHighlightParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,

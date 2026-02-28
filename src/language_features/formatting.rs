@@ -5,10 +5,10 @@ use crate::context::*;
 use crate::controller::can_serve;
 use crate::types::*;
 use crate::util::editor_quote;
+use crate::util::file_path_to_uri;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use url::Url;
 
 pub fn text_document_formatting(
     meta: EditorMeta,
@@ -61,7 +61,7 @@ pub fn text_document_formatting(
         server_id,
         vec![DocumentFormattingParams {
             text_document: TextDocumentIdentifier {
-                uri: Url::from_file_path(&meta.buffile).unwrap(),
+                uri: file_path_to_uri(&meta.buffile),
             },
             options: params.clone(),
             work_done_progress_params: Default::default(),

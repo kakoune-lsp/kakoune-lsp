@@ -16,7 +16,6 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use lsp_types::request::*;
 use lsp_types::*;
-use url::Url;
 
 pub fn text_document_code_action(
     meta: EditorMeta,
@@ -91,7 +90,7 @@ fn code_actions_for_ranges(
                 *server_id,
                 vec![CodeActionParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     range: *range,
                     context: CodeActionContext {

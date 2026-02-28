@@ -6,6 +6,8 @@ use std::{
 
 use crate::thread_worker::Worker;
 use crate::types::*;
+use crate::util::file_path_to_uri;
+use crate::util::uri_to_file_path;
 use crate::{context::*, editor_transport::ToEditorSender};
 use crossbeam_channel::{Receiver, Sender};
 use jsonrpc_core::Value;
@@ -18,7 +20,6 @@ use notify_debouncer_full::{
 };
 use ropey::Rope;
 use serde::Deserialize;
-use url::Url;
 
 pub fn text_document_did_open(
     meta: EditorMeta,
@@ -33,7 +34,7 @@ pub fn text_document_did_open(
 
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
-            uri: Url::from_file_path(&meta.buffile).unwrap(),
+            uri: file_path_to_uri(&meta.buffile),
             language_id: meta.language_id.clone(),
             version: meta.version,
             text: params.draft,
@@ -49,7 +50,7 @@ pub fn text_document_did_change(
     params: TextDocumentDidChangeParams,
     ctx: &mut Context,
 ) {
-    let uri = Url::from_file_path(&meta.buffile).unwrap();
+    let uri = file_path_to_uri(&meta.buffile);
     let version = meta.version;
     let old_version = ctx
         .documents
@@ -86,7 +87,7 @@ pub fn text_document_did_change(
 
 pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
     ctx.documents.remove(&meta.buffile);
-    let uri = Url::from_file_path(&meta.buffile).unwrap();
+    let uri = file_path_to_uri(&meta.buffile);
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };
@@ -115,7 +116,7 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
             _ => None,
         };
 
-        let uri = Url::from_file_path(&meta.buffile).unwrap();
+        let uri = file_path_to_uri(&meta.buffile);
         let params = DidSaveTextDocumentParams {
             text_document: TextDocumentIdentifier { uri },
             text,
@@ -227,7 +228,7 @@ fn event_file_changes(
             };
             if watch_request.pattern.matches_path(path) {
                 file_changes.push(FileEvent {
-                    uri: Url::from_file_path(path).unwrap(),
+                    uri: file_path_to_uri(path),
                     typ: file_change_type,
                 });
                 break;
@@ -288,14 +289,7 @@ pub fn register_workspace_did_change_watched_files(
                     OneOf::Left(workspace_folder) => workspace_folder.uri,
                     OneOf::Right(url) => url,
                 };
-                let root = match url.to_file_path() {
-                    Ok(root) => root,
-                    Err(_) => {
-                        error!(ctx.to_editor(), "URL is not a file path: {}", url);
-                        continue;
-                    }
-                };
-                (Some(root), pattern)
+                (Some(url), pattern)
             }
         };
         let pattern = match glob::Pattern::new(&glob_pattern) {
@@ -311,7 +305,11 @@ pub fn register_workspace_did_change_watched_files(
         let default_watch_kind = WatchKind::Create | WatchKind::Change | WatchKind::Delete;
         let kind = watcher.kind.unwrap_or(default_watch_kind);
         ctx.pending_file_watchers
-            .entry((server_id, ctx.server(server_id).roots[0].clone(), root_path))
+            .entry((
+                server_id,
+                ctx.server(server_id).roots[0].clone(),
+                root_path.map(|uri| uri_to_file_path(&uri)),
+            ))
             .or_default()
             .push(CompiledFileSystemWatcher { kind, pattern });
     }

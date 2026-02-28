@@ -5,7 +5,7 @@ use crate::capabilities::{
 use crate::context::{Context, RequestParams};
 use crate::position::*;
 use crate::types::{BackwardKakouneRange, EditorMeta, KakouneRange, PositionParams, ServerId};
-use crate::util::{editor_quote, short_file_path};
+use crate::util::{editor_quote, file_path_to_uri, short_file_path, uri_to_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::{
@@ -13,7 +13,6 @@ use lsp_types::request::{
     GotoTypeDefinitionResponse, References, Request,
 };
 use lsp_types::*;
-use url::Url;
 
 pub fn goto(
     meta: EditorMeta,
@@ -79,7 +78,7 @@ fn goto_location(
     (server_id, Location { uri, range }): &(ServerId, Location),
     ctx: &mut Context,
 ) {
-    let path = uri.to_file_path().unwrap();
+    let path = uri_to_file_path(uri);
     let path_str = path.to_str().unwrap();
     if let Some(contents) = get_file_contents(path_str, ctx) {
         let server = ctx.server(*server_id);
@@ -95,7 +94,7 @@ fn goto_location(
 fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mut Context) {
     let select_location = locations
         .iter()
-        .chunk_by(|(_, Location { uri, .. })| uri.to_file_path().unwrap())
+        .chunk_by(|(_, Location { uri, .. })| uri_to_file_path(uri))
         .into_iter()
         .map(|(path, locations)| {
             let path_str = path.to_str().unwrap();
@@ -156,7 +155,7 @@ pub fn text_document_definition(
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,
@@ -206,7 +205,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ct
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,
@@ -249,7 +248,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, c
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,
@@ -292,7 +291,7 @@ pub fn text_document_references(meta: EditorMeta, params: PositionParams, ctx: &
                 vec![ReferenceParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,

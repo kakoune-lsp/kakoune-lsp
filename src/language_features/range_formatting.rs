@@ -7,10 +7,10 @@ use crate::position::{kakoune_range_to_lsp, parse_kakoune_range};
 use crate::text_edit::{apply_text_edits_to_buffer, TextEditish};
 use crate::types::*;
 use crate::util::editor_quote;
+use crate::util::file_path_to_uri;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use url::Url;
 
 pub fn text_document_range_formatting(
     meta: EditorMeta,
@@ -80,7 +80,7 @@ pub fn text_document_range_formatting(
             })
             .map(|range| DocumentRangeFormattingParams {
                 text_document: TextDocumentIdentifier {
-                    uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    uri: file_path_to_uri(&meta.buffile),
                 },
                 range,
                 options: params.formatting_options.clone(),

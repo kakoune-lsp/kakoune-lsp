@@ -2,6 +2,7 @@ use crate::context::*;
 use crate::markup::escape_kakoune_markup;
 use crate::position::*;
 use crate::types::*;
+use crate::util::uri_to_file_path;
 use crate::util::*;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
@@ -12,8 +13,8 @@ use std::fmt::Write as _;
 
 pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
-    let path = params.uri.to_file_path().unwrap();
-    let buffile = path.to_str().unwrap();
+    let buffile = uri_to_file_path(&params.uri);
+    let buffile = buffile.to_str().unwrap();
     let mut diagnostics: Vec<_> = ctx
         .diagnostics
         .remove(buffile)
@@ -388,8 +389,8 @@ pub fn format_related_information(
                 + &infos
                     .iter()
                     .map(|info| {
-                        let path = info.location.uri.to_file_path().unwrap();
-                        let filename = path.to_str().unwrap();
+                        let filename = uri_to_file_path(&info.location.uri);
+                        let filename = filename.to_str().unwrap();
                         let p = get_kakoune_position_with_fallback(
                             server,
                             filename,

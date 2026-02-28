@@ -8,7 +8,6 @@ use crate::util::*;
 use lsp_types::request::*;
 use lsp_types::*;
 use ropey::Rope;
-use url::Url;
 
 pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
@@ -31,7 +30,7 @@ pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ct
                     context: None,
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,

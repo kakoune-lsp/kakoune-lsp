@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
+use crate::util::uri_to_file_path;
 use crate::util::*;
 use itertools::Itertools;
 use lsp_types::{request::*, *};
@@ -13,7 +14,7 @@ pub fn call_hierarchy_prepare(meta: EditorMeta, params: CallHierarchyParams, ctx
         .map(|(server_id, server_settings)| {
             let position =
                 get_lsp_position(server_settings, &meta.buffile, &params.position, ctx).unwrap();
-            let uri = Url::from_file_path(&meta.buffile).unwrap();
+            let uri = file_path_to_uri(&meta.buffile);
             (
                 server_id,
                 vec![CallHierarchyPrepareParams {
@@ -101,14 +102,15 @@ fn format_location(
     server_id: ServerId,
     meta: &EditorMeta,
     ctx: &mut Context,
-    uri: &Url,
+    uri: &Uri,
     position: Position,
     prefix: &str,
     suffix: &str,
 ) -> String {
     let server = ctx.server(server_id);
-    let filename = uri.to_file_path().unwrap();
-    let filename = short_file_path(filename.to_str().unwrap(), ctx.main_root(meta));
+    let path = uri_to_file_path(uri);
+    let path = path.to_str().unwrap();
+    let filename = short_file_path(path, ctx.main_root(meta));
     let position = get_kakoune_position_with_fallback(server, &meta.buffile, position, ctx);
     format!(
         "{}{}:{}:{}: {}\n",
@@ -182,7 +184,8 @@ fn format_call_hierarchy_calls<'a>(
         .iter()
         .map(|call| {
             let caller = call.caller(item);
-            let callsite_filename = caller.uri.to_file_path().unwrap();
+            let callsite_filename = uri_to_file_path(&caller.uri);
+            let callsite_filename = callsite_filename.to_str().unwrap();
             let caller_or_calle = call.caller_or_callee();
 
             format_location(
@@ -197,7 +200,7 @@ fn format_call_hierarchy_calls<'a>(
                 .callsites()
                 .iter()
                 .map(|range| {
-                    let line = get_file_contents(callsite_filename.to_str().unwrap(), ctx)
+                    let line = get_file_contents(callsite_filename, ctx)
                         .map(|text| text.line(range.start.line as usize).to_string())
                         .unwrap_or_default();
                     let line = line

@@ -2,13 +2,13 @@ use crate::context::*;
 use crate::language_features::goto;
 use crate::position::*;
 use crate::types::*;
+use crate::util::uri_to_file_path;
 use crate::util::*;
 use itertools::Itertools;
 use jsonrpc_core::Params;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::Deserialize;
-use url::Url;
 
 // Navigate
 
@@ -42,7 +42,7 @@ pub fn navigate(meta: EditorMeta, params: EditorNavigateParams, ctx: &mut Contex
                 server_id,
                 vec![NavigateParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -92,7 +92,7 @@ pub fn vars(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
                 server_id,
                 vec![VarsParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -154,7 +154,7 @@ pub fn inheritance(meta: EditorMeta, params: EditorInheritanceParams, ctx: &mut 
                 server_id,
                 vec![InheritanceParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -216,7 +216,7 @@ pub fn call(meta: EditorMeta, params: EditorCallParams, ctx: &mut Context) {
                 server_id,
                 vec![CallParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -277,7 +277,7 @@ pub fn member(meta: EditorMeta, params: EditorMemberParams, ctx: &mut Context) {
                 server_id,
                 vec![MemberParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -449,7 +449,7 @@ impl SemanticSymbol {
 #[serde(rename_all = "camelCase")]
 pub struct PublishSemanticHighlightingParams {
     /// The URI for which diagnostic information is reported.
-    pub uri: Url,
+    pub uri: Uri,
 
     /// The symbols to highlight
     pub symbols: Vec<SemanticSymbol>,
@@ -458,8 +458,8 @@ pub struct PublishSemanticHighlightingParams {
 pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
-    let path = params.uri.to_file_path().unwrap();
-    let buffile = path.to_str().unwrap();
+    let buffile = uri_to_file_path(&params.uri);
+    let buffile = buffile.to_str().unwrap();
     let document = match ctx.documents.get(buffile) {
         Some(document) => document,
         None => return,

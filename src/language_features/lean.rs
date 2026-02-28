@@ -79,7 +79,7 @@ pub fn plain_goal_impl<
                 server_id,
                 vec![R::Params {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,

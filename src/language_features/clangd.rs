@@ -8,7 +8,7 @@ pub struct SwitchSourceHeaderRequest {}
 
 impl Request for SwitchSourceHeaderRequest {
     type Params = TextDocumentIdentifier;
-    type Result = Option<Url>;
+    type Result = Option<Uri>;
     const METHOD: &'static str = "textDocument/switchSourceHeader";
 }
 
@@ -20,7 +20,7 @@ pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
             (
                 server_id,
                 vec![TextDocumentIdentifier {
-                    uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    uri: file_path_to_uri(&meta.buffile),
                 }],
             )
         })
@@ -38,7 +38,7 @@ pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
             if let Some(response) = response {
                 let command = format!(
                     "evaluate-commands -try-client %opt{{jumpclient}} -verbatim -- edit -existing {}",
-                    editor_quote(response.to_file_path().unwrap().to_str().unwrap()),
+                    editor_quote(response.as_str()),
                 );
                 ctx.exec(meta, command);
             }

@@ -16,7 +16,6 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use unicode_width::UnicodeWidthStr;
-use url::Url;
 
 pub fn text_document_completion(
     meta: EditorMeta,
@@ -36,7 +35,7 @@ pub fn text_document_completion(
                 vec![CompletionParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(
                             server_settings,
@@ -350,7 +349,7 @@ pub fn completion_item_resolve(
         match item.additional_text_edits {
             Some(edits) if !edits.is_empty() => {
                 // Not sure if this case ever happens, the spec is unclear.
-                let uri = Url::from_file_path(&meta.buffile).unwrap();
+                let uri = file_path_to_uri(&meta.buffile);
                 apply_text_edits(server_id, meta, uri, edits, ctx);
                 return;
             }
@@ -404,7 +403,7 @@ fn editor_completion_item_resolve(
             ),
         );
     } else if let Some(resolved_edits) = new_item.additional_text_edits {
-        let uri = Url::from_file_path(&meta.buffile).unwrap();
+        let uri = file_path_to_uri(&meta.buffile);
         apply_text_edits(server_id, meta, uri, resolved_edits.clone(), ctx)
     }
 }

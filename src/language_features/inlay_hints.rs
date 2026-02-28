@@ -3,7 +3,7 @@ use std::{borrow::Cow, collections::HashMap};
 use itertools::Itertools;
 use lsp_types::{
     request::InlayHintRequest, InlayHint, InlayHintLabel, InlayHintParams, Position, Range,
-    TextDocumentIdentifier, TextEdit, Url,
+    TextDocumentIdentifier, TextEdit,
 };
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
     },
     text_edit::apply_text_edits,
     types::{EditorMeta, ServerId},
-    util::{editor_quote, escape_tuple_element},
+    util::{editor_quote, escape_tuple_element, file_path_to_uri},
 };
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -40,7 +40,7 @@ pub fn inlay_hints(meta: EditorMeta, params: InlayHintsOptions, ctx: &mut Contex
                 vec![InlayHintParams {
                     work_done_progress_params: Default::default(),
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     range: Range::new(Position::new(0, 0), Position::new(params.buf_line_count, 0)),
                 }],
@@ -230,7 +230,7 @@ pub fn inlay_hint_apply(meta: EditorMeta, params: InlayHintApplyParams, ctx: &mu
             continue;
         }
 
-        let uri = Url::from_file_path(&meta.buffile).unwrap();
+        let uri = file_path_to_uri(&meta.buffile);
 
         // FIXME: https://github.com/kakoune-lsp/kakoune-lsp/issues/873
         // we expect this to break if multiple servers provide InlayHints with textedits

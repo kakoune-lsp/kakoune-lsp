@@ -9,11 +9,11 @@ use crate::markup::*;
 use crate::mkfifo;
 use crate::position::*;
 use crate::types::*;
+use crate::util::file_path_to_uri;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
-use url::Url;
 
 pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
@@ -39,7 +39,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mu
                 vec![HoverParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: Url::from_file_path(&meta.buffile).unwrap(),
+                            uri: file_path_to_uri(&meta.buffile),
                         },
                         position: get_lsp_position(server_settings, &meta.buffile, &cursor, ctx)
                             .unwrap(),

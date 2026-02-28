@@ -2,14 +2,13 @@ use crate::context::{Context, RequestParams};
 use crate::position::{get_lsp_position, lsp_position_to_kakoune};
 use crate::text_edit::apply_text_edits_try_deferred;
 use crate::types::{EditorMeta, KakounePosition, PositionParams};
-use crate::util::{editor_escape, editor_quote};
+use crate::util::{editor_escape, editor_quote, file_path_to_uri, uri_to_file_path};
 use crate::{workspace, ResponseFifo};
 use itertools::Itertools;
 use lsp_types::request::Request;
 use lsp_types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use url::Url;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -23,7 +22,7 @@ pub struct SourceChange {
 #[serde(rename_all = "camelCase")]
 pub struct SnippetWorkspaceEdit {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub changes: Option<HashMap<Url, Vec<TextEdit>>>,
+    pub changes: Option<HashMap<Uri, Vec<TextEdit>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub document_changes: Option<Vec<SnippetDocumentChangeOperation>>,
 }
@@ -115,7 +114,7 @@ pub fn apply_source_change(
         }
         return;
     };
-    let buffile = uri.to_file_path().unwrap();
+    let buffile = uri_to_file_path(uri);
     let buffile = buffile.to_str().unwrap();
     let position = match ctx.documents.get(buffile) {
         Some(document) => {
@@ -165,7 +164,7 @@ pub fn expand_macro(meta: EditorMeta, params: PositionParams, ctx: &mut Context)
                 server_id,
                 vec![ExpandMacroParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,

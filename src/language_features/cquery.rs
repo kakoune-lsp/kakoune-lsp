@@ -2,12 +2,12 @@ use crate::context::*;
 use crate::position::*;
 use crate::types::ForwardKakouneRange;
 use crate::types::ServerId;
+use crate::util::uri_to_file_path;
 use crate::util::*;
 use crate::EditorMeta;
 use itertools::Itertools;
 use jsonrpc_core::Params;
-use lsp_types::{NumberOrString, Range};
-use url::Url;
+use lsp_types::{NumberOrString, Range, Uri};
 
 enum_from_primitive! {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -151,7 +151,7 @@ impl SemanticSymbol {
 #[serde(rename_all = "camelCase")]
 pub struct PublishSemanticHighlightingParams {
     /// The URI for which diagnostic information is reported.
-    pub uri: Url,
+    pub uri: Uri,
 
     /// The symbols to highlight
     pub symbols: Vec<SemanticSymbol>,
@@ -160,8 +160,8 @@ pub struct PublishSemanticHighlightingParams {
 pub fn publish_semantic_highlighting(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishSemanticHighlightingParams =
         params.parse().expect("Failed to parse semhl params");
-    let path = params.uri.to_file_path().unwrap();
-    let buffile = path.to_str().unwrap();
+    let buffile = uri_to_file_path(&params.uri);
+    let buffile = buffile.to_str().unwrap();
     let document = ctx.documents.get(buffile);
     if document.is_none() {
         return;

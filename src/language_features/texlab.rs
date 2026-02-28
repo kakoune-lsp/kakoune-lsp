@@ -5,11 +5,11 @@ use crate::capabilities::{
 use crate::context::{Context, RequestParams};
 use crate::position::get_lsp_position;
 use crate::types::EditorMeta;
+use crate::util::file_path_to_uri;
 use crate::PositionParams;
 use lsp_types::request::Request;
 use lsp_types::TextDocumentIdentifier;
 use lsp_types::TextDocumentPositionParams;
-use lsp_types::Url;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt;
@@ -68,7 +68,7 @@ pub fn forward_search(meta: EditorMeta, params: PositionParams, ctx: &mut Contex
                 server_id,
                 vec![TextDocumentPositionParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -152,7 +152,7 @@ pub fn build(meta: EditorMeta, ctx: &mut Context) {
                 server_id,
                 vec![BuildTextDocumentParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                 }],
             )

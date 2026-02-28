@@ -4,6 +4,7 @@ use crate::language_features::{document_symbol, rust_analyzer};
 use crate::settings::*;
 use crate::text_edit::apply_text_edits_try_deferred;
 use crate::types::*;
+use crate::util::uri_to_file_path;
 use crate::util::*;
 use jsonrpc_core::Params;
 use lsp_types::notification::*;
@@ -138,7 +139,7 @@ impl document_symbol::Symbol<WorkspaceSymbol> for WorkspaceSymbol {
     fn kind(&self) -> SymbolKind {
         self.kind
     }
-    fn uri(&self) -> Option<&Url> {
+    fn uri(&self) -> Option<&Uri> {
         None
     }
     fn range(&self) -> Range {
@@ -264,7 +265,7 @@ pub fn execute_command(
 pub fn apply_document_resource_op(op: ResourceOp) -> io::Result<()> {
     match op {
         ResourceOp::Create(op) => {
-            let path = op.uri.to_file_path().unwrap();
+            let path = uri_to_file_path(&op.uri);
             let ignore_if_exists = if let Some(options) = op.options {
                 !options.overwrite.unwrap_or(false) && options.ignore_if_exists.unwrap_or(false)
             } else {
@@ -280,7 +281,7 @@ pub fn apply_document_resource_op(op: ResourceOp) -> io::Result<()> {
             }
         }
         ResourceOp::Delete(op) => {
-            let path = op.uri.to_file_path().unwrap();
+            let path = uri_to_file_path(&op.uri);
             if path.is_dir() {
                 let recursive = if let Some(options) = op.options {
                     options.recursive.unwrap_or(false)
@@ -299,8 +300,8 @@ pub fn apply_document_resource_op(op: ResourceOp) -> io::Result<()> {
             }
         }
         ResourceOp::Rename(op) => {
-            let from = op.old_uri.to_file_path().unwrap();
-            let to = op.new_uri.to_file_path().unwrap();
+            let from = uri_to_file_path(&op.old_uri);
+            let to = uri_to_file_path(&op.new_uri);
             let ignore_if_exists = if let Some(options) = op.options {
                 !options.overwrite.unwrap_or(false) && options.ignore_if_exists.unwrap_or(false)
             } else {

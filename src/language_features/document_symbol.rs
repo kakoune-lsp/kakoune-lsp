@@ -19,7 +19,6 @@ use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
-use url::Url;
 
 pub fn text_document_document_symbol(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
     let eligible_servers: Vec<_> = ctx
@@ -33,7 +32,7 @@ pub fn text_document_document_symbol(meta: EditorMeta, params: PositionParams, c
                 server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     partial_result_params: Default::default(),
                     work_done_progress_params: Default::default(),
@@ -69,7 +68,7 @@ pub fn next_or_prev_symbol(meta: EditorMeta, params: NextOrPrevSymbolParams, ctx
                 server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     partial_result_params: Default::default(),
                     work_done_progress_params: Default::default(),
@@ -95,7 +94,7 @@ pub fn next_or_prev_symbol(meta: EditorMeta, params: NextOrPrevSymbolParams, ctx
 pub trait Symbol<T: Symbol<T>> {
     fn name(&self) -> &str;
     fn kind(&self) -> SymbolKind;
-    fn uri(&self) -> Option<&Url>;
+    fn uri(&self) -> Option<&Uri>;
     fn range(&self) -> Range;
     fn selection_range(&self) -> Range;
     fn children(&self) -> &[T];
@@ -107,9 +106,9 @@ fn symbol_filename<'a, T: Symbol<T>>(
     symbol: &'a T,
     filename_path: &'a mut PathBuf,
 ) -> &'a str {
-    if let Some(filename) = symbol.uri() {
-        *filename_path = filename.to_file_path().unwrap();
-        filename_path.to_str().unwrap()
+    if let Some(uri) = symbol.uri() {
+        *filename_path = uri_to_file_path(uri);
+        filename_path.to_str().unwrap_or(&meta.buffile)
     } else {
         &meta.buffile
     }
@@ -122,7 +121,7 @@ impl Symbol<SymbolInformation> for SymbolInformation {
     fn kind(&self) -> SymbolKind {
         self.kind
     }
-    fn uri(&self) -> Option<&Url> {
+    fn uri(&self) -> Option<&Uri> {
         Some(&self.location.uri)
     }
     fn range(&self) -> Range {
@@ -146,7 +145,7 @@ impl Symbol<DocumentSymbol> for DocumentSymbol {
     fn kind(&self) -> SymbolKind {
         self.kind
     }
-    fn uri(&self) -> Option<&Url> {
+    fn uri(&self) -> Option<&Uri> {
         None
     }
     fn range(&self) -> Range {
@@ -521,7 +520,7 @@ fn editor_next_or_prev_for_details(
         vec![HoverParams {
             text_document_position_params: TextDocumentPositionParams {
                 text_document: TextDocumentIdentifier {
-                    uri: Url::from_file_path(&meta.buffile).unwrap(),
+                    uri: file_path_to_uri(&meta.buffile),
                 },
                 position: get_lsp_position(server, &meta.buffile, &symbol_position, ctx).unwrap(),
             },
@@ -740,7 +739,7 @@ pub fn object(meta: EditorMeta, params: ObjectParams, ctx: &mut Context) {
                 server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     partial_result_params: Default::default(),
                     work_done_progress_params: Default::default(),
@@ -971,7 +970,7 @@ pub fn document_symbol_menu(meta: EditorMeta, params: GotoSymbolParams, ctx: &mu
                 server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     partial_result_params: Default::default(),
                     work_done_progress_params: Default::default(),
@@ -1157,7 +1156,7 @@ pub fn breadcrumbs(meta: EditorMeta, params: BreadcrumbsParams, ctx: &mut Contex
                 server_id,
                 vec![DocumentSymbolParams {
                     text_document: TextDocumentIdentifier {
-                        uri: Url::from_file_path(&meta.buffile).unwrap(),
+                        uri: file_path_to_uri(&meta.buffile),
                     },
                     partial_result_params: Default::default(),
                     work_done_progress_params: Default::default(),
