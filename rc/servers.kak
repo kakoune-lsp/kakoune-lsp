@@ -636,6 +636,13 @@ hook -group lsp-filetype-svelte global BufSetOption filetype=svelte %{
     }
 }
 
+hook -group lsp-filetype-swift global BufSetOption filetype=swift %{
+    set-option buffer lsp_servers %{
+        [sourcekit-lsp]
+        root_globs = ["Package.swift", ".xcodeproj", ".git", ".hg"]
+    }
+}
+
 hook -group lsp-filetype-terraform global BufSetOption filetype=terraform %{
     set-option buffer lsp_servers %{
         [terraform-ls]
