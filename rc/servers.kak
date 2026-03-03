@@ -22,6 +22,13 @@ hook -group lsp-filetype-c-family global BufSetOption filetype=(?:c|cpp|objc) %{
     }
 }
 
+hook -group lsp-filetype-swift global BufSetOption filetype=(?:swift) %{
+    set-option buffer lsp_servers %{
+        [sourcekit-lsp]
+        root_globs = ["Package.swift", ".xcodeproj", ".git", ".hg"]
+    }
+}
+
 hook -group lsp-filetype-clojure global BufSetOption filetype=clojure %{
     set-option buffer lsp_servers %{
         [clojure-lsp]
