@@ -5,6 +5,7 @@ Breaking changes:
 
 Additions:
 - `lsp-inlay-hint-apply-*` commands to apply inlay hints' text edits, such as type-insertion (#864)
+- Fix for a breaking change in Kakoune that affects files without a final newline.
 
 ## 19.0.1 - 2025-12-10
 

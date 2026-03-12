@@ -687,6 +687,7 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 }
 
 define-command -hidden lsp-send-buffer -params 1 %{
+    try %{ set-option local finaleol present }
     lsp-send %arg{1} %val{buf_line_count}
     evaluate-commands -no-hooks %{ write -force %opt{lsp_alt_fifo} }
 }
