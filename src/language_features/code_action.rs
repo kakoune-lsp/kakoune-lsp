@@ -83,6 +83,7 @@ fn code_actions_for_ranges(
         HashMap::new()
     };
 
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = ranges
         .iter()
         .map(|(server_id, range)| {
@@ -90,7 +91,7 @@ fn code_actions_for_ranges(
                 *server_id,
                 vec![CodeActionParams {
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                     range: *range,
                     context: CodeActionContext {

@@ -9,12 +9,13 @@ use itertools::Itertools;
 use lsp_types::{request::*, *};
 
 pub fn call_hierarchy_prepare(meta: EditorMeta, params: CallHierarchyParams, ctx: &mut Context) {
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
             let position =
                 get_lsp_position(server_settings, &meta.buffile, &params.position, ctx).unwrap();
-            let uri = file_path_to_uri(&meta.buffile);
+            let uri = uri.clone();
             (
                 server_id,
                 vec![CallHierarchyPrepareParams {

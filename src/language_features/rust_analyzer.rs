@@ -2,7 +2,7 @@ use crate::context::{Context, RequestParams};
 use crate::position::{get_lsp_position, lsp_position_to_kakoune};
 use crate::text_edit::apply_text_edits_try_deferred;
 use crate::types::{EditorMeta, KakounePosition, PositionParams};
-use crate::util::{editor_escape, editor_quote, file_path_to_uri, uri_to_file_path};
+use crate::util::{editor_escape, editor_quote, uri_to_file_path};
 use crate::{workspace, ResponseFifo};
 use itertools::Itertools;
 use lsp_types::request::Request;
@@ -157,6 +157,7 @@ impl Request for ExpandMacroRequest {
 }
 
 pub fn expand_macro(meta: EditorMeta, params: PositionParams, ctx: &mut Context) {
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -164,7 +165,7 @@ pub fn expand_macro(meta: EditorMeta, params: PositionParams, ctx: &mut Context)
                 server_id,
                 vec![ExpandMacroParams {
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                     position: get_lsp_position(
                         server_settings,

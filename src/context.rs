@@ -2,6 +2,7 @@ use crate::editor_transport::{self, ToEditorSender};
 use crate::language_server_transport::LanguageServerTransport;
 use crate::text_sync::CompiledFileSystemWatcher;
 use crate::thread_worker::Worker;
+use crate::util::file_path_to_uri;
 use crate::{filetype_to_language_id_map, types::*};
 use jsonrpc_core::{self, Call, Error, Failure, Id, Output, Success, Value, Version};
 use lsp_types::notification::{Cancel, Notification};
@@ -13,6 +14,7 @@ use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time;
 
 // Copy of Kakoune's timestamped buffer content.
@@ -78,6 +80,7 @@ pub struct Context {
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<(ServerId, Diagnostic)>>,
     pub documents: HashMap<String, Document>,
+    pub virtual_documents: HashSet<String>,
     pub dynamic_config: DynamicConfig,
     pub inlay_hints: HashMap<String, Vec<(ServerId, InlayHint)>>,
     pub language_servers: BTreeMap<ServerId, ServerSettings>,
@@ -118,6 +121,7 @@ impl Context {
             config,
             diagnostics: Default::default(),
             documents: Default::default(),
+            virtual_documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
             inlay_hints: Default::default(),
             language_servers: BTreeMap::new(),
@@ -419,6 +423,13 @@ impl Context {
         message: impl AsRef<str>,
     ) {
         editor_transport::show_error(&self.to_editor, meta, response_fifo, message);
+    }
+
+    pub fn uri_for_buffer(&self, path: &str) -> Uri {
+        match self.virtual_documents.contains(path) {
+            true => Uri::from_str(path).unwrap(),
+            false => file_path_to_uri(path),
+        }
     }
 
     fn next_batch_id(&mut self) -> BatchNumber {

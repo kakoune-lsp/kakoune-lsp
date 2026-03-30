@@ -7,7 +7,6 @@ use crate::position::{kakoune_range_to_lsp, parse_kakoune_range};
 use crate::text_edit::{apply_text_edits_to_buffer, TextEditish};
 use crate::types::*;
 use crate::util::editor_quote;
-use crate::util::file_path_to_uri;
 use itertools::Itertools;
 use lsp_types::request::*;
 use lsp_types::*;
@@ -68,6 +67,7 @@ pub fn text_document_range_formatting(
     };
 
     let (server_id, server) = eligible_servers[0];
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let mut req_params = HashMap::new();
     req_params.insert(
         server_id,
@@ -80,7 +80,7 @@ pub fn text_document_range_formatting(
             })
             .map(|range| DocumentRangeFormattingParams {
                 text_document: TextDocumentIdentifier {
-                    uri: file_path_to_uri(&meta.buffile),
+                    uri: uri.clone(),
                 },
                 range,
                 options: params.formatting_options.clone(),

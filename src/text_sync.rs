@@ -34,7 +34,7 @@ pub fn text_document_did_open(
 
     let params = DidOpenTextDocumentParams {
         text_document: TextDocumentItem {
-            uri: file_path_to_uri(&meta.buffile),
+            uri: ctx.uri_for_buffer(&meta.buffile),
             language_id: meta.language_id.clone(),
             version: meta.version,
             text: params.draft,
@@ -50,7 +50,7 @@ pub fn text_document_did_change(
     params: TextDocumentDidChangeParams,
     ctx: &mut Context,
 ) {
-    let uri = file_path_to_uri(&meta.buffile);
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let version = meta.version;
     let old_version = ctx
         .documents
@@ -87,7 +87,7 @@ pub fn text_document_did_change(
 
 pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
     ctx.documents.remove(&meta.buffile);
-    let uri = file_path_to_uri(&meta.buffile);
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },
     };
@@ -116,7 +116,7 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
             _ => None,
         };
 
-        let uri = file_path_to_uri(&meta.buffile);
+        let uri = ctx.uri_for_buffer(&meta.buffile);
         let params = DidSaveTextDocumentParams {
             text_document: TextDocumentIdentifier { uri },
             text,
