@@ -672,7 +672,7 @@ hook -group lsp-filetype-typst global BufSetOption filetype=typst %{
         # See https://myriad-dreamin.github.io/tinymist/configurations.html
         exportPdf = "onDocumentHasTitle"
         formatterMode = "typstyle"
-        previewFeature = "disable"
+        preview.background.enabled = false
     }
     set-option -add buffer lsp_servers "formatterPrintWidth = %opt{autowrap_column}"
 }
