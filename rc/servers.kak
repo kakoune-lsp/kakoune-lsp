@@ -669,7 +669,7 @@ hook -group lsp-filetype-typst global BufSetOption filetype=typst %{
         args = ["lsp"]
         settings_section = "_"
         [tinymist.settings._]
-        # See https://myriad-dreamin.github.io/tinymist/configurations.html
+        # See https://myriad-dreamin.github.io/tinymist/config/neovim.html
         exportPdf = "onDocumentHasTitle"
         formatterMode = "typstyle"
         preview.background.enabled = false
