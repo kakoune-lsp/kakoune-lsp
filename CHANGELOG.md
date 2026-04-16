@@ -1,4 +1,4 @@
-## Unreleased
+## 20.0.0 - 2026-04-16
 
 Breaking changes:
 - Replace `erlang_ls` with `erlang-language-platform` in default config.
