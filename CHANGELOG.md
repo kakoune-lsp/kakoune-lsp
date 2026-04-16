@@ -4,8 +4,13 @@ Breaking changes:
 - Replace `erlang_ls` with `erlang-language-platform` in default config.
 
 Additions:
+- Default configuration for Swift, using `sourcekit-lsp`.
 - `lsp-inlay-hint-apply-*` commands to apply inlay hints' text edits, such as type-insertion (#864)
-- Fix for a breaking change in Kakoune that affects files without a final newline.
+
+Fixes:
+- Fix for a breaking change in Kakoune v2026.04.12 that causes issues when editing files without a final newline.
+- Fix handling of file paths containing square brackets.
+- Fix `tinymist` default configuration, see `kak-lsp | grep tinymist -A6`.
 
 ## 19.0.1 - 2025-12-10
 
