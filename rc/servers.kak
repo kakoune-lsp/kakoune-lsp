@@ -454,7 +454,7 @@ hook -group lsp-filetype-nim global BufSetOption filetype=nim %{
 
 hook -group lsp-filetype-nix global BufSetOption filetype=nix %{
     set-option buffer lsp_servers %{
-        [nil]
+        [nixd]
         root_globs = ["flake.nix", "shell.nix", ".git", ".hg"]
     }
 }

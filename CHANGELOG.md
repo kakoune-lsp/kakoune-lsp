@@ -1,5 +1,8 @@
 ## Unreleased
 
+Breaking changes:
+- `nixd` replaces `nil` as default language server for nix (#890).
+
 ## 20.0.0 - 2026-04-16
 
 Breaking changes:
