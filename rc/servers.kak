@@ -628,6 +628,13 @@ hook -group lsp-filetype-sh global BufSetOption filetype=sh %{
     }
 }
 
+hook -group lsp-filetype-sql global BufSetOption filetype=sql %{
+    set-option buffer lsp_servers %{
+        [sqls]
+        root_globs = [".git", ".hg"]
+    }
+}
+
 hook -group lsp-filetype-svelte global BufSetOption filetype=svelte %{
     set-option buffer lsp_servers %{
         [svelteserver]
