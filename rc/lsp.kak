@@ -128,6 +128,7 @@ declare-option -docstring "Completion request is sent only when this expression 
 # By default, it tracks back to the first punctuation or whitespace.
 declare-option -docstring "Select from cursor to the start of the term being completed" str lsp_completion_fragment_start %{execute-keys "<esc><a-h>s\$?[\w%opt{lsp_extra_word_chars}]+.\z<ret>"}
 declare-option -hidden str lsp_extra_word_chars
+declare-option -hidden str lsp_completion_trigger_regex
 # Update lsp_extra_word_chars whenever extra_word_chars changes.
 # We could avoid this if we are not enabled, but this doesn't trigger that often and that would complicate initialization.
 hook -group lsp-extra-word-chars global WinSetOption extra_word_chars=.* %{
@@ -701,25 +702,40 @@ define-command -hidden lsp-did-change -docstring "Notify language server about b
 }
 
 define-command -hidden lsp-completion -docstring "Request completions for the main cursor position" %{
+    declare-option -hidden str lsp_completion_offset
+    declare-option -hidden str lsp_trigger_character
+
+    set-option window lsp_trigger_character ''
+    set-option window lsp_completion_offset %val{cursor_column}
+
     try %{
-        # Fail if preceding character is a whitespace (by default; the trigger could be customized).
-        evaluate-commands -draft %opt{lsp_completion_trigger}
-
-        # Kakoune requires completions to point fragment start rather than cursor position.
-        # We try to detect it and put into lsp_completion_offset and then pass via completion.offset
-        # parameter to the kakoune-lsp server so it can use it when sending completions back.
-        declare-option -hidden str lsp_completion_offset
-
-        set-option window lsp_completion_offset %val{cursor_column}
-        evaluate-commands -draft %{
-            try %{
-                evaluate-commands %opt{lsp_completion_fragment_start}
-                set-option window lsp_completion_offset %val{cursor_column}
+        try %{
+            # Path 1: Trigger character detection
+            # In insert mode, <a-h> selects the line including trailing newline.
+            # <a-k> keeps the selection only if it ends with a trigger char
+            # before the newline; on success we extract it with <a-:> (ensure
+            # forward), ; (reduce to cursor at the trailing newline), h (back
+            # one character to the trigger char).
+            evaluate-commands -draft %{
+                execute-keys "<a-h><a-k>[%opt{lsp_completion_trigger_regex}]\n\z<ret>"
+                execute-keys "<a-:>;h"
+                set-option window lsp_trigger_character %val{selection}
+            }
+        } catch %{
+            # Path 2: Normal completion (no trigger character or no match)
+            # Standard trigger check (default: preceding character is not whitespace).
+            evaluate-commands -draft %opt{lsp_completion_trigger}
+            # Detect fragment start position.
+            evaluate-commands -draft %{
+                try %{
+                    evaluate-commands %opt{lsp_completion_fragment_start}
+                    set-option window lsp_completion_offset %val{cursor_column}
+                }
             }
         }
 
         lsp-send textDocument/completion %val{cursor_line} %val{cursor_column} \
-            %opt{lsp_completion_offset}
+            %opt{lsp_completion_offset} %opt{lsp_trigger_character}
     }
 }
 
