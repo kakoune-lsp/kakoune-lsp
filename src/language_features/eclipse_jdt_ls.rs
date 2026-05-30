@@ -1,12 +1,11 @@
 use super::code_action::apply_workspace_edit_editor_command;
 use crate::context::*;
 use crate::types::*;
-use crate::util::file_path_to_uri;
 use lsp_types::request::ExecuteCommand;
 use lsp_types::*;
 
 pub fn organize_imports(meta: EditorMeta, ctx: &mut Context) {
-    let file_uri = file_path_to_uri(&meta.buffile);
+    let file_uri = ctx.uri_for_buffer(&meta.buffile);
     let file_uri: String = file_uri.as_str().into();
 
     let req_params = ctx

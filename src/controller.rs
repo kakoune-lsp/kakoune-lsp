@@ -21,7 +21,6 @@ use crate::language_features::lean::{
 };
 use crate::language_features::{selection_range, *};
 use crate::log::DEBUG;
-use crate::progress;
 use crate::project_root::find_project_root;
 use crate::show_message::{self, MessageRequestResponse};
 use crate::text_sync::*;
@@ -34,6 +33,7 @@ use crate::workspace::{
 use crate::{context::*, set_logger};
 use crate::{diagnostics, do_cleanup};
 use crate::{language_server_transport, LAST_CLIENT};
+use crate::{progress, util};
 use ccls::{EditorCallParams, EditorInheritanceParams, EditorMemberParams, EditorNavigateParams};
 use code_lens::{text_document_code_lens, CodeLensOptions};
 use crossbeam_channel::{after, never, tick, Receiver, Select, Sender};
@@ -491,6 +491,25 @@ fn dispatch_fifo_request(
             debug!(&state.to_editor, "Applied option change {}", hook_param);
             return Some(());
         }
+        "kakoune/open-virtual-file" => Box::new({
+            let uri: String = state.next()?;
+            let start_line: u32 = state.next()?;
+            let start_column: u32 = state.next()?;
+            let end_line: u32 = state.next().or(Some(start_line))?;
+            let end_column: u32 = state.next().or(Some(start_column))?;
+
+            OpenVirtualFileParams {
+                uri,
+                start: KakounePosition {
+                    line: start_line,
+                    column: start_column,
+                },
+                end: KakounePosition {
+                    line: end_line,
+                    column: end_column,
+                },
+            }
+        }),
         "rust-analyzer/expandMacro" => Box::new(PositionParams {
             position: state.next()?,
         }),
@@ -1329,6 +1348,9 @@ fn route_request(
     if request_method == notification::Exit::METHOD {
         return None;
     }
+    if request_method == "kakoune/open-virtual-file" {
+        return None;
+    }
     if !meta.session.is_empty() && &meta.session != ctx.session() {
         info!(
             ctx.to_editor(),
@@ -1338,7 +1360,7 @@ fn route_request(
         );
         return Some(ControlFlow::Break(()));
     }
-    if !meta.buffile.starts_with('/') {
+    if !meta.buffile.starts_with('/') && !ctx.virtual_documents.contains(&meta.buffile) {
         report_error_no_server_configured(
             ctx,
             meta,
@@ -1653,6 +1675,7 @@ fn dispatch_incoming_editor_request(request: EditorRequest, ctx: &mut Context) -
             // InsertIdle is not triggered while the completion pager is active, so let's
             // smuggle completion-related requests through.
             && method != request::ResolveCompletionItem::METHOD
+            && method != "kakoune/open-virtual-file"
     {
         assert!(request.response_fifo.is_none());
         // Wait for buffer update.
@@ -1838,6 +1861,13 @@ fn dispatch_editor_request(request: EditorRequest, ctx: &mut Context) -> Control
         }
         "kakoune/textDocument/codeLens" => {
             code_lens::resolve_and_perform_code_lens(meta, params.unbox(), ctx);
+        }
+        "kakoune/open-virtual-file" => {
+            let OpenVirtualFileParams { uri, start, end } = params.unbox();
+            if let Some(contents) = ctx.documents.get(&uri) {
+                let range = KakouneRange { start, end };
+                util::open_virtual_file(ctx, meta, &uri, range, &contents.text.to_string());
+            }
         }
         request::Formatting::METHOD => {
             formatting::text_document_formatting(meta, response_fifo, params.unbox(), ctx);
@@ -2136,7 +2166,11 @@ fn ensure_did_open(request: &EditorRequest, ctx: &mut Context) {
         return;
     };
     if !buffile.starts_with('/') {
-        assert_eq!(&request.method, notification::Exit::METHOD);
+        assert!(
+            request.method == notification::Exit::METHOD
+                || &request.method == "kakoune/open-virtual-file"
+                || ctx.virtual_documents.contains(buffile)
+        );
         return;
     }
     if request.method == notification::DidChangeTextDocument::METHOD {

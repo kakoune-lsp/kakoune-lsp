@@ -5,6 +5,7 @@ pub mod code_action;
 pub mod code_lens;
 pub mod completion;
 pub mod cquery;
+pub mod deno;
 pub mod document_symbol;
 pub mod eclipse_jdt_ls;
 pub mod formatting;

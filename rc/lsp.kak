@@ -2268,10 +2268,15 @@ hook -group lsp-goto global WinSetOption filetype=(lsp-(?:diagnostics|document-s
 define-command -hidden lsp-make-register-relative-to-root %{
     evaluate-commands -save-regs / %{
         try %{
-            # Is it an absolute path?
-            execute-keys <a-k>\A/<ret>
+            # Is it a virtual path?
+            execute-keys <a-k>\A\w+:/<ret>
         } catch %{
-            set-register a "%opt{lsp_project_root}%reg{a}"
+            try %{
+                # Is it an absolute path?
+                execute-keys <a-k>\A/<ret>
+            } catch %{
+                set-register a "%opt{lsp_project_root}%reg{a}"
+            }
         }
     }
 }
@@ -2286,17 +2291,35 @@ define-command -hidden lsp-goto-jump -docstring %{
         try %{
             evaluate-commands -draft -save-regs / %{
                 set-register / ^\h*\K([^:\n]+):(\d+)\b(?::(\d+)\b)?(?::([^\n]+))
-                execute-keys <semicolon>xs<ret>
+                try %{
+                    execute-keys <semicolon>xs<ret>
+                } catch %{
+                    # Try virtual path pattern.
+                    set-register / ^\h*\K(.+):(\d+):(\d+):([^\n]+)
+                    execute-keys <semicolon>xs<ret>
+                }
                 set-register a "%reg{1}"
                 set-register b "%reg{2}"
                 set-register c "%reg{3}"
                 lsp-make-register-relative-to-root
             }
             set-option buffer jump_current_line %val{cursor_line}
-            evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing -- %reg{a} %reg{b} %reg{c}
-            try %{ focus %opt{jumpclient} }
+            try %{
+                lsp-open-file %reg{a} %reg{b} %reg{c}
+            } catch %{
+                lsp-open-virtual-file %reg{a} %reg{b} %reg{c} %reg{b} %reg{c}
+            }
         }
     }
+}
+
+define-command -hidden lsp-open-file -params 3 %{
+    evaluate-commands -try-client %opt{jumpclient} -verbatim -- edit -existing -- %arg{@}
+    try %{ focus %opt{jumpclient} }
+}
+
+define-command -hidden lsp-open-virtual-file -params 5 %{
+    evaluate-commands -try-client %opt{jumpclient} -- lsp-do-send kakoune/open-virtual-file %arg{@}
 }
 
 define-command -hidden lsp-document-symbol-jump -docstring %{

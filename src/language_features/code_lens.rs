@@ -8,7 +8,6 @@ use crate::position::*;
 use crate::types::*;
 use crate::util::editor_quote;
 use crate::util::escape_tuple_element;
-use crate::util::file_path_to_uri;
 use crate::wcwidth;
 use crate::{capabilities::server_has_capability, markup::escape_kakoune_markup};
 use indoc::formatdoc;
@@ -26,6 +25,7 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
         return;
     }
 
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _server)| {
@@ -33,7 +33,7 @@ pub fn text_document_code_lens(meta: EditorMeta, ctx: &mut Context) {
                 server_id,
                 vec![CodeLensParams {
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                     work_done_progress_params: WorkDoneProgressParams::default(),
                     partial_result_params: PartialResultParams::default(),

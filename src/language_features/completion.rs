@@ -27,6 +27,7 @@ pub fn text_document_completion(
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_COMPLETION))
         .collect();
 
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -35,7 +36,7 @@ pub fn text_document_completion(
                 vec![CompletionParams {
                     text_document_position: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
+                            uri: uri.clone(),
                         },
                         position: get_lsp_position(
                             server_settings,
@@ -349,7 +350,7 @@ pub fn completion_item_resolve(
         match item.additional_text_edits {
             Some(edits) if !edits.is_empty() => {
                 // Not sure if this case ever happens, the spec is unclear.
-                let uri = file_path_to_uri(&meta.buffile);
+                let uri = ctx.uri_for_buffer(&meta.buffile);
                 apply_text_edits(server_id, meta, uri, edits, ctx);
                 return;
             }
@@ -403,7 +404,7 @@ fn editor_completion_item_resolve(
             ),
         );
     } else if let Some(resolved_edits) = new_item.additional_text_edits {
-        let uri = file_path_to_uri(&meta.buffile);
+        let uri = ctx.uri_for_buffer(&meta.buffile);
         apply_text_edits(server_id, meta, uri, resolved_edits.clone(), ctx)
     }
 }

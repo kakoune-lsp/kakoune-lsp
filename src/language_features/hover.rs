@@ -9,7 +9,6 @@ use crate::markup::*;
 use crate::mkfifo;
 use crate::position::*;
 use crate::types::*;
-use crate::util::file_path_to_uri;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
@@ -31,6 +30,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mu
     let tabstop = params.tabstop;
 
     let (range, cursor) = parse_kakoune_range(&params.selection_desc);
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -39,7 +39,7 @@ pub fn text_document_hover(meta: EditorMeta, params: EditorHoverParams, ctx: &mu
                 vec![HoverParams {
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
+                            uri: uri.clone(),
                         },
                         position: get_lsp_position(server_settings, &meta.buffile, &cursor, ctx)
                             .unwrap(),
