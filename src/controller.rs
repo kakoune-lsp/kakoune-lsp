@@ -1375,6 +1375,18 @@ fn route_request(
     }
 
     #[allow(deprecated)]
+    if is_using_legacy_toml(&ctx.config)
+        && meta
+            .language_server
+            .values()
+            .any(|server| !server.root_globs.is_empty() || !server.root.is_empty())
+    {
+        let msg = r#"Error: the legacy kak-lsp.toml configuration does not support the "root_globs"/"root" parameters, please use the new approach (via lsp_servers) or "roots""#;
+        ctx.show_error(mem::take(meta), msg);
+        return Some(ControlFlow::Continue(()));
+    }
+
+    #[allow(deprecated)]
     let legacy_cfg = ctx.legacy_filetypes.get(&meta.filetype);
     let server_addresses: Vec<(ServerName, RootPath)>;
     if is_using_legacy_toml(&ctx.config) {
