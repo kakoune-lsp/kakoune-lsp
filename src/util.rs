@@ -1,4 +1,6 @@
+use crate::context::Context;
 use crate::types::*;
+use indoc::formatdoc;
 use lsp_types::Uri;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::PathBuf;
@@ -153,4 +155,35 @@ pub fn uri_to_file_path(uri: &Uri) -> PathBuf {
         .unwrap()
         .to_file_path()
         .unwrap()
+}
+
+pub fn open_virtual_file(
+    ctx: &Context,
+    meta: EditorMeta,
+    uri: &str,
+    range: KakouneRange,
+    contents: &str,
+) {
+    let fifo = mkfifo(ctx.to_editor());
+    let client = meta.client.as_ref().unwrap();
+    let command = format!(
+        "%[
+            edit! -readonly -fifo {fifo} {uri}; \
+            hook -once buffer BufCloseFifo .* %[
+                nop %sh[ rm {fifo} ]; \
+                evaluate-commands -try-client {client} %[
+                    edit -existing -readonly {uri}
+                    select {}; \
+                    execute-keys <c-s>vv; \
+                    lsp-unblock-in-buffer; \
+                ]
+            ]
+        ]",
+        BackwardKakouneRange(range),
+    );
+
+    // Write to fifo in draft context so that the buffer isn't focused right away.
+    let command = formatdoc!("evaluate-commands -draft {command}");
+    ctx.exec(meta, command);
+    let _ = std::fs::write(&fifo, contents);
 }

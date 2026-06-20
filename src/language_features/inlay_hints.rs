@@ -15,7 +15,7 @@ use crate::{
     },
     text_edit::apply_text_edits,
     types::{EditorMeta, ServerId},
-    util::{editor_quote, escape_tuple_element, file_path_to_uri},
+    util::{editor_quote, escape_tuple_element},
 };
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -32,6 +32,7 @@ pub fn inlay_hints(meta: EditorMeta, params: InlayHintsOptions, ctx: &mut Contex
         return;
     }
 
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _)| {
@@ -40,7 +41,7 @@ pub fn inlay_hints(meta: EditorMeta, params: InlayHintsOptions, ctx: &mut Contex
                 vec![InlayHintParams {
                     work_done_progress_params: Default::default(),
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                     range: Range::new(Position::new(0, 0), Position::new(params.buf_line_count, 0)),
                 }],
@@ -230,7 +231,7 @@ pub fn inlay_hint_apply(meta: EditorMeta, params: InlayHintApplyParams, ctx: &mu
             continue;
         }
 
-        let uri = file_path_to_uri(&meta.buffile);
+        let uri = ctx.uri_for_buffer(&meta.buffile);
 
         // FIXME: https://github.com/kakoune-lsp/kakoune-lsp/issues/873
         // we expect this to break if multiple servers provide InlayHints with textedits

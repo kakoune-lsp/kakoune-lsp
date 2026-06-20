@@ -1,7 +1,6 @@
 use crate::context::*;
 use crate::position::*;
 use crate::types::*;
-use crate::util::file_path_to_uri;
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::*;
@@ -28,6 +27,7 @@ pub fn text_document_selection_range(
             return;
         }
     };
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = ctx
         .servers(&meta)
         .map(|(server_id, server_settings)| {
@@ -47,7 +47,7 @@ pub fn text_document_selection_range(
                 server_id,
                 vec![SelectionRangeParams {
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                     positions: cursor_positions,
                     work_done_progress_params: WorkDoneProgressParams::default(),

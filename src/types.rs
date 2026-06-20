@@ -510,6 +510,13 @@ pub struct SelectionRangePositionParams {
     pub selections_desc: Vec<String>,
 }
 
+#[derive(Clone, Debug)]
+pub struct OpenVirtualFileParams {
+    pub uri: String,
+    pub start: KakounePosition,
+    pub end: KakounePosition,
+}
+
 // Language Server
 
 // XXX serde(untagged) ?

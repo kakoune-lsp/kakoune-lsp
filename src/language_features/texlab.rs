@@ -5,7 +5,6 @@ use crate::capabilities::{
 use crate::context::{Context, RequestParams};
 use crate::position::get_lsp_position;
 use crate::types::EditorMeta;
-use crate::util::file_path_to_uri;
 use crate::PositionParams;
 use lsp_types::request::Request;
 use lsp_types::TextDocumentIdentifier;
@@ -61,6 +60,7 @@ pub fn forward_search(meta: EditorMeta, params: PositionParams, ctx: &mut Contex
         return;
     }
 
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -68,7 +68,7 @@ pub fn forward_search(meta: EditorMeta, params: PositionParams, ctx: &mut Contex
                 server_id,
                 vec![TextDocumentPositionParams {
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                     position: get_lsp_position(
                         server_settings,
@@ -145,6 +145,7 @@ pub fn build(meta: EditorMeta, ctx: &mut Context) {
         ctx.show_error(meta, format!("no server supports {}", Build::METHOD));
         return;
     }
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, _server_settings)| {
@@ -152,7 +153,7 @@ pub fn build(meta: EditorMeta, ctx: &mut Context) {
                 server_id,
                 vec![BuildTextDocumentParams {
                     text_document: TextDocumentIdentifier {
-                        uri: file_path_to_uri(&meta.buffile),
+                        uri: uri.clone(),
                     },
                 }],
             )

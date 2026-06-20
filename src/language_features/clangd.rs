@@ -13,6 +13,7 @@ impl Request for SwitchSourceHeaderRequest {
 }
 
 pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = meta
         .servers
         .iter()
@@ -20,7 +21,7 @@ pub fn switch_source_header(meta: EditorMeta, ctx: &mut Context) {
             (
                 server_id,
                 vec![TextDocumentIdentifier {
-                    uri: file_path_to_uri(&meta.buffile),
+                    uri: uri.clone(),
                 }],
             )
         })

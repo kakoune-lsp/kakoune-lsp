@@ -21,6 +21,7 @@ pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ct
     let (first_server, _) = *eligible_servers.first().unwrap();
     let first_server = first_server.to_owned();
 
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -30,7 +31,7 @@ pub fn text_document_signature_help(meta: EditorMeta, params: PositionParams, ct
                     context: None,
                     text_document_position_params: TextDocumentPositionParams {
                         text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
+                            uri: uri.clone(),
                         },
                         position: get_lsp_position(
                             server_settings,

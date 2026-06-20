@@ -3,9 +3,10 @@ use crate::capabilities::{
     CAPABILITY_REFERENCES, CAPABILITY_TYPE_DEFINITION,
 };
 use crate::context::{Context, RequestParams};
+use crate::language_features::deno;
 use crate::position::*;
 use crate::types::{BackwardKakouneRange, EditorMeta, KakouneRange, PositionParams, ServerId};
-use crate::util::{editor_quote, file_path_to_uri, short_file_path, uri_to_file_path};
+use crate::util::{editor_quote, short_file_path, uri_to_file_path};
 use indoc::formatdoc;
 use itertools::Itertools;
 use lsp_types::request::{
@@ -54,10 +55,10 @@ pub fn goto(
     match locations.len() {
         0 => {}
         1 => {
-            goto_location(meta, &locations[0], ctx);
+            goto_location(meta, locations.into_iter().next().unwrap(), ctx);
         }
         _ => {
-            goto_locations(meta, &locations, ctx);
+            goto_locations(meta, locations, vec![], ctx);
         }
     }
 }
@@ -73,31 +74,98 @@ pub fn edit_at_range(buffile: &str, range: KakouneRange, in_normal_mode: bool) -
     )
 }
 
-fn goto_location(
+pub fn goto_location(
     meta: EditorMeta,
-    (server_id, Location { uri, range }): &(ServerId, Location),
+    (server_id, location): (ServerId, Location),
     ctx: &mut Context,
 ) {
+    let Location { uri, range } = &location;
+    let is_file = uri
+        .scheme()
+        .is_some_and(|scheme| scheme.eq_lowercase("file"));
+
     let path = uri_to_file_path(uri);
-    let path_str = path.to_str().unwrap();
+    let path_str = if is_file {
+        path.to_str().unwrap()
+    } else {
+        uri.as_str()
+    };
+
     if let Some(contents) = get_file_contents(path_str, ctx) {
-        let server = ctx.server(*server_id);
+        let server = ctx.server(server_id);
         let range = lsp_range_to_kakoune(range, &contents, server.offset_encoding);
-        let command = format!(
-            "evaluate-commands -try-client %opt{{jumpclient}} -- {}",
+        let command = formatdoc!(
+            "try %[
+                evaluate-commands -try-client %opt{{jumpclient}} -- {}
+            ] catch %[
+                evaluate-commands -try-client %opt{{jumpclient}} -- lsp-do-send kakoune/open-virtual-file {} {} {} {} {}
+            ]",
             editor_quote(&edit_at_range(path_str, range, true)),
+            editor_quote(path_str),
+            range.start.line,
+            range.start.column,
+            range.end.line,
+            range.end.column,
         );
         ctx.exec(meta, command);
+    } else if let Some(scheme) = uri.scheme() {
+        if scheme.eq_lowercase(deno::SCHEME) {
+            deno::handle_virtual_locations(meta, ctx, vec![(server_id, location)], vec![]);
+        }
     }
 }
 
-fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mut Context) {
+pub fn goto_locations(
+    meta: EditorMeta,
+    mut locations: Vec<(ServerId, Location)>,
+    virtual_locations: Vec<(ServerId, Location)>,
+    ctx: &mut Context,
+) {
+    if virtual_locations.is_empty() {
+        let (virtual_locations, non_virtual_locations): (Vec<_>, Vec<_>) = locations
+            .into_iter()
+            .partition(|(_, Location { uri, .. })| {
+                uri.scheme()
+                    .is_some_and(|scheme| !scheme.eq_lowercase("file"))
+            });
+
+        if !virtual_locations.is_empty() {
+            let (deno_locations, _): (Vec<_>, Vec<_>) =
+                virtual_locations
+                    .into_iter()
+                    .partition(|(_, Location { uri, .. })| {
+                        uri.scheme()
+                            .is_some_and(|scheme| scheme.eq_lowercase(deno::SCHEME))
+                    });
+
+            return deno::handle_virtual_locations(
+                meta,
+                ctx,
+                deno_locations,
+                non_virtual_locations,
+            );
+        }
+
+        locations = non_virtual_locations;
+    } else {
+        locations.extend(virtual_locations);
+    }
+
     let select_location = locations
         .iter()
-        .chunk_by(|(_, Location { uri, .. })| uri_to_file_path(uri))
+        .chunk_by(|(_, Location { uri, .. })| (uri_to_file_path(uri), uri))
         .into_iter()
-        .map(|(path, locations)| {
-            let path_str = path.to_str().unwrap();
+        .map(|((path, uri), locations)| {
+            let is_file = uri
+                .scheme()
+                .is_some_and(|scheme| scheme.eq_lowercase("file"));
+
+            let path_str = if is_file {
+                path.to_str().unwrap()
+            } else {
+                uri.as_str()
+            };
+
             let contents = match get_file_contents(path_str, ctx) {
                 Some(contents) => contents,
                 None => return "".into(),
@@ -109,11 +177,21 @@ fn goto_locations(meta: EditorMeta, locations: &[(ServerId, Location)], ctx: &mu
                     if range.start.line as usize >= contents.len_lines() {
                         return "".into();
                     }
+
+                    let file_path = if uri
+                        .scheme()
+                        .is_some_and(|scheme| scheme.eq_lowercase("file"))
+                    {
+                        short_file_path(path_str, ctx.main_root(&meta))
+                    } else {
+                        uri.as_str()
+                    };
+
                     // Let's use the main server root path to dictate how
                     // file paths should look like in the goto buffer.
                     format!(
                         "{}:{}:{}:{}",
-                        short_file_path(path_str, ctx.main_root(&meta)),
+                        file_path,
                         pos.line,
                         pos.column,
                         contents.line(range.start.line as usize),
@@ -147,6 +225,7 @@ pub fn text_document_definition(
         );
         return;
     }
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -154,9 +233,7 @@ pub fn text_document_definition(
                 server_id,
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
-                        text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
-                        },
+                        text_document: TextDocumentIdentifier { uri: uri.clone() },
                         position: get_lsp_position(
                             server_settings,
                             &meta.buffile,
@@ -197,6 +274,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ct
         );
         return;
     }
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -204,9 +282,7 @@ pub fn text_document_implementation(meta: EditorMeta, params: PositionParams, ct
                 server_id,
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
-                        text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
-                        },
+                        text_document: TextDocumentIdentifier { uri: uri.clone() },
                         position: get_lsp_position(
                             server_settings,
                             &meta.buffile,
@@ -240,6 +316,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, c
         );
         return;
     }
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -247,9 +324,7 @@ pub fn text_document_type_definition(meta: EditorMeta, params: PositionParams, c
                 server_id,
                 vec![GotoDefinitionParams {
                     text_document_position_params: TextDocumentPositionParams {
-                        text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
-                        },
+                        text_document: TextDocumentIdentifier { uri: uri.clone() },
                         position: get_lsp_position(
                             server_settings,
                             &meta.buffile,
@@ -283,6 +358,7 @@ pub fn text_document_references(meta: EditorMeta, params: PositionParams, ctx: &
         );
         return;
     }
+    let uri = ctx.uri_for_buffer(&meta.buffile);
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
@@ -290,9 +366,7 @@ pub fn text_document_references(meta: EditorMeta, params: PositionParams, ctx: &
                 server_id,
                 vec![ReferenceParams {
                     text_document_position: TextDocumentPositionParams {
-                        text_document: TextDocumentIdentifier {
-                            uri: file_path_to_uri(&meta.buffile),
-                        },
+                        text_document: TextDocumentIdentifier { uri: uri.clone() },
                         position: get_lsp_position(
                             server_settings,
                             &meta.buffile,
