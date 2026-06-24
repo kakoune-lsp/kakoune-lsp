@@ -99,21 +99,23 @@ pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
 pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
     for &server_id in &meta.servers {
         let server = ctx.server(server_id);
-        let options = match &server.capabilities.as_ref().unwrap().text_document_sync {
-            Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
-                save: Some(opts),
-                ..
-            })) if !matches!(opts, TextDocumentSyncSaveOptions::Supported(false)) => opts,
-            _ => continue, // don't send didSave by default
+        let include_text = match &server.capabilities.as_ref().unwrap().text_document_sync {
+            Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions { save, .. })) => {
+                match save {
+                    Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
+                        include_text: Some(include_text),
+                    })) => *include_text,
+                    _ => continue,
+                }
+            }
+            _ => continue,
         };
-        let text = match options {
-            TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
-                include_text: Some(true),
-            }) => ctx
-                .documents
+        let text = if include_text {
+            ctx.documents
                 .get(&meta.buffile)
-                .map(|doc| doc.text.to_string()),
-            _ => None,
+                .map(|doc| doc.text.to_string())
+        } else {
+            None
         };
 
         let uri = file_path_to_uri(&meta.buffile);
