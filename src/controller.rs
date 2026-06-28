@@ -746,7 +746,12 @@ fn dispatch_fifo_request(
     flow
 }
 
-fn read_to_end(to_editor: &ToEditorSender, file: &mut fs::File, buffer: &SharedBuffer) {
+fn read_to_end(
+    to_editor: &ToEditorSender,
+    file: &mut fs::File,
+    buffer: &SharedBuffer,
+    label: &str,
+) {
     {
         let mut buffer = buffer.lock();
         let offset = buffer.len();
@@ -757,7 +762,8 @@ fn read_to_end(to_editor: &ToEditorSender, file: &mut fs::File, buffer: &SharedB
         }
         debug!(
             to_editor,
-            "From editor (raw): {{{}}}",
+            "From editor (raw) via {}: {{{}}}",
+            label,
             &String::from_utf8_lossy(&buffer[offset..])
         );
     }
@@ -842,10 +848,10 @@ pub fn start(
                     }
                     events.clear();
                     if readable1 {
-                        read_to_end(&to_editor, &mut fifo, &command_buffer);
+                        read_to_end(&to_editor, &mut fifo, &command_buffer, "command fifo");
                     }
                     if readable2 {
-                        read_to_end(&to_editor, &mut alt_fifo, &text_buffer);
+                        read_to_end(&to_editor, &mut alt_fifo, &text_buffer, "buffer fifo");
                     }
                     if FIFO_READER_DONE.load(Relaxed) {
                         break;
