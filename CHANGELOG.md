@@ -3,6 +3,9 @@
 Additions:
 - Default configuration for Hare, using [`hare-lsp`](https://git.sr.ht/~whynothugo/hare-lsp).
 
+Fixes:
+- Fix hangs after editing a file without trailing newline, such as empty files (#892).
+
 ## 21.0.0 - 2026-05-18
 
 Breaking changes:
