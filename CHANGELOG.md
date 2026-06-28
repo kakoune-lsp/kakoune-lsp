@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- Default configuration for Hare, using [`hare-lsp`](https://git.sr.ht/~whynothugo/hare-lsp).
+
 ## 21.0.0 - 2026-05-18
 
 Breaking changes:

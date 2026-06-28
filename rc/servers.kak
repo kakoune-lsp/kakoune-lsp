@@ -163,6 +163,14 @@ hook -group lsp-filetype-graphql global BufSetOption filetype=graphql %{
 
 }
 
+hook -group lsp-filetype-hare global BufSetOption filetype=hare %{
+    set-option buffer lsp_servers %{
+        [hare-lsp]
+        root_globs = [".git", ".hg"]
+        args = ["-S"]
+    }
+}
+
 hook -group lsp-filetype-haskell global BufSetOption filetype=haskell %{
     set-option buffer lsp_servers %{
         [haskell-language-server]
