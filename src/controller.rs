@@ -2010,7 +2010,7 @@ fn dispatch_server_request(
                                 Err(e) => {
                                     error!(
                                         ctx.to_editor(),
-                                        "Failed to parse semantic tokens options: {}",
+                                        "Failed to unmarshal semantic tokens options: {}",
                                         e
                                     );
                                     continue;
