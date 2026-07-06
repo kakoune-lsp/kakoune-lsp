@@ -2004,7 +2004,18 @@ fn dispatch_server_request(
                             continue;
                         };
                         let semantic_tokens_options: SemanticTokensOptions =
-                            serde_json::from_value(options).unwrap();
+                            // sourcekit-lsp shipped with Xcode 27.beta1 workaround
+                            match serde_json::from_value(options) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    warn!(
+                                        ctx.to_editor(),
+                                        "Failed to parse semantic tokens options: {}",
+                                        e
+                                    );
+                                    continue;
+                                }
+                            };
                         let semantic_tokens_server_capabilities =
                             SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
                                 SemanticTokensRegistrationOptions {
