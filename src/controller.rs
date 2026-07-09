@@ -2141,6 +2141,9 @@ fn dispatch_server_notification(
         "telemetry/event" => {
             debug!(ctx.to_editor(), "{:?}", params);
         }
+        "metals/status" => {
+            metals::status(server_id, meta, params, ctx);
+        }
         _ => {
             warn!(ctx.to_editor(), "Unsupported method: {}", method);
         }
