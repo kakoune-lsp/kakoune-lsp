@@ -688,15 +688,17 @@ define-command -hidden lsp-if-changed-since -params 3 -docstring %{
 
 define-command -hidden lsp-send-buffer -params 1 %{
     evaluate-commands -save-regs a %{
-        unset-option window finaleol # TODO remove this
-        set-register a %opt{finaleol}
-        set-option buffer finaleol present
+        try %{
+            unset-option window finaleol # TODO remove this
+            set-register a %opt{finaleol}
+            set-option buffer finaleol present
+        }
         try %{
             lsp-send %arg{1} %val{buf_line_count}
             evaluate-commands -no-hooks %{ write -force %opt{lsp_alt_fifo} }
-            set-option buffer finaleol %reg{a}
+            try %{ set-option buffer finaleol %reg{a} }
         } catch %{
-            set-option buffer finaleol %reg{a}
+            try %{ set-option buffer finaleol %reg{a} }
             fail %val{error}
         }
     }
