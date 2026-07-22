@@ -3,7 +3,7 @@
 ## 21.0.2 - 2026-07-21
 
 Fixes:
-- Fixed a regression in 21.0.2 which broke compatibility with Kakoune versions older than 2026.05.21.
+- Fixed a regression in 21.0.1 which broke compatibility with Kakoune versions older than 2026.05.21.
 
 ## 21.0.1 - 2026-06-29
 
