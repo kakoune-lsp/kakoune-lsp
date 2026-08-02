@@ -100,14 +100,16 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
     for &server_id in &meta.servers {
         let server = ctx.server(server_id);
         let include_text = match &server.capabilities.as_ref().unwrap().text_document_sync {
-            Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions { save, .. })) => {
-                match save {
-                    Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
-                        include_text: Some(include_text),
-                    })) => *include_text,
-                    _ => continue,
+            Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+                save: Some(save),
+                ..
+            })) => match save {
+                TextDocumentSyncSaveOptions::SaveOptions(SaveOptions { include_text }) => {
+                    include_text.clone().unwrap_or(false)
                 }
-            }
+                TextDocumentSyncSaveOptions::Supported(true) => false,
+                TextDocumentSyncSaveOptions::Supported(false) => continue,
+            },
             _ => continue,
         };
         let text = if include_text {
