@@ -1,5 +1,11 @@
 ## Unreleased
 
+Additions:
+- Support the LSP diagnostic pull model (`textDocument/diagnostic`) and
+  `workspace/diagnostic/refresh`. When a language server advertises
+  `diagnosticProvider`, kak-lsp pulls diagnostics after open/change instead of
+  relying on `textDocument/publishDiagnostics`.
+
 ## 21.0.2 - 2026-07-21
 
 Fixes:

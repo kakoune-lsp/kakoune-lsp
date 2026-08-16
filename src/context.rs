@@ -77,6 +77,9 @@ pub struct Context {
     pub completion_last_client: Option<ClientId>,
     pub config: Config,
     pub diagnostics: HashMap<String, Vec<(ServerId, Diagnostic)>>,
+    /// Opaque `resultId` values from document diagnostic pull responses, keyed by
+    /// (server, buffile). Used as `previousResultId` on subsequent pulls.
+    pub diagnostic_pull_result_ids: HashMap<(ServerId, String), String>,
     pub documents: HashMap<String, Document>,
     pub dynamic_config: DynamicConfig,
     pub inlay_hints: HashMap<String, Vec<(ServerId, InlayHint)>>,
@@ -117,6 +120,7 @@ impl Context {
             completion_last_client: None,
             config,
             diagnostics: Default::default(),
+            diagnostic_pull_result_ids: Default::default(),
             documents: Default::default(),
             dynamic_config: DynamicConfig::default(),
             inlay_hints: Default::default(),

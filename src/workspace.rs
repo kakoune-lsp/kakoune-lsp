@@ -98,14 +98,22 @@ pub fn configuration(
                 .map(|section| match &settings {
                     None => Value::Null,
                     Some(settings) => {
-                        if if is_using_legacy_toml(&ctx.config) {
+                        let eslint_workaround = if is_using_legacy_toml(&ctx.config) {
                             ctx.server_config(&meta, server_name)
                                 .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
                         } else {
                             ctx.server(server_id).workaround_eslint
-                        } && section.is_empty()
-                        {
-                            return settings.clone();
+                        };
+                        if eslint_workaround && section.is_empty() {
+                            // vscode-eslint expects JSON null for unset nodePath; TOML
+                            // cannot express null, so fill it in here.
+                            let mut settings = settings.clone();
+                            if let Some(obj) = settings.as_object_mut() {
+                                obj.entry("nodePath".to_string()).or_insert(Value::Null);
+                                obj.entry("options".to_string())
+                                    .or_insert(Value::Object(Default::default()));
+                            }
+                            return settings;
                         }
                         settings.get(section).unwrap_or(&Value::Null).clone()
                     }

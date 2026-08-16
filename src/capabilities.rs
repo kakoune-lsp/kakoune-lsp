@@ -115,7 +115,9 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                             inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
                                 refresh_support: Some(true),
                             }),
-                            diagnostic: None,
+                            diagnostic: Some(DiagnosticWorkspaceClientCapabilities {
+                                refresh_support: Some(true),
+                            }),
                         }),
                         text_document: Some(TextDocumentClientCapabilities {
                             synchronization: Some(TextDocumentSyncClientCapabilities {
@@ -332,7 +334,10 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                                 dynamic_registration: Some(false),
                                 resolve_support: None,
                             }),
-                            diagnostic: None,
+                            diagnostic: Some(DiagnosticClientCapabilities {
+                                dynamic_registration: Some(false),
+                                related_document_support: Some(true),
+                            }),
                             inline_completion: None,
                         }),
                         window: Some(WindowClientCapabilities {
@@ -463,6 +468,7 @@ pub const CAPABILITY_FORMATTING: &str = "lsp-formatting";
 pub const CAPABILITY_HOVER: &str = "lsp-hover";
 pub const CAPABILITY_IMPLEMENTATION: &str = "lsp-implementation";
 pub const CAPABILITY_INLAY_HINTS: &str = "lsp-inlay-hints";
+pub const CAPABILITY_PULL_DIAGNOSTIC: &str = "textDocument/diagnostic";
 pub const CAPABILITY_RANGE_FORMATTING: &str = "lsp-range-formatting";
 pub const CAPABILITY_REFERENCES: &str = "lsp-references";
 pub const CAPABILITY_RENAME: &str = "lsp-rename";
@@ -573,6 +579,7 @@ pub fn server_has_capability(
             Some(OneOf::Right(_)) => true,
             None => false,
         },
+        CAPABILITY_PULL_DIAGNOSTIC => server_capabilities.diagnostic_provider.is_some(),
         CAPABILITY_RANGE_FORMATTING => match server_capabilities.document_range_formatting_provider
         {
             Some(OneOf::Left(ok)) => ok,
@@ -681,6 +688,7 @@ pub fn capabilities(meta: EditorMeta, ctx: &mut Context) {
             .or_default()
             .push(server_name);
         probe_feature(to_editor, entry, &mut features, CAPABILITY_INLAY_HINTS);
+        probe_feature(to_editor, entry, &mut features, CAPABILITY_PULL_DIAGNOSTIC);
 
         // NOTE controller should park request for capabilities until they are available thus it should
         // be safe to unwrap here (otherwise something unexpectedly wrong and it's better to panic)
