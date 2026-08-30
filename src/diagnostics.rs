@@ -163,6 +163,12 @@ fn set_server_diagnostics(
     refresh_diagnostics_display(buffile, ctx);
 }
 
+// Note: Some language servers (such as rust-analyzer) use a hybrid model where native/syntax
+// diagnostics are served via pull requests (textDocument/diagnostic), while flycheck/clippy/rustc
+// diagnostics are pushed asynchronously via textDocument/publishDiagnostics (see
+// https://github.com/rust-lang/rust-analyzer/issues/18709).
+// Both pull responses and push notifications update the diagnostics collection so all diagnostics
+// are preserved and merged for display.
 pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Context) {
     let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
     let buffile = uri_to_file_path(&params.uri);
