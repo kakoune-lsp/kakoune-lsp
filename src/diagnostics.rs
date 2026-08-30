@@ -13,16 +13,6 @@ use lsp_types::*;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-fn diagnostic_provider_identifier(server: &ServerSettings) -> Option<String> {
-    let caps = server.capabilities.as_ref()?;
-    match caps.diagnostic_provider.as_ref()? {
-        DiagnosticServerCapabilities::Options(options) => options.identifier.clone(),
-        DiagnosticServerCapabilities::RegistrationOptions(options) => {
-            options.diagnostic_options.identifier.clone()
-        }
-    }
-}
-
 /// Request document diagnostics via the LSP pull model for servers that advertise
 /// `diagnosticProvider`.
 pub fn pull_document_diagnostics(meta: EditorMeta, ctx: &mut Context) {
@@ -30,7 +20,16 @@ pub fn pull_document_diagnostics(meta: EditorMeta, ctx: &mut Context) {
         .servers(&meta)
         .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_PULL_DIAGNOSTIC))
         .map(|(server_id, server)| {
-            let identifier = diagnostic_provider_identifier(server);
+            let identifier = server
+                .capabilities
+                .as_ref()
+                .and_then(|caps| caps.diagnostic_provider.as_ref())
+                .and_then(|provider| match provider {
+                    DiagnosticServerCapabilities::Options(options) => options.identifier.clone(),
+                    DiagnosticServerCapabilities::RegistrationOptions(options) => {
+                        options.diagnostic_options.identifier.clone()
+                    }
+                });
             let previous_result_id = ctx
                 .diagnostic_pull_result_ids
                 .get(&(server_id, meta.buffile.clone()))
@@ -54,19 +53,12 @@ pub fn pull_document_diagnostics(meta: EditorMeta, ctx: &mut Context) {
     }
 
     let buffile = meta.buffile.clone();
-    let version = meta.version;
     ctx.call::<DocumentDiagnosticRequest, _>(
         meta,
         RequestParams::Each(eligible_servers.into_iter().collect()),
-        move |ctx, _meta, results| {
+        move |ctx, meta, results| {
             // Drop stale responses after the buffer changed again.
-            if ctx
-                .documents
-                .get(&buffile)
-                .map(|doc| doc.version)
-                .unwrap_or(-1)
-                != version
-            {
+            if ctx.documents.get(&buffile).map(|doc| doc.version) != Some(meta.version) {
                 return;
             }
             for (server_id, result) in results {

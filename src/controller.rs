@@ -2079,27 +2079,24 @@ fn dispatch_server_request(
             Ok(serde_json::Value::Null)
         }
         request::WorkspaceDiagnosticRefresh::METHOD => {
+            // Invalidate cached result ids so the server recomputes.
+            ctx.diagnostic_pull_result_ids
+                .retain(|&(sid, _), _| sid != server_id);
+
             // Re-pull diagnostics for every open document that talks to this server.
-            let buffiles: Vec<_> = ctx.documents.keys().cloned().collect();
-            for buffile in buffiles {
-                let servers: Vec<_> = ctx
-                    .language_servers
-                    .keys()
-                    .copied()
-                    .filter(|&id| id == server_id)
-                    .collect();
-                if servers.is_empty() {
-                    continue;
-                }
-                let mut pull_meta = meta.clone();
-                pull_meta.buffile = buffile.clone();
-                pull_meta.servers = servers;
-                if let Some(doc) = ctx.documents.get(&buffile) {
-                    pull_meta.version = doc.version;
-                }
-                // Invalidate cached result ids so the server recomputes.
-                ctx.diagnostic_pull_result_ids
-                    .retain(|&(sid, ref path), _| !(sid == server_id && path == &buffile));
+            let docs: Vec<_> = ctx
+                .documents
+                .iter()
+                .map(|(buffile, doc)| (buffile.clone(), doc.version))
+                .collect();
+            for (buffile, version) in docs {
+                let pull_meta = EditorMeta {
+                    session: ctx.session.clone(),
+                    buffile,
+                    version,
+                    servers: vec![server_id],
+                    ..Default::default()
+                };
                 diagnostics::pull_document_diagnostics(pull_meta, ctx);
             }
             Ok(serde_json::Value::Null)
