@@ -385,6 +385,17 @@ hook -group lsp-filetype-julia global BufSetOption filetype=julia %{
     }
 }
 
+hook -group lsp-filetype-kotlin global BufSetOption filetype=kotlin %{
+    set-option buffer lsp_servers %{
+        [intellij-server]
+        args = ["--stdio"]
+        root_globs = ["mvnw", "gradlew", ".git", ".hg"]
+        # See https://github.com/Kotlin/kotlin-lsp
+        # This build of intellij-server has expired #271
+        # Fix: https://github.com/Kotlin/kotlin-lsp/issues/271#issuecomment-5575511559
+    }
+}
+
 hook -group lsp-filetype-latex global BufSetOption filetype=latex %{
     set-option buffer lsp_servers %{
         [texlab]
