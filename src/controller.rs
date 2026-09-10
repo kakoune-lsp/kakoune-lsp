@@ -43,7 +43,7 @@ use itertools::Itertools;
 use jsonrpc_core::{Call, ErrorCode, MethodCall, Output, Params};
 use lean::EditorPlainGoalParams;
 use libc::O_NONBLOCK;
-use lsp_types::error_codes::CONTENT_MODIFIED;
+use lsp_types::error_codes::{CONTENT_MODIFIED, SERVER_CANCELLED};
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
 use lsp_types::*;
@@ -1105,6 +1105,8 @@ pub fn start(
                                     );
                                     if failure.error.code
                                         == ErrorCode::ServerError(CONTENT_MODIFIED)
+                                        || failure.error.code
+                                            == ErrorCode::ServerError(SERVER_CANCELLED)
                                     {
                                         debug!(
                                             ctx.to_editor(),
@@ -1158,6 +1160,7 @@ pub fn start(
                                     match failure.error.code {
                                         code if code
                                             == ErrorCode::ServerError(CONTENT_MODIFIED)
+                                            || code == ErrorCode::ServerError(SERVER_CANCELLED)
                                             || method == request::CodeActionRequest::METHOD => {}
                                         code => {
                                             let msg = match code {
@@ -2073,6 +2076,29 @@ fn dispatch_server_request(
                 meta,
                 "evaluate-commands -buffer * unset-option buffer lsp_semantic_tokens_timestamp",
             );
+            Ok(serde_json::Value::Null)
+        }
+        request::WorkspaceDiagnosticRefresh::METHOD => {
+            // Invalidate cached result ids so the server recomputes.
+            ctx.diagnostic_pull_result_ids
+                .retain(|&(sid, _), _| sid != server_id);
+
+            // Re-pull diagnostics for every open document that talks to this server.
+            let docs: Vec<_> = ctx
+                .documents
+                .iter()
+                .map(|(buffile, doc)| (buffile.clone(), doc.version))
+                .collect();
+            for (buffile, version) in docs {
+                let pull_meta = EditorMeta {
+                    session: ctx.session.clone(),
+                    buffile,
+                    version,
+                    servers: vec![server_id],
+                    ..Default::default()
+                };
+                diagnostics::pull_document_diagnostics(pull_meta, ctx);
+            }
             Ok(serde_json::Value::Null)
         }
         _ => {

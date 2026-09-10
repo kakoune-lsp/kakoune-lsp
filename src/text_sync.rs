@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use crate::diagnostics;
 use crate::thread_worker::Worker;
 use crate::types::*;
 use crate::util::file_path_to_uri;
@@ -43,6 +44,7 @@ pub fn text_document_did_open(
     for &server_id in &meta.servers {
         ctx.notify::<DidOpenTextDocument>(server_id, params.clone());
     }
+    diagnostics::pull_document_diagnostics(meta, ctx);
 }
 
 pub fn text_document_did_change(
@@ -67,8 +69,9 @@ pub fn text_document_did_change(
 
     // Resets metadata for buffer.
     ctx.documents.insert(meta.buffile.clone(), document);
-    ctx.diagnostics.insert(meta.buffile.clone(), Vec::new());
-
+    // Keep existing diagnostics until the next pull/push update so the UI does not
+    // flicker empty while we wait for the language server. Pull result IDs stay
+    // valid for unchanged reports.
     let req_params = DidChangeTextDocumentParams {
         text_document: VersionedTextDocumentIdentifier {
             uri,
@@ -83,10 +86,13 @@ pub fn text_document_did_change(
     for &server_id in &meta.servers {
         ctx.notify::<DidChangeTextDocument>(server_id, req_params.clone());
     }
+    diagnostics::pull_document_diagnostics(meta, ctx);
 }
 
 pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
     ctx.documents.remove(&meta.buffile);
+    ctx.diagnostic_pull_result_ids
+        .retain(|(_, path), _| path != &meta.buffile);
     let uri = file_path_to_uri(&meta.buffile);
     let params = DidCloseTextDocumentParams {
         text_document: TextDocumentIdentifier { uri },

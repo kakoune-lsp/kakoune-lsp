@@ -1,3 +1,4 @@
+use crate::capabilities::{attempt_server_capability, CAPABILITY_PULL_DIAGNOSTIC};
 use crate::context::*;
 use crate::markup::escape_kakoune_markup;
 use crate::position::*;
@@ -7,14 +8,141 @@ use crate::util::*;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
 use jsonrpc_core::Params;
+use lsp_types::request::DocumentDiagnosticRequest;
 use lsp_types::*;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Context) {
-    let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
-    let buffile = uri_to_file_path(&params.uri);
-    let buffile = buffile.to_str().unwrap();
+/// Request document diagnostics via the LSP pull model for servers that advertise
+/// `diagnosticProvider`.
+pub fn pull_document_diagnostics(meta: EditorMeta, ctx: &mut Context) {
+    let eligible_servers: Vec<_> = ctx
+        .servers(&meta)
+        .filter(|srv| attempt_server_capability(ctx, *srv, &meta, CAPABILITY_PULL_DIAGNOSTIC))
+        .map(|(server_id, server)| {
+            let identifier = server
+                .capabilities
+                .as_ref()
+                .and_then(|caps| caps.diagnostic_provider.as_ref())
+                .and_then(|provider| match provider {
+                    DiagnosticServerCapabilities::Options(options) => options.identifier.clone(),
+                    DiagnosticServerCapabilities::RegistrationOptions(options) => {
+                        options.diagnostic_options.identifier.clone()
+                    }
+                });
+            let previous_result_id = ctx
+                .diagnostic_pull_result_ids
+                .get(&(server_id, meta.buffile.clone()))
+                .cloned();
+            (
+                server_id,
+                vec![DocumentDiagnosticParams {
+                    text_document: TextDocumentIdentifier {
+                        uri: file_path_to_uri(&meta.buffile),
+                    },
+                    identifier,
+                    previous_result_id,
+                    work_done_progress_params: Default::default(),
+                    partial_result_params: Default::default(),
+                }],
+            )
+        })
+        .collect();
+    if eligible_servers.is_empty() {
+        return;
+    }
+
+    let buffile = meta.buffile.clone();
+    ctx.call::<DocumentDiagnosticRequest, _>(
+        meta,
+        RequestParams::Each(eligible_servers.into_iter().collect()),
+        move |ctx, meta, results| {
+            // Drop stale responses after the buffer changed again.
+            if ctx.documents.get(&buffile).map(|doc| doc.version) != Some(meta.version) {
+                return;
+            }
+            for (server_id, result) in results {
+                handle_document_diagnostic_result(server_id, &buffile, result, ctx);
+            }
+        },
+    );
+}
+
+fn handle_document_diagnostic_result(
+    server_id: ServerId,
+    buffile: &str,
+    result: DocumentDiagnosticReportResult,
+    ctx: &mut Context,
+) {
+    let report = match result {
+        DocumentDiagnosticReportResult::Report(report) => report,
+        DocumentDiagnosticReportResult::Partial(_) => {
+            warn!(ctx.to_editor(), "Unexpected partial diagnostic report");
+            return;
+        }
+    };
+
+    match report {
+        DocumentDiagnosticReport::Full(report) => {
+            let (result_id, items) = (
+                report.full_document_diagnostic_report.result_id,
+                report.full_document_diagnostic_report.items,
+            );
+            if let Some(result_id) = result_id {
+                ctx.diagnostic_pull_result_ids
+                    .insert((server_id, buffile.to_string()), result_id);
+            }
+            set_server_diagnostics(server_id, buffile, items, ctx);
+            if let Some(related) = report.related_documents {
+                for (uri, related_report) in related {
+                    handle_related_document_report(server_id, uri, related_report, ctx);
+                }
+            }
+        }
+        DocumentDiagnosticReport::Unchanged(report) => {
+            ctx.diagnostic_pull_result_ids.insert(
+                (server_id, buffile.to_string()),
+                report.unchanged_document_diagnostic_report.result_id,
+            );
+            if let Some(related) = report.related_documents {
+                for (uri, related_report) in related {
+                    handle_related_document_report(server_id, uri, related_report, ctx);
+                }
+            }
+        }
+    }
+}
+
+fn handle_related_document_report(
+    server_id: ServerId,
+    uri: Uri,
+    report: DocumentDiagnosticReportKind,
+    ctx: &mut Context,
+) {
+    let path = uri_to_file_path(&uri);
+    let path = path.to_str().unwrap();
+    match report {
+        DocumentDiagnosticReportKind::Full(report) => {
+            let (result_id, items) = (report.result_id, report.items);
+            if let Some(result_id) = result_id {
+                ctx.diagnostic_pull_result_ids
+                    .insert((server_id, path.to_string()), result_id);
+            }
+            set_server_diagnostics(server_id, path, items, ctx);
+        }
+        DocumentDiagnosticReportKind::Unchanged(report) => {
+            ctx.diagnostic_pull_result_ids
+                .insert((server_id, path.to_string()), report.result_id);
+        }
+    }
+}
+
+fn set_server_diagnostics(
+    server_id: ServerId,
+    buffile: &str,
+    items: Vec<Diagnostic>,
+    ctx: &mut Context,
+) {
     let mut diagnostics: Vec<_> = ctx
         .diagnostics
         .remove(buffile)
@@ -22,18 +150,29 @@ pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Contex
         .into_iter()
         .filter(|(id, _)| id != &server_id)
         .collect();
-    let params: Vec<_> = params
-        .diagnostics
-        .into_iter()
-        .map(|d| (server_id, d))
-        .collect();
-    diagnostics.extend(params);
+    diagnostics.extend(items.into_iter().map(|d| (server_id, d)));
     ctx.diagnostics.insert(buffile.to_string(), diagnostics);
-    let document = ctx.documents.get(buffile);
-    if document.is_none() {
-        return;
-    }
-    let document = document.unwrap();
+    refresh_diagnostics_display(buffile, ctx);
+}
+
+// Note: Some language servers (such as rust-analyzer) use a hybrid model where native/syntax
+// diagnostics are served via pull requests (textDocument/diagnostic), while flycheck/clippy/rustc
+// diagnostics are pushed asynchronously via textDocument/publishDiagnostics (see
+// https://github.com/rust-lang/rust-analyzer/issues/18709).
+// Both pull responses and push notifications update the diagnostics collection so all diagnostics
+// are preserved and merged for display.
+pub fn publish_diagnostics(server_id: ServerId, params: Params, ctx: &mut Context) {
+    let params: PublishDiagnosticsParams = params.parse().expect("Failed to parse params");
+    let buffile = uri_to_file_path(&params.uri);
+    let buffile = buffile.to_str().unwrap();
+    set_server_diagnostics(server_id, buffile, params.diagnostics, ctx);
+}
+
+fn refresh_diagnostics_display(buffile: &str, ctx: &mut Context) {
+    let document = match ctx.documents.get(buffile) {
+        Some(document) => document,
+        None => return,
+    };
     let version = document.version;
     let diagnostics = &ctx.diagnostics[buffile];
     let diagnostics_orderd_by_severity = diagnostics

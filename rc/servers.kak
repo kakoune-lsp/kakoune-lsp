@@ -283,7 +283,8 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     # set-option buffer lsp_servers %opt{lsp_server_biome}
     # set-option buffer lsp_servers %{
     #     [eslint-language-server]
-    #     root_globs = [".eslintrc", ".eslintrc.json"]
+    #     root_globs = [".eslintrc", ".eslintrc.json", "eslint.config.js", "package.json"]
+    #     command = "vscode-eslint-language-server"
     #     args = ["--stdio"]
     #     workaround_eslint = true
     #     [eslint-language-server.settings]
@@ -293,10 +294,12 @@ hook -group lsp-filetype-javascript global BufSetOption filetype=(?:javascript|t
     #     rulesCustomizations = []
     #     run = "onType"
     #     validate = "on"
+    #     packageManager = "npm"
     #     experimental = {}
     #     problems = { shortenToSingleLine = false }
     #     codeAction.disableRuleComment = { enable = true, location = "separateLine" }
     #     codeAction.showDocumentation = { enable = false }
+    #     workingDirectory.mode = "auto"
     # }
     # set-option buffer lsp_servers %{
     #     [tailwindcss-language-server]

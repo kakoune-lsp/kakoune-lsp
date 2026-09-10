@@ -98,14 +98,28 @@ pub fn configuration(
                 .map(|section| match &settings {
                     None => Value::Null,
                     Some(settings) => {
-                        if if is_using_legacy_toml(&ctx.config) {
+                        let eslint_workaround = if is_using_legacy_toml(&ctx.config) {
                             ctx.server_config(&meta, server_name)
                                 .is_some_and(|cfg| cfg.workaround_eslint == Some(true))
                         } else {
                             ctx.server(server_id).workaround_eslint
-                        } && section.is_empty()
-                        {
-                            return settings.clone();
+                        };
+                        if eslint_workaround && section.is_empty() {
+                            // vscode-eslint expects specific fields to be present in configuration.
+                            // Fill in reasonable defaults for missing optional fields that TOML cannot easily express.
+                            let mut settings = settings.clone();
+                            if let Some(obj) = settings.as_object_mut() {
+                                obj.entry("nodePath".to_string()).or_insert(Value::Null);
+                                obj.entry("options".to_string())
+                                    .or_insert(Value::Object(Default::default()));
+                                obj.entry("experimental".to_string())
+                                    .or_insert(Value::Object(Default::default()));
+                                obj.entry("problems".to_string())
+                                    .or_insert(serde_json::json!({ "shortenToSingleLine": false }));
+                                obj.entry("rulesCustomizations".to_string())
+                                    .or_insert(Value::Array(Vec::new()));
+                            }
+                            return settings;
                         }
                         settings.get(section).unwrap_or(&Value::Null).clone()
                     }
