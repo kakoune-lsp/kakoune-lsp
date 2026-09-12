@@ -1,5 +1,8 @@
 ## Unreleased
 
+Additions:
+- Default configuration for `kotlin`, using `intellij-server`.
+
 Fixes:
 - Fix a regression in 21.0.1 that incorrectly rejected legacy `kak-lsp.toml` configurations with an error about unsupported `root_globs`/`root` parameters (#903).
 
