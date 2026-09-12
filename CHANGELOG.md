@@ -4,6 +4,7 @@ Additions:
 - Default configuration for `kotlin`, using `intellij-server`.
 
 Fixes:
+- Fix a regression in 21.0.1 that stopped sending save notifications to language servers that advertise `save: true` or omit `includeText` from their save options.
 - Fix a regression in 21.0.1 that incorrectly rejected legacy `kak-lsp.toml` configurations with an error about unsupported `root_globs`/`root` parameters (#903).
 
 ## 21.0.2 - 2026-07-21
