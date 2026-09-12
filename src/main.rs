@@ -699,6 +699,16 @@ fn parse_legacy_config(config_path: &PathBuf, session: &SessionId) -> Result<Con
                     }
                 }
             }
+            if cfg
+                .language_server
+                .values()
+                .any(|server| !server.root_globs.is_empty() || !server.root.is_empty())
+            {
+                return Err(
+                    r#"the legacy kak-lsp.toml configuration does not support the "root_globs"/"root" parameters, please use the new approach (via lsp_servers) or "roots""#
+                        .to_string(),
+                );
+            }
             Ok(cfg)
         })
         .map_err(|err| {
