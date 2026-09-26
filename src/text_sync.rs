@@ -96,21 +96,27 @@ pub fn text_document_did_close(meta: EditorMeta, ctx: &mut Context) {
     }
 }
 
+fn did_save_include_text(text_document_sync: &Option<TextDocumentSyncCapability>) -> Option<bool> {
+    match text_document_sync {
+        Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+            save: Some(TextDocumentSyncSaveOptions::Supported(true)),
+            ..
+        })) => Some(false),
+        Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
+            save: Some(TextDocumentSyncSaveOptions::SaveOptions(options)),
+            ..
+        })) => Some(options.include_text.unwrap_or(false)),
+        _ => None,
+    }
+}
+
 pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
     for &server_id in &meta.servers {
         let server = ctx.server(server_id);
-        let include_text = match &server.capabilities.as_ref().unwrap().text_document_sync {
-            Some(TextDocumentSyncCapability::Options(TextDocumentSyncOptions {
-                save: Some(save),
-                ..
-            })) => match save {
-                TextDocumentSyncSaveOptions::SaveOptions(SaveOptions { include_text }) => {
-                    include_text.clone().unwrap_or(false)
-                }
-                TextDocumentSyncSaveOptions::Supported(true) => false,
-                TextDocumentSyncSaveOptions::Supported(false) => continue,
-            },
-            _ => continue,
+        let Some(include_text) =
+            did_save_include_text(&server.capabilities.as_ref().unwrap().text_document_sync)
+        else {
+            continue;
         };
         let text = if include_text {
             ctx.documents
@@ -316,5 +322,40 @@ pub fn register_workspace_did_change_watched_files(
             ))
             .or_default()
             .push(CompiledFileSystemWatcher { kind, pattern });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn include_text(capabilities: &str) -> Option<bool> {
+        let capabilities: ServerCapabilities = serde_json::from_str(capabilities).unwrap();
+        did_save_include_text(&capabilities.text_document_sync)
+    }
+
+    #[test]
+    fn did_save_capability() {
+        // no save notification
+        assert_eq!(include_text("{}"), None);
+        assert_eq!(include_text(r#"{"textDocumentSync":{"save":false}}"#), None);
+        // set with boolean
+        assert_eq!(
+            include_text(r#"{"textDocumentSync":{"save":true}}"#),
+            Some(false)
+        );
+        // empty options is same as false
+        assert_eq!(
+            include_text(r#"{"textDocumentSync":{"save":{}}}"#),
+            Some(false)
+        );
+        // explicit includeText settings
+        assert_eq!(
+            include_text(r#"{"textDocumentSync":{"save":{"includeText":false}}}"#),
+            Some(false)
+        );
+        assert_eq!(
+            include_text(r#"{"textDocumentSync":{"save":{"includeText":true}}}"#),
+            Some(true)
+        );
     }
 }
