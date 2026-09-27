@@ -601,7 +601,7 @@ define-command -hidden lsp-do-send-async %{
 define-command -hidden lsp-do-send-sync %{
     unset-option buffer lsp_do_send_maybe_sync
     evaluate-commands %sh{
-        tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+        tmp=$(mktemp -d "${TMPDIR:-/tmp}/kak-lsp-sync.XXXXXX")
         pipe=${tmp}/fifo
         if ! mkfifo ${pipe}; then
             echo 'fail failed to create fifo'
@@ -994,7 +994,7 @@ define-command -hidden lsp-code-lens-request %{
 define-command lsp-execute-command -params 2..3 -docstring "lsp-execute-command <command> <args> [<server_name>]: execute a server-specific command" %{
     lsp-execute-command-request is-async %arg{@}
 } -shell-script-candidates %{
-    tmp=$(mktemp -q -d -t 'kak-lsp-sync.XXXXXX' 2>/dev/null || mktemp -q -d)
+    tmp=$(mktemp -d "${TMPDIR:-/tmp}/kak-lsp-sync.XXXXXX")
     pipe=${tmp}/fifo
     if ! mkfifo ${pipe}; then
         exit
