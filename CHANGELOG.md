@@ -2,6 +2,7 @@
 
 Additions:
 - Default configuration for `kotlin`, using `intellij-server`.
+- Default configuration for `vala`, using [`vala-language-server`](https://github.com/vala-lang/vala-language-server).
 
 Fixes:
 - Fix a regression in 21.0.1 that stopped sending save notifications to language servers that advertise `save: true` or omit `includeText` from their save options.
