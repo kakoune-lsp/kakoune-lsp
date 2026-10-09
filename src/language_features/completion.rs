@@ -391,7 +391,7 @@ fn editor_completion_item_resolve(
     new_item: CompletionItem,
 ) {
     if pager_active {
-        if new_item.detail == old_detail || new_item.documentation == old_documentation {
+        if new_item.detail == old_detail && new_item.documentation == old_documentation {
             return;
         }
         let menu_text = completion_menu_text(ctx.to_editor(), &new_item);

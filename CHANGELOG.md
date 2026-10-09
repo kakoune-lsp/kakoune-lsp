@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Fix completion item menu text not updating sometimes after `completionItem/resolve`.
+
 ## 22.0.0 - 2026-10-06
 
 Additions:
