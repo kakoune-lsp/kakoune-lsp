@@ -696,6 +696,14 @@ hook -group lsp-filetype-typst global BufSetOption filetype=typst %{
     set-option -add buffer lsp_servers "formatterPrintWidth = %opt{autowrap_column}"
 }
 
+hook -group lsp-filetype-vala global BufSetOption filetype=vala %{
+    set-option buffer lsp_servers %{
+        [vala-language-server]
+        # Not "meson.build" first: meson projects usually have one in subdirectories too.
+        root_globs = [".git", ".hg", "meson.build"]
+    }
+}
+
 hook -group lsp-filetype-yaml global BufSetOption filetype=yaml %{
     set-option buffer lsp_servers %{
         [yaml-language-server]
