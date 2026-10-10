@@ -364,15 +364,7 @@ pub fn initialize(meta: EditorMeta, ctx: &mut Context, servers: Vec<ServerId>) {
                                 }
                             }),
                         }),
-                        offset_encoding: Some(
-                            match preferred_offset_encoding {
-                                None | Some(OffsetEncoding::Utf8) => ["utf-8", "utf-16"],
-                                Some(OffsetEncoding::Utf16) => ["utf-16", "utf-8"],
-                            }
-                            .iter()
-                            .map(|s| s.to_string())
-                            .collect(),
-                        ),
+                        offset_encoding: None,
                         experimental: ctx
                             .server_config(&meta, server_name)
                             .and_then(|cfg| cfg.experimental.clone())
