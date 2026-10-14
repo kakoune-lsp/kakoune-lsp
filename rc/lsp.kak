@@ -509,6 +509,8 @@ declare-option -hidden str lsp_fifo
 declare-option -hidden str lsp_alt_fifo
 declare-option -hidden -docstring 'PID file for kak-lsp server' str lsp_pid_file
 
+declare-option -hidden bool lsp_background_shell_supported true
+
 define-command lsp-start -docstring "Start kakoune-lsp session" %{
     evaluate-commands %sh{
         # kak_session
@@ -517,16 +519,27 @@ define-command lsp-start -docstring "Start kakoune-lsp session" %{
         # kak_opt_lsp_timeout
         # kak_opt_lsp_snippet_support
         # kak_opt_lsp_file_watch_support
-        if ! session_dir=$(eval "${kak_opt_lsp_cmd} --daemonize"); then
-            echo 'fail Failed to start kak-lsp server, see the *debug* buffer'
-            exit
-        fi
-        echo set-option global lsp_fifo "${session_dir}/fifo"
-        echo set-option global lsp_alt_fifo "${session_dir}/alt-fifo"
-        echo set-option global lsp_pid_file "${session_dir}/pid"
-        until pid=$(cat "${session_dir}/pid" 2>/dev/null); do
-            sleep .010
-        done
+
+        # if ! session_dir=$(eval "${kak_opt_lsp_cmd} --daemonize"); then
+        #     echo 'fail Failed to start kak-lsp server, see the *debug* buffer'
+        #     exit
+        # fi
+
+        # echo set-option global lsp_fifo "${session_dir}/fifo"
+        # echo set-option global lsp_alt_fifo "${session_dir}/alt-fifo"
+        # echo set-option global lsp_pid_file "${session_dir}/pid"
+        # until pid=$(cat "${session_dir}/pid" 2>/dev/null); do
+        #     sleep .010
+        # done
+
+        # set -x
+        # kak_command_fifo
+        # kak_response_fifo
+        # kak_opt_lsp_background_shell_supported
+        exec >/tmp/log 2>&1
+        exec <&-
+        eval "set -- ${kak_opt_lsp_cmd}"
+        "$@"
     }
 }
 

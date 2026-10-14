@@ -29,6 +29,7 @@ mod util;
 mod wcwidth;
 mod workspace;
 
+use crate::editor_transport::exec_fifo;
 use crate::types::*;
 use crate::util::*;
 use clap::ArgMatches;
@@ -42,7 +43,6 @@ use libc::SIGINT;
 use libc::SIGPIPE;
 use libc::SIGQUIT;
 use libc::SIGTERM;
-use libc::STDOUT_FILENO;
 use log::DEBUG;
 use sloggers::file::FileLoggerBuilder;
 use sloggers::null::NullLoggerBuilder;
@@ -243,7 +243,13 @@ fn run_main() -> Result<(), ()> {
 
     let session = SessionHandle {
         session,
-        command_fifos: None,
+        command_fifos: match (env_var("kak_command_fifo")?, env_var("kak_response_fifo")?) {
+            (Some(command_fifo), Some(response_fifo)) => Some(CommandFifos {
+                command_fifo,
+                response_fifo,
+            }),
+            _ => None,
+        },
     };
 
     let env_var = |name| environment_variable(Some(&session), name);
@@ -291,11 +297,31 @@ fn run_main() -> Result<(), ()> {
             eprintln!("Attaching to externally-started kak-lsp server");
         }
     }
-    println!("{}", session_symlink_path.display());
-    unsafe {
-        libc::close(STDOUT_FILENO);
-    }
+
+    let mut f = std::fs::File::options()
+        .append(true)
+        .open("/tmp/log")
+        .unwrap();
+    writeln!(&mut f, "HELLO").unwrap();
+    // if let Some(output_path) = matches.get_one::<String>("background") {
+    //     writeln!(&mut f, "OUTPUT PATH: {output_path}").unwrap();
+    //     if let Err(err) = std::fs::write(output_path, session_symlink_path.as_os_str().as_bytes()) {
+    //         writeln!(&mut f, "err: {err}").unwrap();
+    //         eprintln!("Error writing to '{output_path}': {err}");
+    //         return Err(());
+    //     }
+    // } else {
+    //     println!("{}", session_symlink_path.display());
+    //     unsafe {
+    //         libc::close(STDOUT_FILENO);
+    //     }
+    // }
+
+    // TODO echo path
+
     if existing_path.is_some() {
+        panic!();
+        // initialize_editor()?;
         return Ok(());
     }
 
@@ -493,6 +519,35 @@ fn run_main() -> Result<(), ()> {
             process::abort();
         }));
     }
+
+    let initialize_editor = || {
+        assert!(session.command_fifos.is_some());
+        let command = formatdoc!(
+            r#"
+            set-option global lsp_fifo "{session_dir}/fifo"
+            set-option global lsp_alt_fifo "{session_dir}/alt-fifo"
+            set-option global lsp_pid_file "{session_dir}/pid"
+            {background_shell}
+            # echo -to-file /tmp/fifo
+            "#,
+            session_dir = session_symlink_path.display(),
+            background_shell =
+                // TODO assert
+                if environment_variable(Some(&session), "kak_opt_lsp_background_shell_supported")?
+                    .unwrap()
+                    == "true"
+                {
+                    "background-shell"
+                } else {
+                    ""
+                }
+        );
+        writeln!(&mut f, "WRITING COMMAND [{command}]").unwrap();
+        exec_fifo(&session, EditorMeta::default(), None, command, true);
+        drop(f);
+        Ok(())
+    };
+    initialize_editor()?;
 
     controller::start(
         session.clone(),

@@ -68,6 +68,48 @@ impl ToEditor for SessionHandle {
             debug!(self, "To editor `{}`: {}", self.session, command);
         }
 
+        // assert!(self.command_fifos.is_some());
+
+        if let Some(CommandFifos {
+            command_fifo,
+            response_fifo,
+        }) = &self.command_fifos
+        {
+            {
+                let mut file = match std::fs::File::options().append(true).open(command_fifo) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        if false && log {
+                            error!(self, "Failed to open command fifo '{command_fifo}': {err}");
+                        }
+                        return;
+                    }
+                };
+                {
+                    let mut file = std::fs::File::options()
+                        .append(true)
+                        .open("/tmp/log")
+                        .unwrap();
+                    writeln!(&mut file, "WRITING COMMAND {command}");
+                }
+                let command = format!("{command}\necho -to-file {}", editor_quote(response_fifo));
+                // let command =
+                //     format!("evaluate-commands %[ set-option local debug commands; {command} ]");
+                if let Err(err) = file.write_all(command.as_bytes()) {
+                    if false && log {
+                        error!(self, "Failed to write to command fifo: {}", err);
+                    }
+                    return;
+                }
+            }
+            if let Err(err) = std::fs::File::open(response_fifo) {
+                if false && log {
+                    error!(self, "Failed to open reponse fifo: {}", err);
+                }
+            }
+            return;
+        }
+
         match Command::new("kak")
             .args(["-p", &self.session])
             .stdin(Stdio::piped())
