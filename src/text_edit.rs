@@ -1149,7 +1149,8 @@ mod tests {
         );
 
         let expected = indoc!(
-            r#"select 8.2,13.1000000
+            r#"execute-keys -draft gj<a-o>
+               select 8.2,13.1000000
                execute-keys "c
                <esc>"
                select 7.38,7.39
@@ -1175,7 +1176,8 @@ mod tests {
                    if matches.is_present(""kakoune"") {}
                }<esc>"
                select 1.5,1.19
-               execute-keys "cstd::{path::Path, process::Stdio}<esc>""#
+               execute-keys "cstd::{path::Path, process::Stdio}<esc>"
+               execute-keys -draft gj<a-k>^$<ret>d"#
         )
         .to_string();
         assert_eq!(result, Some(expected));
