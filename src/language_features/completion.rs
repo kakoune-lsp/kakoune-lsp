@@ -30,6 +30,18 @@ pub fn text_document_completion(
     let req_params = eligible_servers
         .into_iter()
         .map(|(server_id, server_settings)| {
+            let context = params.completion.trigger_character.as_ref().and_then(|tc| {
+                let has_trigger = server_settings
+                    .capabilities
+                    .as_ref()
+                    .and_then(|caps| caps.completion_provider.as_ref())
+                    .and_then(|provider| provider.trigger_characters.as_ref())
+                    .is_some_and(|chars| chars.contains(tc));
+                has_trigger.then(|| CompletionContext {
+                    trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
+                    trigger_character: Some(tc.clone()),
+                })
+            });
             (
                 server_id,
                 vec![CompletionParams {
@@ -45,7 +57,7 @@ pub fn text_document_completion(
                         )
                         .unwrap(),
                     },
-                    context: None,
+                    context,
                     work_done_progress_params: Default::default(),
                     partial_result_params: Default::default(),
                 }],
@@ -241,10 +253,11 @@ fn editor_completion(
                     editor_quote(&snippet)
                 );
 
-                completion_entry(&insert_text, &on_select, &entry)
+                // Use filterText when available for Kakoune filtering, falling back
+                // to the processed insert text.
+                let candidate_text = x.filter_text.as_deref().unwrap_or(&insert_text);
+                completion_entry(candidate_text, &on_select, &entry)
             } else {
-                // Due to implementation reasons, we currently do not support filter text
-                // with snippets.
                 let specified_filter_text = x.filter_text.as_ref().unwrap_or(&x.label);
                 let (insert_text, on_select) = if specified_filter_text != eventual_insert_text {
                     // Simulate filter-text support by giving the filter-text to Kakoune
