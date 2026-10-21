@@ -1,6 +1,7 @@
 ## Unreleased
 
 - Fix completion item menu text not updating sometimes after `completionItem/resolve`.
+- Fix text edits at the last line wrongly inserting at the last-but-one line (#907).
 
 ## 22.0.0 - 2026-10-06
 

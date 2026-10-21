@@ -353,7 +353,7 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
         .into_iter()
         .filter(|text_edit| {
             // Drop redundant text edits because Kakoune treats them differently. Here's how
-            // (Note that we no longer use the actual Z/z commands), but compute equivalent
+            // (Note that we no longer use the actual Z/z commands, but compute equivalent
             // selections ourselves.)
             //
             // 0. Assume we have two adjacent selections "foo" "bar".
@@ -397,32 +397,44 @@ pub fn lsp_text_edits_to_kakoune<T: TextEditish<T>>(
             let redundant = new_text.as_bytes() == contents;
             !redundant
         })
-        .map(|text_edit| lsp_text_edit_to_kakoune(&text_edit, text, offset_encoding))
         .collect::<Vec<_>>();
 
-    let apply_edits = edits
+    let mut apply_edits = edits
         .iter()
         .rev()
-        .map(
-            |KakouneTextEdit {
-                 range,
-                 new_text,
-                 command,
-             }| {
-                use KakouneTextEditCommand::{InsertBefore, Replace};
-                let command = match command {
-                    InsertBefore => 'i',
-                    Replace => 'c',
-                };
-                formatdoc!(
-                    "select {}
+        .map(|edit| {
+            let KakouneTextEdit {
+                range,
+                new_text,
+                command,
+            } = lsp_text_edit_to_kakoune(edit, text, offset_encoding);
+            use KakouneTextEditCommand::{InsertBefore, Replace};
+            let command = match command {
+                InsertBefore => 'i',
+                Replace => 'c',
+            };
+            formatdoc!(
+                "select {}
                      execute-keys \"{command}{}<esc>\"",
-                    ForwardKakouneRange(*range),
-                    editor_escape_double_quotes(&escape_keys(new_text))
-                )
-            },
-        )
+                ForwardKakouneRange(range),
+                editor_escape_double_quotes(&escape_keys(&new_text))
+            )
+        })
         .join("\n");
+
+    if edits.last().is_some_and(|edit| {
+        edit.range.end
+            == Position {
+                line: (text.len_lines() - 1) as _,
+                character: 0,
+            }
+    }) {
+        apply_edits = formatdoc!(
+            "execute-keys -draft gj<a-o>
+         {apply_edits}
+         execute-keys -draft gj<a-k>^$<ret>d"
+        );
+    }
 
     Some(apply_edits)
 }
