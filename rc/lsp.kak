@@ -1530,9 +1530,6 @@ If no arguments are specified, 'error' is implied.
             types="$types $1"
             diagnostic_faces="$diagnostic_faces $2"
         }
-        if [ $# -eq 0 ]; then
-            add_face error DiagnosticError
-        fi
         previous=false
         for arg; do
             case "$arg" in
@@ -1547,6 +1544,9 @@ If no arguments are specified, 'error' is implied.
                     ;;
             esac
         done
+        if [ -z "$types" ]; then
+            add_face error DiagnosticError
+        fi
         types=${types#" "}
         # expand quoting, stores option in $@
         eval set -- "${kak_quoted_opt_lsp_inline_diagnostics}"
