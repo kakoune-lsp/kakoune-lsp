@@ -1,5 +1,9 @@
 ## Unreleased
 
+Additions:
+- Default configuration for XML, using `lemminx`.
+
+Fixes:
 - Fix completion item menu text not updating sometimes after `completionItem/resolve`.
 - Fix text edits at the last line wrongly inserting at the last-but-one line (#907).
 

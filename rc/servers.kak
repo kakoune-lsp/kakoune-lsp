@@ -696,6 +696,19 @@ hook -group lsp-filetype-typst global BufSetOption filetype=typst %{
     set-option -add buffer lsp_servers "formatterPrintWidth = %opt{autowrap_column}"
 }
 
+hook -group lsp-filetype-xml global BufSetOption filetype=xml %{
+  set-option buffer lsp_servers %{
+    [lemminx]
+    root_globs = [".git", ".hg"]
+    settings_section = "_"
+    [lemminx.settings._]
+    # Slightly confusing, but the settings documentation is here:
+    # https://github.com/redhat-developer/vscode-xml/tree/main/docs
+    # (see https://github.com/eclipse-lemminx/lemminx/issues/460)
+    # xml.format.maxLineWidth = 0
+  }
+}
+
 hook -group lsp-filetype-yaml global BufSetOption filetype=yaml %{
     set-option buffer lsp_servers %{
         [yaml-language-server]
