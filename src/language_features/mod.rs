@@ -13,6 +13,7 @@ pub mod highlight;
 pub mod hover;
 pub mod inlay_hints;
 pub mod lean;
+pub mod metals;
 pub mod range_formatting;
 pub mod rename;
 pub mod rust_analyzer;
