@@ -392,6 +392,7 @@ pub type ServerId = usize;
 #[derive(Debug)]
 pub struct EditorCompletion {
     pub offset: u32,
+    pub trigger_character: Option<String>,
 }
 
 #[derive(Debug)]

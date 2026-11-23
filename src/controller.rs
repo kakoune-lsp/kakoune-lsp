@@ -524,6 +524,14 @@ fn dispatch_fifo_request(
             position: state.next()?,
             completion: EditorCompletion {
                 offset: state.next()?,
+                trigger_character: {
+                    let tc: String = state.next()?;
+                    if tc.is_empty() {
+                        None
+                    } else {
+                        Some(tc)
+                    }
+                },
             },
         }),
         "textDocument/definition" => {
