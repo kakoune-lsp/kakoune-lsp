@@ -6,6 +6,7 @@ Additions:
 Fixes:
 - Fix completion item menu text not updating sometimes after `completionItem/resolve`.
 - Fix text edits at the last line wrongly inserting at the last-but-one line (#907).
+- Include the parse error when failing to parse a language server message.
 
 ## 22.0.0 - 2026-10-06
 

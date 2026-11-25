@@ -8,6 +8,13 @@ use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum LspMessage {
+    Request(Call),
+    Response(Output),
+}
+
 pub struct LanguageServerTransport {
     // The field order is important as it defines the order of drop.
     // We want to exit a writer loop first (after sending exit notification),
@@ -173,20 +180,14 @@ fn reader_loop(
         let msg = String::from_utf8(content)
             .map_err(|_| Error::other("Failed to read content as UTF-8 string"))?;
         debug!(to_editor, "From server {server_name}: {msg}");
-        let output: serde_json::Result<Output> = serde_json::from_str(&msg);
-        match output {
-            Ok(output) => {
-                if sender.send(ServerMessage::Response(output)).is_err() {
-                    return Err(Error::other("Failed to send response"));
-                }
-            }
-            Err(_) => {
-                let msg: Call = serde_json::from_str(&msg)
-                    .map_err(|_| Error::other("Failed to parse language server message"))?;
-                if sender.send(ServerMessage::Request(msg)).is_err() {
-                    return Err(Error::other("Failed to send response"));
-                }
-            }
+        let lsp_message: LspMessage = serde_json::from_str(&msg)
+            .map_err(|e| Error::other(format!("Failed to parse language server message: {e}")))?;
+        let message = match lsp_message {
+            LspMessage::Request(call) => ServerMessage::Request(call),
+            LspMessage::Response(output) => ServerMessage::Response(output),
+        };
+        if sender.send(message).is_err() {
+            return Err(Error::other("Failed to send response"));
         }
     }
 }
