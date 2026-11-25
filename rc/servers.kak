@@ -616,6 +616,11 @@ hook -group lsp-filetype-ruby global BufSetOption filetype=ruby %{
         # [ruby-lsp]
         # root_globs = ["Gemfile"]
         # args = ["stdio"]
+        # [sorbet]
+        # root_globs = ["Gemfile"]
+        # command = "bundle"
+        # args = ["exec", "srb", "tc", "--disable-watchman", "--lsp"]
+        # workaround_sorbet = true # removes a nonstandard JSON-RPC field sent by sorbet; see https://github.com/sorbet/sorbet/issues/6125
     }
 }
 
