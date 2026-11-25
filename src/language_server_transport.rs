@@ -3,41 +3,16 @@ use crate::thread_worker::Worker;
 use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
-use jsonrpc_core::{
-    self, Call, Failure, Id, MethodCall, Notification, Output, Params, Success, Version,
-};
+use jsonrpc_core::{self, Call, Output};
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
 
-// Some LSP servers add non-standard fields, which causes parse errors because jsonrpc-core's
-// message types are declared with `deny_unknown_fields`. jsonrpc-core is unmaintained, so as
-// a workaround we model the LSP message format here and permit additional fields.
-// See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#abstractMessage
-#[derive(Deserialize)]
-struct LspMessage {
-    jsonrpc: Option<Version>,
-    #[serde(flatten)]
-    kind: LspMessageKind,
-}
-
 #[derive(Deserialize)]
 #[serde(untagged)]
-enum LspMessageKind {
-    Request {
-        id: Id,
-        method: String,
-        params: Option<Params>,
-    },
-    Response {
-        id: Id,
-        result: Option<serde_json::Value>,
-        error: Option<jsonrpc_core::Error>,
-    },
-    Notification {
-        method: String,
-        params: Option<Params>,
-    },
+enum LspMessage {
+    Request(Call),
+    Response(Output),
 }
 
 pub struct LanguageServerTransport {
@@ -205,34 +180,11 @@ fn reader_loop(
         let msg = String::from_utf8(content)
             .map_err(|_| Error::other("Failed to read content as UTF-8 string"))?;
         debug!(to_editor, "From server {server_name}: {msg}");
-        let LspMessage { jsonrpc, kind } = serde_json::from_str(&msg)
+        let lsp_message: LspMessage = serde_json::from_str(&msg)
             .map_err(|e| Error::other(format!("Failed to parse language server message: {e}")))?;
-        let message = match kind {
-            LspMessageKind::Request { id, method, params } => {
-                ServerMessage::Request(Call::MethodCall(MethodCall {
-                    jsonrpc,
-                    method,
-                    params: params.unwrap_or(Params::None),
-                    id,
-                }))
-            }
-            LspMessageKind::Response { id, result, error } => {
-                ServerMessage::Response(match error {
-                    Some(error) => Output::Failure(Failure { jsonrpc, error, id }),
-                    None => Output::Success(Success {
-                        jsonrpc,
-                        result: result.unwrap_or(serde_json::Value::Null),
-                        id,
-                    }),
-                })
-            }
-            LspMessageKind::Notification { method, params } => {
-                ServerMessage::Request(Call::Notification(Notification {
-                    jsonrpc,
-                    method,
-                    params: params.unwrap_or(Params::None),
-                }))
-            }
+        let message = match lsp_message {
+            LspMessage::Request(call) => ServerMessage::Request(call),
+            LspMessage::Response(output) => ServerMessage::Response(output),
         };
         if sender.send(message).is_err() {
             return Err(Error::other("Failed to send response"));
