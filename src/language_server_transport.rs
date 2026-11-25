@@ -4,6 +4,7 @@ use crate::types::*;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use itertools::Itertools;
 use jsonrpc_core::{self, Call, Output};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Write};
 use std::process::{Command, Stdio};
@@ -24,6 +25,7 @@ pub fn start(
     cmd: &str,
     args: &[String],
     envs: &HashMap<String, String>,
+    workaround_sorbet: bool,
 ) -> Result<LanguageServerTransport, String> {
     info!(
         to_editor,
@@ -98,7 +100,14 @@ pub fn start(
             "Messages from language server",
             channel_capacity,
             move |to_editor, receiver, sender| {
-                if let Err(msg) = reader_loop(&to_editor, server_name, reader, receiver, &sender) {
+                if let Err(msg) = reader_loop(
+                    &to_editor,
+                    server_name,
+                    reader,
+                    receiver,
+                    &sender,
+                    workaround_sorbet,
+                ) {
                     error!(&to_editor, "{}", msg);
                 }
             },
@@ -137,6 +146,7 @@ fn reader_loop(
     mut reader: impl BufRead,
     receiver: Receiver<Void>,
     sender: &Sender<ServerMessage>,
+    workaround_sorbet: bool,
 ) -> io::Result<()> {
     let mut headers: HashMap<String, String> = HashMap::default();
     loop {
@@ -173,7 +183,24 @@ fn reader_loop(
         let msg = String::from_utf8(content)
             .map_err(|_| Error::other("Failed to read content as UTF-8 string"))?;
         debug!(to_editor, "From server {server_name}: {msg}");
-        let output: serde_json::Result<Output> = serde_json::from_str(&msg);
+        let output: serde_json::Result<Output> = if workaround_sorbet {
+            // See https://github.com/sorbet/sorbet/issues/6125.
+            // Sorbet sends a nonstandard field `requestMethod`, but `Output` has
+            // `serde(deny_unknown_fields)`, which causes a parse error.
+            // While we wait for sorbet to rewrite their JSON parser, we gracefully handle
+            // the nonstandard field.
+            let raw: serde_json::Result<Value> = serde_json::from_str(&msg);
+            raw.map(|v| match v {
+                Value::Object(mut kvs) => {
+                    kvs.remove("requestMethod");
+                    Value::Object(kvs)
+                }
+                _ => v,
+            })
+            .and_then(serde_json::value::from_value)
+        } else {
+            serde_json::from_str(&msg)
+        };
         match output {
             Ok(output) => {
                 if sender.send(ServerMessage::Response(output)).is_err() {

@@ -1535,6 +1535,7 @@ fn route_request(
             server_command,
             &server_config.args,
             &server_config.envs,
+            server_config.workaround_sorbet.unwrap_or(false),
         ) {
             Ok(ls) => ls,
             Err(err) => {
