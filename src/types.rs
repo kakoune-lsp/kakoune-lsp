@@ -95,6 +95,7 @@ pub struct LanguageServerConfig {
     #[allow(dead_code)]
     workaround_server_sends_plaintext_labeled_as_markdown: Option<bool>,
     pub workaround_eslint: Option<bool>,
+    pub workaround_sorbet: Option<bool>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
