@@ -2,6 +2,7 @@
 
 Additions:
 - Default configuration for XML, using `lemminx`.
+- Default configuration for `vala`, using [`vala-language-server`](https://github.com/vala-lang/vala-language-server).
 
 Fixes:
 - Fix completion item menu text not updating sometimes after `completionItem/resolve`.
